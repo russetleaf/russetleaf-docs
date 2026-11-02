@@ -21,7 +21,7 @@ At home, MariaDB runs in the cluster with operator-generated passwords (Phase 1)
 - **MariaDB in the EKS cluster** (as at home): cheaper, but hides the managed-database design the AWS site is meant to show.
 
 ## Consequences
-- In the cloud, the application holds no database secret; at home, secrets are minimised, generated and isolated instead.
+- In the cloud, the application holds no database secret; at home, secrets are minimized, generated and isolated instead.
 - RDS Proxy adds about $0.03 an hour during demos.
 - The IAM token path is the one uncertain part of the design, with a tested fallback.
 

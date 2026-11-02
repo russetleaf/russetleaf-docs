@@ -43,14 +43,14 @@ ThreatMapper's management console bundles several databases and services; its do
 - **No account scanning:** leaves configuration done outside Terraform unchecked.
 
 ## Consequences
-- The AWS account is checked against recognised frameworks at no cost, with nothing to run in the clusters.
+- The AWS account is checked against recognized frameworks at no cost, with nothing to run in the clusters.
 - Scans are periodic, not continuous; AWS Budgets, Cost Anomaly Detection and CloudWatch alarms remain the continuous signals.
 - No attack-path ranking or malware scanning; acceptable at this scale.
 
 ## When to revisit
 - Much more memory available (e.g. a dedicated security node), making ThreatMapper's console affordable.
 - ~~The AWS account holding production or personal data: consider AWS Security Hub for continuous checks.~~ Done (ADR 1019).
-- Many more services, where attack-path ranking would help prioritise findings.
+- Many more services, where attack-path ranking would help prioritize findings.
 
 ## Open items
 - Phase 1 step 7.5: first Prowler run; record the baseline and accepted findings.

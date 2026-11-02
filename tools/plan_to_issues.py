@@ -139,8 +139,8 @@ def main():
     labels = [(f'phase-{phase_num}', 'fbca04', phase_name)]
     labels += [(f'tier:{t.lower()}', c, f'{t} tier') for t, c in TIER_COLOURS.items()]
     labels += [(f'stage:{n}', 'ededed', f'Stage {n}') for n in sorted({s.split('.')[0] for s in order}, key=int)]
-    for name, colour, desc in labels:
-        gh(['label', 'create', name, '--repo', a.repo, '--color', colour, '--description', desc, '--force'], a.apply)
+    for name, color, desc in labels:
+        gh(['label', 'create', name, '--repo', a.repo, '--color', color, '--description', desc, '--force'], a.apply)
 
     for m in milestones:
         if m['title'] in existing_ms:

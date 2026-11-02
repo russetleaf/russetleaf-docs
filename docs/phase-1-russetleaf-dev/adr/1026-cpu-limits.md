@@ -1,4 +1,4 @@
-# ADR 1026: No CPU limits by default; CPU limits only to protect a specific neighbour
+# ADR 1026: No CPU limits by default; CPU limits only to protect a specific neighbor
 
 - **Status:** Accepted
 - **Date:** 2026-11-01
@@ -13,7 +13,7 @@ On the home cluster, etcd runs on all three nodes (ADR 1020), and box 2 also run
 ## Decision
 - **Every container sets CPU and memory requests and a memory limit** (enforced by Kyverno).
 - **CPU limits are not required by default.** CPU requests (proportional sharing under contention) protect workloads from each other well enough, without throttling.
-- **CPU limits are used where a specific neighbour needs protecting:**
+- **CPU limits are used where a specific neighbor needs protecting:**
   - **llama.cpp** on box 2, leaving about one core free for etcd and the kubelet
   - **CI runners** on box 2, so the model and runners together can never take every core
   - load-test generators (k6), so tests can't starve the system under test on the same node
@@ -32,7 +32,7 @@ On the home cluster, etcd runs on all three nodes (ADR 1020), and box 2 also run
 
 ## When to revisit
 - etcd alerts fire despite the limits: move the CI runners to box 1, or reduce llama.cpp's limit.
-- A workload causes noisy-neighbour problems: give it a CPU limit and record why.
+- A workload causes noisy-neighbor problems: give it a CPU limit and record why.
 
 ## Open items
 - Phase 1 step 4.4 (etcd alerts), 5.5 (runner limits) and 8.1 (llama.cpp limit).

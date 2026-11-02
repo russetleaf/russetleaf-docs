@@ -9,7 +9,7 @@
 The design was checked against the common platform security topics: supply chain security, the image repository, observability, service mesh, Kubernetes PKI, mutual TLS and admission controllers.
 
 Supply chain security was strong (signed images with SBOM and SLSA provenance verified at admission, signed charts pinned by digest, mirrored upstream images). Service mesh and mTLS were covered by ADR 1001 (no mesh; WireGuard plus TLS on every sensitive connection, with the lack of per-service identity stated). The rest had gaps:
-- **Admission controllers:** Kyverno's replica count, failure behaviour and webhook timeouts weren't decided; if Kyverno was down or misconfigured, nothing built into Kubernetes backed up its most important rules; the enabled admission plugins weren't checked on EKS.
+- **Admission controllers:** Kyverno's replica count, failure behavior and webhook timeouts weren't decided; if Kyverno was down or misconfigured, nothing built into Kubernetes backed up its most important rules; the enabled admission plugins weren't checked on EKS.
 - **Kubernetes PKI:** Talos manages the cluster CAs and rotates leaf certificates, but the kubelets' **serving certificates are self-signed** by default, so metrics-server and Prometheus would skip verification (`--kubelet-insecure-tls`); there was no **CA rotation** procedure, no expiry alerts for Talos- and Kubernetes-managed certificates, and the **talosconfig client certificate expires after a year** with nothing to remind anyone.
 - **Image repository:** GHCR package permissions and a cleanup policy weren't set down; a careless cleanup could delete an image needed for rollback.
 - **Observability:** Loki holds the API audit log, Falco events and Argo CD audit events, and Grafana's free edition can't restrict data sources, so any Grafana user could read them. Loki, Prometheus, Tempo and Alertmanager have no authentication inside the cluster.
@@ -32,7 +32,7 @@ Supply chain security was strong (signed images with SBOM and SLSA provenance ve
   - A monthly **cleanup workflow** deletes untagged versions older than 90 days, but **never** a digest referenced anywhere in `wp-gitops` in the last 90 days or one of the last 10 releases; signatures and attestations are kept with their images. It runs in dry-run mode first.
   - The mirrored upstream images follow the same rules.
 - **Observability access:**
-  - Loki runs with **two tenants**: `apps` (application and platform logs) and `security` (API audit log, Argo CD audit events, Falco and Tetragon events). Grafana gets a separate **Security organisation** holding the `security` data source and security dashboards; only the **platform-admin** group is a member (mapped from Dex groups).
+  - Loki runs with **two tenants**: `apps` (application and platform logs) and `security` (API audit log, Argo CD audit events, Falco and Tetragon events). Grafana gets a separate **Security organization** holding the `security` data source and security dashboards; only the **platform-admin** group is a member (mapped from Dex groups).
   - Loki, Prometheus, Tempo and Alertmanager have no login inside the cluster; **network policies are their access control** (only Grafana, Alloy, Prometheus and the ruler can reach them), and none is exposed outside the cluster. Hubble UI is reachable only through Cloudflare Access (home) or port-forward (AWS).
 - **Supply chain: VEX:** accepted vulnerabilities are recorded as **OpenVEX** statements (`.vex/` in `wp-image` and `llm-summarizer`), each with a justification and a review date, read by Trivy in CI (`--vex`) and attached to the image as a signed attestation; `.trivyignore` stays only for secret and misconfiguration findings.
 
@@ -59,7 +59,7 @@ Supply chain security was strong (signed images with SBOM and SLSA provenance ve
 ## Open items
 - Phase 1 step 2.2: kubelet serving certificates and the approver; metrics-server without insecure TLS.
 - Phase 1 step 4.4: Prometheus verifies the kubelet's certificate; certificate expiry alerts.
-- Phase 1 step 4.6: Loki tenants and the Grafana Security organisation.
+- Phase 1 step 4.6: Loki tenants and the Grafana Security organization.
 - Phase 1 step 5.1: GHCR package access, the cleanup workflow, VEX.
 - Phase 1 step 6.1: Kyverno replicas, failure policy, timeouts, ValidatingAdmissionPolicy backstop.
 - Phase 1 step 7.2: admission plugin check; CA rotation runbook and rehearsal.

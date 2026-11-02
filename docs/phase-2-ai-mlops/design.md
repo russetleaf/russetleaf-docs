@@ -78,7 +78,7 @@ The summarizer is its own repo, `llm-summarizer`, built to stand alone as an MLO
 - New code rolls out through the Argo Rollouts canary; new models roll out through the gateway's canary split.
 
 ### LLM monitoring
-The summarizer reports **OpenTelemetry metrics** to Prometheus, labelled by model and prompt version:
+The summarizer reports **OpenTelemetry metrics** to Prometheus, labeled by model and prompt version:
 - input and output **tokens**
 - **latency** per model call
 - **errors**, throttling and **gateway fallbacks**
@@ -113,7 +113,7 @@ flowchart LR
 
 ### Guardrails
 Post content is untrusted input, so the summarizer treats it as data:
-- **Prompt-injection defences:** post text is clearly delimited and labelled as content to summarise, never instructions; the system prompt says so and is never echoed back.
+- **Prompt-injection defences:** post text is clearly delimited and labeled as content to summarize, never instructions; the system prompt says so and is never echoed back.
 - **Output validation** before anything is saved: length limits, plain text only, no URLs, no instructions or role-play, no text from the system prompt; a failing summary is retried once and then left unsaved with an alert.
 - **Personal-data redaction:** email addresses, phone numbers and similar patterns are removed from post text before it leaves the cluster for Bedrock.
 - **Adversarial evaluation cases:** the evaluation set includes posts containing injection attempts and personal data; the CI gate fails if any guardrail is bypassed.
@@ -275,7 +275,7 @@ One trace then shows: a post is published → queued → picked up by the summar
 
 | Test | Load profile | Where | What it shows |
 |---|---|---|---|
-| **AI pipeline burst** | 200–500 posts queued at once | Home staging; EKS | KEDA scale-out limits, Bedrock throttling and gateway fallback to llama.cpp, dead-letter-queue behaviour, time to drain the queue, cost per burst |
+| **AI pipeline burst** | 200–500 posts queued at once | Home staging; EKS | KEDA scale-out limits, Bedrock throttling and gateway fallback to llama.cpp, dead-letter-queue behavior, time to drain the queue, cost per burst |
 
 ### Cost alerts
 

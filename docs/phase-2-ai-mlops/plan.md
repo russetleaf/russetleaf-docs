@@ -32,7 +32,7 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 ## Stage 1: Foundations
 
 ### Step 1.1: The `llm-summarizer` repo
-**Do:** create **`llm-summarizer`** the same way as the Phase 1 repos (Phase 1 step 1.1): README, `.gitignore`, licence, branch protection, gitleaks with a full-history scan, then **make it public** with secret scanning and push protection; **OpenSSF Scorecard**, **zizmor**, **dependency review**, **Checkov** (workflows first) and **Renovate** (Python lock file, base images, GitHub Actions, `.mise.toml`). Add the GitHub organisation settings for it in `wp-infra/envs/github/`. Layout: `src/`, `prompts/`, `evals/`, `guardrails/`, `chart/`, `ci/`, `demo/`, `online-eval/` (see the [Phase 2 design](design.md#repository-llm-summarizer)).
+**Do:** create **`llm-summarizer`** the same way as the Phase 1 repos (Phase 1 step 1.1): README, `.gitignore`, license, branch protection, gitleaks with a full-history scan, then **make it public** with secret scanning and push protection; **OpenSSF Scorecard**, **zizmor**, **dependency review**, **Checkov** (workflows first) and **Renovate** (Python lock file, base images, GitHub Actions, `.mise.toml`). Add the GitHub organization settings for it in `wp-infra/envs/github/`. Layout: `src/`, `prompts/`, `evals/`, `guardrails/`, `chart/`, `ci/`, `demo/`, `online-eval/` (see the [Phase 2 design](design.md#repository-llm-summarizer)).
 
 **Test:** the repo is public with a clean history scan and push protection on; a test pull request runs the secret scan and Checkov; Renovate opens its onboarding pull request.
 
@@ -96,7 +96,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Test (end to end):** the kind tests pass in CI; a release goes through staging and is promoted; then publish a post on russetleaf.dev → a summarizer pod starts → the summary appears on the post within a few minutes → the pod scales back to zero. A message that always fails ends up in the dead-letter queue.
 
 ### Step 2.5: LLM monitoring
-**Do:** OpenTelemetry metrics in the summarizer (tokens, latency, errors, fallbacks, estimated cost, all labelled by model and prompt version); the Grafana LLM dashboard and `PrometheusRule` alerts shipped **in the summarizer chart** (error spike, dead-letter queue not empty, daily Bedrock spend over a limit, all labelled `team=mlops` so they go to `#rl-mlops`, with runbooks), plus the log-based `SummarizerExceptions` and `BedrockThrottling` alerts in Loki; SQS queue depth in Grafana.
+**Do:** OpenTelemetry metrics in the summarizer (tokens, latency, errors, fallbacks, estimated cost, all labeled by model and prompt version); the Grafana LLM dashboard and `PrometheusRule` alerts shipped **in the summarizer chart** (error spike, dead-letter queue not empty, daily Bedrock spend over a limit, all labeled `team=mlops` so they go to `#rl-mlops`, with runbooks), plus the log-based `SummarizerExceptions` and `BedrockThrottling` alerts in Loki; SQS queue depth in Grafana.
 
 **Test:** the dashboard shows real numbers after a few posts; temporarily lowering the spend limit makes the alert appear in `#rl-mlops`.
 

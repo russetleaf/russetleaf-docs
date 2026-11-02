@@ -12,7 +12,7 @@ EKS nodes cost money by the hour, demos are short, traffic during a load test va
 - **A small managed node group** (two nodes) runs Karpenter itself, CoreDNS and other system pods.
 - **Karpenter** creates all other nodes from two **NodePools**:
   - a **general pool** (spot and on-demand, several instance families) for WordPress and platform services, with **consolidation** to remove idle or underused nodes and a disruption budget;
-  - a **GPU pool** (g6 family, spot preferred) for the model server and fine-tuning, labelled `workload=llm` and tainted `dedicated=llm:NoSchedule`, with consolidation limited so the model isn't moved needlessly; created only if Phase 2 is built.
+  - a **GPU pool** (g6 family, spot preferred) for the model server and fine-tuning, labeled `workload=llm` and tainted `dedicated=llm:NoSchedule`, with consolidation limited so the model isn't moved needlessly; created only if Phase 2 is built.
 - **Spot interruption handling** through an SQS queue fed by EventBridge, so pods move before AWS reclaims a node.
 - **Node settings** in the `EC2NodeClass`: AL2023 with a pinned AMI version tracked by Renovate, IMDSv2 with hop limit 1, encrypted root volumes, kubelet limits (ADR 3004), and the Cilium startup taint (ADR 3003).
 - **Cost alert:** `GPUNodeRunningLong` from OpenCost when a GPU node runs longer than expected.
@@ -31,4 +31,4 @@ EKS nodes cost money by the hour, demos are short, traffic during a load test va
 - EKS Auto Mode's fees and flexibility change, or the cluster grows enough that its managed upgrades are worth more than the visible configuration.
 
 ## Open items
-- Phase 3 step 1.5: Karpenter's infrastructure; step 2.3: the NodePools; step 6.4: scaling behaviour under load.
+- Phase 3 step 1.5: Karpenter's infrastructure; step 2.3: the NodePools; step 6.4: scaling behavior under load.

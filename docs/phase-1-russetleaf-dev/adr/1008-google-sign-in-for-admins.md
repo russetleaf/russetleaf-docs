@@ -33,7 +33,7 @@ Only admins and editors log in to WordPress; site visitors don't. By default Wor
 
 ## When to revisit
 - Visitors need accounts (e.g. members or comments with login): consider a customer-facing identity service.
-- An organisation moves to a different identity provider (e.g. Microsoft Entra ID or Okta): the OIDC plugin and edge layers support other providers with configuration changes.
+- An organization moves to a different identity provider (e.g. Microsoft Entra ID or Okta): the OIDC plugin and edge layers support other providers with configuration changes.
 - More than 50 users would need Cloudflare Access (beyond its free tier).
 
 ## Open items

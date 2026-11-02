@@ -26,7 +26,7 @@ The design was checked against common compliance frameworks: MITRE ATT&CK, GDPR,
   - **Personal data breach runbook** (`docs/runbooks/personal-data-breach.md`): assess, contain, record, and notify the supervisory authority within **72 hours** if required (and affected people if the risk is high); linked from the security alerts' runbooks.
   - **No tracking cookies:** no analytics or third-party scripts that set cookies, so no consent banner is needed; a CI check (Playwright) confirms anonymous page views set no cookies and load no third-party scripts. Adding analytics later means choosing a cookieless tool or adding consent.
 - **MITRE ATT&CK detection map** (`docs/security/attack-coverage.md`): each detection (Falco rules, Kubernetes audit alerts, GuardDuty finding types, Hubble drops, CrowdSec) mapped to the **ATT&CK for Containers** techniques it covers, with the uncovered techniques listed and either accepted or planned. Falco rules keep their MITRE tags, and a Grafana panel shows Falco alerts by technique.
-- **NIST mapping:** the control matrix (Phase 1 step 8.5) is organised by **Cybersecurity Framework 2.0** functions (Govern, Identify, Protect, Detect, Respond, Recover), with two checklists as appendices: **SP 800-190** (application container security) and **SP 800-218** (Secure Software Development Framework, SSDF), which the SLSA provenance and the CI checks map onto.
+- **NIST mapping:** the control matrix (Phase 1 step 8.5) is organized by **Cybersecurity Framework 2.0** functions (Govern, Identify, Protect, Detect, Respond, Recover), with two checklists as appendices: **SP 800-190** (application container security) and **SP 800-218** (Secure Software Development Framework, SSDF), which the SLSA provenance and the CI checks map onto.
 - **CIS:** the image build runs Trivy's **CIS Docker Benchmark** compliance check on each image; the CIS Kubernetes (kube-bench, Trivy Operator), CIS AWS Foundations (Security Hub) and CIS Docker results are linked from the control matrix as evidence.
 
 ## Alternatives considered
@@ -51,5 +51,5 @@ The design was checked against common compliance frameworks: MITRE ATT&CK, GDPR,
 - Phase 1 step 5.12: compliance scope document and GDPR basics.
 - Phase 1 step 5.1: CIS Docker Benchmark check.
 - Phase 1 step 7.1: ATT&CK detection map and Grafana panel.
-- Phase 1 step 8.5: NIST CSF 2.0 organisation, SP 800-190 and SSDF checklists, CIS evidence links.
+- Phase 1 step 8.5: NIST CSF 2.0 organization, SP 800-190 and SSDF checklists, CIS evidence links.
 - Phase 3 step 5.1: GuardDuty's EKS findings in the ATT&CK map; the privacy notice and cookie check on russetleaf.com.

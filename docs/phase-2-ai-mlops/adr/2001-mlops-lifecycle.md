@@ -11,7 +11,7 @@
 The summary pipeline already had strong **inference-side** practices (often called LLMOps): versioned prompts, a CI evaluation gate with an LLM-as-judge, a model gateway with fallback and canaries, a self-hosted model, cost and latency monitoring, tracing, a model card and a re-summarize job. Senior MLOps work is judged on the **whole lifecycle** (data → training → evaluation → registry → deployment → monitoring → retraining), and the design was missing:
 - experiment tracking and a model registry (results lived in CI comments; no lineage)
 - monitoring of quality and drift **in production**
-- guardrails (post content went straight into prompts; no injection defence, output validation or personal-data redaction)
+- guardrails (post content went straight into prompts; no injection defense, output validation or personal-data redaction)
 - any training or fine-tuning
 - data versioning
 - a feedback loop
@@ -27,7 +27,7 @@ The summary pipeline already had strong **inference-side** practices (often call
 
 ## Alternatives considered
 - **Kubeflow (Pipelines, Katib, KServe):** the full ML platform, but heavy for the home cluster and more than this project needs; Argo Workflows (already in the Argo ecosystem) runs the pipelines, and llama.cpp serves the model. (Kubeflow Pipelines itself runs on Argo Workflows underneath.)
-- **Tekton:** Kubernetes-native pipelines aimed mainly at CI/CD; weaker support for data and ML workflows (artifacts, parameters between steps, retries per step, DAG visualisation) than Argo Workflows.
+- **Tekton:** Kubernetes-native pipelines aimed mainly at CI/CD; weaker support for data and ML workflows (artifacts, parameters between steps, retries per step, DAG visualization) than Argo Workflows.
 - **Apache Airflow:** the standard for data pipelines, but a heavier, Python-centric scheduler with its own database and web server, and less natural for running each step as a GPU pod.
 - **Plain Kubernetes CronJobs and Jobs:** enough for the daily online evaluation alone, but no multi-step pipelines with artifacts, retries per step, or a view of each run.
 - **Amazon SageMaker** (training jobs, model registry, pipelines): AWS-native and capable, but doesn't cover the home site and would split the lifecycle across two platforms.

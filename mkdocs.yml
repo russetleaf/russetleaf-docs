@@ -97,7 +97,7 @@ nav:
           - "1023 Reliability practice: scheduled chaos experiments and blameless postmortems": phase-1-russetleaf-dev/adr/1023-reliability-practice.md
           - "1024 Performance and stress testing with k6, and a performance regression gate": phase-1-russetleaf-dev/adr/1024-performance-and-stress-testing.md
           - "1025 A custom block theme built into the image; Site Editor locked in production": phase-1-russetleaf-dev/adr/1025-site-design-in-git.md
-          - "1026 No CPU limits by default; CPU limits only to protect a specific neighbour": phase-1-russetleaf-dev/adr/1026-cpu-limits.md
+          - "1026 No CPU limits by default; CPU limits only to protect a specific neighbor": phase-1-russetleaf-dev/adr/1026-cpu-limits.md
           - "1027 Cilium as the network plugin on both clusters": phase-1-russetleaf-dev/adr/1027-cilium-cni.md
           - "1028 Internal certificates with cert-manager and an internal CA": phase-1-russetleaf-dev/adr/1028-internal-pki.md
           - "1029 On-demand, scale-to-zero staging on the home cluster": phase-1-russetleaf-dev/adr/1029-on-demand-staging.md

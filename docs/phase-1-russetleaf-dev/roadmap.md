@@ -32,7 +32,7 @@ What each milestone shows when it's done:
 - **M7:** SLOs and error budgets, DORA metrics, Backstage and a second service, the threat model and control matrix, chaos and postmortems, strategy documents, fleet management, and public writing.
 
 ## Tracking and reporting
-- **Issues:** one per step, created from the plan by `tools/plan_to_issues.py` (see its usage notes), labelled by tier and stage, in the milestone above, with the step's substeps as a checklist and its test as acceptance criteria.
+- **Issues:** one per step, created from the plan by `tools/plan_to_issues.py` (see its usage notes), labeled by tier and stage, in the milestone above, with the step's substeps as a checklist and its test as acceptance criteria.
 - **Step specs:** before starting a step, write its spec with Claude from [`../specs/TEMPLATE.md`](../specs/TEMPLATE.md); the pull request links the issue and the spec.
 - **Actuals:** record actual hours per step in the plan's checklist, and fill in this table's **Actual** columns when a milestone closes.
 - **Milestone retro:** when a milestone closes, add a short note to the plan's decision log: estimated vs actual hours, what took longer and why, and what changes for the next milestone.

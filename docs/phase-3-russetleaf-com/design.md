@@ -117,7 +117,7 @@ Switching between the two is an **overlay change** in `wp-gitops` (`database.aut
 
 The WordPress Rollout, Service, HPA and the rest of the base are the same for both sites; only where the credential comes from differs, which is exactly what overlays are for. A `wp-image` release adding the drop-in goes through ci → staging → prod like any other.
 
-**Interview angle:** in the cloud, the database trusts **IAM identities**, so the application has no secret at all; self-hosted, you can't remove every secret, so you **minimise, generate, isolate and rotate** them.
+**Interview angle:** in the cloud, the database trusts **IAM identities**, so the application has no secret at all; self-hosted, you can't remove every secret, so you **minimize, generate, isolate and rotate** them.
 
 ## Fine-tuning on the GPU pool (if Phase 2 is built)
 
@@ -248,14 +248,14 @@ These are approximate prices for **us-east-1**, on demand unless noted, for a sm
 | kube-bench | One Job per node pool, every demo (in `demo-up`) | $0 |
 | Loki log storage (S3) | 14-day retention, demo-hours volume | <$1 |
 | Tempo trace storage (S3) | 7-day retention, demo-hours volume | <$1 |
-| CloudTrail + GuardDuty | Organisation trail (management events); GuardDuty incl. EKS audit-log monitoring | ~$1–5 |
-| Security Hub + Config + KMS | Organisation-wide standards; focused Config recording; KMS keys for logs and backups | ~$5–15 |
+| CloudTrail + GuardDuty | Organization trail (management events); GuardDuty incl. EKS audit-log monitoring | ~$1–5 |
+| Security Hub + Config + KMS | Organization-wide standards; focused Config recording; KMS keys for logs and backups | ~$5–15 |
 | Alerting (SNS, Amazon Q Developer in chat applications, Slack free plan) | CloudWatch alarms and budget alerts to Slack | $0 |
 | **Total** | | **~$725–$840 / month** |
 
 Without the self-hosted model (Bedrock only behind the gateway), the total is **~$510–$560 / month**. GuardDuty EKS Runtime Monitoring, if used instead of Falco, is billed per vCPU monitored and would add roughly $10–$20/month at this size. New AWS accounts usually have a **GPU instance quota of 0**, so request a quota increase for G-family instances (both on-demand and spot) before the first deploy.
 
-Summarizing an existing back catalogue is a one-time cost: about **$0.40 for 100 posts** (~2,700 tokens in, ~200 tokens out each) on Bedrock. Each CI evaluation run (25 posts per model, plus judge calls) costs a few cents.
+Summarizing an existing back catalog is a one-time cost: about **$0.40 for 100 posts** (~2,700 tokens in, ~200 tokens out each) on Bedrock. Each CI evaluation run (25 posts per model, plus judge calls) costs a few cents.
 
 ## russetleaf.com between demos
 

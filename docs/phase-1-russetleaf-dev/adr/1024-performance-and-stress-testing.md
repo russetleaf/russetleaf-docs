@@ -23,7 +23,7 @@ Load tests appeared only in passing (the gVisor comparison, light load during no
 - **Comparing staging results with a stored production baseline:** simpler, but noisy on a shared three-node cluster (LLM work on box 2 and monitoring on box 3 vary over time); back-to-back runs in the same conditions are more reliable.
 
 ## Consequences
-- The breaking points, bottlenecks and recovery behaviour of both sites and the AI pipeline are known and documented.
+- The breaking points, bottlenecks and recovery behavior of both sites and the AI pipeline are known and documented.
 - Promotions take a few minutes longer (the short load test).
 - Stress and soak tests use the home cluster heavily for a while; run them at quiet times, in staging where possible.
 - Temporary WAF exceptions must be removed reliably after edge tests (applied and removed by Terraform).

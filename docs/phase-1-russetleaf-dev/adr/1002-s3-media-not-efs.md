@@ -8,14 +8,14 @@
 ## Context
 WordPress needs somewhere to keep `wp-content`: uploaded media, plus (traditionally) plugins and themes. When WordPress runs on several servers or pods, they must all see the same files. Many WordPress-on-AWS guides, including AWS's own reference architecture for WordPress on EC2 Auto Scaling groups, put `wp-content` on **Amazon EFS**, a shared network filesystem.
 
-This project is containerised and GitOps-managed. Images are signed and pinned by digest, Kyverno requires a read-only root filesystem, Falco alerts on writes to `/var/www/html`, and every change is promoted through ci and staging. The home lab has no EFS, and box 1 has little spare memory.
+This project is containerized and GitOps-managed. Images are signed and pinned by digest, Kyverno requires a read-only root filesystem, Falco alerts on writes to `/var/www/html`, and every change is promoted through ci and staging. The home lab has no EFS, and box 1 has little spare memory.
 
 ## Decision
 - **WordPress code** (core, plugins, themes) is **built into the container image** in the `wp-image` repo. Plugin installs and updates from the admin screen are disabled (`DISALLOW_FILE_MODS`).
 - **Media uploads go to S3** through an offload plugin, served through CloudFront on russetleaf.com and from S3 at home.
 - **No shared filesystem** is used on either site.
 
-This is the pattern used by large containerised WordPress platforms such as WordPress VIP and Human Made's Altis.
+This is the pattern used by large containerized WordPress platforms such as WordPress VIP and Human Made's Altis.
 
 ## Alternatives considered
 

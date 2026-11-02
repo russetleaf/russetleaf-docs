@@ -17,7 +17,7 @@ Each post gets a short AI-generated summary. Summaries must not slow down publis
 - **Python** for the summarizer (boto3, the `openai` client, OpenTelemetry).
 
 ## Alternatives considered
-- **Summarising inside WordPress on publish (synchronous):** simplest, but slows publishing, ties model outages to the admin screen, and can't scale or be tested separately.
+- **Summarizing inside WordPress on publish (synchronous):** simplest, but slows publishing, ties model outages to the admin screen, and can't scale or be tested separately.
 - **WP-Cron or a Kubernetes CronJob polling for new posts:** no queue to manage, but adds latency and polling load, and gives no per-message retries or dead-letter queue.
 - **Calling Bedrock directly from the summarizer:** one less component, but no fallback, canaries, budgets or uniform metrics across models.
 - **A different gateway (e.g. a cloud-hosted router):** capable, but a third-party service in the request path; LiteLLM is open source and in-cluster.

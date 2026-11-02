@@ -6,7 +6,7 @@
 - **Phase:** 1. Later: Phase 3 adds AWS WAF, GuardDuty's EKS monitoring and the EKS audit alerts.
 
 
-> **Update (ADR 1019):** CloudTrail is now a single **organisation trail** delivering to the **Log Archive** account, and GuardDuty is enabled organisation-wide with the **Security Tooling** account as delegated administrator; GuardDuty and Security Hub findings are routed to Slack from there.
+> **Update (ADR 1019):** CloudTrail is now a single **organization trail** delivering to the **Log Archive** account, and GuardDuty is enabled organization-wide with the **Security Tooling** account as delegated administrator; GuardDuty and Security Hub findings are routed to Slack from there.
 
 > **Update (ADR 1020):** With the three-node home cluster's extra memory, **CrowdSec is realistic at home** (recommended, no longer a stretch goal).
 ## Context

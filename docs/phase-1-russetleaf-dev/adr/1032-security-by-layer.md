@@ -14,11 +14,11 @@ Cloud-native security is commonly described in four layers, the **4 C's**: **Clo
 - the summarizer's **base image** wasn't specified
 - **Secrets as environment variables** weren't prevented
 - the sites had **no HTTP security headers**, **no DAST**, no WordPress-specific hardening (user enumeration, keys and salts), and no **OWASP ASVS** mapping
-- the controls weren't summarised **by layer**
+- the controls weren't summarized **by layer**
 
 ## Decision
-- **Summarise every control by layer** in the Phase 1 design ("Security by layer"), and organise the threat model and control matrix (Phase 1 step 8.5) by the 4 C's, with an **OWASP ASVS** mapping for the application.
-- **SaaS account hardening:** passkeys or hardware security keys for GitHub, Cloudflare, Google, AWS (Identity Center), Slack and the registrars; **registrar lock** on both domains; GitHub organisation settings (default workflow token **read-only**, only verified or allow-listed Actions, required reviews, environment protections), managed with Terraform's **GitHub provider** where possible; Cloudflare **least-privilege API tokens** and audit-log review; a minimal Google Cloud project; a **quarterly access review** of all of them.
+- **Summarize every control by layer** in the Phase 1 design ("Security by layer"), and organize the threat model and control matrix (Phase 1 step 8.5) by the 4 C's, with an **OWASP ASVS** mapping for the application.
+- **SaaS account hardening:** passkeys or hardware security keys for GitHub, Cloudflare, Google, AWS (Identity Center), Slack and the registrars; **registrar lock** on both domains; GitHub organization settings (default workflow token **read-only**, only verified or allow-listed Actions, required reviews, environment protections), managed with Terraform's **GitHub provider** where possible; Cloudflare **least-privilege API tokens** and audit-log review; a minimal Google Cloud project; a **quarterly access review** of all of them.
 - **Home network and boot:** a **lab VLAN** (or separate router subnet) with rules allowing the cluster out to the internet and in from the workstation only, and blocking it from household devices; **Talos Secure Boot images** with the TPM-sealed disk encryption (ADR 1031); **BIOS passwords**.
 - **User namespaces** (`hostUsers: false`) for application pods where the Kubernetes and Talos versions support them (root in a container then maps to an unprivileged user on the node).
 - **Artifact integrity:** sign **Helm charts** with cosign (verified in CI before the version-bump pull request) and **pin charts by digest** in `wp-gitops`; grant `packages: write` only to release jobs; **mirror critical third-party images** into GHCR (copied by digest after verifying upstream signatures, then re-signed) for availability and rate limits; **hash-pinned dependencies** (uv's lock file with hashes; `composer.lock`).

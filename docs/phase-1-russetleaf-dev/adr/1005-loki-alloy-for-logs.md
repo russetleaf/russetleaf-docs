@@ -21,7 +21,7 @@ Constraints: box 1 of the home lab has 8 GB of RAM and already uses about 6–7 
 - **VictoriaLogs:** lighter on memory than Loki and simple to run; a reasonable fit for 8 GB. Not chosen because Loki is more widely used, integrates natively with Grafana (correlation with metrics and traces), and is the more recognisable skill.
 - **OpenSearch / ELK (Elasticsearch, Logstash, Kibana):** full-text search over everything, but needs several GB of memory; far too heavy for this hardware.
 - **CloudWatch Logs only:** fine on AWS, but doesn't cover the home site, and costs per GB ingested.
-- **Promtail** as the collector: deprecated in favour of Alloy.
+- **Promtail** as the collector: deprecated in favor of Alloy.
 - **No central logs (status quo):** rejected; losing logs on every restart is not production-grade.
 
 ## Consequences

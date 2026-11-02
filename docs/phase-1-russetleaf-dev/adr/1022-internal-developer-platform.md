@@ -9,7 +9,7 @@
 The project had become a capable platform (GitOps, signed supply chain, policies, observability, SLOs), but only for the services it was built around. Staff-level platform work is judged by whether **other engineers** can use the platform easily and safely. Separately, each cluster ran its own Argo CD, so there was no single place to manage both.
 
 ## Decision
-- **Backstage** as the developer portal (catalogue, TechDocs, links to dashboards, runbooks and SLOs), with PostgreSQL run by **CloudNativePG**.
+- **Backstage** as the developer portal (catalog, TechDocs, links to dashboards, runbooks and SLOs), with PostgreSQL run by **CloudNativePG**.
 - **A golden-path software template** that creates a complete new service (repo, CI with the full supply-chain pipeline, a Kyverno-compliant chart, CiliumNetworkPolicies, SLOs, dashboard, alerts, runbook stub, ApplicationSet registration).
 - **Proof:** create a **second, different service** from the template and measure time to first production deploy.
 - **Multi-tenancy:** per-tenant namespaces, Argo CD projects, quotas and limit ranges, RBAC, Kyverno policies and OpenCost showback.
@@ -17,7 +17,7 @@ The project had become a capable platform (GitOps, signed supply chain, policies
 
 ## Alternatives considered
 - **Port or Cortex (hosted portals):** less to run, but hosted services; Backstage is the open-source standard.
-- **Templates without a portal** (e.g. Copier or Cookiecutter plus a docs site): lighter, but no catalogue or ownership view; acceptable fallback if Backstage's upkeep proves too much.
+- **Templates without a portal** (e.g. Copier or Cookiecutter plus a docs site): lighter, but no catalog or ownership view; acceptable fallback if Backstage's upkeep proves too much.
 - **Per-cluster Argo CD only:** simpler networking, but no fleet view; kept as fallback.
 - **Kargo or Argo CD's own multi-cluster tooling as the hub:** possible later; ApplicationSets cover two clusters well.
 
