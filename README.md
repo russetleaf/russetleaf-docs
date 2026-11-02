@@ -2,7 +2,7 @@
 
 Design, plans, roadmap and architecture decisions for **RussetLeaf**, a production-grade WordPress platform built as a portfolio project: a highly available Talos Kubernetes cluster at home running [russetleaf.dev](https://russetleaf.dev) (Phase 1), AI post summaries with an MLOps lifecycle (Phase 2), and the same site on the full AWS production design for demos (Phase 3).
 
-**Read it as a website:** https://smscully.github.io/russetleaf-docs/
+**Read it as a website:** https://docs.russetleaf.dev
 
 ## Contents
 - [`docs/index.md`](docs/index.md): start here

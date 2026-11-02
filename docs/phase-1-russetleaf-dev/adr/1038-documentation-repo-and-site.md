@@ -12,7 +12,7 @@ The documentation (overview, phase designs, plans and roadmaps, 48 ADRs, step sp
 - **A dedicated documentation repo, `russetleaf-docs`** (the former `private-test-wordpress`, renamed on 2026-11-02, history kept), public, holding the project-level documents: the overview, phase designs, plans and roadmaps, all ADRs, step specs, the threat model and control matrix, strategy documents and postmortems.
 - **Operational docs stay with their code:** runbooks (linked from alerts), SLO definitions, chaos and performance results, security reports and the Talos hardening notes live in `docs/` of the repo that produces or uses them, mostly `wp-gitops`; the docs site links to them.
 - **Planning lives here too:** the milestones, one issue per step (created by `tools/plan_to_issues.py`) and the public GitHub Projects board.
-- **A docs site:** **MkDocs** with the **Material** theme, built by GitHub Actions and published on **GitHub Pages**, optionally at `docs.russetleaf.dev`. The build runs in **strict mode** on every pull request, so a broken link or anchor fails it.
+- **A docs site:** **MkDocs** with the **Material** theme, built by GitHub Actions and published on **GitHub Pages** at **`docs.russetleaf.dev`** (a CNAME in Cloudflare, DNS only, with the domain verified in the GitHub account to prevent subdomain takeover). The build runs in **strict mode** on every pull request, so a broken link or anchor fails it.
 - **Diagrams as code:** **Mermaid**, following the **C4 model** (system context, then containers) for each phase, kept in the same Markdown so they change in the same pull request.
 - **Keeping docs current:** each code repo's pull-request template asks whether the docs need updating; each step's spec is written here before the code.
 
@@ -33,4 +33,5 @@ The documentation (overview, phase designs, plans and roadmaps, 48 ADRs, step sp
 - Backstage becomes the main portal (Phase 1 step 8.3): consider serving these docs through TechDocs as well.
 
 ## Open items
-- Phase 1 step 1.1: confirm the site publishes, optionally add `docs.russetleaf.dev`, add the README links and pull-request templates in the code repos, and create the issues and Projects board here.
+- ~~Set up `docs.russetleaf.dev`~~: done 2026-11-02 (records added by hand; imported into Terraform in Phase 1 step 2.3).
+- Phase 1 step 1.1: add the README links and pull-request templates in the code repos, and create the issues and Projects board here.

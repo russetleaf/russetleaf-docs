@@ -1,6 +1,6 @@
 site_name: RussetLeaf
 site_description: Design, plans, roadmap and architecture decisions for a production-grade WordPress platform on Talos Kubernetes (and AWS EKS).
-site_url: https://smscully.github.io/russetleaf-docs/
+site_url: https://docs.russetleaf.dev/
 repo_url: https://github.com/smscully/russetleaf-docs
 repo_name: smscully/russetleaf-docs
 edit_uri: edit/main/docs/
