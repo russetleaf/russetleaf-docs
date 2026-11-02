@@ -1018,6 +1018,15 @@ A **monthly scheduled workflow** in `wp-gitops` checks running versions (Talos, 
 - **Quarterly:** Kubernetes minor upgrade at home, after rehearsing locally.
 - **Out of band:** security releases within 48 hours.
 
+## Disaster recovery
+
+Recovering from losses bigger than a bad change (a destroyed home lab, a compromised or lost AWS account, a regional outage, a lost GitHub or Cloudflare account) is covered by **`docs/disaster-recovery.md`**: an inventory of every asset and where its copy is, scenarios with data-loss and recovery-time targets and procedures, the bootstrap order from zero, and drills. The decisions are recorded in `docs/adr/0019-disaster-recovery.md`. In short:
+- **Rebuild from code** wherever possible (Terraform, GitOps, image builds).
+- **Copy what can't be rebuilt outside the main account and region:** a separate **backup AWS account** with **S3 Object Lock** buckets in **us-west-2** (30-day retention) receives **replicated** copies of the database backups, Terraform state, media and CloudTrail logs; russetleaf.com's database is dumped at every `demo-down` and replicated the same way; the four repos are **mirrored daily** as `git bundle`s.
+- **Regenerate secrets** rather than copy them, except account access and the Talos secrets bundle, which live in a **break-glass kit** (password manager plus a printed copy of the essentials).
+- **Drills:** monthly restores, quarterly restores from the backup account, and a **yearly full "home lab destroyed" rebuild** using only the break-glass kit and the backups.
+- **Cost:** a few cents a month.
+
 ## Rollback strategy
 
 Every change can be undone, and the way to undo it is decided **before** it's needed. The reasoning is recorded in `docs/adr/0017-rollback-strategy.md`, and each layer has a step-by-step runbook in `docs/runbooks/rollback-<layer>.md`.
@@ -1360,6 +1369,7 @@ The cost column is what russetleaf.dev costs to run 24/7, plus russetleaf.com's 
 | Logs | Loki (single binary, S3 storage) + Alloy, 7-day retention | Same, 14-day retention | <$1 |
 | Alerting | Alertmanager → Slack, dead man's switch, uptime checks, Cloudflare notifications | Same, plus CloudWatch alarms via SNS and Amazon Q Developer | $0 |
 | Account threat detection | CloudTrail + GuardDuty (account-wide, always on) | Same account | ~$1–5 |
+| Disaster recovery copies | Backup account: Object Lock buckets in us-west-2, replication, daily repo mirrors | Same (shared) | <$1 |
 | russetleaf.com always-on edge | n/a | Route 53 zone, CloudFront, offline page, media bucket, RDS snapshot (`envs/aws-edge`) | ~$1 |
 | **Total (24/7)** | | | **~$9–$20 / month** |
 
@@ -1400,6 +1410,7 @@ Together with the home lab, the total stays within **$30–$50/month**. If the A
 - **A gated Terraform pipeline:** linting (tflint + AWS ruleset), Checkov with custom project policies, module tests, Infracost cost diffs, secret scanning with push protection, and approved applies of the exact reviewed plan through a GitHub Environment.
 - **Terraform for both sides, in one repo (`wp-infra`):** shared modules, plus separate root modules for russetleaf.com's always-on edge, its demo stack (including Karpenter and its NodePools), and the russetleaf.dev home lab (Talos provider `siderolabs/talos` for both nodes' machine configs, Cloudflare provider for the tunnel, DNS and WAF rules, and the AWS pieces used from home).
 - **CI on GitHub in every repo:** Terraform checks and plans in `wp-infra`; manifest validation and Kyverno policy tests in `wp-gitops`; image builds with SBOMs, scans and signing in `wp-image` and `llm-summarizer`; and the prompt evaluation gate in `llm-summarizer`. Employers see all of it without the AWS stack running.
+- **Disaster recovery beyond a single account:** immutable, cross-account and cross-region copies (S3 Object Lock), daily repo mirrors, a break-glass kit, a written plan with scenarios and a bootstrap order, and a yearly full-rebuild drill.
 - **A defined rollback strategy:** decision rules (roll back first), Git revert as the default, automatic canary rollback, backups before database schema changes, recovery paths for Cilium, Kyverno and Argo CD, `prevent_destroy` on stateful infrastructure, re-summarizing bad AI output, and regular rollback drills.
 - **A defined update strategy:** every update is a Renovate pull request, risk-tiered (patches auto-merge; minors and majors rehearsed; applications through staging and canaries), with WPScan for WordPress plugin vulnerabilities, 48-hour security releases, and a monthly end-of-life report.
 - **Environments and promotion:** local, ci (kind + LocalStack + mock LLM per pull request), on-demand scale-to-zero staging with scrubbed production data, and automated promotion to production after staging passes.
@@ -1450,6 +1461,7 @@ wp-gitops/
     aws-eks-plan.md         # build plan for russetleaf.com
     runbooks/               # one page per alert (what it means, how to check, how to fix), plus
                             #   rollback-<layer>.md runbooks
+    disaster-recovery.md    # DR plan: asset inventory, scenarios, bootstrap order from zero, drills
     adr/                    # architecture decision records (e.g. 0001-no-service-mesh.md,
                             #   0002-s3-media-not-efs.md, 0003-kubescape-cli-not-operator.md,
                             #   0004-ghcr-not-ecr.md, 0005-loki-alloy-for-logs.md,
@@ -1459,7 +1471,7 @@ wp-gitops/
                             #   0012-kube-bench-eks-only.md, 0013-opencost-and-aws-billing.md,
                             #   0014-image-supply-chain.md, 0015-availability-levels.md,
                             #   0016-process-allow-listing.md, 0017-rollback-strategy.md,
-                            #   0018-intrusion-detection-and-prevention.md)
+                            #   0018-intrusion-detection-and-prevention.md, 0019-disaster-recovery.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
@@ -1552,6 +1564,8 @@ wp-infra/
     alerting/               # SNS topics, CloudWatch alarms, Amazon Q Developer Slack channel configs
     ...                     # vpc, eks, karpenter, rds, elasticache, cloudfront, waf
   envs/
+    dr/                     # backup account (ALWAYS ON, shared): Object Lock buckets in us-west-2, replication
+                            #   roles, write-only repo-mirror role; plus replication rules on the source buckets
     aws-edge/               # russetleaf.com, ALWAYS ON (~$1/month): Route 53 hosted zone, ACM certificates
                             #   (us-east-1 for CloudFront; the ALB's region for origin.russetleaf.com), CloudFront
                             #   distribution with the offline-page fallback, offline-page bucket, media bucket,

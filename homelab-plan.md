@@ -139,6 +139,7 @@ gh auth status
 - Create an **AWS Budget** with an email alert at about $25/month (by hand in the console is fine; Terraform takes over in step 2.1).
 - Pick an AWS region for the home lab's AWS resources (e.g. `us-east-1`) and use it everywhere.
 
+- **Break-glass kit** (see `docs/disaster-recovery.md`): in your password manager, record the AWS root login and **MFA recovery**, GitHub, Cloudflare and Google recovery codes, and the domain registrar logins; print the essentials and store the printed copy safely (ideally a second copy elsewhere). Add the Talos secrets bundle after step 2.2.
 - **Slack:** create the project workspace and the channels from `aws-wp.md` ([Alerting and notifications](aws-wp.md#alerting-and-notifications-slack)): `#rl-critical`, `#rl-dev-alerts`, `#rl-com-alerts`, `#rl-deploys`, `#rl-security`, `#rl-mlops`, `#rl-costs`, `#rl-staging`. Create the custom Slack app ("russetleaf-bot") with a bot token allowed to post to those channels, and install the **GitHub** app for Slack. Turn on phone notifications for `#rl-critical` only.
 - **Outside monitoring accounts** (free plans): a heartbeat service (e.g. healthchecks.io) and an uptime checker (e.g. UptimeRobot or Better Stack), both posting to Slack.
 
@@ -167,7 +168,7 @@ Record each answer in the [decision log](#decision-log).
 **Do:**
 - Rename this repo to **`wp-gitops`**. Create **`wp-infra`**, **`wp-image`** and **`llm-summarizer`**.
 - In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a `LICENSE` if public, branch protection on `main` (pull requests and passing checks required).
-- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) `0016-process-allow-listing.md` (finish in step 10.1) and `0017-rollback-strategy.md` (finish in steps 3.1, 5.7, 6.1, 7.4 and 10.8) and `0018-intrusion-detection-and-prevention.md` (finish in steps 2.1, 2.2, 2.3, 4.6 and 10.9); move them with the other docs.
+- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) `0016-process-allow-listing.md` (finish in step 10.1) and `0017-rollback-strategy.md` (finish in steps 3.1, 5.7, 6.1, 7.4 and 10.8) and `0018-intrusion-detection-and-prevention.md` (finish in steps 2.1, 2.2, 2.3, 4.6 and 10.9) and `0019-disaster-recovery.md` (finish in steps 0.1, 2.5 and 10.10); move them, and `docs/disaster-recovery.md`, with the other docs.
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo.
 - Add **OpenSSF Scorecard** (weekly scheduled workflow) and **zizmor** (on workflow changes) to every repo, and GitHub's **dependency-review action** to the repos with dependencies (`wp-image`, `llm-summarizer`).
 - Add **Checkov** to every repo's CI from the start, scanning the **GitHub Actions workflows** (unpinned actions, over-broad `permissions`, script injection), with a `.checkov.yaml` per repo. Later steps add each repo's other targets (Terraform, manifests, Dockerfiles, charts). Skips must carry a reason. See [Infrastructure and configuration scanning](aws-wp.md#infrastructure-and-configuration-scanning-checkov).
@@ -226,6 +227,15 @@ The cluster is deliberately **not highly available** (one control-plane node); s
 - Applies to `envs/home` stay **local** for now (the Talos provider needs your home network); they can move to in-cluster runners after step 5.5.
 
 **Test:** a pull request with a harmless change shows passing checks, a plan comment and an Infracost comment; a deliberately insecure change (e.g. a public bucket) fails Checkov; an untagged resource fails the custom tag policy; an invalid instance type fails tflint; after merge, the apply waits for approval in the `apply` environment and applies the saved plan.
+
+### Step 2.5: Disaster recovery copies
+**Do:** as described in `docs/disaster-recovery.md` and ADR 0019:
+- Create an **AWS Organization** (the main account becomes its management account) and a **backup account**; secure its root login with MFA and add it to the break-glass kit; give yourself an IAM Identity Center login to it.
+- `wp-infra/envs/dr/`: in the backup account, **S3 Object Lock** buckets in **us-west-2** (30-day retention, governance mode at first), versioned and encrypted; in the main account, **replication** rules (with a write-only role) from the Terraform state, MariaDB backup, media and CloudTrail buckets.
+- A **daily repo-mirror** workflow (`git bundle` of each repo) uploading to the backup account through a write-only OIDC role.
+- Add the **Talos secrets bundle** and talosconfig (from step 2.2) to the break-glass kit.
+
+**Test:** a new MariaDB backup appears in the backup account within minutes; deleting or overwriting it there **fails** (Object Lock); restoring a MariaDB backup **from the backup account's copy** into a scratch instance works; a repo can be cloned from its latest bundle.
 
 ## Phase 3: GitOps foundation (`wp-gitops`)
 
@@ -580,6 +590,11 @@ Record each drill's time in the decision log and compare it with the expected ti
 
 **Test:** a simulated brute-force from a test address (in staging) gets that address banned at Cloudflare, and the ban expires as configured; normal visitors aren't affected.
 
+### Step 10.10: First full disaster drill
+**Do:** simulate "the home lab is destroyed": using **only** the break-glass kit, the GitHub repos (or their mirrors) and the backups in the backup account, rebuild russetleaf.dev on a local Talos-in-Docker cluster (or on the real boxes during a maintenance window), following the bootstrap order in `docs/disaster-recovery.md`. Time each step, and fix the plan wherever it was wrong or incomplete.
+
+**Test:** russetleaf.dev's content (posts, summaries, media) is fully restored from the off-account copies; the total time is recorded in `docs/disaster-recovery.md` and ADR 0019.
+
 ## Phase 11: Optional and finishing
 
 ### Step 11.1 (optional): Keyless AWS access for pods
@@ -599,6 +614,9 @@ These keep russetleaf.dev healthy once it's running. Add each as a calendar remi
 | Task | How often | How |
 |---|---|---|
 | Rollback drill | Monthly (staging); quarterly (Talos, Cilium, Kyverno locally) | Follow a rollback runbook end to end and time it; fix the runbook if anything differed |
+| Restore from the backup account | Quarterly | Restore a MariaDB backup from the backup account's locked copy into a scratch instance |
+| Full disaster drill | Yearly | Rebuild russetleaf.dev using only the break-glass kit and off-account backups; record the time |
+| Check the break-glass kit | Every 6 months | Logins work, recovery codes are valid, the printed copy is current |
 | Test a database restore | Monthly | Restore the latest backup into a scratch MariaDB instance and check the post count (step 4.5) |
 | Merge Renovate pull requests | Weekly | Review the Dependency Dashboard and pull requests; patches auto-merge; read changelogs for minors and majors and rehearse platform ones on a local Talos-in-Docker cluster; Argo Rollouts and the CI checks catch bad application updates |
 | Security releases | Within 48 hours of a WPScan, Trivy Operator or Renovate security alert | Fast-track through ci and staging; promote as soon as staging passes |
@@ -643,6 +661,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 2.2 Talos cluster | ☐ | | | |
 | 2.3 AWS + Cloudflare resources | ☐ | | | |
 | 2.4 `wp-infra` CI | ☐ | | | |
+| 2.5 Disaster recovery copies | ☐ | | | |
 | 3.1 GitOps structure + Argo CD | ☐ | | | |
 | 4.1 Storage | ☐ | | | |
 | 4.2 Secrets | ☐ | | | |
@@ -682,6 +701,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 10.7 Custom seccomp profiles (optional) | ☐ | | | |
 | 10.8 Rollback runbooks and drills | ☐ | | | |
 | 10.9 CrowdSec (optional) | ☐ | | | |
+| 10.10 First full disaster drill | ☐ | | | |
 | 11.1 Keyless AWS access (optional) | ☐ | | | |
 | 11.2 Docs + go public | ☐ | | | |
 
