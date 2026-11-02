@@ -27,8 +27,8 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the summarizer, the demo workflows, one rehearsed and **recorded demo**, and the docs. | 0.1–2.4, 3.1, 3.2, 4.1, 6.1, 6.2, 6.3 | **~67–115** |
 | **Differentiator** | kube-bench and Kubescape on EKS, the GPU model server, evaluation and tracing on AWS, the security and cost reviews, and the EKS rollback drill. | 2.5, 4.2, 4.3, 4.4, 5.1, 5.2, 6.1b | **~14–27** |
 | **Stretch** | The fine-tuning (distillation) pipeline on the GPU (valuable for MLOps roles specifically), and the Istio ambient and Tetragon experiments. | 4.5, 5.3, 5.4 | **~22–38** |
-| **Staff** | Load tests and capacity data for the capacity plan, and management from the home Argo CD hub. | 6.4, 6.5 | **~8–12** |
-| **Total** | | | **~111–192** |
+| **Staff** | Load, stress, spike and AI burst tests for the capacity plan, and management from the home Argo CD hub. | 6.4, 6.5 | **~10–15** |
+| **Total** | | | **~113–195** |
 
 **Calendar time:** about **5–9 weeks at ~20 hours a week** for the whole AWS plan, after the home lab's Core tier is done (this plan depends on it). Allow for waiting: the **GPU quota** request (days; submit it in step 0.1 well ahead), **SES production access**, and **Bedrock model access** in the new account.
 
@@ -300,10 +300,10 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 
 **Test:** a complete demo runs in under an hour of stack time, and the recording is linked from the hub README.
 
-### Step 6.4: Load test and capacity data
-**Do:** during a demo, run **k6** load tests against russetleaf.com at increasing traffic levels; record how the HPA and Karpenter respond (scale-up time, nodes added), where latency or errors start to rise, the bottleneck (PHP workers, RDS Proxy connections, Valkey, CloudFront cache hit rate), and the cost per hour at each level. These numbers feed the capacity and cost plan (home plan step 12.7).
+### Step 6.4: Load, stress, spike and burst tests (capacity data)
+**Do:** during a demo, using the k6 Operator on EKS (the same `wp-gitops/perf/` scripts as home), run a **load** test, a **stress / breakpoint** test (ramp until failure, and check it recovers on its own), a **spike** test (about 10× suddenly, to time HPA and Karpenter scale-up), and an **AI pipeline burst** (200–500 posts queued); for edge tests through CloudFront, apply a temporary AWS WAF allow rule for the test source through Terraform and remove it afterwards. Run the tests at increasing traffic levels; record how the HPA and Karpenter respond (scale-up time, nodes added), where latency or errors start to rise, the bottleneck (PHP workers, RDS Proxy connections, Valkey, CloudFront cache hit rate), and the cost per hour at each level. These numbers feed the capacity and cost plan (home plan step 12.7).
 
-**Test:** results for at least three traffic levels are recorded, with the bottleneck identified and **cost per 1,000 visitors** calculated.
+**Test:** results for at least three traffic levels, the breaking point and recovery, spike scale-up times and the burst's drain time and cost are recorded in `docs/performance/`, with the bottleneck identified, **cost per 1,000 visitors** calculated, and the temporary WAF rule removed.
 
 ### Step 6.5: Register EKS with the home Argo CD hub
 **Do:** extend `demo-up` to register the EKS cluster with the home Argo CD (an Argo CD cluster secret using IAM authentication; the EKS API endpoint public but restricted to the home network's address), so the hub's ApplicationSets deploy the AWS overlays; extend `demo-down` to remove the registration first. Keep the per-cluster Argo CD path (step 1.8) as a documented fallback. See `docs/adr/0024-internal-developer-platform.md`.
@@ -368,7 +368,7 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 | 6.1b Rollback drill on EKS | Differentiator | 2–4 | ☐ | | | | |
 | 6.2 Rehearsal + recording | Core | 3–5 | ☐ | | | | |
 | 6.3 Documentation | Core | 2–3 | ☐ | | | | |
-| 6.4 Load test + capacity data | Staff | 4–6 | ☐ | | | | |
+| 6.4 Load, stress, spike + burst tests | Staff | 6–9 | ☐ | | | | |
 | 6.5 Register EKS with the Argo CD hub | Staff | 4–6 | ☐ | | | | |
 
 ## Decision log

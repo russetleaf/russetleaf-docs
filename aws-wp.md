@@ -1025,8 +1025,9 @@ Staging exists **only while it's being tested** (scale-to-zero): it keeps the cl
   1. Syncs the staging Applications and waits until they're healthy.
   2. Runs the **data Job**: copies the latest russetleaf.dev production backup from S3, imports it into the staging MariaDB, and **scrubs personal data** (user emails, commenter names and emails, application passwords) before anything else touches it.
   3. Runs the **smoke-test Job**: the home page and a few posts load, an upload goes to the staging S3 bucket, publishing a post produces a summary through the real gateway and real Bedrock models.
-  4. **Soaks** briefly (e.g. 30 minutes), checking Prometheus for errors and crash loops.
-  5. Records the results, then **deletes** the staging Applications and their volumes (with cascade), returning staging to zero.
+  4. Runs a **short load test** and compares it with the last production baseline: a release more than about 20% slower, or over the error threshold, **fails** (see [Performance and stress testing](#performance-and-stress-testing)).
+  5. **Soaks** briefly (e.g. 30 minutes), checking Prometheus for errors and crash loops.
+  6. Records the results, then **deletes** the staging Applications and their volumes (with cascade), returning staging to zero.
 - **Separate everything at runtime:** staging has its own namespaces, MariaDB instance (no Valkey, to save memory), media bucket, SQS queue, Secrets Manager entries and a **LiteLLM key with its own small Bedrock budget**. It shares the gateway and the llama.cpp model with production. Its IAM key can **read** the production backup bucket but write only to staging resources.
 - **Alerts:** `env=staging` alerts go only to `#rl-staging`, never to `#rl-critical`.
 
@@ -1040,6 +1041,35 @@ Staging exists **only while it's being tested** (scale-to-zero): it keeps the cl
 Infrastructure changes follow the same idea with different tools: Terraform modules are tested with **`terraform test`** in CI, Talos version upgrades are rehearsed on a **local Talos-in-Docker cluster** first, and `envs/home` changes are planned in CI before being applied.
 
 **Kargo (optional, later):** Kargo, a GitOps promotion tool from the makers of Argo CD, can replace the promotion workflows with a visual pipeline (stages, verification, approvals). It's a good portfolio addition, but its controllers are always on, so add it only if box 1 has memory to spare. The workflows above are the lightweight default.
+
+## Performance and stress testing
+
+Performance is tested on purpose, at several levels, not just checked for correctness. The reasoning is recorded in `docs/adr/0026-performance-and-stress-testing.md`.
+
+### Test types
+
+| Test | Load profile | Where | What it shows |
+|---|---|---|---|
+| **Smoke** | 1–2 virtual users for about a minute | Every staging run | The scripts work; baseline numbers |
+| **Load** | Expected traffic for about 15 minutes | Staging; home and EKS production at quiet times | The latency and error SLOs are met at normal load |
+| **Stress / breakpoint** | Ramp up until errors or latency pass their limits | Home staging; EKS during a demo | The **breaking point**, the **first bottleneck**, **how** it fails (errors or slowdown), and whether it **recovers on its own** once load drops |
+| **Spike** | A sudden jump to about 10× normal traffic | EKS (HPA and Karpenter); home | How fast it scales up; whether canary and SLO alerts trip correctly |
+| **Soak** | Moderate load for 4–8 hours | Home staging, overnight | Memory leaks, connection-pool exhaustion, growing queues |
+| **AI pipeline burst** | 200–500 posts queued at once | Home staging; EKS | KEDA scale-out limits, Bedrock throttling and gateway fallback to llama.cpp, dead-letter-queue behaviour, time to drain the queue, cost per burst |
+
+### How it's run
+- **k6** scripts (home page, posts, search, the REST API, admin sign-in through a test identity provider in staging) live in `wp-gitops/perf/`, with **thresholds in code** (e.g. 95th-percentile latency under 1 second, errors under 1%) so each run passes or fails.
+- **The k6 Operator** runs tests **inside the cluster**, distributed across pods and aimed at the ingress, so tests aren't limited by your home internet connection and don't go through Cloudflare. Its namespace gets a CiliumNetworkPolicy allowing only the ingress as a target, and its images go on the Kyverno registry allow-list.
+- **Edge tests** (through Cloudflare or CloudFront, to test caching and the WAFs themselves) use a narrow, **temporary WAF allow rule** for the test source, applied through Terraform and removed afterwards, so the WAFs are tested deliberately rather than tripped by accident.
+- **Results** go to **Prometheus** (k6's remote-write output), shown in Grafana beside the system metrics (CPU, memory, database, queue depth, Bedrock calls) for the same time window, and are summarised in `docs/performance/`.
+
+### Performance regression gate
+The `staging-test` workflow also runs a **short load test** (a few minutes at expected traffic) and compares its 95th-percentile latency and error rate with the **last production baseline** (recorded after each promotion). A release that is more than about **20% slower**, or above the error threshold, **fails promotion**, in the same way an exhausted error budget does. The baseline and the comparison are attached to the promotion pull request.
+
+### How results are used
+- **SLO targets** (ADR 0023) are set from measured capacity, not guesses.
+- The **capacity and cost plan** (strategy documents) uses the EKS stress and spike results, including **cost per 1,000 visitors**.
+- Each stress test's **first bottleneck** gets an action item (or an explanation of why it's acceptable); the **AI burst** test sets the KEDA limits and the Bedrock budget alert thresholds.
 
 ## Cost monitoring and alerts
 
@@ -1506,6 +1536,7 @@ Together with the home lab, the total stays within **$30–$50/month**. If the A
 - **Real AWS integration from home:** S3 media offload, SQS, Secrets Manager, S3 backups, Bedrock and IAM are all managed by Terraform.
 - **Generative AI run like production software:** Bedrock integration with least-privilege IAM, event-driven scaling to zero, a dead-letter queue, and cost controls, with the same code running on both clusters.
 - **Model serving on Kubernetes:** a self-hosted model on dedicated nodes (labels, taints, tolerations, node selectors), behind an LLM gateway with routing, fallback, canary splits, rate limits and budgets, so no single model provider is a dependency.
+- **Performance engineering:** smoke, load, stress, spike, soak and AI-burst tests with k6 (distributed in-cluster), results beside system metrics in Grafana, a performance regression gate in promotion, and capacity numbers that set SLOs and costs.
 - **Staff-level practices:** SLOs with error budgets that block promotions automatically, DORA metrics, an internal developer platform (Backstage, a golden-path template proven with a second service, multi-tenancy), hub-and-spoke fleet management, chaos experiments and blameless postmortems, a threat model and control matrix, strategy documents, and public writing.
 - **The full MLOps lifecycle:** MLflow experiment tracking and model registry with lineage, guardrails against prompt injection and personal-data leaks, online evaluation and drift alerts, a LoRA fine-tuning (distillation) pipeline on a spot GPU with evaluation against the base model, DVC-versioned data, and an editor feedback loop.
 - **A standalone MLOps repo (`llm-summarizer`):** versioned prompts, an evaluation set, a CI gate that compares every model and blocks changes that lower summary quality, releases gated on evaluation, a model card, a published Helm chart, and a local demo anyone can run. It's the repo to link on a CV for AI and MLOps roles.
@@ -1596,11 +1627,11 @@ The two build plans tier every step as **Core**, **Differentiator** or **Stretch
 
 | Plan | Core | Differentiator | Stretch | Staff | Total |
 |---|---|---|---|---|---|
-| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~120–208 | ~103–182 | ~19–35 | ~81–132 | ~323–557 |
-| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~67–115 | ~14–27 | ~22–38 | ~8–12 | ~111–192 |
-| **Whole project** | ~187–323 | ~117–209 | ~41–73 | ~89–144 | **~434–749** |
+| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~120–208 | ~116–203 | ~19–35 | ~81–132 | ~336–578 |
+| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~67–115 | ~14–27 | ~22–38 | ~10–15 | ~113–195 |
+| **Whole project** | ~187–323 | ~130–230 | ~41–73 | ~91–147 | **~449–773** |
 
-At about **20 hours a week**, the home lab's Core tier takes roughly **6–10 weeks**, everything except the Staff tier roughly **4–7 months**, and the whole project including it roughly **5–9 months** (about **10–17 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
+At about **20 hours a week**, the home lab's Core tier takes roughly **6–10 weeks**, everything except the Staff tier roughly **4–7 months**, and the whole project including it roughly **5–9 months** (about **10–18 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
 
 **Portfolio level:** the home lab's **Core tier on its own reads as strong intermediate work**; adding the **Differentiators**, especially the AI pipeline with its evaluation gate and **evidence of operating the system** (rollback, node-failure and disaster drills, a restore from the Backup account, a recorded AWS demo), is what makes it **senior-level**. For **MLOps** roles specifically, the inference-side work (evaluation gate, gateway, self-hosted model, monitoring) reads as strong intermediate (senior for LLMOps); **MLflow, guardrails and online evaluation** (Differentiators) make it senior for LLM-focused MLOps; the **fine-tuning pipeline, DVC and the feedback loop** (Stretch) complete the full lifecycle expected of senior MLOps generally. The **Staff** tier (SLOs and error budgets, DORA metrics, the developer platform proven with a second service, fleet management, chaos and postmortems, the threat model, strategy documents and public writing) shows **staff-level judgement**; staff roles also expect evidence of leading people and teams, which comes from your work history rather than the project. A finished subset is worth more than an unfinished whole: finish Core first.
 
@@ -1651,6 +1682,7 @@ wp-gitops/
     postmortems/            # blameless postmortems (template + incidents and drills)
     chaos/                  # chaos experiment hypotheses and results
     strategy/               # roadmap, capacity and cost plan, migration plan, build-vs-buy
+    performance/            # load, stress, spike, soak and AI burst test results; production baselines
     security/               # also threat-model.md and controls-matrix.md
     adr/                    # architecture decision records (e.g. 0001-no-service-mesh.md,
                             #   0002-s3-media-not-efs.md, 0003-kubescape-cli-not-operator.md,
@@ -1664,7 +1696,8 @@ wp-gitops/
                             #   0018-intrusion-detection-and-prevention.md, 0019-disaster-recovery.md,
                             #   0020-aws-multi-account-sra.md, 0021-three-node-ha-home-cluster.md,
                             #   0022-mlops-lifecycle.md, 0023-slos-and-error-budgets.md,
-                            #   0024-internal-developer-platform.md, 0025-reliability-practice.md)
+                            #   0024-internal-developer-platform.md, 0025-reliability-practice.md,
+                            #   0026-performance-and-stress-testing.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
@@ -1728,6 +1761,7 @@ wp-gitops/
     tenants/                # per-tenant namespaces, Argo CD projects, quotas, limit ranges, RBAC, Kyverno policies
     sloth/                  # SLO rule generation (Sloth) and SLO dashboards
     chaos-mesh/             # Chaos Mesh and scheduled experiments
+    k6-operator/            # k6 Operator for distributed in-cluster load tests (scripts in perf/)
     argo-workflows/         # Argo Workflows (online evaluation, data export, the fine-tuning pipeline on EKS)
     llm-gateway/            # LiteLLM + routing config: model list, fallbacks, canary weights, budgets
     llm-serving/            # llama.cpp model server, tolerations/node selector;
