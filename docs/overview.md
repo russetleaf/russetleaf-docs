@@ -272,7 +272,6 @@ Phase 3's figures include its AI steps (about 28–52 hours), which only apply i
 
 Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar. A finished Phase 1 is worth more than three unfinished phases.
 
-
 ## Repository structure (four repos)
 
 The project's code is split across four Git repositories, by **what each one controls** and **how often it changes**, not by environment. Both clusters (home Talos and AWS EKS) are driven from the same repos. A fifth repo, **`russetleaf-docs`**, holds the project documentation and publishes it as the docs site (ADR 1038).
