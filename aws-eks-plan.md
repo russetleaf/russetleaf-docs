@@ -175,7 +175,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 2.5: kube-bench and Kubescape scan
 **Do:**
-- `platform/kube-bench/`: a Job using the **EKS CIS benchmark** profile (node and control-plane configuration), with results saved to `docs/` in `wp-gitops` (e.g. `docs/kube-bench-eks-<date>.txt`) and a short summary of any failures and why they're accepted or fixed.
+- `platform/kube-bench/`: a Job using the **EKS CIS benchmark** profile (node and control-plane configuration), with results saved to `docs/` in `wp-gitops` (e.g. `docs/kube-bench-eks-<date>.txt`) and a short summary of any failures and why they're accepted or fixed. The summary states that the **control plane is AWS-managed** (shared-responsibility model): EKS enables only Node and RBAC authorization plus AWS's access-entry webhook, and ABAC can't be enabled; kube-bench's node-side checks (kubelet anonymous access off, webhook authorization) must pass.
 - A **Kubescape CLI** scan of the EKS cluster from the workstation (NSA-CISA and MITRE ATT&CK frameworks, plus RBAC analysis; nothing installed in the cluster), saved in `docs/security/` with a summary, and compared with the home cluster's scores. Fill in the EKS open item in `docs/adr/0003-kubescape-cli-not-operator.md`.
 
 **Test:** the Job completes and both reports are committed with summaries; any differences between the home and EKS Kubescape scores are explained (e.g. AWS-managed components).
