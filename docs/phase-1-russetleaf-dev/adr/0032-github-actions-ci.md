@@ -3,13 +3,14 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** all four repos (and repos created from the golden-path template)
+- **Phase:** 1. Later: Phase 2 adds `llm-summarizer`; Phase 3 runs the demo workflows on the home runners.
 
 ## Context
-The project needs CI for Terraform, manifests, images, charts, evaluation and promotion, plus scheduled workflows (scans, reports, demos). The code lives on GitHub. The repos were planned to stay **private** until the end (home step 11.2), but GitHub's free plan gives private repos only about **2,000 Actions minutes a month** (check current limits), which image builds, kind clusters, scans and integration tests across four repos would use up quickly. Some jobs also need to reach the home cluster or a restricted EKS API.
+The project needs CI for Terraform, manifests, images, charts, evaluation and promotion, plus scheduled workflows (scans, reports, demos). The code lives on GitHub. The repos were planned to stay **private** until the end (Phase 1 step 9.2), but GitHub's free plan gives private repos only about **2,000 Actions minutes a month** (check current limits), which image builds, kind clusters, scans and integration tests across four repos would use up quickly. Some jobs also need to reach the home cluster or a restricted EKS API.
 
 ## Decision
 - **GitHub Actions** is the CI/CD platform, with OIDC to AWS (no stored keys), GitHub Environments for approvals, and reusable workflows (including the SLSA build workflow, ADR 0014).
-- **Make the repositories public early** (step 1.1, right after a `gitleaks` scan of their history). By design nothing secret is in Git, and public repos get **free GitHub-hosted runner minutes**, free code scanning and push protection, and public GHCR packages (no storage limit or pull secrets; ADR 0004).
+- **Make the repositories public early** (Phase 1 step 1.1, right after a `gitleaks` scan of their history). By design nothing secret is in Git, and public repos get **free GitHub-hosted runner minutes**, free code scanning and push protection, and public GHCR packages (no storage limit or pull secrets; ADR 0004).
 - **Runner strategy:**
   - **GitHub-hosted runners** for most jobs (linting, scans, builds, kind tests).
   - **Self-hosted, ephemeral ARC runners** on the home cluster (under gVisor, ADR 0009) for jobs that must reach the home cluster: the evaluation gate, `staging-test`, home Terraform applies, and the **AWS demo workflows** (so the EKS API endpoint can be restricted to the home network's address).
@@ -31,4 +32,4 @@ The project needs CI for Terraform, manifests, images, charts, evaluation and pr
 - GitHub's free-tier terms change.
 
 ## Open items
-- Home plan step 1.1: scan and make the repos public; step 5.5: runners; AWS plan steps 1.4 and 6.1: the restricted endpoint and demo workflows on home runners.
+- Phase 1 step 1.1: scan and make the repos public; step 5.5: runners; Phase 3 steps 1.4 and 6.1: the restricted endpoint and demo workflows on home runners.

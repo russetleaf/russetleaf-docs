@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites and all four repos
+- **Phase:** 1. Later: Phase 2 adds model and summarizer updates; Phase 3 adds EKS versions and add-ons.
 
 ## Context
 The project has many layers that need regular updates: WordPress core, plugins and themes; base images; the summarizer's Python dependencies; platform components (Cilium, Argo CD, Kyverno, Falco, Loki and others); Talos and Kubernetes at home; EKS, AMIs, RDS and ElastiCache on AWS; Terraform providers; CLI tools and GitHub Actions; and the models. The design already pins versions (images by digest, charts, Terraform), disables WordPress's in-place updates (`DISALLOW_FILE_MODS`), and has ci kind tests, on-demand staging, promotion pull requests and Argo Rollouts canaries. What was missing was one consistent strategy, plus coverage of WordPress plugin vulnerabilities (which Trivy doesn't detect) and of end-of-life versions.
@@ -40,7 +41,7 @@ The project has many layers that need regular updates: WordPress core, plugins a
 - The site adopts premium plugins outside WPackagist: add their update sources.
 
 ## Open items
-- Home plan step 1.1: write the shared Renovate configuration (schedule, grouping, auto-merge rules, custom version rules).
-- Home plan step 5.1: move plugins to Composer with WPackagist, and add WPScan to CI and a weekly schedule.
-- Home plan step 10.6: build the version-age report workflow.
+- Phase 1 step 1.1: write the shared Renovate configuration (schedule, grouping, auto-merge rules, custom version rules).
+- Phase 1 step 5.1: move plugins to Composer with WPackagist, and add WPScan to CI and a weekly schedule.
+- Phase 1 step 7.6: build the version-age report workflow.
 - Record the first Talos and Kubernetes upgrade (with timings and any issues) in the decision log.

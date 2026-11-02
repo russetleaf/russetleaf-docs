@@ -3,6 +3,7 @@
 - **Status:** Accepted; updated by ADR 0021
 - **Date:** 2026-11-01
 - **Applies to:** russetleaf.dev (home lab). russetleaf.com uses AWS's managed EBS and S3.
+- **Phase:** 1.
 
 
 > **Update (ADR 0021):** The home cluster now has three nodes. Still no Ceph (memory per storage daemon) and no Longhorn (unnecessary): **database availability now comes from MariaDB primary–replica replication with automatic failover** (primary on box 3, replica on box 1), so a node or disk loss costs seconds of data, not hours. The 6-hourly S3 backups remain for disasters.
@@ -35,5 +36,5 @@
 - Workloads that need shared (read-write-many) volumes in the cluster.
 
 ## Open items
-- Home plan step 4.5: confirm the 6-hourly backups run within their window and record the backup size.
-- Home plan step 4.1: confirm local-path-provisioner is the only StorageClass.
+- Phase 1 step 4.5: confirm the 6-hourly backups run within their window and record the backup size.
+- Phase 1 step 4.1: confirm local-path-provisioner is the only StorageClass.

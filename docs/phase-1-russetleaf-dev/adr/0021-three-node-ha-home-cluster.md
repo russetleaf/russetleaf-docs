@@ -3,6 +3,7 @@
 - **Status:** Accepted; updated by ADR 0028
 - **Date:** 2026-11-01
 - **Applies to:** russetleaf.dev (home lab)
+- **Phase:** 1. Later: box 2 becomes the dedicated LLM node in Phase 2 (ADR 0041).
 - **Updates:** ADR 0006 (Tempo always on at home), ADR 0010 (database HA from replication), ADR 0015 (home availability), ADR 0016 (Tetragon feasible at home), ADR 0018 (CrowdSec feasible at home)
 
 
@@ -49,6 +50,6 @@ The home lab had two nodes with 8 GB of RAM each: box 1 (single control plane, a
 - More nodes with spare disks: reconsider replicated storage (Longhorn) for volumes other than the database.
 
 ## Open items
-- Home plan step 2.2: the three-node Talos configuration with the virtual IP and reservations; record etcd health under LLM load.
-- Home plan step 4.5: MariaDB replication and a failover test.
-- Home plan step 10.11: the first node-failure drills; record timings in ADR 0015.
+- Phase 1 step 2.2: the three-node Talos configuration with the virtual IP and reservations; record etcd health under LLM load.
+- Phase 1 step 4.5: MariaDB replication and a failover test.
+- Phase 1 step 7.11: the first node-failure drills; record timings in ADR 0015.

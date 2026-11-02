@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-02
 - **Applies to:** both clusters
+- **Phase:** 1. Later: Phase 3 adds the EKS kubelet limits and the CloudWatch persistence alarms.
 
 ## Context
 The design was checked against the common Kubernetes threat model, which groups threats into eight areas: trust boundaries and data flow, persistence, denial of service, malicious code execution, compromised applications in containers, attacker on the network, access to sensitive data, and privilege escalation.
@@ -10,13 +11,13 @@ The design was checked against the common Kubernetes threat model, which groups 
 Four areas were well covered: malicious code execution (signed images, Falco, gVisor, seccomp), compromised applications (non-root, read-only, no service-account token, Pod Security `restricted`, default-deny networking), attacker on the network (Cilium policies, WireGuard, internal TLS, lab VLAN) and access to sensitive data (encryption at rest, Secret access limited and alerted).
 
 Four had gaps:
-- **Trust boundaries and data flow:** described only in the Staff-tier threat model (home step 12.5), late in the build and not mapped to these areas.
+- **Trust boundaries and data flow:** described only in the Staff-tier threat model (Phase 1 step 8.5), late in the build and not mapped to these areas.
 - **Persistence:** nodes can't be changed (Talos), and Argo CD self-heal reverts changes to what it manages, but nothing flagged **new** objects created outside Argo CD (a CronJob, DaemonSet or admission webhook left behind by an attacker), and long-lived service-account token Secrets weren't blocked.
 - **Denial of service:** quotas, memory limits and edge rate limits existed, but there was **no per-pod process (PID) limit** (a fork bomb could exhaust a node), no explicit eviction thresholds, no ephemeral-storage limits, and nothing watched the API server's request throttling.
 - **Privilege escalation through RBAC:** Pod Security blocks container-based escalation, but nothing checked roles for **risky permissions** (`escalate`, `bind`, `impersonate`, `nodes/proxy`, wildcards, or `create pods` where powerful service accounts run), especially in third-party charts.
 
 ## Decision
-- **Trust boundaries and data flows** are drawn now in `aws-wp.md` ([Kubernetes threat model coverage](../../aws-wp.md#kubernetes-threat-model-coverage)), with a table mapping each of the eight areas to its controls and tests. The STRIDE threat model (home step 12.5) adds a cross-check against the eight areas.
+- **Trust boundaries and data flows** are drawn now in the overview ([Kubernetes threat model coverage](../../overview.md#kubernetes-threat-model-coverage)), with a table mapping each of the eight areas to its controls and tests. The STRIDE threat model (Phase 1 step 8.5) adds a cross-check against the eight areas.
 - **Persistence:**
   - Argo CD **AppProjects warn about orphaned resources** (objects in managed namespaces that Argo CD doesn't own), shown in the UI and sent to `#rl-security` through Argo CD Notifications.
   - New audit alerts: **`KubeWorkloadCreatedOutsideArgoCD`** (Pods, Deployments, DaemonSets, StatefulSets, Jobs or CronJobs created in production or platform namespaces by anyone other than Argo CD and the expected controllers), **`KubeAdmissionWebhookChanged`** (validating or mutating webhook configurations created, changed or deleted by anyone other than Argo CD and the components that manage their own webhooks, such as Kyverno and cert-manager's CA injector) and **`KubeTokenSecretCreated`** (a long-lived service-account token Secret).
@@ -50,11 +51,11 @@ Four had gaps:
 - The cluster gets other users or tenants: consider custom API Priority and Fairness levels per tenant.
 
 ## Open items
-- Home plan step 2.2: kubelet PID limit and eviction thresholds.
-- Home plan step 3.1: orphaned-resource warnings in Argo CD AppProjects.
-- Home plan step 4.6: the three persistence alerts.
-- Home plan step 4.4: `KubeAPIRequestsRejected`.
-- Home plan step 6.1: RBAC policy, token-Secret block, ephemeral-storage defaults, Kubescape RBAC check in CI.
-- Home plan steps 6.3 and 10.2: exfiltration test; RBAC review and accepted findings.
-- Home plan step 12.5: map the threat model to the eight areas.
-- AWS plan steps 1.4 and 2.3: kubelet limits on EKS nodes; the persistence alerts from the EKS audit log; step 5.1 checks.
+- Phase 1 step 2.2: kubelet PID limit and eviction thresholds.
+- Phase 1 step 3.1: orphaned-resource warnings in Argo CD AppProjects.
+- Phase 1 step 4.6: the three persistence alerts.
+- Phase 1 step 4.4: `KubeAPIRequestsRejected`.
+- Phase 1 step 6.1: RBAC policy, token-Secret block, ephemeral-storage defaults, Kubescape RBAC check in CI.
+- Phase 1 steps 6.3 and 7.2: exfiltration test; RBAC review and accepted findings.
+- Phase 1 step 8.5: map the threat model to the eight areas.
+- Phase 3 steps 1.4 and 2.3: kubelet limits on EKS nodes; the persistence alerts from the EKS audit log; step 5.1 checks.

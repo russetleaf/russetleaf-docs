@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-02
 - **Applies to:** both clusters, GHCR, the observability stack
+- **Phase:** 1. Later: Phase 2 adds the summarizer's signing identity; Phase 3 adds the EKS checks.
 
 ## Context
 The design was checked against the common platform security topics: supply chain security, the image repository, observability, service mesh, Kubernetes PKI, mutual TLS and admission controllers.
@@ -56,10 +57,10 @@ Supply chain security was strong (signed images with SBOM and SLSA provenance ve
 - GHCR adds tag immutability or retention policies.
 
 ## Open items
-- Home plan step 2.2: kubelet serving certificates and the approver; metrics-server without insecure TLS.
-- Home plan step 4.4: Prometheus verifies the kubelet's certificate; certificate expiry alerts.
-- Home plan step 4.6: Loki tenants and the Grafana Security organisation.
-- Home plan step 5.1: GHCR package access, the cleanup workflow, VEX.
-- Home plan step 6.1: Kyverno replicas, failure policy, timeouts, ValidatingAdmissionPolicy backstop.
-- Home plan step 10.2: admission plugin check; CA rotation runbook and rehearsal.
-- AWS plan step 5.1: the same checks on EKS.
+- Phase 1 step 2.2: kubelet serving certificates and the approver; metrics-server without insecure TLS.
+- Phase 1 step 4.4: Prometheus verifies the kubelet's certificate; certificate expiry alerts.
+- Phase 1 step 4.6: Loki tenants and the Grafana Security organisation.
+- Phase 1 step 5.1: GHCR package access, the cleanup workflow, VEX.
+- Phase 1 step 6.1: Kyverno replicas, failure policy, timeouts, ValidatingAdmissionPolicy backstop.
+- Phase 1 step 7.2: admission plugin check; CA rotation runbook and rehearsal.
+- Phase 3 step 5.1: the same checks on EKS.

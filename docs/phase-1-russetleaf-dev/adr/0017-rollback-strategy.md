@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites
+- **Phase:** 1. Later: Phase 2 adds model-routing rollback and re-summarizing; Phase 3 adds the demo-stack and edge rollbacks.
 
 ## Context
 Rollback mechanisms existed in pieces (Argo Rollouts canaries, Git reverts, `talosctl rollback`, database backups and snapshots, staging gates), but there was no single strategy. Several cases weren't covered:
@@ -46,8 +47,8 @@ Rollback mechanisms existed in pieces (Argo Rollouts canaries, Git reverts, `tal
 - WordPress or a plugin adopts reversible migrations.
 
 ## Open items
-- Home plan step 5.7: the `schema-change` label and the pre-promotion backup.
-- Home plan step 6.1: Kyverno webhook exclusions and the emergency procedure, tested.
-- Home plan step 3.1: Cilium on manual sync, and the `helm rollback` recovery path tested locally.
-- Home plan step 7.4: the re-summarize job.
-- Home plan step 10.8: the first set of rollback drills, with timings.
+- Phase 1 step 5.7: the `schema-change` label and the pre-promotion backup.
+- Phase 1 step 6.1: Kyverno webhook exclusions and the emergency procedure, tested.
+- Phase 1 step 3.1: Cilium on manual sync, and the `helm rollback` recovery path tested locally.
+- Phase 2 step 2.4: the re-summarize job.
+- Phase 1 step 7.8: the first set of rollback drills, with timings.

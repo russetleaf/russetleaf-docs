@@ -1,0 +1,41 @@
+# ADR 0039: Build the project in three phases
+
+- **Status:** Accepted
+- **Date:** 2026-11-02
+- **Applies to:** the whole project and its documents
+- **Phase:** all (recorded in Phase 1)
+
+## Context
+The project had grown to two sites and one design document: russetleaf.dev at home and russetleaf.com on EKS, with AI post summaries and an MLOps lifecycle running through both. Effort was estimated at roughly 525–875 focused hours. Built in one go, that's a year or more of evenings with nothing finished in between, and much of it (the EKS demo stack, GPU fine-tuning) may never be needed for interviews. The home lab alone already shows most of the platform work: infrastructure as code, GitOps, security, observability, delivery and operations.
+
+## Decision
+Build in **three phases**, each complete and demonstrable on its own, with its own design, build plan and decisions:
+
+| Phase | Builds | Needs |
+|---|---|---|
+| **1. russetleaf.dev** | WordPress on the three-node Talos cluster at home, with the AWS Organization it uses, GitOps, platform services, security, observability, staging and promotion, DR, and the Staff-tier practices | — |
+| **2. AI summaries and MLOps** | The summary pipeline (SQS, KEDA, LiteLLM, Bedrock, the self-hosted model on box 2), the evaluation gate, MLflow, guardrails, online evaluation, drift, feedback and DVC | Phase 1 |
+| **3. russetleaf.com** | The EKS demo site (Karpenter, RDS with RDS Proxy, ElastiCache, CloudFront, ALB, WAF, the always-on edge), plus the AI pipeline on EKS and GPU fine-tuning if Phase 2 is built | Phase 1 (Phase 2 optional) |
+
+- **Documents:** `docs/overview.md` holds what's shared (the phases, how the two sites compare, security views, effort, repositories, the ADR index); each phase has a folder with `design.md`, `plan.md` and `adr/`.
+- **ADR numbers stay global and permanent.** Each ADR lives in the folder of the phase that first implements it. Where a decision has a substantial later-phase part, that part is a separate ADR in the later phase (0042–0045); smaller later-phase parts are noted in the ADR's **Phase** line.
+- **Plans group steps into stages** ("Phase" always means one of the three project phases); step references across phases name the phase ("Phase 1 step 4.6").
+- **Phase 1 stands alone:** nothing in it waits for AI or EKS. Box 2 is an ordinary third node until Phase 2; fleet management uses a local spoke cluster until Phase 3; the capacity plan uses home load tests until Phase 3.
+
+## Alternatives considered
+- **One plan, tiers only (Core, Differentiator, Stretch, Staff):** tiers rank steps by value, but the AI and EKS work was interleaved through every stage, so no subset was complete without the rest.
+- **Two phases (home with AI, then EKS):** keeps the AI pipeline in the first build, but delays a finished site by a few months, and the AI work is the part least needed for platform roles.
+- **Separate documents per site:** duplicates the shared platform design, which is most of it.
+
+## Consequences
+- A complete, publishable project after Phase 1 (about 330–546 hours, or 169–275 for its Core tier).
+- Phases 2 and 3 can be skipped, reordered or done years apart without leaving half-built work.
+- Some integration work is repeated per phase (policies, network rules, monitoring for new components), adding roughly 15–25 hours overall.
+- Phase 1's design mentions later phases only in short notes; the details live in their own design documents.
+
+## When to revisit
+- A job target makes one later phase more valuable (e.g. MLOps roles: do Phase 2 next; cloud platform roles: Phase 3).
+- A phase turns out too large to finish: split it further rather than leaving it half done.
+
+## Open items
+- Phase 1 step 1.1: move the `docs/` tree into `wp-gitops` with the other docs.

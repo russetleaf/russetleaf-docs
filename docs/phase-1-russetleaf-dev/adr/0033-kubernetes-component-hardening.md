@@ -2,7 +2,10 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-02
-- **Applies to:** both clusters
+- **Applies to:** both clusters (the EKS-specific parts are tracked in ADR 0044)
+- **Phase:** 1. EKS: ADR 0044 (Phase 3).
+
+> **Update (ADR 0044):** the project is now built in three phases (ADR 0039). This ADR is Phase 1's: the Talos cluster and the controls shared by both clusters. The **EKS-specific controls** (envelope encryption with a customer-managed key, API endpoint access, kube-bench on the nodes, the checks in the AWS security review) are recorded in ADR 0044 (Phase 3). The EKS entries in the table below are kept for comparison.
 
 ## Context
 A review of the design against the Kubernetes components (API server, controller-manager, scheduler, kubelet, container runtime, kube-proxy, etcd, Pod Security Admission and Standards, network and storage) found strong coverage for the network, runtime, admission and kubelet layers, but gaps in: per-namespace **Pod Security Admission**; the full **`restricted`** Pod Security Standard for application namespaces; **encryption at rest** (Secrets in etcd, the home disks, etcd snapshots); **verification** of the control-plane components' settings; **service-account tokens** mounted in every pod; and access to the Talos and Kubernetes API ports on the home network.
@@ -31,20 +34,18 @@ On the home cluster, Talos manages the control-plane components and their settin
 - **Kyverno only (no PSA labels):** one enforcement point; adding PSA gives a second, built-in one at almost no cost.
 - **PSA only (no Kyverno restricted set):** the built-in controller can't produce reports or CI tests, and can't express project-specific rules.
 - **Disk encryption with a static key or node ID instead of the TPM:** works on hardware without a TPM, but the key is less protected; TPM sealing is preferred where available.
-- **AWS-owned keys for EKS envelope encryption:** the default and free, but the SRA prefers customer-managed keys for control and audit.
 
 ## Consequences
 - Every component has explicit controls and a repeatable check, recorded in the Talos hardening document and the security review.
 - Workloads that need API access must opt in to a token, and anything new must meet `restricted` in application namespaces.
 - Disk encryption depends on each node's TPM; replacing a node's TPM or motherboard needs the documented recovery procedure.
-- A KMS key for EKS envelope encryption (about $1/month while the demo account has it).
 
 ## When to revisit
 - A node lacks TPM 2.0: use Talos's static-key option and record the weaker protection.
 - Talos or EKS defaults change (re-run the checks after upgrades).
 
 ## Open items
-- Home plan step 2.2: disk encryption, host firewall, `seccompDefault`, PSA defaults.
-- Home plan step 6.1: PSA namespace labels, Kyverno `restricted` set, service-account token default.
-- Home plan step 10.2: the verification checks, recorded in `docs/talos-hardening.md`.
-- AWS plan step 1.4: envelope encryption with a customer-managed key; step 5.1: the checks on EKS.
+- Phase 1 step 2.2: disk encryption, host firewall, `seccompDefault`, PSA defaults.
+- Phase 1 step 6.1: PSA namespace labels, Kyverno `restricted` set, service-account token default.
+- Phase 1 step 7.2: the verification checks, recorded in `docs/talos-hardening.md`.
+- EKS: see ADR 0044.

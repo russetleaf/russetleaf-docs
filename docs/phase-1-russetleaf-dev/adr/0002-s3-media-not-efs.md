@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites
+- **Phase:** 1. Later: Phase 3 serves russetleaf.com's media from its own bucket through CloudFront.
 
 ## Context
 WordPress needs somewhere to keep `wp-content`: uploaded media, plus (traditionally) plugins and themes. When WordPress runs on several servers or pods, they must all see the same files. Many WordPress-on-AWS guides, including AWS's own reference architecture for WordPress on EC2 Auto Scaling groups, put `wp-content` on **Amazon EFS**, a shared network filesystem.
@@ -44,4 +45,4 @@ Also considered:
 - A move away from containers to a traditional server-based setup.
 
 ## Open items
-- **Offload plugin choice** (home plan step 5.1): compare **S3-Uploads** (Human Made; writes directly to S3, so no writable uploads folder) and **WP Offload Media Lite** (writes locally first, then copies to S3). Check uploads, thumbnails, deletion, the media URL (S3 at home, CloudFront on AWS) and custom S3 endpoint support. Record the choice and reasons here, and whether the uploads `emptyDir` is needed.
+- **Offload plugin choice** (Phase 1 step 5.1): compare **S3-Uploads** (Human Made; writes directly to S3, so no writable uploads folder) and **WP Offload Media Lite** (writes locally first, then copies to S3). Check uploads, thumbnails, deletion, the media URL (S3 at home, CloudFront on AWS) and custom S3 endpoint support. Record the choice and reasons here, and whether the uploads `emptyDir` is needed.

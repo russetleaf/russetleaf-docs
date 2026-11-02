@@ -3,6 +3,7 @@
 - **Status:** Accepted; updated by ADR 0020
 - **Date:** 2026-11-01
 - **Applies to:** both sites, the AWS accounts, and the supporting services (GitHub, Cloudflare, Google, domain registrars)
+- **Phase:** 1. Later: Phase 3 adds russetleaf.com's logical dump at `demo-down` and its restore drill.
 
 
 > **Update (ADR 0020):** The Organization now has a **dedicated management account** that runs nothing (rather than the workload account acting as management), and the Backup account sits in the **Security OU** alongside **Security Tooling** and **Log Archive**. CloudTrail logs are in the Log Archive account's locked buckets rather than replicated from a workload account. Member accounts have no root credentials (centralised root access management), so the break-glass kit holds only the management account's root access plus the Identity Center logins.
@@ -18,7 +19,7 @@ The design could already rebuild most things from code (Terraform, GitOps, image
 - **russetleaf.com's database:** a logical dump at every `demo-down`, stored in its backup bucket and replicated (instead of cross-account snapshot copies, which would need KMS key sharing).
 - **Daily repo mirrors** (`git bundle`) of the four repos into the backup account, through a write-only OIDC role. Images and charts are rebuilt rather than copied.
 - **Regenerate secrets rather than copy them**, except those that can't be regenerated (account access, the Talos secrets bundle), which go in the **break-glass kit**: the password manager plus a printed copy of the essentials.
-- **A written plan** (`docs/disaster-recovery.md`): an asset inventory, scenarios with data-loss and recovery-time targets and procedures, and the bootstrap order from zero.
+- **A written plan** (`docs/phase-1-russetleaf-dev/disaster-recovery.md`): an asset inventory, scenarios with data-loss and recovery-time targets and procedures, and the bootstrap order from zero.
 - **Drills:** monthly restore; quarterly restore from the backup account; a yearly full "home lab destroyed" rebuild using only the kit and backups; a once-then-yearly russetleaf.com restore; a 6-monthly break-glass kit check.
 
 ## Alternatives considered
@@ -41,7 +42,7 @@ The design could already rebuild most things from code (Terraform, GitOps, image
 - Data grows enough that replication or Object Lock costs matter.
 
 ## Open items
-- Home plan steps 2.0 and 2.5: create the Organization and accounts, including the Backup account (2.0); create the locked buckets, replication and repo mirrors (2.5); test a restore from the backup account.
-- Home plan step 0.1: assemble the break-glass kit.
-- Home plan step 10.10: the first full disaster drill; record the time in `docs/disaster-recovery.md`.
-- AWS plan step 6.1: the logical dump at `demo-down`; restore it once from the backup account.
+- Phase 1 steps 2.0 and 2.5: create the Organization and accounts, including the Backup account (2.0); create the locked buckets, replication and repo mirrors (2.5); test a restore from the backup account.
+- Phase 1 step 0.1: assemble the break-glass kit.
+- Phase 1 step 7.10: the first full disaster drill; record the time in `docs/phase-1-russetleaf-dev/disaster-recovery.md`.
+- Phase 3 step 6.1: the logical dump at `demo-down`; restore it once from the backup account.

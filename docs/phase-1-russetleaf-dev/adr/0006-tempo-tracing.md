@@ -3,6 +3,7 @@
 - **Status:** Accepted; updated by ADR 0021
 - **Date:** 2026-11-01
 - **Applies to:** both sites (always on for russetleaf.com demos; on demand for russetleaf.dev)
+- **Phase:** 1 (page traces, always on at home). Later: Phase 2 traces the summary pipeline end to end (100% of summary jobs); Phase 3 runs Tempo on every demo.
 
 
 > **Update (ADR 0021):** The home cluster now has three nodes (box 3: i5-8500T, 16 GB), so **Tempo runs always on at home** (sampled, 3-day retention), not on demand.
@@ -41,6 +42,6 @@ Constraints: box 1 of the home lab has 8 GB of RAM and is close to its limit; EK
 - A move fully into AWS: reconsider X-Ray or AWS's managed options.
 
 ## Open items
-- Home plan step 10.4: record Tempo's memory use and the sampling rates that work.
-- AWS plan step 4.4: confirm the end-to-end trace (publish → summary saved) in a demo and add a screenshot to the docs.
+- Phase 1 step 7.4: record Tempo's memory use and the sampling rates that work.
+- Phase 3 step 4.4: confirm the end-to-end trace (publish → summary saved) in a demo and add a screenshot to the docs.
 - Confirm the current OpenTelemetry PHP package names for WordPress, database and HTTP auto-instrumentation when building the image.

@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites
+- **Phase:** 3. In Phase 1, the home cluster relies on Trivy Operator, Kubescape and the Talos hardening checks (ADR 0033).
 
 ## Context
 **kube-bench** checks a cluster against the **CIS Kubernetes Benchmark** by running on a node and inspecting configuration files, file permissions and process arguments (kubelet, API server, etcd) in the locations used by standard Linux distributions and kubeadm-style installs.
@@ -41,5 +42,5 @@ Both sites run **Trivy Operator**, which produces **CIS compliance reports** con
 - A compliance requirement demands the same tool on every cluster.
 
 ## Open items
-- AWS plan step 2.5: create the per-node-pool Job templates and the accepted-findings file; record the first results.
-- Home plan step 10.2: confirm Trivy Operator's compliance metrics appear in Prometheus and the Compliance dashboard works.
+- Phase 3 step 2.5: create the per-node-pool Job templates and the accepted-findings file; record the first results.
+- Phase 1 step 7.2: confirm Trivy Operator's compliance metrics appear in Prometheus and the Compliance dashboard works.

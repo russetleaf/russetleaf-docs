@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites (the same WordPress image)
+- **Phase:** 1. Later: Phase 2 adds the AI summary box.
 
 ## Context
 russetleaf.dev is the project's public face, so it needs a custom design and a logo rather than a default theme. Modern WordPress **block themes** can be customised in the admin **Site Editor**, but those changes are stored **in the database**, not in files. That would let the live design drift from Git and bypass review, signing, staging and promotion, contradicting ADR 0002 (code in the image, nothing changed in production).
@@ -31,5 +32,5 @@ russetleaf.dev is the project's public face, so it needs a custom design and a l
 - WordPress gains a native way to keep Site Editor changes in theme files.
 
 ## Open items
-- Home plan step 5.10: the brief, theme, logo and brand assets, and the Site Editor lock.
-- Home plan step 5.11: visual regression, accessibility and Lighthouse gates.
+- Phase 1 step 5.10: the brief, theme, logo and brand assets, and the Site Editor lock.
+- Phase 1 step 5.11: visual regression, accessibility and Lighthouse gates.

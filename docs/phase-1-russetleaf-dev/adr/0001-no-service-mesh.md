@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites
+- **Phase:** 1. Later: Phase 3 tries Istio ambient mode on EKS during a demo.
 
 ## Context
 Service meshes such as Istio are common in larger production Kubernetes environments. They add mutual TLS (mTLS) between services, layer-7 authorization, traffic shifting, retries and timeouts, and per-service request metrics.
@@ -38,5 +39,5 @@ Don't run a service mesh. Cover a mesh's benefits with tools already in the desi
 - More memory on the home nodes (e.g. 16 GB), making Istio ambient mode affordable.
 
 ## Open items
-- **EKS WireGuard support:** confirm whether Cilium's WireGuard encryption is supported in chaining mode with the VPC CNI for the Cilium version installed (AWS plan step 1.4). If not, record it here; application-level TLS then covers encryption in transit on EKS.
-- **Optional Istio ambient experiments:** if run, add the findings (memory used, latency added, setup issues with Cilium, what it added) from the local kind experiment (home plan step 6.4) and the EKS experiment (AWS plan step 5.3).
+- **EKS WireGuard support:** confirm whether Cilium's WireGuard encryption is supported in chaining mode with the VPC CNI for the Cilium version installed (Phase 3 step 1.4). If not, record it here; application-level TLS then covers encryption in transit on EKS.
+- **Optional Istio ambient experiments:** if run, add the findings (memory used, latency added, setup issues with Cilium, what it added) from the local kind experiment (Phase 1 step 6.4) and the EKS experiment (Phase 3 step 5.3).

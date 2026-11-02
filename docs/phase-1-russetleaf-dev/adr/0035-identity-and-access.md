@@ -2,7 +2,10 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-02
-- **Applies to:** both clusters and their admin tools
+- **Applies to:** both clusters and their admin tools (the EKS-specific parts are tracked in ADR 0045)
+- **Phase:** 1. EKS: ADR 0045 (Phase 3).
+
+> **Update (ADR 0045):** the project is now built in three phases (ADR 0039). This ADR is Phase 1's. **EKS access** (Identity Center permission sets mapped to access entries) and the **EKS audit-log archive** are recorded in ADR 0045 (Phase 3).
 
 ## Context
 Workload identity was well covered (projected service-account tokens off by default, Pod Identity on EKS, scoped keys at home), and the admin UIs sat behind Cloudflare Access with Google. But for **people**:
@@ -19,12 +22,12 @@ Workload identity was well covered (projected service-account tokens off by defa
 - **Break-glass:** the Talos-generated admin kubeconfig is kept **only in the break-glass kit**, never used day to day, and an **audit alert** (`KubeBreakGlassAdminUsed`) fires whenever its identity makes a request. If Dex is down, the break-glass kubeconfig is the documented way in.
 - **Talos API roles:** day-to-day talosconfig uses the **`os:reader`** role; `os:admin` is break-glass and change-time only.
 - **Human RBAC roles** (`wp-gitops/platform/rbac/`): **`platform-admin`**, **`operator`** (deploy, restart, view logs; no RBAC or Secret changes) and **`read-only`** ClusterRoles, bound to Dex groups (or, for a single person, specific users); **no day-to-day cluster-admin**. Argo CD's service account remains the identity that changes production.
-- **EKS:** IAM Identity Center permission sets mapped to **access entries** with the EKS **cluster-admin** (break-glass) and **view/edit** access policies; the CI apply role scoped to what Terraform needs.
+- **EKS:** see ADR 0045.
 - **SSO inside the admin tools:** Argo CD (OIDC through Dex, with its RBAC mapping groups to roles), Grafana (OIDC with Viewer, Editor and Admin roles) and Backstage, all behind Cloudflare Access as well.
-- **Audit-log retention:** Kubernetes audit logs are also shipped to an **S3 bucket with Object Lock in the Log Archive account**, kept **1 year** (home: Alloy writes a copy; EKS: a CloudWatch Logs subscription delivers through Firehose); Argo CD's audit events (who synced or changed what) are collected into Loki and the same archive.
+- **Audit-log retention:** Kubernetes audit logs are also shipped to an **S3 bucket with Object Lock in the Log Archive account**, kept **1 year** (Alloy writes a copy; EKS: ADR 0045); Argo CD's audit events (who synced or changed what) are collected into Loki and the same archive.
 - **Default-deny network policies for platform namespaces** too (Argo CD, monitoring, logging, External Secrets, Kyverno, cert-manager, Dex, KEDA, Argo Rollouts and others), with least-privilege egress per component (e.g. Argo CD → GitHub and GHCR and the API server; External Secrets → Secrets Manager; cert-manager → the API server), tested in CI.
 - **Pod Security Admission version pinned** on every namespace (`enforce-version`), so Kubernetes upgrades don't silently change enforcement.
-- **Keyless AWS access for the home cluster** (home step 11.1) moves from Stretch to **Differentiator**, removing the last static AWS keys.
+- **Keyless AWS access for the home cluster** (Phase 1 step 9.1) moves from Stretch to **Differentiator**, removing the last static AWS keys.
 
 ## Alternatives considered
 - **Admin client certificates for everyday use:** simple, but can't be revoked and grant full control.
@@ -44,7 +47,7 @@ Workload identity was well covered (projected service-account tokens off by defa
 - Talos or Kubernetes changes the authentication configuration interface.
 
 ## Open items
-- Home plan step 4.7: Dex, OIDC sign-in, roles, tool SSO, the break-glass alert, Talos `os:reader`.
-- Home plan step 4.6: audit-log archive and Argo CD audit events.
-- Home plan step 6.3: platform default-deny policies; step 6.1: PSA version pins.
-- AWS plan steps 1.4 and 1.7: access entries; EKS audit-log archive.
+- Phase 1 step 4.7: Dex, OIDC sign-in, roles, tool SSO, the break-glass alert, Talos `os:reader`.
+- Phase 1 step 4.6: audit-log archive and Argo CD audit events.
+- Phase 1 step 6.3: platform default-deny policies; step 6.1: PSA version pins.
+- EKS: see ADR 0045.

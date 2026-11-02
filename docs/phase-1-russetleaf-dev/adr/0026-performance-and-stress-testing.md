@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites and the AI pipeline
+- **Phase:** 1 (load, stress, spike, soak, the regression gate, a capacity estimate). Later: Phase 2 adds the AI burst test; Phase 3 measures EKS for the capacity plan.
 
 ## Context
 Load tests appeared only in passing (the gVisor comparison, light load during node-failure drills, and capacity tests on EKS). Nothing found **where and how** the sites break, tested sudden surges or long-running load, measured the AI pipeline's capacity under a burst of posts, or stopped a slower release from being promoted. Load from a single source would also be rate-limited or blocked by the Cloudflare and AWS WAF rules, and home tests would be limited by the home internet connection.
@@ -32,7 +33,7 @@ Load tests appeared only in passing (the gVisor comparison, light load during no
 - The regression threshold proves too noisy: widen it or compare medians over several runs.
 
 ## Open items
-- Home plan step 5.9: k6 Operator, scripts, the baseline and the regression gate.
-- Home plan step 7.6: the AI pipeline burst test.
-- Home plan step 10.12: stress, spike and soak tests at home.
-- AWS plan step 6.4: stress, spike and burst tests on EKS.
+- Phase 1 step 5.9: k6 Operator, scripts, the baseline and the regression gate.
+- Phase 2 step 2.6: the AI pipeline burst test.
+- Phase 1 step 7.12: stress, spike and soak tests at home.
+- Phase 3 step 6.4: stress, spike and burst tests on EKS.

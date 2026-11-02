@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-02
 - **Applies to:** both sites, the AWS accounts and the supporting SaaS accounts
+- **Phase:** 1 (most controls). Later: Phase 2 adds prompt-injection guardrails; Phase 3 adds the AWS edge and VPC controls.
 
 ## Context
 Cloud-native security is commonly described in four layers, the **4 C's**: **Cloud** (the provider and infrastructure), **Cluster** (Kubernetes), **Container** (images and runtime) and **Code** (the application and its dependencies); each layer depends on the one outside it. A review against that model, and against cloud provider, infrastructure, isolation, artifact, image, workload and application-code security, found the design strong in depth but with gaps:
@@ -16,7 +17,7 @@ Cloud-native security is commonly described in four layers, the **4 C's**: **Clo
 - the controls weren't summarised **by layer**
 
 ## Decision
-- **Summarise every control by layer** in `aws-wp.md` ("Security by layer"), and organise the threat model and control matrix (home step 12.5) by the 4 C's, with an **OWASP ASVS** mapping for the application.
+- **Summarise every control by layer** in the Phase 1 design ("Security by layer"), and organise the threat model and control matrix (Phase 1 step 8.5) by the 4 C's, with an **OWASP ASVS** mapping for the application.
 - **SaaS account hardening:** passkeys or hardware security keys for GitHub, Cloudflare, Google, AWS (Identity Center), Slack and the registrars; **registrar lock** on both domains; GitHub organisation settings (default workflow token **read-only**, only verified or allow-listed Actions, required reviews, environment protections), managed with Terraform's **GitHub provider** where possible; Cloudflare **least-privilege API tokens** and audit-log review; a minimal Google Cloud project; a **quarterly access review** of all of them.
 - **Home network and boot:** a **lab VLAN** (or separate router subnet) with rules allowing the cluster out to the internet and in from the workstation only, and blocking it from household devices; **Talos Secure Boot images** with the TPM-sealed disk encryption (ADR 0033); **BIOS passwords**.
 - **User namespaces** (`hostUsers: false`) for application pods where the Kubernetes and Talos versions support them (root in a container then maps to an unprivileged user on the node).
@@ -46,4 +47,4 @@ Cloud-native security is commonly described in four layers, the **4 C's**: **Clo
 - The router can't do VLANs: use a separate router or firewall for the lab.
 
 ## Open items
-- Home plan steps 0.1, 0.3, 1.1, 2.2, 2.3, 5.1, 5.2, 5.6, 5.7, 6.1, 7.4 and 12.5; AWS plan steps 1.2, 2.4 and 5.1.
+- Phase 1 steps 0.1, 0.3, 1.1, 2.2, 2.3, 5.1, 5.2, 5.6, 5.7, 6.1 and 8.5 and Phase 2 step 2.4; Phase 3 steps 1.2, 2.4 and 5.1.

@@ -3,6 +3,7 @@
 - **Status:** Accepted; updated by ADR 0021
 - **Date:** 2026-11-01
 - **Applies to:** both sites
+- **Phase:** 1 (WordPress's allow-list). Later: Phase 2 adds the summarizer, gateway and llama.cpp lists; Phase 3 tries Tetragon enforcement on EKS.
 
 
 > **Update (ADR 0021):** With the three-node home cluster's extra memory, **Tetragon enforcement is realistic at home** after its EKS trial.
@@ -43,6 +44,6 @@ Platform constraints:
 - A compliance requirement mandates mandatory access control profiles.
 
 ## Open items
-- Home plan step 10.1: write and test the allow-list rules.
-- Home plan step 10.7 (optional): Security Profiles Operator recordings for WordPress and the summarizer.
-- AWS plan step 5.4 (optional): Tetragon enforcement trial during a demo; record memory use and any false blocks.
+- Phase 1 step 7.1: write and test the allow-list rules.
+- Phase 1 step 7.7 (optional): Security Profiles Operator recordings for WordPress and the summarizer.
+- Phase 3 step 5.4 (optional): Tetragon enforcement trial during a demo; record memory use and any false blocks.

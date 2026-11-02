@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** russetleaf.dev (and russetleaf.com during demos)
+- **Phase:** 1. Later: Phase 2 adds latency injected into model calls.
 
 ## Context
 The design had rollback, node-failure and disaster drills, but no regular, hypothesis-driven testing of failure modes inside the running system, and no standard way of learning from incidents.
@@ -26,4 +27,4 @@ The design had rollback, node-failure and disaster drills, but no regular, hypot
 - Experiments become routine and stable: automate them as part of releases (e.g. a chaos stage before promotion).
 
 ## Open items
-- Home plan step 12.6: Chaos Mesh, the first experiments, the postmortem template and the first two postmortems.
+- Phase 1 step 8.6: Chaos Mesh, the first experiments, the postmortem template and the first two postmortems.

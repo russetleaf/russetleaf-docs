@@ -3,6 +3,7 @@
 - **Status:** Accepted; updated by ADR 0020, ADR 0021
 - **Date:** 2026-11-01
 - **Applies to:** both sites and the AWS account
+- **Phase:** 1. Later: Phase 3 adds AWS WAF, GuardDuty's EKS monitoring and the EKS audit alerts.
 
 
 > **Update (ADR 0020):** CloudTrail is now a single **organisation trail** delivering to the **Log Archive** account, and GuardDuty is enabled organisation-wide with the **Security Tooling** account as delegated administrator; GuardDuty and Security Hub findings are routed to Slack from there.
@@ -42,7 +43,7 @@ Falco provides runtime detection inside containers, but on its own it isn't an i
 - A home-network IDS (router-level) becomes part of the lab.
 
 ## Open items
-- Home plan step 2.1: CloudTrail, GuardDuty and the Slack routing; test with GuardDuty sample findings.
-- Home plan steps 2.2 and 4.6: the Talos audit policy, collection into Loki, and the audit alert rules.
-- Home plan step 2.3: Cloudflare managed rules, rate limiting and XML-RPC blocking.
-- Home plan step 10.9 (optional): CrowdSec.
+- Phase 1 step 2.1: CloudTrail, GuardDuty and the Slack routing; test with GuardDuty sample findings.
+- Phase 1 steps 2.2 and 4.6: the Talos audit policy, collection into Loki, and the audit alert rules.
+- Phase 1 step 2.3: Cloudflare managed rules, rate limiting and XML-RPC blocking.
+- Phase 1 step 7.9 (optional): CrowdSec.

@@ -3,6 +3,7 @@
 - **Status:** Accepted; updated by ADR 0032
 - **Date:** 2026-11-01
 - **Applies to:** both sites
+- **Phase:** 1. Later: Phase 3 may add an ECR pull-through cache for GHCR.
 
 
 > **Update (ADR 0032):** The repos are now made **public early** (ADR 0032), so the GHCR packages are made public at first push: no private-package storage limit and no pull secrets are needed. The private-package mitigations below apply only if a repo has to stay private.
@@ -11,7 +12,7 @@ The project builds two images, each with a Helm chart published as an OCI artifa
 - **russetleaf.dev** runs 24/7 on a home Talos cluster, **outside AWS**.
 - **russetleaf.com** runs on EKS only during demos.
 
-Images are built and signed (cosign keyless) in GitHub Actions, and Kyverno only admits images signed by those workflows and pulled from allowed registries. ~~The repos are private while being built and become public later (home plan step 11.2).~~ **Superseded by ADR 0032:** the repos are made public early (step 1.1).
+Images are built and signed (cosign keyless) in GitHub Actions, and Kyverno only admits images signed by those workflows and pulled from allowed registries. ~~The repos are private while being built and become public later (Phase 1 step 9.2).~~ **Superseded by ADR 0032:** the repos are made public early (step 1.1).
 
 ## Decision
 Use **GHCR** for all project images and charts: `ghcr.io/<github-user>/wp-image` and `ghcr.io/<github-user>/llm-summarizer`. Both sites pull from GHCR. On AWS, an **ECR pull-through cache** in front of GHCR is optional.
@@ -42,5 +43,5 @@ Reasons, in order of importance:
 - GitHub pull limits, outages or pricing changes affecting deployments.
 
 ## Open items
-- Decide in home plan step 5.1 whether to make the packages public at first push, or keep them private with a retention rule until step 11.2; record the choice here.
-- AWS plan step 0.2: decide whether to add the ECR pull-through cache.
+- Decide in Phase 1 step 5.1 whether to make the packages public at first push, or keep them private with a retention rule until Phase 1 step 9.2; record the choice here.
+- Phase 3 step 0.2: decide whether to add the ECR pull-through cache.

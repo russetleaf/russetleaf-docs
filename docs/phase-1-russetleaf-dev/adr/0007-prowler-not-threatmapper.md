@@ -3,6 +3,7 @@
 - **Status:** Accepted; updated by ADR 0020
 - **Date:** 2026-11-01
 - **Applies to:** both sites (the AWS account is shared by the home lab's AWS resources and russetleaf.com)
+- **Phase:** 1. Later: Phase 3 adds a Prowler run per demo with the stack up.
 
 
 > **Update (ADR 0020):** The project now follows the AWS Security Reference Architecture, with **Security Hub** (AWS Foundational Security Best Practices and CIS standards) as the **continuous** posture check across all accounts. Prowler remains as a free monthly **second opinion**, now run against every account. The "AWS Security Hub" alternative below was rejected on cost at the time; ADR 0020 accepts that cost (about $5–15/month with Config and KMS).
@@ -52,6 +53,6 @@ ThreatMapper's management console bundles several databases and services; its do
 - Many more services, where attack-path ranking would help prioritise findings.
 
 ## Open items
-- Home plan step 10.5: first Prowler run; record the baseline and accepted findings.
-- AWS plan step 5.1: first run with the demo stack up.
+- Phase 1 step 7.5: first Prowler run; record the baseline and accepted findings.
+- Phase 3 step 5.1: first run with the demo stack up.
 - Check ThreatMapper's current project status if this decision is revisited.

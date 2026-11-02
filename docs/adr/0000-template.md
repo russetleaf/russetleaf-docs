@@ -3,6 +3,9 @@
 - **Status:** Proposed | Accepted | Superseded by ADR NNNN
 - **Date:** YYYY-MM-DD
 - **Applies to:** russetleaf.dev, russetleaf.com, or both
+- **Phase:** the phase that first implements it (1, 2 or 3), and what later phases add
+
+<!-- ADR numbers are global and permanent. Save the file in docs/phase-N-.../adr/ for the phase that first implements it, and add it to the index in docs/overview.md. -->
 
 ## Context
 What problem or question prompted this decision? What constraints apply (cost, memory, team size, security, portability between the two sites)?

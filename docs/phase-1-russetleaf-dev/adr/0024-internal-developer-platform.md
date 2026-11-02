@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** the home cluster as the platform; russetleaf.com as a managed spoke
+- **Phase:** 1 (Backstage, the golden path, multi-tenancy, the Argo CD hub with a local spoke cluster). Later: Phase 3 adds EKS as a second spoke.
 
 ## Context
 The project had become a capable platform (GitOps, signed supply chain, policies, observability, SLOs), but only for the services it was built around. Staff-level platform work is judged by whether **other engineers** can use the platform easily and safely. Separately, each cluster ran its own Argo CD, so there was no single place to manage both.
@@ -31,4 +32,4 @@ The project had become a capable platform (GitOps, signed supply chain, policies
 - More clusters: consider a dedicated management cluster or a managed Argo CD.
 
 ## Open items
-- Home plan steps 12.3, 12.4 and 12.8; AWS plan step 6.5.
+- Phase 1 steps 8.3, 8.4 and 8.8; Phase 3 step 6.5.

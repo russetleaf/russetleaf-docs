@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites
+- **Phase:** 1. Later: Phase 3 adds the ALB's OIDC rule and russetleaf.com's OAuth client.
 
 ## Context
 Only admins and editors log in to WordPress; site visitors don't. By default WordPress uses its own username/password logins at `/wp-login.php`, which is a constant target for password-guessing and credential-stuffing attacks. The project already avoids human-handled passwords elsewhere (IAM auth for the database on AWS, generated passwords at home) and already uses Cloudflare Access for admin tools on the home site. Constraints: no cost, both sites working the same way, no plugin installs from the admin screen (ADR 0002), and the post-summarizer must keep logging in to the REST API with an application password.
@@ -36,5 +37,5 @@ Only admins and editors log in to WordPress; site visitors don't. By default Wor
 - More than 50 users would need Cloudflare Access (beyond its free tier).
 
 ## Open items
-- Home plan step 5.8: choose and verify the OIDC plugin (maintenance, environment-variable configuration, application passwords unaffected); record the choice here.
-- AWS plan step 3.1: confirm the ALB OIDC rule works behind CloudFront (cookies forwarded, admin paths uncached).
+- Phase 1 step 5.8: choose and verify the OIDC plugin (maintenance, environment-variable configuration, application passwords unaffected); record the choice here.
+- Phase 3 step 3.1: confirm the ALB OIDC rule works behind CloudFront (cookies forwarded, admin paths uncached).

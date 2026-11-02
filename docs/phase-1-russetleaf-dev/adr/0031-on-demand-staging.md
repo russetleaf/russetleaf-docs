@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** russetleaf.dev (staging for both sites' application versions)
+- **Phase:** 1. Later: Phase 2 adds the summarizer to staging.
 
 ## Context
 Every release needs testing against real AWS services, real models and realistic data before production. Options range from no staging, to an always-on copy, to a separate cluster. The home cluster's memory was tight when staging was designed (two 8 GB nodes); with ADR 0021's third node it could now afford an always-on copy.
@@ -28,4 +29,4 @@ Every release needs testing against real AWS services, real models and realistic
 - More hardware: a separate staging cluster for platform upgrades.
 
 ## Open items
-- Home plan steps 5.6 and 5.7.
+- Phase 1 steps 5.6 and 5.7.

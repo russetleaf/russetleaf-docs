@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** seccomp on both sites; gVisor on the home cluster only
+- **Phase:** 1. Later: Phase 2 runs the evaluation jobs on the sandboxed runners; Phase 3 doesn't use gVisor on EKS.
 
 ## Context
 Containers on a node share its Linux kernel, so a kernel exploit from inside one container could compromise the whole node. The design already limits what containers can do (Pod Security `baseline`, non-root, read-only root filesystem, dropped capabilities, CiliumNetworkPolicies, Falco), but didn't require a **seccomp** profile and had no **sandboxed runtime**.
@@ -41,6 +42,6 @@ Constraints: home nodes have 8 GB of RAM; Talos offers official system extension
 - AWS offering a managed sandboxed runtime for EKS, or running untrusted code on EKS: reconsider gVisor there.
 
 ## Open items
-- Home plan step 6.5: load-test WordPress with and without gVisor; record response times and the decision.
-- Home plan step 6.5: confirm the ARC runner jobs (evaluation, staging tests) all work under gVisor.
-- Home plan step 10.1: confirm Falco's gVisor event source detects a shell in a sandboxed pod.
+- Phase 1 step 6.5: load-test WordPress with and without gVisor; record response times and the decision.
+- Phase 1 step 6.5: confirm the ARC runner jobs (evaluation, staging tests) all work under gVisor.
+- Phase 1 step 7.1: confirm Falco's gVisor event source detects a shell in a sandboxed pod.

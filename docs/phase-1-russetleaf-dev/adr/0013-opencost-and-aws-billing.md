@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites and the AWS account
+- **Phase:** 1 (OpenCost at home, AWS Budgets, anomaly detection). Later: Phase 2 adds Bedrock spend and cost per summary; Phase 3 adds the per-demo cost report, the GPU-node alert and the demo safety net.
 
 ## Context
 The design used OpenCost on both clusters (with Kubecost as an optional alternative on EKS) and AWS Budgets and Cost Anomaly Detection for the account, but:
@@ -31,7 +32,7 @@ The design used OpenCost on both clusters (with Kubecost as an optional alternat
 
 ## Consequences
 - Every cost signal ends up in `#rl-costs`, whether it comes from AWS or the clusters.
-- Estimates and actual costs are compared after every demo, so the cost tables in `aws-wp.md` stay honest.
+- Estimates and actual costs are compared after every demo, so the cost tables in the Phase 1 design stay honest.
 - Per-workload allocation history on EKS isn't kept between demos; only the actual totals are.
 - Cost Explorer API calls cost about $0.01 each; a daily report costs pennies a month.
 
@@ -41,6 +42,6 @@ The design used OpenCost on both clusters (with Kubecost as an optional alternat
 - Costs grow enough to justify a dedicated FinOps tool.
 
 ## Open items
-- Home plan step 2.1: activate the cost allocation tags (they must already exist on a resource).
-- Home plan step 10.3: OpenCost alerts and the weekly summary workflow.
-- AWS plan step 5.2: the per-demo Cost Explorer report; record actual cost per demo hour.
+- Phase 1 step 2.1: activate the cost allocation tags (they must already exist on a resource).
+- Phase 1 step 7.3: OpenCost alerts and the weekly summary workflow.
+- Phase 3 step 5.2: the per-demo Cost Explorer report; record actual cost per demo hour.

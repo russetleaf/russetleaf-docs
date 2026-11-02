@@ -3,6 +3,7 @@
 - **Status:** Accepted; updated by senior review
 - **Date:** 2026-11-01
 - **Applies to:** russetleaf.dev (and russetleaf.com during demos)
+- **Phase:** 1 (site and API SLOs). Later: Phase 2 adds summary freshness and quality.
 
 
 > **Update (senior review):** Availability and latency SLIs are measured at the **ingress inside the cluster**, so home internet outages don't burn the error budget (the external uptime check still alerts on them). The error-budget policy has an **exclusion process** for documented external incidents (e.g. ISP or Bedrock outages): an annotation linking the incident record removes that window from the budget calculation.
@@ -32,5 +33,5 @@ Alerting was threshold-based (error spikes, latency, freshness of backups), and 
 - More services join the platform: SLOs become part of the golden-path template.
 
 ## Open items
-- Home plan step 12.1: SLO definitions, Sloth rules, dashboards, the promotion gate; tune targets after the first month.
-- Home plan step 12.2: the DORA workflow and dashboard.
+- Phase 1 step 8.1: SLO definitions, Sloth rules, dashboards, the promotion gate; tune targets after the first month.
+- Phase 1 step 8.2: the DORA workflow and dashboard.

@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** `wp-image` and `llm-summarizer` (and Scorecard on all four repos)
+- **Phase:** 1 (`wp-image`). Later: Phase 2 builds `llm-summarizer` through the same pipeline.
 
 ## Context
 The image pipelines already had gitleaks, Checkov, Trivy (critical vulnerabilities), WPScan, Syft SBOMs, cosign keyless signing, signed SBOM attestations and Rekor transparency-log entries, with Kyverno verifying signatures and SBOM attestations at admission. Missing were: language linting and application security analysis (SAST) for the project's own Python and PHP; dependency checks before the build; Dockerfile linting; deeper workflow security analysis; checks on the built image's properties; secrets baked into image layers; **build provenance** (how and where an image was built); in-pipeline verification of signatures; and an audit of the repos' own security practices.
@@ -38,6 +39,6 @@ The image pipelines already had gitleaks, Checkov, Trivy (critical vulnerabiliti
 - Chainguard or Wolfi offers pinned versions on a free tier.
 
 ## Open items
-- Home plan steps 5.1 and 7.4: implement the pipeline in both repos; record the first release's Rekor links.
-- Home plan step 6.1: confirm Kyverno can verify the GitHub provenance attestation with the release workflow's identity, and enforce it.
+- Phase 1 step 5.1 and Phase 2 step 2.4: implement the pipeline in both repos; record the first release's Rekor links.
+- Phase 1 step 6.1: confirm Kyverno can verify the GitHub provenance attestation with the release workflow's identity, and enforce it.
 - Record the initial OpenSSF Scorecard scores in the decision log.

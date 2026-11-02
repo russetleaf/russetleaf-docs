@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites
+- **Phase:** 1. Later: Phase 3 scans EKS once per demo.
 
 ## Context
 Kubescape (a CNCF project) assesses a Kubernetes cluster's security posture. It can scan manifests and Helm charts in CI, run inside the cluster as an operator (with vulnerability scanning, a per-node agent and its own storage), score clusters against recognised frameworks (NSA-CISA Kubernetes hardening guidance, MITRE ATT&CK for Kubernetes, CIS), and analyse RBAC for risky permissions.
@@ -44,5 +45,5 @@ Box 1 of the home lab has 8 GB of RAM and already uses about 6–7 GB.
 - Trivy Operator or Falco being removed, leaving the operator's other features uncovered.
 
 ## Open items
-- First home-cluster scan (home plan step 10.2): record the baseline scores and any accepted findings.
-- First EKS scan (AWS plan step 2.5).
+- First home-cluster scan (Phase 1 step 7.2): record the baseline scores and any accepted findings.
+- First EKS scan (Phase 3 step 2.5).

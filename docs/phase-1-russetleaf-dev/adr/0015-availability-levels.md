@@ -3,6 +3,7 @@
 - **Status:** Accepted; updated by ADR 0021
 - **Date:** 2026-11-01
 - **Applies to:** both sites
+- **Phase:** 1 (the home cluster). Later: Phase 3 adds russetleaf.com's availability while running.
 
 
 > **Update (ADR 0021):** The home lab now has **three control-plane nodes** with a virtual IP, replicated MariaDB with automatic failover, and spread workloads, so it **survives any single node failure** (recovery point: seconds; recovery time: about a minute). Power and internet remain single points of failure; a UPS is recommended. The "Future changes" items 1, 3 and 4 for the home lab are now done; the table below describes the original two-node state.
@@ -32,7 +33,7 @@ High availability (HA) means a site keeps working when a single component (a nod
 |---|---|---|
 | russetleaf.dev, single node or disk loss (**current**, three nodes; ADR 0021) | Seconds (MariaDB replication lag) | About a minute (database failover; other workloads already on other nodes) |
 | ~~russetleaf.dev, node or disk loss (original two-node lab)~~ | ~~≤ 6 hours (MariaDB backup interval); media, logs and traces are in S3~~ | ~~A few hours: rebuild the node or cluster from Git, restore the latest backup~~ |
-| russetleaf.dev, disaster (data corrupted or home lab lost) | ≤ 6 hours (MariaDB backup interval) | 1–2 days with new hardware (see `docs/disaster-recovery.md`) |
+| russetleaf.dev, disaster (data corrupted or home lab lost) | ≤ 6 hours (MariaDB backup interval) | 1–2 days with new hardware (see `docs/phase-1-russetleaf-dev/disaster-recovery.md`) |
 | russetleaf.dev, home outage (power, internet) | None (data is intact) | Until power or internet returns; the external uptime check alerts |
 | russetleaf.com, node, zone or database failure (while running) | Seconds (RDS Multi-AZ, synchronous replication) | Seconds to minutes (Kubernetes rescheduling, RDS failover, Karpenter replacing nodes) |
 | russetleaf.com, between demos | Content kept in the final RDS snapshot and the media bucket | The next `demo-up` (about 20–30 minutes) |
@@ -50,7 +51,7 @@ High availability (HA) means a site keeps working when a single component (a nod
 **AWS (russetleaf.com):**
 1. **Three NAT Gateways** (one per zone): about **+$65/month** if running 24/7.
 2. **More GPU capacity:** on-demand or a second GPU node, about **+$350/month** for on-demand; or rely on the existing Bedrock fallback.
-3. **Always-on operation:** the full **~$720–820/month** in `aws-wp.md`'s cost table.
+3. **Always-on operation:** the full **~$720–820/month** in the Phase 1 design's cost table.
 4. **Multi-region disaster recovery:** cross-region copies of RDS snapshots and S3 data (backup-and-restore costs little more than storage), or a warm standby in a second region with **Route 53 failover** (roughly doubles the cost).
 
 ## Alternatives considered
@@ -71,6 +72,6 @@ High availability (HA) means a site keeps working when a single component (a nod
 - A requirement for regional disaster recovery appears.
 
 ## Open items
-- Home plan step 2.2: rehearse a full rebuild of the cluster from Git and record the actual recovery time.
-- Home plan step 4.5: confirm the 6-hour recovery point with the backup schedule.
-- AWS plan step 3.1: test a forced RDS failover (already planned) and a node loss; record recovery times.
+- Phase 1 step 2.2: rehearse a full rebuild of the cluster from Git and record the actual recovery time.
+- Phase 1 step 4.5: confirm the 6-hour recovery point with the backup schedule.
+- Phase 3 step 3.1: test a forced RDS failover (already planned) and a node loss; record recovery times.

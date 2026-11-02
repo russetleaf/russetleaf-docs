@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** all AWS usage by both sites
+- **Phase:** 1 (the Organization and all accounts except russetleaf-com). Later: Phase 3 creates russetleaf-com.
 - **Updates:** ADR 0007 (Security Hub now used; Prowler kept as a second opinion), ADR 0018 (organisation CloudTrail and GuardDuty, delegated administration), ADR 0019 (a dedicated management account; CloudTrail logs in Log Archive)
 
 ## Context
@@ -35,8 +36,8 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 - russetleaf.com becomes always-on or holds user data: add Macie, Detective and Inspector, and consider a separate network account.
 
 ## Open items
-- Home plan step 2.0: create the management account, the Organization, OUs, accounts, SCPs, Identity Center, tag policies and root access management; move the existing account in.
-- Home plan step 2.0b: the security services in Security Tooling; first Security Hub score recorded.
-- Home plan step 2.4: Access Analyzer policy checks in the Terraform pipeline.
-- AWS plan steps 0.1 and 1.x: russetleaf.com in its own account (GPU quota, SES, Bedrock access, IMDSv2, VPC endpoints, flow logs).
+- Phase 1 step 2.0: create the management account, the Organization, OUs, accounts, SCPs, Identity Center, tag policies and root access management; move the existing account in.
+- Phase 1 step 2.0b: the security services in Security Tooling; first Security Hub score recorded.
+- Phase 1 step 2.4: Access Analyzer policy checks in the Terraform pipeline.
+- Phase 3 steps 0.1 and 1.x: russetleaf.com in its own account (GPU quota, SES, Bedrock access, IMDSv2, VPC endpoints, flow logs).
 - Run the first Well-Architected review once both sites exist; keep the report in `docs/`.
