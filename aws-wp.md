@@ -306,7 +306,7 @@ Each Kubernetes component has explicit controls and a repeatable check, recorded
 - **Pod Security Admission labels on every namespace, on both clusters** (EKS doesn't enforce Pod Security by default): `restricted` for application namespaces (WordPress, summarizer, gateway, model server, staging, tenants), `baseline` for most platform services, `privileged` only for node agents (Cilium, Falco, Alloy, the storage provisioner, the NVIDIA device plugin), with the **PSA version pinned** (`enforce-version`) so Kubernetes upgrades don't silently change enforcement. Kyverno's **`restricted`** policy set enforces the same for application namespaces, so two independent controls apply.
 - **Service-account tokens off by default:** a Kyverno rule sets `automountServiceAccountToken: false` unless a workload needs the Kubernetes API (operators, Argo CD, KEDA, External Secrets).
 - **Encryption at rest:** Secrets in etcd (Talos's built-in encryption at home; **EKS envelope encryption with a customer-managed KMS key**); **Talos disk encryption** of the system-state and data partitions on every home node, **sealed to the TPM**; etcd snapshots stored only in the KMS-encrypted backup bucket, readable only by the backup role.
-- **kubelet:** `seccompDefault: true` (RuntimeDefault even for pods that don't ask), the read-only port off, certificate rotation, a **per-pod PID limit** (`podPidsLimit`, so a fork bomb can't exhaust a node) and **hard eviction thresholds** for memory, disk and inodes, alongside `systemReserved` and `kubeReserved` (ADR 0036).
+- **kubelet:** `seccompDefault: true` (RuntimeDefault even for pods that don't ask), the read-only port off, certificate rotation, **serving certificates signed by the cluster CA** (so metrics-server and Prometheus verify TLS; ADR 0037), a **per-pod PID limit** (`podPidsLimit`, so a fork bomb can't exhaust a node) and **hard eviction thresholds** for memory, disk and inodes, alongside `systemReserved` and `kubeReserved` (ADR 0036).
 - **Control-plane settings verified at home** (profiling off, local-only binding, NodeRestriction, per-controller service-account credentials) with `talosctl`, in `docs/talos-hardening.md`.
 - **Talos host firewall:** the Kubernetes API (6443) and Talos API (50000) reachable only from the LAN and the workstation.
 
@@ -366,6 +366,19 @@ flowchart LR
 | **Attacker on the network** | CiliumNetworkPolicies (default-deny, DNS-name egress, layer 7), WireGuard, internal TLS (ADR 0030), lab VLAN, host firewall, API endpoints restricted | Hubble (`HubblePolicyDropsSpike`), CrowdSec, GuardDuty | MariaDB unreachable from other namespaces; ports 6443 and 50000 refused from outside the LAN |
 | **Access to sensitive data** | Secrets encrypted at rest, External Secrets, Secrets as files, roles without Secret access, encrypted backups, IMDSv2 with hop limit 1, egress limited by DNS name | `KubeUnexpectedSecretRead`; audit archive; CloudTrail | **Exfiltration test:** sending data from each application pod to an unlisted destination is blocked and shows in Hubble |
 | **Privilege escalation** | Pod Security, no privileged pods or host access, NodeRestriction, least-privilege human roles; a Kyverno policy **rejecting risky RBAC** (`escalate`, `bind`, `impersonate`, `nodes/proxy`, wildcards, `cluster-admin` bindings) outside an allow-list | `KubeRBACChangedOutsideArgoCD`; Kubescape RBAC checks in CI and monthly | A Role with `impersonate` is rejected; the RBAC review lists who can create pods or read Secrets |
+
+### Platform security
+The platform's own security (supply chain, registry, observability, mesh, PKI, mTLS and admission), checked against the common platform-security topics and recorded in `docs/adr/0037-platform-security.md`:
+
+| Topic | How it's covered |
+|---|---|
+| **Supply chain security** | Signed images with SBOM and SLSA provenance, verified at admission and pinned by digest; signed charts; mirrored upstream images; Renovate, Scorecard, zizmor, gitleaks, Checkov; accepted vulnerabilities as signed **OpenVEX** statements. See [Supply chain and policy](#supply-chain-and-policy). |
+| **Image repository** | GHCR, each package linked to its repo with write access only from that repo's Actions; images pinned by digest; a monthly **cleanup workflow** that never deletes a digest referenced in `wp-gitops` in the last 90 days or one of the last 10 releases. |
+| **Observability** | Grafana through Cloudflare Access and Dex SSO; **two Loki tenants**, with the audit log and runtime-security events in a **Security** Grafana organisation visible only to platform admins; Loki, Prometheus, Tempo and Alertmanager reachable only by Grafana, Alloy and Prometheus (network policies are their access control; none is exposed); token masking in logs. |
+| **Service mesh** | Not used (ADR 0001); its features are covered by Cilium (WireGuard, layer-7 policies, Hubble) and Argo Rollouts; Istio ambient tried as an experiment. |
+| **Kubernetes PKI** | Talos manages the cluster CAs and rotates leaf certificates; **kubelet serving certificates signed by the cluster CA** (no `--kubelet-insecure-tls` anywhere); certificate expiry alerts; a rehearsed **CA rotation runbook**; yearly talosconfig renewal; the internal CA for applications (ADR 0030). On EKS, AWS runs the cluster PKI. |
+| **Mutual TLS** | etcd mTLS; WireGuard between nodes; TLS on every sensitive connection with the internal CA. Per-service cryptographic identity isn't used (ADR 0001): identity is enforced by Cilium policies. |
+| **Admission controllers** | Kyverno with **three admission replicas** across nodes, **fail-closed** security policies with short timeouts, recovery exclusions and runbook; **ValidatingAdmissionPolicy backstops** (allowed registries, no `cluster-admin` bindings, no token Secrets) that hold even if Kyverno is down; Pod Security Admission; enabled admission plugins checked on both clusters. |
 
 ### Intrusion detection and prevention
 Falco is one layer among several. The design combines **prevention** (stopping attacks) and **detection** (noticing them) at every layer, so no single tool has to catch everything. The reasoning is recorded in `docs/adr/0018-intrusion-detection-and-prevention.md`.
@@ -487,7 +500,7 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
 | Chart checks | `helm lint` and `ct lint` (chart-testing) | Chart correctness |
 | Build | Docker Buildx | Builds the image (base images pinned by digest) |
 | Image checks | **container-structure-test** | The built image runs as non-root, listens on port 8080, has the expected files and no leftover tools |
-| Image scanning | **Trivy** with its **vulnerability**, **secret** and **misconfiguration** scanners | Fails on critical vulnerabilities and on any secret baked into a layer; accepted findings go in `.trivyignore` with a reason and an expiry date |
+| Image scanning | **Trivy** with its **vulnerability**, **secret** and **misconfiguration** scanners | Fails on critical vulnerabilities and on any secret baked into a layer; accepted vulnerabilities go in signed **OpenVEX** statements (`.vex/`, each with a justification and review date, attached to the image as an attestation); `.trivyignore` only for secret and misconfiguration findings (ADR 0037) |
 | Tests | Unit tests, Compose smoke test, kind integration tests; the **evaluation gate** (summarizer) | Behaviour |
 | Publish | Push **by digest** to GHCR (image and chart) | Only after everything above passes |
 | Sign | **cosign** keyless (GitHub OIDC → Fulcio certificate) | Signature recorded in **Rekor** |
@@ -590,7 +603,7 @@ The site uses a **custom image built on the official `wordpress` image** and a *
 
 **Repos and packages are public early** (ADR 0032): the repos are made public in home step 1.1, after a secret scan, which gives free GitHub-hosted CI minutes, and the GHCR packages are made public at first push.
 
-**Where images and charts are hosted:** on **GitHub Container Registry (GHCR)** under the project's GitHub account: `ghcr.io/<github-user>/wp-image` and `ghcr.io/<github-user>/llm-summarizer`, each holding its image and its Helm chart (as an OCI artifact). Each package is linked to the repo whose CI publishes it. **GHCR packages have their own visibility setting, separate from the repo's:** a package stays **private** even after its repo is made public, until its visibility is changed in the package's settings. While packages are private, both clusters need credentials to pull them: an image pull secret for the kubelet, and OCI repository credentials for Argo CD (both from a GitHub token with `read:packages` only, kept in Secrets Manager and synced by External Secrets). Once the packages are public, both can be removed. While packages are private, GitHub's free-plan limits for private packages apply (roughly 500 MB of storage and limited transfer), so either make the packages public early or delete old untagged versions automatically. Why GHCR rather than ECR is recorded in `docs/adr/0004-ghcr-not-ecr.md`.
+**Where images and charts are hosted:** on **GitHub Container Registry (GHCR)** under the project's GitHub account: `ghcr.io/<github-user>/wp-image` and `ghcr.io/<github-user>/llm-summarizer`, each holding its image and its Helm chart (as an OCI artifact). Each package is linked to the repo whose CI publishes it. **GHCR packages have their own visibility setting, separate from the repo's:** a package stays **private** even after its repo is made public, until its visibility is changed in the package's settings. While packages are private, both clusters need credentials to pull them: an image pull secret for the kubelet, and OCI repository credentials for Argo CD (both from a GitHub token with `read:packages` only, kept in Secrets Manager and synced by External Secrets). Once the packages are public, both can be removed. While packages are private, GitHub's free-plan limits for private packages apply (roughly 500 MB of storage and limited transfer), so either make the packages public early or delete old untagged versions automatically. Why GHCR rather than ECR is recorded in `docs/adr/0004-ghcr-not-ecr.md`. **Access and cleanup (ADR 0037):** each package accepts writes only from its own repo's Actions (no personal tokens with `write:packages`); a monthly cleanup workflow deletes untagged versions older than 90 days but never a digest referenced in `wp-gitops` in the last 90 days or one of the last 10 releases, so rollbacks always find their image.
 
 ## Networking: Cilium and Hubble
 
@@ -1043,7 +1056,7 @@ Alloy needs to read log files on each node and listen on a host port for Talos's
 Each has a runbook in `docs/runbooks/` and a test of its log query.
 
 ### Privacy
-Logs can contain visitors' IP addresses and occasionally email addresses. Short retention (7 and 14 days), masking in Alloy, and access to Grafana only through Cloudflare Access (home) or port-forward (AWS) keep that in check. Staging logs come from scrubbed data.
+Logs can contain visitors' IP addresses and occasionally email addresses. Short retention (7 and 14 days), masking in Alloy, and access to Grafana only through Cloudflare Access (home) or port-forward (AWS) keep that in check. **Security logs are separate:** the API audit log, Argo CD audit events and runtime-security events go to a separate Loki tenant (`security`), visible only in a Grafana **Security** organisation whose members are platform admins (ADR 0037). Staging logs come from scrubbed data.
 
 ### Cost and memory
 - **Money:** a few cents a month per site for the S3 buckets.
@@ -1349,7 +1362,7 @@ WordPress core upgrades (and some plugin updates) **change the database structur
 ### High-risk platform components
 Some components can make normal rollback impossible if they break, because rollback itself depends on them:
 - **Cilium (networking):** if an upgrade breaks pod networking, Argo CD can't sync a revert. The Cilium Application uses **manual sync** (not auto-sync), and the recovery path is from the workstation: `helm rollback cilium` against the API server (which runs on the host network, so it stays reachable), then a Git revert to match. `talosctl` access is independent of Cilium.
-- **Kyverno (admission):** a broken policy or a down Kyverno can block every deployment, including the fix. Kyverno's webhooks **exclude** `kube-system`, `kyverno` and `argocd`, so Argo CD and Kyverno itself can always be repaired; in an emergency, deleting Kyverno's webhook configurations lets deployments through until Kyverno is healthy again (Kyverno recreates them). New policies always start in audit mode.
+- **Kyverno (admission):** a broken policy or a down Kyverno can block every deployment, including the fix. Kyverno's webhooks **exclude** `kube-system`, `kyverno` and `argocd`, so Argo CD and Kyverno itself can always be repaired; in an emergency, deleting Kyverno's webhook configurations lets deployments through until Kyverno is healthy again (Kyverno recreates them). New policies always start in audit mode. Kyverno's admission controller runs **three replicas** across the nodes and security policies **fail closed** with short timeouts; **ValidatingAdmissionPolicy** backstops (allowed registries, no `cluster-admin` bindings, no token Secrets) still apply while Kyverno's webhooks are removed (ADR 0037).
 - **Argo CD:** if Argo CD itself is broken, revert with `helm rollback` from the workstation, then re-sync.
 - **External Secrets:** if it stops syncing, existing Kubernetes Secrets keep working; revert the chart, and use `AWSPREVIOUS` for bad secret values.
 
@@ -1713,6 +1726,7 @@ Together with the home lab (~$18–40/month always on), the total is about **$30
 - **Security organised by layer (the 4 C's):** cloud (AWS SRA plus hardened GitHub, Cloudflare, Google and registrar accounts, lab VLAN, Secure Boot), cluster, container (signed images and charts, mirrored dependencies, user namespaces) and code (SAST, DAST, security headers, ASVS mapping).
 - **Identity and access:** OIDC sign-in through Dex for kubectl and the admin tools, group-based human roles with no day-to-day cluster-admin, an alerted break-glass path, Talos read-only access by default, and a year of tamper-evident audit logs.
 - **Kubernetes threat model coverage:** trust boundaries and data flows drawn, and every one of the Kubernetes threat model's eight areas (persistence, denial of service, privilege escalation and the rest) mapped to prevention, detection and a test, including alerts for objects created outside GitOps, PID limits and a policy rejecting risky RBAC.
+- **Platform security:** fail-closed, highly available admission with built-in backstop policies, CA-signed kubelet certificates and a rehearsed CA rotation, a registry cleanup that protects rollback images, security logs visible only to admins, and signed VEX statements for accepted vulnerabilities.
 - **Kubernetes component hardening:** per-namespace Pod Security Admission with Kyverno's `restricted` set, service-account tokens off by default, Secrets and disks encrypted at rest (TPM-sealed at home, customer-managed KMS on EKS), kubelet `seccompDefault`, a Talos host firewall, and verified control-plane settings.
 - **Layered intrusion detection and prevention:** WAFs and edge login, Cilium policies, Kyverno admission, runtime controls, plus detection at runtime (Falco), in the Kubernetes API (audit logs with alert rules) and in the AWS account (CloudTrail, GuardDuty), all reporting to Slack.
 - **Zero-trust networking with Cilium on both clusters:** WireGuard encryption between nodes, default-deny CiliumNetworkPolicies, outbound traffic allowed by DNS name, layer-7 rules where useful, and Hubble flow visibility with metrics, dashboards and alerts in the same Prometheus and Grafana.
@@ -1804,11 +1818,11 @@ The two build plans tier every step as **Core**, **Differentiator** or **Stretch
 
 | Plan | Core | Differentiator | Stretch | Staff | Total |
 |---|---|---|---|---|---|
-| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~162–264 | ~128–222 | ~14–25 | ~83–134 | ~387–645 |
-| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~73–121 | ~15–28 | ~22–38 | ~10–15 | ~120–202 |
-| **Whole project** | ~235–385 | ~143–250 | ~36–63 | ~93–149 | **~507–847** |
+| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~168–272 | ~130–225 | ~14–25 | ~83–134 | ~395–656 |
+| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~73–121 | ~16–29 | ~22–38 | ~10–15 | ~121–203 |
+| **Whole project** | ~241–393 | ~146–254 | ~36–63 | ~93–149 | **~516–859** |
 
-At about **20 hours a week**, the home lab's Core tier takes roughly **8–13 weeks**, everything except the Staff tier roughly **5–8 months**, and the whole project including it roughly **6–10 months** (about **12–20 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
+At about **20 hours a week**, the home lab's Core tier takes roughly **8–14 weeks**, everything except the Staff tier roughly **5–8 months**, and the whole project including it roughly **6–10 months** (about **12–20 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
 
 **Portfolio level:** the home lab's **Core tier on its own reads as strong intermediate work**; adding the **Differentiators**, especially the AI pipeline with its evaluation gate and **evidence of operating the system** (rollback, node-failure and disaster drills, a restore from the Backup account, a recorded AWS demo), is what makes it **senior-level**. For **MLOps** roles specifically, the inference-side work (evaluation gate, gateway, self-hosted model, monitoring) reads as strong intermediate (senior for LLMOps); **MLflow, guardrails and online evaluation** (Differentiators) make it senior for LLM-focused MLOps; the **fine-tuning pipeline, DVC and the feedback loop** (Stretch) complete the full lifecycle expected of senior MLOps generally. The **Staff** tier (SLOs and error budgets, DORA metrics, the developer platform proven with a second service, fleet management, chaos and postmortems, the threat model, strategy documents and public writing) shows **staff-level judgement**; staff roles also expect evidence of leading people and teams, which comes from your work history rather than the project. A finished subset is worth more than an unfinished whole: finish Core first.
 
@@ -1879,7 +1893,7 @@ wp-gitops/
                             #   0031-on-demand-staging.md, 0032-github-actions-ci.md,
                             #   0033-kubernetes-component-hardening.md, 0034-security-by-layer.md,
                             #   0035-identity-and-access.md,
-                            #   0036-kubernetes-threat-model-coverage.md)
+                            #   0036-kubernetes-threat-model-coverage.md, 0037-platform-security.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
@@ -1925,6 +1939,7 @@ wp-gitops/
                             #   read-only root filesystem, probes, no NodePort/LoadBalancer Services, unique
                             #   Ingress hosts) + PolicyExceptions + the default-deny Cilium generate rule
                             #   + policy tests + Policy Reporter (violations to Slack)
+                            #   + ValidatingAdmissionPolicy backstops; 3 admission replicas, fail-closed
     falco/                  # Falco (modern eBPF) + custom rules + Falcosidekick + ServiceMonitors and health
                             #   gVisor event source (home) for sandboxed pods; per-workload process allow-list
                             #   rules and their tests
@@ -2063,7 +2078,8 @@ wp-image/
   .hadolint.yaml            # Dockerfile lint settings
   .semgrep/                 # Semgrep configuration (open-source rule sets + project rules)
   container-structure-test.yaml  # built-image checks (non-root, port 8080, expected files)
-  .trivyignore              # accepted findings, each with a reason and expiry date
+  .vex/                     # OpenVEX statements for accepted vulnerabilities (justification, review date)
+  .trivyignore              # accepted secret/misconfiguration findings only, each with a reason and expiry date
   .github/workflows/        # lint (hadolint, PHPCS, PHPStan), Semgrep, composer audit, dependency review, Checkov,
                             #   zizmor, helm/ct lint, build, container-structure-test, Trivy (vuln, secret,
                             #   misconfig), WPScan, kind integration tests; release: push by digest, cosign sign,
