@@ -21,21 +21,21 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 6.1, 6.3, 11.2 | **~168–272** |
-| **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model, MLflow tracking and registry, guardrails, online evaluation and drift monitoring), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–9.6, 10.1–10.6, 10.8–10.12, 11.1 | **~130–225** |
+| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, privacy basics (GDPR), and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 5.12, 6.1, 6.3, 11.2 | **~173–280** |
+| **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model, MLflow tracking and registry, guardrails, online evaluation and drift monitoring), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–9.6, 10.1–10.6, 10.8–10.12, 11.1 | **~132–227** |
 | **Stretch** | Extras: the rest of the MLOps lifecycle (feedback loop, DVC, deploying a fine-tuned model; valuable for MLOps roles specifically), custom seccomp profiles. | 9.7, 9.8, 10.7 | **~14–25** |
-| **Staff** | Beyond senior: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management, chaos experiments and postmortems, a threat model and control matrix, strategy documents, and public writing. Shows staff-level judgement; staff roles also expect evidence of leading people. | 12.1–12.9 | **~83–134** |
-| **Total** | | | **~395–656** |
+| **Staff** | Beyond senior: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management, chaos experiments and postmortems, a threat model and control matrix, strategy documents, and public writing. Shows staff-level judgement; staff roles also expect evidence of leading people. | 12.1–12.9 | **~86–138** |
+| **Total** | | | **~405–670** |
 
 **Calendar time** (home lab only):
 
 | Hours per week | Core | + Differentiators | + Stretch | + Staff (everything) |
 |---|---|---|---|---|
-| ~10 | 4–7 months | 7–12 months | 7–12 months | 9–15 months |
-| ~20 | 8–14 weeks | 15–25 weeks | 16–26 weeks | 20–33 weeks |
-| ~40 | 4–7 weeks | 7–12 weeks | 8–13 weeks | 10–16 weeks |
+| ~10 | 4–7 months | 7–12 months | 7–12 months | 9–16 months |
+| ~20 | 9–14 weeks | 15–25 weeks | 16–27 weeks | 20–34 weeks |
+| ~40 | 4–7 weeks | 8–13 weeks | 8–13 weeks | 10–17 weeks |
 
-Add the AWS plan (~121–203 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~516–859 hours** (about **423–710** without the Staff tier).
+Add the AWS plan (~121–203 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~526–873 hours** (about **430–720** without the Staff tier).
 
 **Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to explain it in an interview**.
 
@@ -242,6 +242,7 @@ Record each answer in the [decision log](#decision-log).
 | 0035 Identity and access | 4.6, 4.7, 6.1, 6.3, 11.1 (and AWS 1.4, 1.7) |
 | 0036 Kubernetes threat model coverage | 2.2, 3.1, 4.4, 4.6, 6.1, 6.3, 10.2, 12.5 (and AWS 1.4, 2.3, 5.1) |
 | 0037 Platform security | 2.2, 4.4, 4.6, 5.1, 6.1, 10.2 (and AWS 5.1) |
+| 0038 Compliance frameworks and privacy | 5.1, 5.12, 10.1, 12.5 (and AWS 5.1) |
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo, scan each repo's **full history**, and then **make the repos public** (ADR 0032); turn on **secret scanning with push protection**.
 - **GitHub organisation settings** in `wp-infra/envs/github/` (Terraform's GitHub provider): default workflow token **read-only**, only verified or allow-listed Actions, branch protection and required reviews, environments, secret scanning with push protection.
 - Add **OpenSSF Scorecard** (weekly scheduled workflow) and **zizmor** (on workflow changes) to every repo, and GitHub's **dependency-review action** to the repos with dependencies (`wp-image`, `llm-summarizer`).
@@ -449,7 +450,7 @@ Check `kubectl top nodes` after each step.
 - The **summary-queue must-use plugin**: on publish or update, send `{"post_id": ...}` to SQS, adding the current trace context (W3C `traceparent`) as a **message attribute** when tracing is on (AWS SDK for PHP, installed with Composer at build time).
 - `tests/`: a smoke test (Docker Compose with MariaDB: the container starts, plugins are active, health check passes).
 - `chart/`: the WordPress Helm chart (see step 5.2 for what it deploys), versioned with the image.
-- CI, following `aws-wp.md`'s [Image build pipeline](aws-wp.md#image-build-pipeline-wp-image-llm-summarizer): **pull requests:** gitleaks, **hadolint**, **PHP_CodeSniffer with the WordPress Coding Standards** and **PHPStan** (for the must-use plugins and `db.php`), **Semgrep**, `composer audit`, dependency review, **Checkov** (Dockerfile, chart), **zizmor**, `helm lint` / `ct lint`, build, **container-structure-test** (non-root, port 8080, expected files), **Trivy** (vulnerability, secret and misconfiguration scanners; failing on critical vulnerabilities and any secret; `.trivyignore` with reasons and expiry dates); **release:** push the image and chart (OCI) to GHCR **by digest** with an immutable version, sign (cosign keyless), **attach the SBOM as a signed attestation** (`cosign attest`, SPDX JSON), add **SLSA build provenance** (`actions/attest-build-provenance`), with the build running in a **reusable workflow** (a shared build workflow the release workflow calls) so the provenance reaches SLSA Build Level 3 as GitHub documents it (Level 2 otherwise), **verify** all three on the pushed digest (`cosign verify`, `cosign verify-attestation`, `gh attestation verify`), and write release notes with the digests and **Rekor** log links.
+- CI, following `aws-wp.md`'s [Image build pipeline](aws-wp.md#image-build-pipeline-wp-image-llm-summarizer): **pull requests:** gitleaks, **hadolint**, **PHP_CodeSniffer with the WordPress Coding Standards** and **PHPStan** (for the must-use plugins and `db.php`), **Semgrep**, `composer audit`, dependency review, **Checkov** (Dockerfile, chart), **zizmor**, `helm lint` / `ct lint`, build, **container-structure-test** (non-root, port 8080, expected files), **Trivy** (vulnerability, secret and misconfiguration scanners; failing on critical vulnerabilities and any secret; `.trivyignore` with reasons and expiry dates), Trivy's **CIS Docker Benchmark** compliance check on the built image (ADR 0038); **release:** push the image and chart (OCI) to GHCR **by digest** with an immutable version, sign (cosign keyless), **attach the SBOM as a signed attestation** (`cosign attest`, SPDX JSON), add **SLSA build provenance** (`actions/attest-build-provenance`), with the build running in a **reusable workflow** (a shared build workflow the release workflow calls) so the provenance reaches SLSA Build Level 3 as GitHub documents it (Level 2 otherwise), **verify** all three on the pushed digest (`cosign verify`, `cosign verify-attestation`, `gh attestation verify`), and write release notes with the digests and **Rekor** log links.
 
 - **GHCR package settings (ADR 0037):** each package linked to its repo, with write access only for that repo's Actions; no personal access tokens with `write:packages`. A monthly **cleanup workflow** deletes untagged versions older than 90 days, but never a digest referenced in `wp-gitops` in the last 90 days or one of the last 10 releases, keeping signatures and attestations with their images (dry run first).
 - **VEX:** accepted vulnerabilities go in **OpenVEX** statements in `.vex/` (justification and review date each), read by Trivy in CI (`--vex`) and attached to the image as a signed attestation; `.trivyignore` holds only secret and misconfiguration findings.
@@ -543,6 +544,16 @@ Check `kubectl top nodes` after each step.
 **Do:** in `wp-image` CI and the staging gate: **Playwright** visual regression tests of key pages (home, a post with its summary, an archive, light and dark mode, mobile and desktop) against approved baselines; **axe-core** accessibility checks on the same pages (fail on serious issues); **Lighthouse CI** budgets (page weight, Largest Contentful Paint, total blocking time).
 
 **Test:** a deliberate layout change fails visual regression until its new baseline is approved; removing an image's alt text fails accessibility; adding a large unoptimised image fails the Lighthouse budget.
+
+### Step 5.12: Compliance scope and privacy (GDPR basics)
+**Do:** as described in `aws-wp.md`'s [Compliance and privacy](aws-wp.md#compliance-and-privacy) (ADR 0038):
+- `docs/security/compliance.md`: which frameworks apply (GDPR lightly, CIS, NIST guidance, MITRE ATT&CK) and which don't, with reasons (HIPAA: no health data; PCI DSS: no card data, and a hosted payment page if a shop is ever added).
+- A **privacy notice** page in the `russetleaf` theme (who runs the site, what's collected, why, how long, which processors, how to make a request), linked from every footer and the comment form.
+- `docs/privacy/record-of-processing.md`: each kind of personal data (commenters' names and emails, visitors' IPs in logs, admins' Google accounts, anything in Slack alerts), where it's stored, why, and for how long; the **processors list** (Cloudflare, AWS, Google, GitHub, Slack) with their data processing terms; the **retention schedule** (logs 7–14 days, backups 30 days locked plus lifecycle, audit logs 1 year, unapproved comments deleted after 30 days by a scheduled WP-Cron task).
+- Runbooks: `docs/runbooks/data-subject-request.md` (WordPress's built-in **personal data export and erasure tools**; locked backups expire on their own; an **erasure log** re-applied after any restore) and `docs/runbooks/personal-data-breach.md` (assess, contain, record; notify the supervisory authority within **72 hours** if required), linked from the security alerts' runbooks.
+- **No tracking cookies:** a Playwright check in `wp-image` CI and the staging gate that anonymous views of the home page and a post set **no cookies** and load **no third-party scripts**.
+
+**Test:** the privacy notice is linked from every page and the comment form; an export request for a test commenter returns their data, and an erasure removes it (and the erasure log has the entry); adding a script that sets a cookie fails CI.
 
 ## Phase 6: Policy and progressive delivery
 
@@ -724,6 +735,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 10.1: Falco
 **Do:** `platform/falco/`: Falco with the **modern eBPF** driver (Talos doesn't allow kernel modules) and its **gVisor event source** for pods running under gVisor (step 6.5), Falcosidekick to Alertmanager, Grafana and Slack (`#rl-security`, warning priority and above), and custom rules: shell in WordPress, summarizer or gateway pods; writes under `/var/www/html`; unexpected outbound connections from box 2; and **process allow-lists** per workload (WordPress: `apache2`, `php`, and `bash` **only as the container's first process running the entrypoint scripts** `docker-entrypoint.sh` and `apache2-foreground`; summarizer and gateway: `python`; llama.cpp: `llama-server`), alerting on any other process (see `aws-wp.md`'s [Process allow-listing](aws-wp.md#process-allow-listing) and `docs/adr/0016-process-allow-listing.md`).
+- **MITRE ATT&CK detection map (ADR 0038):** `docs/security/attack-coverage.md` mapping each detection (Falco rules with their MITRE tags, the Kubernetes audit alerts, GuardDuty finding types, Hubble drops, CrowdSec) to the **ATT&CK for Containers** techniques it covers, listing the uncovered techniques as accepted or planned; a Grafana panel of Falco alerts by technique.
 - **Falco's own health:** Falco and Falcosidekick metrics with ServiceMonitors, and the alerts `FalcoNotRunning` (fewer ready Falco pods than nodes for 10 minutes; to `#rl-security` and `#rl-critical`), `FalcosidekickOutputErrors` and `FalcoEventsDropped` (to `#rl-security`), each with a runbook.
 
 **Test:** a WordPress pod restart raises **no** allow-list alert (the entrypoint shell is allowed), while starting an unlisted process in each workload (e.g. `kubectl exec <pod> -- curl --version`, or `sleep` where a shell exists) raises a process allow-list alert in `#rl-security`, while normal traffic raises none; `kubectl exec` into a WordPress pod triggers an alert in Grafana and `#rl-security` (and the same in a gVisor runner pod, through the gVisor event source); creating a file under `/var/www/html` triggers another; deleting the Falco pod on one node (or temporarily preventing it from scheduling there) fires `FalcoNotRunning` in `#rl-security` and `#rl-critical`; pointing Falcosidekick at a wrong Slack destination fires `FalcosidekickOutputErrors`.
@@ -807,9 +819,9 @@ Record each drill's time in the decision log and compare it with the expected ti
 **Test:** the second service runs in production with its own SLOs, dashboard and alerts; it can't exceed its quota or deploy outside its namespace; OpenCost shows its cost separately; the onboarding time is recorded.
 
 ### Step 12.5: Threat model and control matrix
-**Do:** `docs/security/threat-model.md`: a **STRIDE** analysis of the whole system (trust boundaries, data flows, threats, mitigations), **organised by the 4 C's** (Cloud, Cluster, Container, Code), linked to the ADRs, building on the trust boundaries in `aws-wp.md`'s [Kubernetes threat model coverage](aws-wp.md#kubernetes-threat-model-coverage) and **cross-checked against the Kubernetes threat model's eight areas** (ADR 0036). `docs/security/controls-matrix.md`: every implemented control mapped to the **CIS Controls** (and SOC 2-style criteria), plus an **OWASP ASVS** mapping for the web application, each with its evidence (policy, configuration, report or test).
+**Do:** `docs/security/threat-model.md`: a **STRIDE** analysis of the whole system (trust boundaries, data flows, threats, mitigations), **organised by the 4 C's** (Cloud, Cluster, Container, Code), linked to the ADRs, building on the trust boundaries in `aws-wp.md`'s [Kubernetes threat model coverage](aws-wp.md#kubernetes-threat-model-coverage) and **cross-checked against the Kubernetes threat model's eight areas** (ADR 0036). The control matrix is **organised by NIST Cybersecurity Framework 2.0** functions (Govern, Identify, Protect, Detect, Respond, Recover), with **NIST SP 800-190** (container security) and **SP 800-218 (SSDF)** checklists as appendices, and links to the **CIS** results (kube-bench, Trivy Operator, Security Hub's CIS AWS Foundations, the CIS Docker check) and the ATT&CK map as evidence (ADR 0038). `docs/security/controls-matrix.md`: every implemented control mapped to the **CIS Controls** (and SOC 2-style criteria), plus an **OWASP ASVS** mapping for the web application, each with its evidence (policy, configuration, report or test).
 
-**Test:** every trust boundary has its threats and mitigations listed, and each of the eight threat areas maps to controls with evidence; every control in the matrix links to evidence that exists.
+**Test:** every trust boundary has its threats and mitigations listed, and each of the eight threat areas maps to controls with evidence; every CSF 2.0 function, SP 800-190 item and SSDF practice is marked met, partly met (with a reason) or not applicable; every control in the matrix links to evidence that exists.
 
 ### Step 12.6: Chaos experiments and postmortems
 **Do:** `platform/chaos-mesh/` with scheduled experiments, each with a written hypothesis, expected outcome, blast radius and abort condition (kill the MariaDB primary; add latency to model calls (with a **Toxiproxy** sidecar in front of the LLM gateway's upstream calls, since Chaos Mesh's network rules can't reliably target AWS endpoints whose addresses change); kill a WordPress pod mid-canary; fill a node's disk; partition box 2), run in staging first, then in production at quiet times; results in `docs/chaos/`. A **blameless postmortem template** in `docs/postmortems/`, and postmortems for at least two real incidents or notable drills from the build. See `docs/adr/0025-reliability-practice.md`.
@@ -867,6 +879,7 @@ These keep russetleaf.dev healthy once it's running. Add each as a calendar remi
 | Full disaster drill | Yearly | Rebuild russetleaf.dev using only the break-glass kit and off-account backups; record the time |
 | Check the break-glass kit | Every 6 months | Logins work, recovery codes are valid, the printed copy is current; the talosconfigs' client certificates aren't near expiry |
 | Renew talosconfigs | Yearly (their client certificates last a year) | Generate new day-to-day and break-glass talosconfigs; update the kit (ADR 0037) |
+| Review the record of processing and ATT&CK map | Quarterly, and when a component or plugin is added | Update `docs/privacy/record-of-processing.md`, the processors list and `docs/security/attack-coverage.md` (ADR 0038) |
 | Review VEX statements | Quarterly, and at each statement's review date | Confirm each `not_affected` justification still holds; remove statements for fixed packages |
 | Test a database restore | Monthly | Restore the latest backup into a scratch MariaDB instance and check the post count (step 4.5) |
 | Merge Renovate pull requests | Weekly | Review the Dependency Dashboard and pull requests; patches auto-merge; read changelogs for minors and majors and rehearse platform ones on a local Talos-in-Docker cluster; Argo Rollouts and the CI checks catch bad application updates |
@@ -929,7 +942,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 4.5 MariaDB + backups + Valkey | Core | 6–10 | ☐ | | | | |
 | 4.6 Logging (Loki + Alloy) | Core | 7–11 | ☐ | | | | |
 | 4.7 Cluster access (OIDC, roles, SSO) | Core | 6–10 | ☐ | | | | |
-| 5.1 WordPress image | Core | 15–24 | ☐ | | | | |
+| 5.1 WordPress image | Core | 16–25 | ☐ | | | | |
 | 5.2 WordPress deployment | Core | 9–15 | ☐ | | | | |
 | 5.3 Image promotion | Core | 2–4 | ☐ | | | | |
 | 5.4 ci test clusters | Core | 5–8 | ☐ | | | | |
@@ -940,6 +953,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 5.9 Performance testing + regression gate | Differentiator | 5–8 | ☐ | | | | |
 | 5.10 Site design and brand (incl. logo) | Core | 6–12 | ☐ | | | | |
 | 5.11 Front-end quality gates | Differentiator | 4–6 | ☐ | | | | |
+| 5.12 Compliance scope + privacy (GDPR) | Core | 4–7 | ☐ | | | | |
 | 6.1 Kyverno | Core | 15–20 | ☐ | | | | |
 | 6.2 Argo Rollouts | Differentiator | 4–7 | ☐ | | | | |
 | 6.3 CiliumNetworkPolicies | Core | 7–10 | ☐ | | | | |
@@ -961,7 +975,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 9.6 Online evaluation + drift | Differentiator | 6–10 | ☐ | | | | |
 | 9.7 Feedback loop + DVC | Stretch | 6–10 | ☐ | | | | |
 | 9.8 Fine-tuned challenger | Stretch | 4–7 | ☐ | | | | |
-| 10.1 Falco | Differentiator | 3–6 | ☐ | | | | |
+| 10.1 Falco | Differentiator | 5–8 | ☐ | | | | |
 | 10.2 Trivy Operator, Kubescape scan, Talos notes + component checks | Differentiator | 7–10 | ☐ | | | | |
 | 10.3 OpenCost | Differentiator | 2–4 | ☐ | | | | |
 | 10.4 Tracing with Tempo (always on) | Differentiator | 3–6 | ☐ | | | | |
@@ -979,7 +993,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 12.2 DORA metrics | Staff | 6–10 | ☐ | | | | |
 | 12.3 Backstage and golden path | Staff | 15–25 | ☐ | | | | |
 | 12.4 Second service + multi-tenancy | Staff | 10–15 | ☐ | | | | |
-| 12.5 Threat model + control matrix | Staff | 10–14 | ☐ | | | | |
+| 12.5 Threat model + control matrix | Staff | 13–18 | ☐ | | | | |
 | 12.6 Chaos experiments + postmortems | Staff | 10–15 | ☐ | | | | |
 | 12.7 Strategy documents | Staff | 6–10 | ☐ | | | | |
 | 12.8 Fleet management (hub) | Staff | 6–10 | ☐ | | | | |

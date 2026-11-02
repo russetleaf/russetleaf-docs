@@ -380,6 +380,18 @@ The platform's own security (supply chain, registry, observability, mesh, PKI, m
 | **Mutual TLS** | etcd mTLS; WireGuard between nodes; TLS on every sensitive connection with the internal CA. Per-service cryptographic identity isn't used (ADR 0001): identity is enforced by Cilium policies. |
 | **Admission controllers** | Kyverno with **three admission replicas** across nodes, **fail-closed** security policies with short timeouts, recovery exclusions and runbook; **ValidatingAdmissionPolicy backstops** (allowed registries, no `cluster-admin` bindings, no token Secrets) that hold even if Kyverno is down; Pod Security Admission; enabled admission plugins checked on both clusters. |
 
+### Compliance and privacy
+Which compliance frameworks the project follows, and how, recorded in `docs/adr/0038-compliance-frameworks-and-privacy.md` and summarised in `docs/security/compliance.md`:
+
+| Framework | Applies? | How it's covered |
+|---|---|---|
+| **GDPR** | Yes, lightly (a small public site holding commenters' names and emails, visitors' IPs in logs, admins' Google accounts) | A **privacy notice** on both sites; a **record of processing** and **processors list** (Cloudflare, AWS, Google, GitHub, Slack); a **retention schedule** (logs 7–14 days, backups 30 days locked plus lifecycle, audit logs 1 year, unapproved comments 30 days); runbooks for **access and erasure requests** (WordPress's built-in export and erasure tools, with an erasure log re-applied after any restore, since locked backups can't be erased early) and **personal data breaches** (72-hour notification); **no tracking cookies**, checked in CI, so no consent banner is needed |
+| **CIS Benchmarks** | Yes | CIS Kubernetes (kube-bench on EKS, Trivy Operator, Talos hardening notes), CIS AWS Foundations (Security Hub), **CIS Docker** (Trivy's compliance check on each image), CIS Controls in the control matrix; results linked from the control matrix as evidence |
+| **NIST** | As guidance, not certification | The control matrix is organised by **Cybersecurity Framework 2.0** functions, with **SP 800-190** (container security) and **SP 800-218 (SSDF)** checklists; SLSA provenance and the CI checks map onto SSDF |
+| **MITRE ATT&CK** | Yes, for detection coverage | Kubescape's ATT&CK posture score, plus a **detection map** (`docs/security/attack-coverage.md`) from each detection (Falco, audit alerts, GuardDuty, Hubble, CrowdSec) to the **ATT&CK for Containers** techniques it covers, with gaps listed; Falco alerts by technique in Grafana |
+| **HIPAA** | No (no health data) | If it ever applied: the encryption, audit logging and access controls carry over; AWS's Business Associate Agreement and HIPAA-eligible services would be needed |
+| **PCI DSS** | No (no card payments) | If a shop is ever added: a **hosted payment page** (e.g. Stripe Checkout) keeps card data off the site, keeping it in PCI's smallest self-assessment category (SAQ A) |
+
 ### Intrusion detection and prevention
 Falco is one layer among several. The design combines **prevention** (stopping attacks) and **detection** (noticing them) at every layer, so no single tool has to catch everything. The reasoning is recorded in `docs/adr/0018-intrusion-detection-and-prevention.md`.
 
@@ -500,7 +512,7 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
 | Chart checks | `helm lint` and `ct lint` (chart-testing) | Chart correctness |
 | Build | Docker Buildx | Builds the image (base images pinned by digest) |
 | Image checks | **container-structure-test** | The built image runs as non-root, listens on port 8080, has the expected files and no leftover tools |
-| Image scanning | **Trivy** with its **vulnerability**, **secret** and **misconfiguration** scanners | Fails on critical vulnerabilities and on any secret baked into a layer; accepted vulnerabilities go in signed **OpenVEX** statements (`.vex/`, each with a justification and review date, attached to the image as an attestation); `.trivyignore` only for secret and misconfiguration findings (ADR 0037) |
+| Image scanning | **Trivy** with its **vulnerability**, **secret** and **misconfiguration** scanners | Fails on critical vulnerabilities and on any secret baked into a layer; accepted vulnerabilities go in signed **OpenVEX** statements (`.vex/`, each with a justification and review date, attached to the image as an attestation); `.trivyignore` only for secret and misconfiguration findings (ADR 0037); Trivy's **CIS Docker Benchmark** compliance check on each image (ADR 0038) |
 | Tests | Unit tests, Compose smoke test, kind integration tests; the **evaluation gate** (summarizer) | Behaviour |
 | Publish | Push **by digest** to GHCR (image and chart) | Only after everything above passes |
 | Sign | **cosign** keyless (GitHub OIDC → Fulcio certificate) | Signature recorded in **Rekor** |
@@ -1056,7 +1068,7 @@ Alloy needs to read log files on each node and listen on a host port for Talos's
 Each has a runbook in `docs/runbooks/` and a test of its log query.
 
 ### Privacy
-Logs can contain visitors' IP addresses and occasionally email addresses. Short retention (7 and 14 days), masking in Alloy, and access to Grafana only through Cloudflare Access (home) or port-forward (AWS) keep that in check. **Security logs are separate:** the API audit log, Argo CD audit events and runtime-security events go to a separate Loki tenant (`security`), visible only in a Grafana **Security** organisation whose members are platform admins (ADR 0037). Staging logs come from scrubbed data.
+Logs can contain visitors' IP addresses and occasionally email addresses. Short retention (7 and 14 days), masking in Alloy, and access to Grafana only through Cloudflare Access (home) or port-forward (AWS) keep that in check. **Security logs are separate:** the API audit log, Argo CD audit events and runtime-security events go to a separate Loki tenant (`security`), visible only in a Grafana **Security** organisation whose members are platform admins (ADR 0037). Staging logs come from scrubbed data. The full record of personal data, its retention and how requests are handled is in [Compliance and privacy](#compliance-and-privacy).
 
 ### Cost and memory
 - **Money:** a few cents a month per site for the S3 buckets.
@@ -1727,6 +1739,7 @@ Together with the home lab (~$18–40/month always on), the total is about **$30
 - **Identity and access:** OIDC sign-in through Dex for kubectl and the admin tools, group-based human roles with no day-to-day cluster-admin, an alerted break-glass path, Talos read-only access by default, and a year of tamper-evident audit logs.
 - **Kubernetes threat model coverage:** trust boundaries and data flows drawn, and every one of the Kubernetes threat model's eight areas (persistence, denial of service, privilege escalation and the rest) mapped to prevention, detection and a test, including alerts for objects created outside GitOps, PID limits and a policy rejecting risky RBAC.
 - **Platform security:** fail-closed, highly available admission with built-in backstop policies, CA-signed kubelet certificates and a rehearsed CA rotation, a registry cleanup that protects rollback images, security logs visible only to admins, and signed VEX statements for accepted vulnerabilities.
+- **Compliance and privacy:** a clear compliance scope (GDPR, CIS, NIST, MITRE ATT&CK; HIPAA and PCI DSS out of scope with reasons), GDPR basics from launch (privacy notice, record of processing, retention schedule, request and breach runbooks, no tracking cookies), a control matrix organised by NIST CSF 2.0, and an ATT&CK detection map with its gaps listed.
 - **Kubernetes component hardening:** per-namespace Pod Security Admission with Kyverno's `restricted` set, service-account tokens off by default, Secrets and disks encrypted at rest (TPM-sealed at home, customer-managed KMS on EKS), kubelet `seccompDefault`, a Talos host firewall, and verified control-plane settings.
 - **Layered intrusion detection and prevention:** WAFs and edge login, Cilium policies, Kyverno admission, runtime controls, plus detection at runtime (Falco), in the Kubernetes API (audit logs with alert rules) and in the AWS account (CloudTrail, GuardDuty), all reporting to Slack.
 - **Zero-trust networking with Cilium on both clusters:** WireGuard encryption between nodes, default-deny CiliumNetworkPolicies, outbound traffic allowed by DNS name, layer-7 rules where useful, and Hubble flow visibility with metrics, dashboards and alerts in the same Prometheus and Grafana.
@@ -1789,7 +1802,7 @@ The home Argo CD becomes the **hub**: `demo-up` registers the EKS cluster with i
 
 ### Security architecture documents
 - **Threat model** (`docs/security/threat-model.md`): a **STRIDE** analysis of the whole system (trust boundaries, data flows, threats, mitigations), linked to the ADRs and controls, building on [Kubernetes threat model coverage](#kubernetes-threat-model-coverage) and cross-checked against its eight threat areas.
-- **Control matrix** (`docs/security/controls-matrix.md`): the implemented controls mapped to the **CIS Controls** (and SOC 2-style criteria), each with its evidence (policy, configuration, report or test).
+- **Control matrix** (`docs/security/controls-matrix.md`): the implemented controls organised by **NIST Cybersecurity Framework 2.0** functions and mapped to the **CIS Controls** (and SOC 2-style criteria), with **NIST SP 800-190** and **SSDF** checklists, the CIS benchmark results and the **MITRE ATT&CK** detection map as evidence (policy, configuration, report or test). See [Compliance and privacy](#compliance-and-privacy).
 
 ### Strategy documents
 ADRs record decisions; these set direction:
@@ -1818,11 +1831,11 @@ The two build plans tier every step as **Core**, **Differentiator** or **Stretch
 
 | Plan | Core | Differentiator | Stretch | Staff | Total |
 |---|---|---|---|---|---|
-| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~168–272 | ~130–225 | ~14–25 | ~83–134 | ~395–656 |
+| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~173–280 | ~132–227 | ~14–25 | ~86–138 | ~405–670 |
 | [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~73–121 | ~16–29 | ~22–38 | ~10–15 | ~121–203 |
-| **Whole project** | ~241–393 | ~146–254 | ~36–63 | ~93–149 | **~516–859** |
+| **Whole project** | ~246–401 | ~148–256 | ~36–63 | ~96–153 | **~526–873** |
 
-At about **20 hours a week**, the home lab's Core tier takes roughly **8–14 weeks**, everything except the Staff tier roughly **5–8 months**, and the whole project including it roughly **6–10 months** (about **12–20 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
+At about **20 hours a week**, the home lab's Core tier takes roughly **9–14 weeks**, everything except the Staff tier roughly **5–8 months**, and the whole project including it roughly **6–10 months** (about **12–20 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
 
 **Portfolio level:** the home lab's **Core tier on its own reads as strong intermediate work**; adding the **Differentiators**, especially the AI pipeline with its evaluation gate and **evidence of operating the system** (rollback, node-failure and disaster drills, a restore from the Backup account, a recorded AWS demo), is what makes it **senior-level**. For **MLOps** roles specifically, the inference-side work (evaluation gate, gateway, self-hosted model, monitoring) reads as strong intermediate (senior for LLMOps); **MLflow, guardrails and online evaluation** (Differentiators) make it senior for LLM-focused MLOps; the **fine-tuning pipeline, DVC and the feedback loop** (Stretch) complete the full lifecycle expected of senior MLOps generally. The **Staff** tier (SLOs and error budgets, DORA metrics, the developer platform proven with a second service, fleet management, chaos and postmortems, the threat model, strategy documents and public writing) shows **staff-level judgement**; staff roles also expect evidence of leading people and teams, which comes from your work history rather than the project. A finished subset is worth more than an unfinished whole: finish Core first.
 
@@ -1893,7 +1906,8 @@ wp-gitops/
                             #   0031-on-demand-staging.md, 0032-github-actions-ci.md,
                             #   0033-kubernetes-component-hardening.md, 0034-security-by-layer.md,
                             #   0035-identity-and-access.md,
-                            #   0036-kubernetes-threat-model-coverage.md, 0037-platform-security.md)
+                            #   0036-kubernetes-threat-model-coverage.md, 0037-platform-security.md,
+                            #   0038-compliance-frameworks-and-privacy.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
