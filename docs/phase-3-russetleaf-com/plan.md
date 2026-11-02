@@ -27,10 +27,9 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
 | **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the demo workflows, one rehearsed and **recorded demo**, and the docs. | 0.1–2.4, 3.1, 3.2, 6.1, 6.2, 6.3 | **~71–117** |
-| **Differentiator** | kube-bench and Kubescape on EKS, the security and cost reviews, and the EKS rollback drill. | 2.5, 5.1, 5.2, 6.1b | **~10–16** |
-| **Stretch** | The Istio ambient and Tetragon experiments. | 5.3, 5.4 | **~6–10** |
-| **Staff** | Load, stress and spike tests for the capacity plan, and EKS as a second spoke of the Argo CD hub. | 6.4, 6.5 | **~10–15** |
-| **AI on EKS** *(if Phase 2 is built)* | The summarizer and gateway on EKS, the GPU model server, evaluation and tracing on AWS (Differentiator); the fine-tuning pipeline and the fine-tuned challenger (Stretch; valuable for MLOps roles specifically). | 4.1–4.4 (Differentiator), 4.5, 4.6 (Stretch) | **~28–52** |
+| **Extended** | kube-bench and Kubescape on EKS, the security and cost reviews, and the EKS rollback drill. | 2.5, 5.1, 5.2, 6.1b | **~10–16** |
+| **Advanced** | Load, stress and spike tests for the capacity plan, EKS as a second spoke of the Argo CD hub, and the Istio ambient and Tetragon experiments. | 5.3, 5.4, 6.4, 6.5 | **~16–25** |
+| **AI on EKS** *(if Phase 2 is built)* | The summarizer and gateway on EKS, the GPU model server, evaluation and tracing on AWS (Extended); the fine-tuning pipeline and the fine-tuned challenger (Advanced). | 4.1–4.4 (Extended), 4.5, 4.6 (Advanced) | **~28–52** |
 | **Total** | | | **~125–210** (~97–158 without Phase 2) |
 
 **Calendar time:** about **6–11 weeks at ~20 hours a week** for the whole plan (5–8 weeks without the AI steps), after Phase 1's Core tier is done (this plan depends on it). Allow for waiting: **SES production access**, and, if Phase 2 is built, the **GPU quota** request (days; submit it in step 0.1 well ahead) and **Bedrock model access** in the new account.
@@ -171,7 +170,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 1.8: Argo CD on EKS
 
-**Do:** Terraform installs Argo CD with Helm and applies the root Application pointing at `russetleaf-gitops/bootstrap/aws`. (In the Staff tier, step 6.5 replaces this with management from the home Argo CD hub; this per-cluster setup stays as the fallback.) Argo CD's UI is reached by `kubectl port-forward` only (no public endpoint for demos). **Argo CD Notifications** post to `#rl-deploys`, prefixed `[com]`.
+**Do:** Terraform installs Argo CD with Helm and applies the root Application pointing at `russetleaf-gitops/bootstrap/aws`. (In the Advanced tier, step 6.5 replaces this with management from the home Argo CD hub; this per-cluster setup stays as the fallback.) Argo CD's UI is reached by `kubectl port-forward` only (no public endpoint for demos). **Argo CD Notifications** post to `#rl-deploys`, prefixed `[com]`.
 
 **Test:** Argo CD lists the AWS root app (it will show missing components until Phase 2), and its first sync appears in `#rl-deploys`.
 
@@ -381,7 +380,7 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 
 | Task | How often | How |
 |---|---|---|
-| Run a demo (or at least `demo-up` / `demo-down`) | Monthly | Catches broken versions, expired assumptions and drift before an interview does |
+| Run a demo (or at least `demo-up` / `demo-down`) | Monthly | Catches broken versions, expired assumptions and drift before a demo does |
 | Check versions before the demo | Before each demo | Review the latest version-age report and Renovate's pending updates for `envs/aws` (EKS, add-ons, AMI, RDS and ElastiCache engine versions); keep RDS's MariaDB version matched to the home MariaDB |
 | Keep the EKS version in standard support | Before each demo, if a new version is out | Bump the version in `envs/aws`; the stack is rebuilt each demo, so there's no in-place upgrade |
 | Clean up old final snapshots | Automatic (step 1.6) | Check that only the last 3 remain |
@@ -414,25 +413,25 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 | 2.2 Load Balancer Controller, ExternalDNS, storage | Core | 3–5 | ☐ | | | | |
 | 2.3 Karpenter NodePools + NVIDIA plugin | Core | 4–7 | ☐ | | | | |
 | 2.4 Shared platform overlays | Core | 4–8 | ☐ | | | | |
-| 2.5 kube-bench + Kubescape scan | Differentiator | 2–3 | ☐ | | | | |
+| 2.5 kube-bench + Kubescape scan | Extended | 2–3 | ☐ | | | | |
 | 3.1 WordPress AWS overlay | Core | 5–9 | ☐ | | | | |
 | 3.2 Seed + snapshot cycle | Core | 3–5 | ☐ | | | | |
-| 4.1 Summarizer + gateway | Differentiator | 2–4 | ☐ | | | | |
-| 4.2 GPU model server | Differentiator | 4–7 | ☐ | | | | |
-| 4.3 Evaluation on AWS | Differentiator | 1–3 | ☐ | | | | |
-| 4.4 End-to-end tracing | Differentiator | 1–3 | ☐ | | | | |
-| 4.5 Fine-tuning pipeline | Stretch | 16–28 | ☐ | | | | |
-| 4.6 Fine-tuned challenger (at home) | Stretch | 4–7 | ☐ | | | | |
-| 5.1 Security review | Differentiator | 4–6 | ☐ | | | | |
-| 5.2 Cost review | Differentiator | 2–3 | ☐ | | | | |
-| 5.3 Istio ambient experiment (optional) | Stretch | 3–5 | ☐ | | | | |
-| 5.4 Tetragon enforcement (optional) | Stretch | 3–5 | ☐ | | | | |
+| 4.1 Summarizer + gateway | Extended | 2–4 | ☐ | | | | |
+| 4.2 GPU model server | Extended | 4–7 | ☐ | | | | |
+| 4.3 Evaluation on AWS | Extended | 1–3 | ☐ | | | | |
+| 4.4 End-to-end tracing | Extended | 1–3 | ☐ | | | | |
+| 4.5 Fine-tuning pipeline | Advanced | 16–28 | ☐ | | | | |
+| 4.6 Fine-tuned challenger (at home) | Advanced | 4–7 | ☐ | | | | |
+| 5.1 Security review | Extended | 4–6 | ☐ | | | | |
+| 5.2 Cost review | Extended | 2–3 | ☐ | | | | |
+| 5.3 Istio ambient experiment (optional) | Advanced | 3–5 | ☐ | | | | |
+| 5.4 Tetragon enforcement (optional) | Advanced | 3–5 | ☐ | | | | |
 | 6.1 Demo workflows | Core | 5–8 | ☐ | | | | |
-| 6.1b Rollback drill on EKS | Differentiator | 2–4 | ☐ | | | | |
+| 6.1b Rollback drill on EKS | Extended | 2–4 | ☐ | | | | |
 | 6.2 Rehearsal + recording | Core | 3–5 | ☐ | | | | |
 | 6.3 Documentation | Core | 2–3 | ☐ | | | | |
-| 6.4 Load, stress, spike + burst tests | Staff | 6–9 | ☐ | | | | |
-| 6.5 Register EKS with the Argo CD hub | Staff | 4–6 | ☐ | | | | |
+| 6.4 Load, stress, spike + burst tests | Advanced | 6–9 | ☐ | | | | |
+| 6.5 Register EKS with the Argo CD hub | Advanced | 4–6 | ☐ | | | | |
 
 ## Decision log
 

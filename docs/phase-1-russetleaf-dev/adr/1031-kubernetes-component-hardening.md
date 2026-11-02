@@ -32,7 +32,7 @@ On the home cluster, Talos manages the control-plane components and their settin
 
 ## Alternatives considered
 
-- **Relying on Talos and EKS defaults without verification:** the defaults are good, but unverified claims don't hold up in an audit or interview; the checks make them evidence.
+- **Relying on Talos and EKS defaults without verification:** the defaults are good, but unverified claims don't hold up in an audit or review; the checks make them evidence.
 - **Kyverno only (no PSA labels):** one enforcement point; adding PSA gives a second, built-in one at almost no cost.
 - **PSA only (no Kyverno restricted set):** the built-in controller can't produce reports or CI tests, and can't express project-specific rules.
 - **Disk encryption with a static key or node ID instead of the TPM:** works on hardware without a TPM, but the key is less protected; TPM sealing is preferred where available.

@@ -7,7 +7,7 @@
 
 ## Context
 
-The project had grown to two sites and one design document: russetleaf.dev at home and russetleaf.com on EKS, with AI post summaries and an MLOps lifecycle running through both. Effort was estimated at roughly 525–875 focused hours. Built in one go, that's a year or more of evenings with nothing finished in between, and much of it (the EKS demo stack, GPU fine-tuning) may never be needed for interviews. The home lab alone already shows most of the platform work: infrastructure as code, GitOps, security, observability, delivery and operations.
+The project had grown to two sites and one design document: russetleaf.dev at home and russetleaf.com on EKS, with AI post summaries and an MLOps lifecycle running through both. Effort was estimated at roughly 525–875 focused hours. Built in one go, that's a year or more of evenings with nothing finished in between, and much of it (the EKS demo stack, GPU fine-tuning) adds less to the core platform than the time it takes. The home lab alone already shows most of the platform work: infrastructure as code, GitOps, security, observability, delivery and operations.
 
 ## Decision
 
@@ -15,7 +15,7 @@ Build in **three phases**, each complete and demonstrable on its own, with its o
 
 | Phase | Builds | Needs |
 |---|---|---|
-| **1. russetleaf.dev** | WordPress on the three-node Talos cluster at home, with the AWS Organization it uses, GitOps, platform services, security, observability, staging and promotion, DR, and the Staff-tier practices | — |
+| **1. russetleaf.dev** | WordPress on the three-node Talos cluster at home, with the AWS Organization it uses, GitOps, platform services, security, observability, staging and promotion, DR, and the Advanced-tier practices | — |
 | **2. AI summaries and MLOps** | The summary pipeline (SQS, KEDA, LiteLLM, Bedrock, the self-hosted model on box 2), the evaluation gate, MLflow, guardrails, online evaluation, drift, feedback and DVC | Phase 1 |
 | **3. russetleaf.com** | The EKS demo site (Karpenter, RDS with RDS Proxy, ElastiCache, CloudFront, ALB, WAF, the always-on edge), plus the AI pipeline on EKS and GPU fine-tuning if Phase 2 is built | Phase 1 (Phase 2 optional) |
 
@@ -26,8 +26,8 @@ Build in **three phases**, each complete and demonstrable on its own, with its o
 
 ## Alternatives considered
 
-- **One plan, tiers only (Core, Differentiator, Stretch, Staff):** tiers rank steps by value, but the AI and EKS work was interleaved through every stage, so no subset was complete without the rest.
-- **Two phases (home with AI, then EKS):** keeps the AI pipeline in the first build, but delays a finished site by a few months, and the AI work is the part least needed for platform roles.
+- **One plan, tiers only (Core, Extended, Advanced):** tiers rank steps by value, but the AI and EKS work was interleaved through every stage, so no subset was complete without the rest.
+- **Two phases (home with AI, then EKS):** keeps the AI pipeline in the first build, but delays a finished site by a few months, and the AI work is the part furthest from the platform's core.
 - **Separate documents per site:** duplicates the shared platform design, which is most of it.
 
 ## Consequences

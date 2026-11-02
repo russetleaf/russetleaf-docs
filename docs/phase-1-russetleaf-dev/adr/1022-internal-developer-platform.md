@@ -7,7 +7,7 @@
 
 ## Context
 
-The project had become a capable platform (GitOps, signed supply chain, policies, observability, SLOs), but only for the services it was built around. Staff-level platform work is judged by whether **other engineers** can use the platform easily and safely. Separately, each cluster ran its own Argo CD, so there was no single place to manage both.
+The project had become a capable platform (GitOps, signed supply chain, policies, observability, SLOs), but only for the services it was built around. A platform's real test is whether **other engineers** can use it easily and safely. Separately, each cluster ran its own Argo CD, so there was no single place to manage both.
 
 ## Decision
 

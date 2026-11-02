@@ -121,7 +121,7 @@ Switching between the two is an **overlay change** in `russetleaf-gitops` (`data
 
 The WordPress Rollout, Service, HPA and the rest of the base are the same for both sites; only where the credential comes from differs, which is exactly what overlays are for. A `russetleaf-wordpress` release adding the drop-in goes through ci → staging → prod like any other.
 
-**Interview angle:** in the cloud, the database trusts **IAM identities**, so the application has no secret at all; self-hosted, you can't remove every secret, so you **minimize, generate, isolate and rotate** them.
+**In short:** in the cloud, the database trusts **IAM identities**, so the application has no secret at all; self-hosted, you can't remove every secret, so you **minimize, generate, isolate and rotate** them.
 
 ## Fine-tuning on the GPU pool (if Phase 2 is built)
 

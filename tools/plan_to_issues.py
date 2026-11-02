@@ -24,7 +24,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-TIER_COLOURS = {'Core': '0e8a16', 'Differentiator': '1d76db', 'Stretch': 'c5def5', 'Staff': '5319e7'}
+TIER_COLOURS = {'Core': '0e8a16', 'Extended': '1d76db', 'Advanced': '5319e7'}
 
 
 def slug(heading):

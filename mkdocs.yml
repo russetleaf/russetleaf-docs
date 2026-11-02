@@ -86,7 +86,7 @@ nav:
           - "1012 OpenCost for in-cluster allocation, AWS billing for actual costs, and how cost alerts flow": phase-1-russetleaf-dev/adr/1012-opencost-and-aws-billing.md
           - "1013 Image supply chain: SLSA provenance, Semgrep for SAST, and the build pipeline's tools": phase-1-russetleaf-dev/adr/1013-image-supply-chain.md
           - "1014 Availability levels: home lab without HA; AWS designed for HA but run as a demo": phase-1-russetleaf-dev/adr/1014-availability-levels.md
-          - "1015 Process allow-listing with Falco; AppArmor and SELinux not used; Tetragon and custom seccomp as stretch goals": phase-1-russetleaf-dev/adr/1015-process-allow-listing.md
+          - "1015 Process allow-listing with Falco; AppArmor and SELinux not used; Tetragon and custom seccomp as optional extras": phase-1-russetleaf-dev/adr/1015-process-allow-listing.md
           - "1016 Rollback strategy: Git revert by default, automatic canary rollback, back up before schema changes": phase-1-russetleaf-dev/adr/1016-rollback-strategy.md
           - "1017 Intrusion detection and prevention in layers": phase-1-russetleaf-dev/adr/1017-intrusion-detection-and-prevention.md
           - "1018 Disaster recovery with off-account immutable copies and a break-glass kit": phase-1-russetleaf-dev/adr/1018-disaster-recovery.md

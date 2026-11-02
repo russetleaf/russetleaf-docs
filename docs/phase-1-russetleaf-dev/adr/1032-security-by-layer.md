@@ -42,7 +42,7 @@ Cloud-native security is commonly described in four layers, the **4 C's**: **Clo
 
 ## Consequences
 
-- Every control is placed in a layer, making gaps visible and interview answers structured.
+- Every control is placed in a layer, making gaps visible and the security story easy to follow.
 - More settings to maintain (headers, CSP reports, mirror jobs, access reviews), mostly automated.
 - CSP may break plugins at first; report-only mode finds problems before enforcement.
 - Rotating keys and salts signs admins out (acceptable, and done on a schedule).

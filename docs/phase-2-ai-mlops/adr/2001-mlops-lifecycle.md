@@ -9,7 +9,7 @@
 
 ## Context
 
-The summary pipeline already had strong **inference-side** practices (often called LLMOps): versioned prompts, a CI evaluation gate with an LLM-as-judge, a model gateway with fallback and canaries, a self-hosted model, cost and latency monitoring, tracing, a model card and a re-summarize job. Senior MLOps work is judged on the **whole lifecycle** (data → training → evaluation → registry → deployment → monitoring → retraining), and the design was missing:
+The summary pipeline already had strong **inference-side** practices (often called LLMOps): versioned prompts, a CI evaluation gate with an LLM-as-judge, a model gateway with fallback and canaries, a self-hosted model, cost and latency monitoring, tracing, a model card and a re-summarize job. A production ML system covers the **whole lifecycle** (data → training → evaluation → registry → deployment → monitoring → retraining), and the design was missing:
 
 - experiment tracking and a model registry (results lived in CI comments; no lineage)
 - monitoring of quality and drift **in production**
@@ -36,7 +36,7 @@ The summary pipeline already had strong **inference-side** practices (often call
 - **Plain Kubernetes CronJobs and Jobs:** enough for the daily online evaluation alone, but no multi-step pipelines with artifacts, retries per step, or a view of each run.
 - **Amazon SageMaker** (training jobs, model registry, pipelines): AWS-native and capable, but doesn't cover the home site and would split the lifecycle across two platforms.
 - **Weights & Biases or other hosted tracking:** polished, but a third-party service and account; MLflow is open source and self-hosted.
-- **No fine-tuning (inference only):** simpler, but leaves out the training half of the lifecycle that senior MLOps roles expect; fine-tuning is kept, in Phase 3 (ADR 3002).
+- **No fine-tuning (inference only):** simpler, but leaves out the training half of the lifecycle; fine-tuning is kept, in Phase 3 (ADR 3002).
 - **A heavyweight guardrail service** (e.g. Presidio, Llama Guard): more thorough, but adds memory and latency; rule-based guardrails plus adversarial evaluation cover this pipeline, with these as later options.
 
 ## Consequences

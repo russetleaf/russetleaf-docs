@@ -1,11 +1,11 @@
 # ADR 1021: SLOs with error budgets that gate promotions; DORA metrics
 
-- **Status:** Accepted; updated by senior review
+- **Status:** Accepted; updated by a design review
 - **Date:** 2026-11-01
 - **Applies to:** russetleaf.dev (and russetleaf.com during demos)
 - **Phase:** 1 (site and API SLOs). Later: Phase 2 adds summary freshness and quality.
 
-> **Update (senior review):** Availability and latency SLIs are measured at the **ingress inside the cluster**, so home internet outages don't burn the error budget (the external uptime check still alerts on them). The error-budget policy has an **exclusion process** for documented external incidents (e.g. ISP or Bedrock outages): an annotation linking the incident record removes that window from the budget calculation.
+> **Update (design review):** Availability and latency SLIs are measured at the **ingress inside the cluster**, so home internet outages don't burn the error budget (the external uptime check still alerts on them). The error-budget policy has an **exclusion process** for documented external incidents (e.g. ISP or Bedrock outages): an annotation linking the incident record removes that window from the budget calculation.
 
 ## Context
 

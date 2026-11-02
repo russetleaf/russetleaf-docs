@@ -1,4 +1,4 @@
-# ADR 1015: Process allow-listing with Falco; AppArmor and SELinux not used; Tetragon and custom seccomp as stretch goals
+# ADR 1015: Process allow-listing with Falco; AppArmor and SELinux not used; Tetragon and custom seccomp as optional extras
 
 - **Status:** Accepted; updated by ADR 1020
 - **Date:** 2026-11-01
@@ -24,7 +24,7 @@ Platform constraints:
 - **Add Falco process allow-list rules** per workload: WordPress (`apache2`, `php`, plus **`bash` only as the container's first process running the image's entrypoint scripts**, `docker-entrypoint.sh` and `apache2-foreground`; any other shell alerts), the summarizer (`python`), the LiteLLM gateway (`python`), llama.cpp (`llama-server`); any other process alerts `#rl-security`. The lists live in Git and are tested.
 - **Keep the images lean:** no download tools or package managers in final images where practical (the official WordPress image's startup script still needs its shell), checked by container-structure-test.
 - **Don't use AppArmor or custom SELinux policies.**
-- **Stretch goals:**
+- **Optional extras:**
     - **Tetragon** enforcement (kill unlisted processes), tried on EKS during a demo first, and at home only if memory allows.
     - **Custom seccomp profiles** recorded with the **Security Profiles Operator** for WordPress and the summarizer.
 

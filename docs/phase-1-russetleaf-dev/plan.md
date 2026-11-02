@@ -10,7 +10,7 @@ Each step is sized for one or a few Claude sessions, and ends with a **test** th
 - **Track the work on GitHub.** Each step is a GitHub issue in a milestone from the [roadmap](roadmap.md) (created in step 1.1 by `tools/plan_to_issues.py`); move it across the Projects board as you work, and update the roadmap's **Actual** columns when a milestone closes.
 - **Start each step with a spec.** Ask Claude to write the step's spec from [`docs/specs/TEMPLATE.md`](../specs/TEMPLATE.md) (goal, context, scope, approach, tasks of 1–3 hours, acceptance criteria from the step's test, risks), save it as `docs/specs/phase-1/<step>-<name>.md`, review it, then build against it. The pull request links the issue and the spec, and the spec's **Outcome** records actual hours and what changed.
 - **One step at a time.** Build it, run the step's test, fix, commit. Don't start the next step until the test passes.
-- **Core first.** Each step has a tier (Core, Differentiator, Stretch) and an hour estimate; see [Priorities and time estimates](#priorities-and-time-estimates). Record actual hours in the checklist.
+- **Core first.** Each step has a tier (Core, Extended, Advanced) and an hour estimate; see [Priorities and time estimates](#priorities-and-time-estimates). Record actual hours in the checklist.
 - **Keep the plan current.** Check off steps in the [progress checklist](#progress-checklist) and add to the [decision log](#decision-log) whenever something is decided or differs from the Phase 1 design. Ask Claude to update this file at the end of each session.
 - **Watch node memory.** After every step that adds something to the cluster, run `kubectl top nodes` and note the result in the checklist. The three nodes have about 32 GB in total (box 3: 16 GB; boxes 1 and 2: 8 GB each); keep the main workloads on box 3 (box 2 becomes the LLM node in Phase 2).
 - **Build the home overlays only, but keep the base clean.** Put anything environment-specific (domain, hostnames, endpoints, credentials) in `overlays/home` (prod), `overlays/home-staging` or `overlays/ci`, never in `base`, so `overlays/aws` can be added later without rework.
@@ -23,25 +23,24 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, privacy basics (GDPR), and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 5.12, 6.1, 6.3, 9.2 | **~169–275** |
-| **Differentiator** | What moves it to senior: progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.12, 9.1 | **~72–127** |
-| **Stretch** | A custom seccomp profile for WordPress. | 7.7 | **~3–6** |
-| **Staff** | Beyond senior: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management with a local spoke cluster, chaos experiments and postmortems, a threat model and control matrix, strategy documents, and public writing. Shows staff-level judgment; staff roles also expect evidence of leading people. | 8.1–8.9 | **~86–138** |
+| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, privacy basics (GDPR), and the docs. Finished on its own, this is a complete platform. | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 5.12, 6.1, 6.3, 9.2 | **~169–275** |
+| **Extended** | Hardening, operations and evidence: progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.12, 9.1 | **~72–127** |
+| **Advanced** | Reliability and platform practices: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management with a local spoke cluster, chaos experiments and postmortems, a threat model and control matrix, strategy documents, public writing, and a custom seccomp profile for WordPress. | 7.7, 8.1–8.9 | **~89–144** |
 | **Total** | | | **~330–546** |
 
 **Calendar time** (Phase 1 only):
 
-| Hours per week | Core | + Differentiators | + Stretch | + Staff (everything) |
-|---|---|---|---|---|
-| ~10 | 4–7 months | 6–9 months | 6–9 months | 8–13 months |
-| ~20 | 9–14 weeks | 12–20 weeks | 12–20 weeks | 17–27 weeks |
-| ~40 | 4–7 weeks | 6–10 weeks | 6–10 weeks | 8–14 weeks |
+| Hours per week | Core | + Extended | + Advanced (everything) |
+|---|---|---|---|
+| ~10 | 4–7 months | 6–9 months | 8–13 months |
+| ~20 | 9–14 weeks | 12–20 weeks | 17–27 weeks |
+| ~40 | 4–7 weeks | 6–10 weeks | 8–14 weeks |
 
 The optional later phases add about **85–144 hours** (Phase 2) and **125–210 hours** (Phase 3, or 97–158 without its AI steps); see the [overview](../overview.md#build-plans-priorities-and-effort).
 
-**Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to explain it in an interview**.
+**Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to explain its trade-offs**.
 
-**Recommended order:** finish **all Core steps first** (in plan order), and publish them; then add Differentiators, starting with the drills (7.8, 7.10, 7.11), which give the most interview material; leave Stretch and Staff steps until Core and Differentiators are done (for staff-level roles, the Staff tier matters more than Stretch). A finished subset is worth more than an unfinished whole. Start Phase 2 or Phase 3 only once Phase 1's Core tier is published.
+**Recommended order:** finish **all Core steps first** (in plan order), and publish them; then add the Extended steps, starting with the drills (7.8, 7.10, 7.11), which show the system being operated; leave the Advanced steps until Core and Extended are done. A finished subset is worth more than an unfinished whole. Start Phase 2 or Phase 3 only once Phase 1's Core tier is published.
 
 ## Starting point (as of 2026-10-31)
 
@@ -789,9 +788,9 @@ Record each drill's time in the decision log and compare it with the expected ti
 
 **Test:** each test's results are recorded with graphs; the first bottleneck has an action item or an explanation; the soak shows no steadily growing memory or connections (or a fix is planned).
 
-## Stage 8: Staff-level practices
+## Stage 8: Engineering practices
 
-These steps are the **Staff** tier; see the Phase 1 design's [Staff-level practices](design.md#staff-level-practices). Do them after Core and most Differentiators.
+These steps are most of the **Advanced** tier; see the Phase 1 design's [Engineering practices](design.md#engineering-practices). Do them after the Core and most Extended steps.
 
 ### Step 8.1: SLOs and error budgets
 
@@ -843,7 +842,7 @@ These steps are the **Staff** tier; see the Phase 1 design's [Staff-level practi
 
 ### Step 8.9: Public writing
 
-**Do:** a series of **articles on russetleaf.dev** explaining the main design decisions (from the ADRs): e.g. S3 rather than EFS, no service mesh, the SRA account structure, error-budget-gated promotion (and, after Phase 2, evaluation gates for LLMs). Link them from the hub README and your CV.
+**Do:** a series of **articles on russetleaf.dev** explaining the main design decisions (from the ADRs): e.g. S3 rather than EFS, no service mesh, the SRA account structure, error-budget-gated promotion (and, after Phase 2, evaluation gates for LLMs). Link them from the hub README.
 
 **Test:** at least four articles published, each linking to the relevant ADRs and code.
 
@@ -926,7 +925,7 @@ Phase 1 builds most of what these need: the shared Terraform modules, the base m
 | 2.2 Talos cluster | Core | 13–19 | ☐ | | | | |
 | 2.3 AWS + Cloudflare resources | Core | 6–9 | ☐ | | | | |
 | 2.4 `russetleaf-infra` CI | Core | 4–6 | ☐ | | | | |
-| 2.5 Disaster recovery copies | Differentiator | 3–6 | ☐ | | | | |
+| 2.5 Disaster recovery copies | Extended | 3–6 | ☐ | | | | |
 | 3.1 GitOps structure + Argo CD | Core | 6–10 | ☐ | | | | |
 | 4.1 Storage | Core | 1–2 | ☐ | | | | |
 | 4.2 Secrets + internal certificates | Core | 4–6 | ☐ | | | | |
@@ -942,39 +941,39 @@ Phase 1 builds most of what these need: the shared Terraform modules, the base m
 | 5.5 Self-hosted runners (ARC) | Core | 2–4 | ☐ | | | | |
 | 5.6 On-demand staging | Core | 7–11 | ☐ | | | | |
 | 5.7 Promotion pipeline | Core | 5–8 | ☐ | | | | |
-| 5.8 Google sign-in for admins | Differentiator | 4–7 | ☐ | | | | |
-| 5.9 Performance testing + regression gate | Differentiator | 5–8 | ☐ | | | | |
+| 5.8 Google sign-in for admins | Extended | 4–7 | ☐ | | | | |
+| 5.9 Performance testing + regression gate | Extended | 5–8 | ☐ | | | | |
 | 5.10 Site design and brand (incl. logo) | Core | 5–11 | ☐ | | | | |
-| 5.11 Front-end quality gates | Differentiator | 4–6 | ☐ | | | | |
+| 5.11 Front-end quality gates | Extended | 4–6 | ☐ | | | | |
 | 5.12 Compliance scope + privacy (GDPR) | Core | 4–7 | ☐ | | | | |
 | 6.1 Kyverno | Core | 15–20 | ☐ | | | | |
-| 6.2 Argo Rollouts | Differentiator | 4–7 | ☐ | | | | |
+| 6.2 Argo Rollouts | Extended | 4–7 | ☐ | | | | |
 | 6.3 CiliumNetworkPolicies | Core | 6–9 | ☐ | | | | |
-| 6.4 Service mesh ADR (+ optional Istio experiment) | Differentiator | 2–6 | ☐ | | | | |
-| 6.5 Sandboxed runtime (gVisor) | Differentiator | 4–7 | ☐ | | | | |
-| 7.1 Falco | Differentiator | 4–7 | ☐ | | | | |
-| 7.2 Trivy Operator, Kubescape scan, Talos notes + component checks | Differentiator | 7–10 | ☐ | | | | |
-| 7.3 OpenCost | Differentiator | 2–4 | ☐ | | | | |
-| 7.4 Tracing with Tempo (always on) | Differentiator | 2–5 | ☐ | | | | |
-| 7.5 AWS account posture (Prowler) | Differentiator | 2–4 | ☐ | | | | |
-| 7.6 Version-age report | Differentiator | 2–3 | ☐ | | | | |
-| 7.7 Custom seccomp profile (optional) | Stretch | 3–6 | ☐ | | | | |
-| 7.8 Rollback runbooks and drills | Differentiator | 5–8 | ☐ | | | | |
-| 7.9 CrowdSec | Differentiator | 3–5 | ☐ | | | | |
-| 7.10 First full disaster drill | Differentiator | 6–10 | ☐ | | | | |
-| 7.11 Node-failure drills | Differentiator | 3–6 | ☐ | | | | |
-| 7.12 Stress, spike and soak tests | Differentiator | 5–8 | ☐ | | | | |
-| 9.1 Keyless AWS access | Differentiator | 5–10 | ☐ | | | | |
+| 6.4 Service mesh ADR (+ optional Istio experiment) | Extended | 2–6 | ☐ | | | | |
+| 6.5 Sandboxed runtime (gVisor) | Extended | 4–7 | ☐ | | | | |
+| 7.1 Falco | Extended | 4–7 | ☐ | | | | |
+| 7.2 Trivy Operator, Kubescape scan, Talos notes + component checks | Extended | 7–10 | ☐ | | | | |
+| 7.3 OpenCost | Extended | 2–4 | ☐ | | | | |
+| 7.4 Tracing with Tempo (always on) | Extended | 2–5 | ☐ | | | | |
+| 7.5 AWS account posture (Prowler) | Extended | 2–4 | ☐ | | | | |
+| 7.6 Version-age report | Extended | 2–3 | ☐ | | | | |
+| 7.7 Custom seccomp profile (optional) | Advanced | 3–6 | ☐ | | | | |
+| 7.8 Rollback runbooks and drills | Extended | 5–8 | ☐ | | | | |
+| 7.9 CrowdSec | Extended | 3–5 | ☐ | | | | |
+| 7.10 First full disaster drill | Extended | 6–10 | ☐ | | | | |
+| 7.11 Node-failure drills | Extended | 3–6 | ☐ | | | | |
+| 7.12 Stress, spike and soak tests | Extended | 5–8 | ☐ | | | | |
+| 9.1 Keyless AWS access | Extended | 5–10 | ☐ | | | | |
 | 9.2 Docs + go public | Core | 6–10 | ☐ | | | | |
-| 8.1 SLOs and error budgets | Staff | 10–15 | ☐ | | | | |
-| 8.2 DORA metrics | Staff | 6–10 | ☐ | | | | |
-| 8.3 Backstage and golden path | Staff | 15–25 | ☐ | | | | |
-| 8.4 Second service + multi-tenancy | Staff | 10–15 | ☐ | | | | |
-| 8.5 Threat model + control matrix | Staff | 13–18 | ☐ | | | | |
-| 8.6 Chaos experiments + postmortems | Staff | 10–15 | ☐ | | | | |
-| 8.7 Strategy documents | Staff | 6–10 | ☐ | | | | |
-| 8.8 Fleet management (hub) | Staff | 6–10 | ☐ | | | | |
-| 8.9 Public writing | Staff | 10–20 | ☐ | | | | |
+| 8.1 SLOs and error budgets | Advanced | 10–15 | ☐ | | | | |
+| 8.2 DORA metrics | Advanced | 6–10 | ☐ | | | | |
+| 8.3 Backstage and golden path | Advanced | 15–25 | ☐ | | | | |
+| 8.4 Second service + multi-tenancy | Advanced | 10–15 | ☐ | | | | |
+| 8.5 Threat model + control matrix | Advanced | 13–18 | ☐ | | | | |
+| 8.6 Chaos experiments + postmortems | Advanced | 10–15 | ☐ | | | | |
+| 8.7 Strategy documents | Advanced | 6–10 | ☐ | | | | |
+| 8.8 Fleet management (hub) | Advanced | 6–10 | ☐ | | | | |
+| 8.9 Public writing | Advanced | 10–20 | ☐ | | | | |
 
 ## Decision log
 

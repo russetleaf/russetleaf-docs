@@ -13,7 +13,7 @@ Four areas were well covered: malicious code execution (signed images, Falco, gV
 
 Four had gaps:
 
-- **Trust boundaries and data flow:** described only in the Staff-tier threat model (Phase 1 step 8.5), late in the build and not mapped to these areas.
+- **Trust boundaries and data flow:** described only in the Advanced-tier threat model (Phase 1 step 8.5), late in the build and not mapped to these areas.
 - **Persistence:** nodes can't be changed (Talos), and Argo CD self-heal reverts changes to what it manages, but nothing flagged **new** objects created outside Argo CD (a CronJob, DaemonSet or admission webhook left behind by an attacker), and long-lived service-account token Secrets weren't blocked.
 - **Denial of service:** quotas, memory limits and edge rate limits existed, but there was **no per-pod process (PID) limit** (a fork bomb could exhaust a node), no explicit eviction thresholds, no ephemeral-storage limits, and nothing watched the API server's request throttling.
 - **Privilege escalation through RBAC:** Pod Security blocks container-based escalation, but nothing checked roles for **risky permissions** (`escalate`, `bind`, `impersonate`, `nodes/proxy`, wildcards, or `create pods` where powerful service accounts run), especially in third-party charts.
@@ -37,7 +37,7 @@ Four had gaps:
 
 ## Alternatives considered
 
-- **Leave it to the Staff-tier threat model:** the gaps are small, cheap controls; waiting until the end leaves them open for most of the build.
+- **Leave it to the Advanced-tier threat model:** the gaps are small, cheap controls; waiting until the end leaves them open for most of the build.
 - **OPA Gatekeeper for RBAC rules:** works, but adds a second policy engine; Kyverno already validates any resource kind.
 - **Blocking all objects not created by Argo CD:** strongest against persistence, but breaks controllers (operators, KEDA, the HPA) that create objects legitimately; detecting and alerting is enough here.
 - **Custom API Priority and Fairness levels:** not needed at this scale; the defaults already protect the API server from one noisy client.

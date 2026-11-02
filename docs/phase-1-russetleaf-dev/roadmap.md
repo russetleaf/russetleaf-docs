@@ -6,7 +6,7 @@ The milestones for building [Phase 1](plan.md), with target dates, and the actua
 
 - **Start:** Monday, November 2, 2026.
 - **Pace:** about **60 hours a week**, worked as **10 hours a day, six days a week**, with **Saturdays off**.
-- **Order:** the Core tier first (in plan order), then the Differentiators, then the Staff and Stretch steps, as the plan recommends.
+- **Order:** the Core tier first (in plan order), then the Extended steps, then the Advanced steps, as the plan recommends.
 - **Estimates:** the plan's focused-hour ranges (expect ±50%). **Target** is the date at the midpoint of the estimates; **latest** is the date at the high end.
 - **Not included:** holidays (Thanksgiving, late December), days lost to waiting (box 3's delivery, AWS approvals, DNS), and the drop in pace that long stretches of 10-hour days usually bring. Plan around the **latest** dates.
 
@@ -19,8 +19,8 @@ The milestones for building [Phase 1](plan.md), with target dates, and the actua
 | **M3 GitOps and platform services** | 3.1–4.7 | 41–67 | Sun, Nov 15, 2026 | Wed, Nov 18, 2026 | | |
 | **M4 WordPress live with staging and promotion** | 5.1–5.7, 5.10, 5.12 | 54–91 | Mon, Nov 23, 2026 | Sun, Nov 29, 2026 | | |
 | **M5 Core tier complete and published** | 6.1, 6.3, 9.2 | 27–39 | Fri, Nov 27, 2026 | Thu, Dec 3, 2026 | | |
-| **M6 Senior tier: operations evidence** | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.12, 9.1 | 72–127 | Wed, Dec 9, 2026 | Fri, Dec 18, 2026 | | |
-| **M7 Staff tier and Phase 1 complete** | 7.7, 8.1–8.9 | 89–144 | Tue, Dec 22, 2026 | Mon, Jan 4, 2027 | | |
+| **M6 Production hardening and operations** | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.12, 9.1 | 72–127 | Wed, Dec 9, 2026 | Fri, Dec 18, 2026 | | |
+| **M7 Advanced practices; Phase 1 complete** | 7.7, 8.1–8.9 | 89–144 | Tue, Dec 22, 2026 | Mon, Jan 4, 2027 | | |
 | **Total** | | **330–546** | | | | |
 
 What each milestone shows when it's done:

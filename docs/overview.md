@@ -183,20 +183,20 @@ Which compliance frameworks the project follows, and how, recorded in `docs/phas
 | **HIPAA** | No (no health data) | If it ever applied: the encryption, audit logging and access controls carry over; AWS's Business Associate Agreement and HIPAA-eligible services would be needed |
 | **PCI DSS** | No (no card payments) | If a shop is ever added: a **hosted payment page** (e.g. Stripe Checkout) keeps card data off the site, keeping it in PCI's smallest self-assessment category (SAQ A) |
 
-## Portfolio highlights
+## Project highlights
 
-What each phase lets you show. Phase 1 on its own is a complete portfolio project; Phases 2 and 3 add to it.
+What each phase builds and shows. Phase 1 on its own is a complete project; Phases 2 and 3 add to it.
 
 ### Phase 1: russetleaf.dev
 
 - **One set of GitOps manifests, two live sites.** Argo CD deploys the same Helm charts and values to russetleaf.dev and russetleaf.com, with small per-environment overrides (`overlays/home`, `overlays/aws`). Only the domain and backing services change: in-cluster MariaDB vs RDS, Valkey vs ElastiCache, Cloudflare vs CloudFront, a CPU worker vs a Karpenter GPU NodePool for the model. *(Completed by Phase 3.)*
 - **Real AWS integration from home:** S3 media offload, SQS, Secrets Manager, S3 backups, Bedrock and IAM are all managed by Terraform.
 - **Performance engineering:** smoke, load, stress, spike, soak and AI-burst tests with k6 (distributed in-cluster), results beside system metrics in Grafana, a performance regression gate in promotion, and capacity numbers that set SLOs and costs.
-- **Staff-level practices:** SLOs with error budgets that block promotions automatically, DORA metrics, an internal developer platform (Backstage, a golden-path template proven with a second service, multi-tenancy), hub-and-spoke fleet management, chaos experiments and blameless postmortems, a threat model and control matrix, strategy documents, and public writing.
+- **Engineering practices:** SLOs with error budgets that block promotions automatically, DORA metrics, an internal developer platform (Backstage, a golden-path template proven with a second service, multi-tenancy), hub-and-spoke fleet management, chaos experiments and blameless postmortems, a threat model and control matrix, strategy documents, and public writing.
 - **A four-repo GitOps structure:** infrastructure, deployment config, the WordPress image and the summarizer are separated by purpose and permissions, with automated, reviewed promotion of signed images and charts into the GitOps repo.
 - **Progressive delivery:** Argo Rollouts canaries with automatic rollback based on Prometheus metrics, plus gateway canaries for model changes.
 - **Architecture decision records:** documented choices with their trade-offs, e.g. why media is on S3 rather than the commonly recommended EFS, and why there's no service mesh and when one would be added, with an optional Istio ambient experiment to back it up.
-- **Defense in depth for containers:** seccomp `RuntimeDefault` everywhere, Falco process allow-lists per workload (with Tetragon enforcement as a stretch goal), and gVisor sandboxing for the self-hosted CI runners that run pull-request code (with a measured trial for WordPress), backed by an ADR comparing gVisor and Kata Containers.
+- **Defense in depth for containers:** seccomp `RuntimeDefault` everywhere, Falco process allow-lists per workload (with Tetragon enforcement as an optional extra), and gVisor sandboxing for the self-hosted CI runners that run pull-request code (with a measured trial for WordPress), backed by an ADR comparing gVisor and Kata Containers.
 - **A custom, tested front end:** an AI-assisted block theme and SVG logo kept in Git (Site Editor locked in production), with visual regression, accessibility and Lighthouse checks in CI and staging.
 - **Passwordless admin access:** Google sign-in (OIDC) for WordPress, an edge login layer (Cloudflare Access at home, ALB OIDC on AWS), application passwords kept only for the REST API, and break-glass recovery with `wp-cli`.
 - **Security organized by layer (the 4 C's):** cloud (AWS SRA plus hardened GitHub, Cloudflare, Google and registrar accounts, lab VLAN, Secure Boot), cluster, container (signed images and charts, mirrored dependencies, user namespaces) and code (SAST, DAST, security headers, ASVS mapping).
@@ -214,7 +214,7 @@ What each phase lets you show. Phase 1 on its own is a complete portfolio projec
 - **Pod permissions without stored keys at home (ADR 1033):** publish the Talos cluster's service-account OIDC discovery files (e.g. in a public S3 bucket) and register them as an IAM OIDC provider. Pods such as WordPress (S3, SQS), the summarizer (SQS) and the gateway (Bedrock) then assume IAM roles without stored keys, just like IRSA on EKS. Until then, the home cluster uses narrowly scoped IAM user keys kept in Secrets Manager.
 - **A gated Terraform pipeline:** linting (tflint + AWS ruleset), Checkov with custom project policies, module tests, Infracost cost diffs, secret scanning with push protection, and approved applies of the exact reviewed plan through a GitHub Environment.
 - **Terraform for both sides, in one repo (`russetleaf-infra`):** shared modules, plus separate root modules for russetleaf.com's always-on edge, its demo stack (including Karpenter and its NodePools), and the russetleaf.dev home lab (Talos provider `siderolabs/talos` for all three nodes' machine configs, Cloudflare provider for the tunnel, DNS and WAF rules, and the AWS pieces used from home). *(Completed by Phase 3.)*
-- **CI on GitHub in every repo:** Terraform checks and plans in `russetleaf-infra`; manifest validation and Kyverno policy tests in `russetleaf-gitops`; image builds with SBOMs, scans and signing in `russetleaf-wordpress` and `russetleaf-llm-summarizer`; and the prompt evaluation gate in `russetleaf-llm-summarizer`. Employers see all of it without the AWS stack running.
+- **CI on GitHub in every repo:** Terraform checks and plans in `russetleaf-infra`; manifest validation and Kyverno policy tests in `russetleaf-gitops`; image builds with SBOMs, scans and signing in `russetleaf-wordpress` and `russetleaf-llm-summarizer`; and the prompt evaluation gate in `russetleaf-llm-summarizer`. Reviewers see all of it without the AWS stack running.
 - **A highly available home cluster:** three Talos control-plane nodes with a virtual IP, replicated MariaDB with automatic failover, workloads spread across nodes, rolling upgrades without downtime, and recorded node-failure drills (unplug a node, the site stays up).
 - **An AWS Security Reference Architecture foundation:** separate management, security tooling, log archive, backup, infrastructure and workload accounts; SCP guardrails; centralized root access management; Identity Center with MFA; organization-wide Security Hub, GuardDuty, Config, Access Analyzer and CloudTrail, all in Terraform; and a Well-Architected review.
 - **Disaster recovery beyond a single account:** immutable, cross-account and cross-region copies (S3 Object Lock), daily repo mirrors, a break-glass kit, a written plan with scenarios and a bootstrap order, and a yearly full-rebuild drill.
@@ -231,7 +231,7 @@ What each phase lets you show. Phase 1 on its own is a complete portfolio projec
 - **Generative AI run like production software:** Bedrock integration with least-privilege IAM, event-driven scaling to zero, a dead-letter queue, and cost controls, with the same code running on both clusters.
 - **Model serving on Kubernetes:** a self-hosted model on dedicated nodes (labels, taints, tolerations, node selectors), behind an LLM gateway with routing, fallback, canary splits, rate limits and budgets, so no single model provider is a dependency.
 - **The full MLOps lifecycle:** MLflow experiment tracking and model registry with lineage, guardrails against prompt injection and personal-data leaks, online evaluation and drift alerts, a LoRA fine-tuning (distillation) pipeline on a spot GPU (Phase 3) with evaluation against the base model, DVC-versioned data, and an editor feedback loop.
-- **A standalone MLOps repo (`russetleaf-llm-summarizer`):** versioned prompts, an evaluation set, a CI gate that compares every model and blocks changes that lower summary quality, releases gated on evaluation, a model card, a published Helm chart, and a local demo anyone can run. It's the repo to link on a CV for AI and MLOps roles.
+- **A standalone MLOps repo (`russetleaf-llm-summarizer`):** versioned prompts, an evaluation set, a CI gate that compares every model and blocks changes that lower summary quality, releases gated on evaluation, a model card, a published Helm chart, and a local demo anyone can run. It's the repo to read first for the AI and MLOps roles.
 - **LLM monitoring:** token, latency, error, fallback and cost metrics per model and prompt version, plus model-server throughput, in Prometheus and Grafana, with alerts.
 
 ### Phase 3: russetleaf.com on EKS
@@ -250,14 +250,14 @@ Running this many systems is a lot for one person, so operations have a delibera
 
 ## Build plans, priorities and effort
 
-Each phase's plan tiers every step as **Core**, **Differentiator**, **Stretch** or **Staff**, with hour estimates (focused hours with Claude's help; expect ±50%):
+Each phase's plan tiers every step as **Core** (a complete, working, secure platform), **Extended** (hardening, operations and evidence) or **Advanced** (reliability and platform practices, and optional experiments), with hour estimates (focused hours with Claude's help; expect ±50%):
 
-| Plan | Core | Differentiator | Stretch | Staff | Total |
-|---|---|---|---|---|---|
-| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~169–275 | ~72–127 | ~3–6 | ~86–138 | **~330–546** |
-| [Phase 2: AI summaries and MLOps](phase-2-ai-mlops/plan.md#priorities-and-time-estimates) (optional) | ~47–81 | ~32–53 | ~6–10 | — | **~85–144** |
-| [Phase 3: russetleaf.com](phase-3-russetleaf-com/plan.md#priorities-and-time-estimates) (optional) | ~71–117 | ~18–33 | ~26–45 | ~10–15 | **~125–210** |
-| **Whole project** | ~287–473 | ~122–213 | ~35–61 | ~96–153 | **~540–900** |
+| Plan | Core | Extended | Advanced | Total |
+|---|---|---|---|---|
+| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~169–275 | ~72–127 | ~89–144 | **~330–546** |
+| [Phase 2: AI summaries and MLOps](phase-2-ai-mlops/plan.md#priorities-and-time-estimates) (optional) | ~47–81 | ~32–53 | ~6–10 | **~85–144** |
+| [Phase 3: russetleaf.com](phase-3-russetleaf-com/plan.md#priorities-and-time-estimates) (optional) | ~71–117 | ~18–33 | ~36–60 | **~125–210** |
+| **Whole project** | ~287–473 | ~122–213 | ~131–214 | **~540–900** |
 
 Phase 3's figures include its AI steps (about 28–52 hours), which only apply if Phase 2 is built; without them Phase 3 is about **97–158 hours**.
 
@@ -272,7 +272,6 @@ Phase 3's figures include its AI steps (about 28–52 hours), which only apply i
 
 Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar. A finished Phase 1 is worth more than three unfinished phases.
 
-**Portfolio level:** Phase 1's **Core tier on its own reads as strong intermediate work**; adding Phase 1's **Differentiators**, especially **evidence of operating the system** (rollback, node-failure and disaster drills, a restore from the Backup account), is what makes it **senior-level** for platform roles. Phase 2 adds the AI pipeline with its evaluation gate, and Phase 3 a recorded AWS demo on managed Kubernetes. For **MLOps** roles specifically, the inference-side work (evaluation gate, gateway, self-hosted model, monitoring) reads as strong intermediate (senior for LLMOps); **MLflow, guardrails and online evaluation** (Differentiators) make it senior for LLM-focused MLOps; the **feedback loop and DVC** (Phase 2 Stretch) and the **fine-tuning pipeline** (Phase 3, on a GPU) complete the full lifecycle expected of senior MLOps generally. The **Staff** tier (SLOs and error budgets, DORA metrics, the developer platform proven with a second service, fleet management, chaos and postmortems, the threat model, strategy documents and public writing) shows **staff-level judgment**; staff roles also expect evidence of leading people and teams, which comes from your work history rather than the project. A finished subset is worth more than an unfinished whole: finish Core first.
 
 ## Repository structure (four repos)
 
@@ -291,7 +290,7 @@ The project's code is split across four Git repositories, by **what each one con
 - **Config is kept separate from code** (standard Argo CD practice). Argo CD watches only `russetleaf-gitops`, so building an image never triggers a deploy by accident, and every deploy is a reviewed commit in one place.
 - **Permissions stay limited by repo.** Only `russetleaf-infra`'s CI can change cloud infrastructure. The image repos can push images and open pull requests, nothing more. Argo CD only reads.
 - **Each repo changes at its own pace**, with its own history, CI and releases.
-- **`russetleaf-llm-summarizer` stands on its own** as a CV piece for AI and MLOps roles: it can be understood, tested and deployed without the rest of the project.
+- **`russetleaf-llm-summarizer` stands on its own** as an MLOps project: it can be understood, tested and deployed without the rest of the project.
 
 ### Why Terraform isn't split by environment
 
@@ -557,7 +556,7 @@ Work **infrastructure first, then code, then config**, so nothing is deployed be
 1. `russetleaf-infra/bootstrap`: apply locally to create the Terraform state bucket and the GitHub OIDC roles.
 2. `russetleaf-infra/envs/home`: apply locally to create the Talos cluster on all three boxes, the Cloudflare tunnel and DNS for russetleaf.dev, and the AWS resources used from home. Save the kubeconfig and talosconfig it produces somewhere safe (not in Git).
 3. Install Argo CD once with Helm, then apply `russetleaf-gitops/bootstrap/home`. From then on, Argo CD manages everything else, including itself if you add Argo CD to `platform/`.
-4. Add the secrets the cluster needs to AWS Secrets Manager (WordPress admin and application passwords; **not** the database passwords, which MariaDB Operator generates; Cloudflare tunnel token, scoped IAM keys for home until the OIDC stretch goal is done); External Secrets syncs them in.
+4. Add the secrets the cluster needs to AWS Secrets Manager (WordPress admin and application passwords; **not** the database passwords, which MariaDB Operator generates; Cloudflare tunnel token, scoped IAM keys for home until keyless OIDC access, Phase 1 step 9.1, is done); External Secrets syncs them in.
 
 **russetleaf.com always-on edge (once):**
 
@@ -620,7 +619,7 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [1012](phase-1-russetleaf-dev/adr/1012-opencost-and-aws-billing.md) | OpenCost for in-cluster allocation, AWS billing for actual costs, and how cost alerts flow | 1 |
 | [1013](phase-1-russetleaf-dev/adr/1013-image-supply-chain.md) | Image supply chain: SLSA provenance, Semgrep for SAST, and the build pipeline's tools | 1 |
 | [1014](phase-1-russetleaf-dev/adr/1014-availability-levels.md) | Availability levels: home lab without HA; AWS designed for HA but run as a demo | 1 |
-| [1015](phase-1-russetleaf-dev/adr/1015-process-allow-listing.md) | Process allow-listing with Falco; AppArmor and SELinux not used; Tetragon and custom seccomp as stretch goals | 1 |
+| [1015](phase-1-russetleaf-dev/adr/1015-process-allow-listing.md) | Process allow-listing with Falco; AppArmor and SELinux not used; Tetragon and custom seccomp as optional extras | 1 |
 | [1016](phase-1-russetleaf-dev/adr/1016-rollback-strategy.md) | Rollback strategy: Git revert by default, automatic canary rollback, back up before schema changes | 1 |
 | [1017](phase-1-russetleaf-dev/adr/1017-intrusion-detection-and-prevention.md) | Intrusion detection and prevention in layers | 1 |
 | [1018](phase-1-russetleaf-dev/adr/1018-disaster-recovery.md) | Disaster recovery with off-account immutable copies and a break-glass kit | 1 |

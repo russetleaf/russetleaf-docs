@@ -11,13 +11,13 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
 | **Core** | A working, evaluated and secured summary pipeline: the repo, AWS resources, box 2 as the LLM node, the WordPress side, KEDA, the gateway, the summarizer, its release and monitoring, the evaluation set, runners and gate, security for the new components, and the docs. | 1.1–1.4, 2.1–2.5, 4.1–4.3, 5.1, 5.3 | **~47–81** |
-| **Differentiator** | The full MLOps story: the AI burst test, the self-hosted model and gateway routing, MLflow tracking and registry, guardrails, online evaluation and drift, and observability and operations for the AI components. | 2.6, 3.1, 3.2, 4.4–4.6, 5.2 | **~32–53** |
-| **Stretch** | The feedback loop and data versioning (DVC). | 4.7 | **~6–10** |
+| **Extended** | The full MLOps lifecycle: the AI burst test, the self-hosted model and gateway routing, MLflow tracking and registry, guardrails, online evaluation and drift, and observability and operations for the AI components. | 2.6, 3.1, 3.2, 4.4–4.6, 5.2 | **~32–53** |
+| **Advanced** | The feedback loop and data versioning (DVC). | 4.7 | **~6–10** |
 | **Total** | | | **~85–144** |
 
 **Calendar time:** about **4–7 weeks at ~20 hours a week** (2–3.5 months at ~10), after Phase 1's Core tier. Allow a few days for Bedrock model access.
 
-**Recommended order:** Stage 1, then the Core steps of Stages 2 and 4 (a working, evaluated pipeline), then 5.1 and 5.3; add the Differentiators after that. Fine-tuning is in Phase 3 (steps 4.5 and 4.6), because it needs a GPU.
+**Recommended order:** Stage 1, then the Core steps of Stages 2 and 4 (a working, evaluated pipeline), then 5.1 and 5.3; add the Extended steps after that. Fine-tuning is in Phase 3 (steps 4.5 and 4.6), because it needs a GPU.
 
 ## Decisions to make before writing code
 
@@ -235,18 +235,18 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 | 2.3 Summarizer code | Core | 8–12 | ☐ | | | | |
 | 2.4 Summarizer chart + deploy | Core | 6–10 | ☐ | | | | |
 | 2.5 LLM monitoring | Core | 3–6 | ☐ | | | | |
-| 2.6 AI pipeline burst test | Differentiator | 3–5 | ☐ | | | | |
-| 3.1 llama.cpp on box 2 | Differentiator | 4–6 | ☐ | | | | |
-| 3.2 Gateway routing to local model | Differentiator | 2–4 | ☐ | | | | |
+| 2.6 AI pipeline burst test | Extended | 3–5 | ☐ | | | | |
+| 3.1 llama.cpp on box 2 | Extended | 4–6 | ☐ | | | | |
+| 3.2 Gateway routing to local model | Extended | 2–4 | ☐ | | | | |
 | 4.1 Evaluation set | Core | 5–8 | ☐ | | | | |
 | 4.2 Runners for `russetleaf-llm-summarizer` | Core | 1–2 | ☐ | | | | |
 | 4.3 Evaluation gate + releases | Core | 4–7 | ☐ | | | | |
-| 4.4 MLflow tracking + registry | Differentiator | 6–10 | ☐ | | | | |
-| 4.5 Guardrails | Differentiator | 6–10 | ☐ | | | | |
-| 4.6 Online evaluation + drift | Differentiator | 6–10 | ☐ | | | | |
-| 4.7 Feedback loop + DVC | Stretch | 6–10 | ☐ | | | | |
+| 4.4 MLflow tracking + registry | Extended | 6–10 | ☐ | | | | |
+| 4.5 Guardrails | Extended | 6–10 | ☐ | | | | |
+| 4.6 Online evaluation + drift | Extended | 6–10 | ☐ | | | | |
+| 4.7 Feedback loop + DVC | Advanced | 6–10 | ☐ | | | | |
 | 5.1 Security for the AI components | Core | 4–7 | ☐ | | | | |
-| 5.2 Observability and operations for AI | Differentiator | 5–8 | ☐ | | | | |
+| 5.2 Observability and operations for AI | Extended | 5–8 | ☐ | | | | |
 | 5.3 Documentation | Core | 2–4 | ☐ | | | | |
 
 ## Decision log

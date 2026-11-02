@@ -17,7 +17,7 @@ Workload identity was well covered (projected service-account tokens off by defa
 - Argo CD, Grafana and Backstage relied on the edge login, without their own SSO and roles
 - **audit logs** were kept only 7 days (Loki at home) or briefly (CloudWatch on EKS), and Argo CD's audit trail wasn't collected
 - **platform namespaces** had no default-deny network policies
-- the home External Secrets bootstrap key remained a static key until a Stretch goal
+- the home External Secrets bootstrap key remained a static key until an optional later step
 
 ## Decision
 
@@ -30,7 +30,7 @@ Workload identity was well covered (projected service-account tokens off by defa
 - **Audit-log retention:** Kubernetes audit logs are also shipped to an **S3 bucket with Object Lock in the Log Archive account**, kept **1 year** (Alloy writes a copy; EKS: ADR 3005); Argo CD's audit events (who synced or changed what) are collected into Loki and the same archive.
 - **Default-deny network policies for platform namespaces** too (Argo CD, monitoring, logging, External Secrets, Kyverno, cert-manager, Dex, KEDA, Argo Rollouts and others), with least-privilege egress per component (e.g. Argo CD → GitHub and GHCR and the API server; External Secrets → Secrets Manager; cert-manager → the API server), tested in CI.
 - **Pod Security Admission version pinned** on every namespace (`enforce-version`), so Kubernetes upgrades don't silently change enforcement.
-- **Keyless AWS access for the home cluster** (Phase 1 step 9.1) moves from Stretch to **Differentiator**, removing the last static AWS keys.
+- **Keyless AWS access for the home cluster** (Phase 1 step 9.1) moves into the **Extended** tier (it was optional), removing the last static AWS keys.
 
 ## Alternatives considered
 

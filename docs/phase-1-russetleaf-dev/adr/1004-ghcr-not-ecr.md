@@ -25,7 +25,7 @@ Reasons, in order of importance:
 1. **The home cluster runs outside AWS.** Private ECR needs AWS credentials, and ECR login tokens **expire every 12 hours**, so the home cluster would need a job or credential helper refreshing its pull secret, which can quietly break pulls. Public GHCR packages need no credentials.
 2. **Simpler CI and signing.** GitHub Actions pushes to GHCR with its built-in token, and cosign keyless signing uses GitHub's identity directly. ECR would need an AWS role per repo for pushing.
 3. **One registry for both sites:** identical image references everywhere and a single Kyverno registry rule.
-4. **Visible to employers:** packages appear on each repo's GitHub page, next to the code that built them.
+4. **Visible to reviewers:** packages appear on each repo's GitHub page, next to the code that built them.
 5. **Cost (minor):** public GHCR packages are free; ECR would cost about $0.10/GB-month of storage plus data-transfer charges for pulls from home: a few dollars a month at most.
 
 ## Alternatives considered

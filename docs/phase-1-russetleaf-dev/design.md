@@ -156,7 +156,7 @@ The project depends on more than AWS: **GitHub** (code, CI, packages, attestatio
 - **HTTP security headers** on both sites: **HSTS** (set at Cloudflare and with a CloudFront response-headers policy), **Content-Security-Policy** (report-only first, with reports collected, then enforced), `X-Content-Type-Options: nosniff`, `frame-ancestors` (or X-Frame-Options), Referrer-Policy and Permissions-Policy.
 - **DAST:** an OWASP **ZAP** baseline scan of staging in the promotion gate (failing on high-risk findings), and once against russetleaf.com during a demo (Phase 3).
 - **WordPress hardening:** anonymous **user enumeration blocked** (author archives and the REST `users` endpoint), **auth keys and salts** from Secrets Manager and rotated on a schedule, XML-RPC off, file modifications off.
-- **OWASP ASVS:** the control matrix (Staff tier) maps the site's controls to ASVS requirements.
+- **OWASP ASVS:** the control matrix (Phase 1 step 8.5) maps the site's controls to ASVS requirements.
 
 ## What production-ready adds
 
@@ -305,7 +305,7 @@ The goal of process allow-listing is "**only these programs may run in this cont
 | **Falco process allow-list rules** | **Yes** (both sites) | Per-workload lists of expected programs; anything else raises an alert. No extra memory: Falco already runs |
 | **Fewer programs in the images** | **Yes** | The read-only root filesystem, non-root user, and images without download tools (`curl`, `wget`) or package managers leave little for an attacker to run; container-structure-test checks this |
 | **Tetragon enforcement** | **Optional** (tried on EKS first, then at home, where the three-node cluster now has the memory) | Cilium's eBPF runtime-security tool can **kill a process the moment it starts** if it isn't on the allow-list, blocking rather than reporting; integrates with Cilium and Hubble; roughly 100–300 MB per node |
-| **Custom per-workload seccomp profiles** | **Optional stretch** | The Security Profiles Operator records the exact system calls each app uses and builds a tight profile; works on both clusters, but a missed call breaks the app after an update |
+| **Custom per-workload seccomp profiles** | **Optional (Advanced tier)** | The Security Profiles Operator records the exact system calls each app uses and builds a tight profile; works on both clusters, but a missed call breaks the app after an update |
 | **AppArmor** | **No** | Talos doesn't ship it, and EKS's Amazon Linux 2023 nodes don't use it |
 | **Custom SELinux policies** | **No** | Talos's SELinux support is limited (check its current status) and AL2023 typically runs SELinux in permissive mode; writing container policies is a large effort for little gain here |
 
@@ -652,7 +652,7 @@ IAM authentication doesn't exist for a self-hosted MariaDB, so the home lab remo
 - **Rotation:** every few months, delete the generated Secret's value and let it be regenerated (or use the operator's rotation feature, if your version has one), then restart WordPress through its Rollout. Done as a scheduled, tested procedure, not by hand.
 - **TLS between WordPress and MariaDB:** turn on TLS in MariaDB Operator (with certificates from the operator or cert-manager) and require it for the `wordpress` user, so credentials never cross the network in clear text, even inside the cluster.
 - **Staging** has its own MariaDB with its own generated passwords; nothing is shared with production.
-- **Stretch goal:** fully passwordless at home with **client certificates** (MariaDB's `REQUIRE X509`, certificates issued by cert-manager). Confirm MariaDB Operator supports certificate-based users before planning on it.
+- **Optional later:** fully passwordless at home with **client certificates** (MariaDB's `REQUIRE X509`, certificates issued by cert-manager). Confirm MariaDB Operator supports certificate-based users before planning on it.
 
 ## Admin sign-in with Google
 
@@ -1119,7 +1119,7 @@ Reverting Terraform code doesn't always undo infrastructure cleanly. Stateful re
 
 The full AWS stack costs too much to run 24/7 as a portfolio project. Instead:
 
-- Keep the **complete AWS design in Terraform on GitHub**, with CI, so employers can review it.
+- Keep the **complete AWS design in Terraform on GitHub**, with CI, so anyone can review it.
 - Run **russetleaf.dev all the time on a three-node, highly available home Talos cluster**, published through a Cloudflare Tunnel.
 - Use **real AWS services where they're cheap** (S3, Secrets Manager, SES, IAM; SQS and Bedrock from Phase 2).
 - In Phase 3 (optional), bring up **russetleaf.com's full AWS stack only for short demos**; see the Phase 3 design.
@@ -1138,7 +1138,7 @@ All three nodes are **control-plane nodes** that also run workloads, so etcd kee
 
 **Disks:** all three nodes must use **SSD or NVMe** storage, because etcd runs on every node and is sensitive to disk latency. Check boxes 1 and 2; a spinning disk should be replaced with an inexpensive SATA SSD before installing Talos.
 
-**Memory budget** (Phase 1, estimates with every tier installed, including Staff; Phase 2's additions are in its design doc):
+**Memory budget** (Phase 1, estimates with every tier installed, including Advanced; Phase 2's additions are in its design doc):
 
 | Node | Main memory users | Estimated use |
 |---|---|---|
@@ -1244,9 +1244,9 @@ The cost column is what russetleaf.dev costs to run 24/7 in Phase 1. The russetl
 | Disaster recovery copies | Backup account: Object Lock buckets in us-west-2, replication, daily repo mirrors | Same (shared) | <$1 |
 | **Total (24/7)** | | | **~$14–$33 / month** |
 
-## Staff-level practices
+## Engineering practices
 
-These practices move the project from "a well-built system" toward **staff-level** work: running a platform as a product for other engineers, letting reliability targets drive decisions, measuring delivery, and setting technical direction in writing. A solo portfolio can show staff-level **judgment**; staff roles also expect evidence of **leading people and teams**, which interviews will ask about separately.
+These practices go beyond building the system: running the platform as a product for other engineers, letting reliability targets drive decisions, measuring delivery, and setting technical direction in writing. They're Phase 1's Advanced tier.
 
 ### SLOs and error budgets that drive decisions
 
