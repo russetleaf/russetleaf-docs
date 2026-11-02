@@ -175,10 +175,13 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 2.5: kube-bench and Kubescape scan
 **Do:**
-- `platform/kube-bench/`: a Job using the **EKS CIS benchmark** profile (node and control-plane configuration), with results saved to `docs/` in `wp-gitops` (e.g. `docs/kube-bench-eks-<date>.txt`) and a short summary of any failures and why they're accepted or fixed. The summary states that the **control plane is AWS-managed** (shared-responsibility model): EKS enables only Node and RBAC authorization plus AWS's access-entry webhook, and ABAC can't be enabled; kube-bench's node-side checks (kubelet anonymous access off, webhook authorization) must pass. As a direct check, from a test pod an anonymous request to a node's kubelet API (`curl -sk -o /dev/null -w '%{http_code}' https://<node-ip>:10250/pods`) must return `401`, for a managed node-group node and a Karpenter-created node alike.
+- **kube-bench** (see `docs/adr/0012-kube-bench-eks-only.md`): `platform/kube-bench/` holds **Job templates, one per node pool** (managed node group, Karpenter general pool, GPU pool with the `dedicated=llm` toleration), using the **EKS CIS benchmark** profile, writing **JSON and text** output, with `ttlSecondsAfterFinished` so they clean up. They're applied by the `demo-up` workflow (step 6.1), not synced by Argo CD. For now, run them by hand:
+  - the JSON output reaches **Loki** through Alloy; add a Grafana panel (pass/fail/warn counts per node pool, per run) using Loki's JSON parsing
+  - commit a summary to `docs/security/kube-bench-eks-<date>.md`, and create `docs/security/kube-bench-accepted.yaml` listing accepted findings with reasons
+  - the summary covers each node pool, with any failures and why they're accepted or fixed. The summary states that the **control plane is AWS-managed** (shared-responsibility model): EKS enables only Node and RBAC authorization plus AWS's access-entry webhook, and ABAC can't be enabled; kube-bench's node-side checks (kubelet anonymous access off, webhook authorization) must pass. As a direct check, from a test pod an anonymous request to a node's kubelet API (`curl -sk -o /dev/null -w '%{http_code}' https://<node-ip>:10250/pods`) must return `401`, for a managed node-group node and a Karpenter-created node alike.
 - A **Kubescape CLI** scan of the EKS cluster from the workstation (NSA-CISA and MITRE ATT&CK frameworks, plus RBAC analysis; nothing installed in the cluster), saved in `docs/security/` with a summary, and compared with the home cluster's scores. Fill in the EKS open item in `docs/adr/0003-kubescape-cli-not-operator.md`.
 
-**Test:** the Job completes and both reports are committed with summaries; any differences between the home and EKS Kubescape scores are explained (e.g. AWS-managed components).
+**Test:** a kube-bench Job runs on each node pool and completes; its results appear in the Grafana panel (from Loki); the summary and accepted-findings file are committed; the Kubescape report is committed; the Compliance dashboard shows EKS next to the home cluster (Trivy Operator metrics); any differences between the home and EKS Kubescape scores are explained (e.g. AWS-managed components).
 
 ## Phase 3: WordPress on russetleaf.com
 
@@ -246,11 +249,11 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 6.1: Demo workflows
 **Do:** GitHub Actions in `wp-infra`, started by hand (`workflow_dispatch`):
-- **`demo-up`:** `terraform apply` in `envs/aws`; wait for Argo CD to sync; wait until russetleaf.com returns 200; resume the russetleaf.com heartbeat check; post the start time (e.g. as a tag on the VPC) and "russetleaf.com demo started" to `#rl-com-alerts`.
+- **`demo-up`:** `terraform apply` in `envs/aws`; wait for Argo CD to sync; wait until russetleaf.com returns 200; resume the russetleaf.com heartbeat check; **run the kube-bench Jobs** (one per node pool), wait for them to finish, collect their JSON and text output as workflow artifacts, compare with `docs/security/kube-bench-accepted.yaml`, commit the summary to `docs/security/` (through a pull request on `wp-gitops`), and post pass/fail/warn counts to `#rl-security`, flagging new failures; post the start time (e.g. as a tag on the VPC) and "russetleaf.com demo started" to `#rl-com-alerts`.
 - **`demo-down`:** create an Alertmanager **silence** for `site=com` and pause the russetleaf.com heartbeat check; suspend Argo CD auto-sync; delete the Applications in reverse order; wait until the ALB, the `origin` record and the Karpenter nodes are gone (with timeouts); `terraform destroy` in `envs/aws`; confirm russetleaf.com returns the 503 offline page and no tagged demo resources remain; post "russetleaf.com demo stopped" (with the run time) to `#rl-com-alerts`.
 - **Safety net:** a scheduled workflow (hourly) that alerts `#rl-costs` and `#rl-critical` (and optionally runs `demo-down`) if the demo stack has been up longer than a set limit (e.g. 6 hours).
 
-**Test:** run `demo-up` and `demo-down` end to end twice without manual steps, and confirm the teardown produces **no** alert noise in Slack (only the "stopped" message); force the safety net by lowering the limit.
+**Test:** run `demo-up` and `demo-down` end to end twice without manual steps (each `demo-up` producing a kube-bench summary pull request and a `#rl-security` message), and confirm the teardown produces **no** alert noise in Slack (only the "stopped" message); force the safety net by lowering the limit.
 
 ### Step 6.2: Full rehearsal and demo script
 **Do:** write `docs/demo-script.md`: what to show and in what order (offline page → `demo-up` → live site → publish a post and watch the summary → its end-to-end trace in Tempo → Grafana LLM dashboard → Argo Rollouts canary → Kyverno rejecting an unsigned image → Falco alert → OpenCost → `demo-down` → offline page). Rehearse, then record a walkthrough.
@@ -275,6 +278,7 @@ Record each answer in the [decision log](#decision-log).
 | Review russetleaf.com alert noise | After each demo | Anything that fired during the demo should have been real; tune or remove alerts that weren't |
 | Rotate the CloudFront-to-ALB secret header | Every few months | Change the value in `envs/aws-edge`; the next demo picks it up |
 | Prowler AWS scan with the stack up | Once per demo | Trigger the `wp-infra` Prowler workflow during the demo; review findings for the demo resources |
+| kube-bench scan | Every demo (automatic, in `demo-up`) | Review the summary pull request and any new failures flagged in `#rl-security`; fix in Terraform or the node class, or add to the accepted-findings file with a reason |
 | Kubescape posture scan | Once per demo | Run the Kubescape CLI against EKS during the demo; save the report in `docs/security/` |
 | Review costs | After each demo | Cost Explorer filtered by `Site=com`, compared with the demo hours recorded |
 

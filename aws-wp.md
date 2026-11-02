@@ -230,12 +230,16 @@ How it's run:
 | `FalcoNotRunning` | The Falco DaemonSet has fewer ready pods than nodes for 10 minutes (from kube-state-metrics), i.e. a node is unprotected | `#rl-security` + `#rl-critical` |
 | `FalcosidekickOutputErrors` | Falcosidekick fails to deliver alerts to Alertmanager or Slack | `#rl-security` |
 | `FalcoEventsDropped` | Falco reports dropped system-call events (it can't keep up, so detections may be missed) | `#rl-security` |
-- **kube-bench** audits the cluster against the **CIS Kubernetes Benchmark**, run as a Job with the EKS profile. Reports are saved to `docs/` in `wp-gitops`.
+- **kube-bench** (EKS only; see `docs/adr/0012-kube-bench-eks-only.md`) audits the worker nodes against the **CIS Kubernetes Benchmark** with the **EKS profile**. It runs on **every demo**, as a step in the `demo-up` workflow (not a CronJob, since the cluster only lives a few hours):
+  - **one Job per node pool** (managed node group, Karpenter general pool, GPU pool), each cleaning itself up afterwards
+  - **JSON and text output**: the JSON reaches **Loki** automatically through Alloy (a Grafana panel shows pass/fail/warn counts per demo and node pool); both are kept as workflow artifacts
+  - a summary committed to `docs/security/kube-bench-eks-<date>.md`, compared with `docs/security/kube-bench-accepted.yaml` (accepted findings, each with a reason) so only **new** failures stand out
+  - counts posted to `#rl-security`, flagging new failures
 - **API server authorization: only Node and RBAC; ABAC and `AlwaysAllow` off** on both clusters.
   - **Home (Talos):** Talos configures the API server with Kubernetes' structured authorization config file (`--authorization-config`), enabling only the **Node** and **RBAC** authorizers. The Talos machine config in `wp-infra` must **never override** it (no custom authorization config, no ABAC policy file). Talos's defaults also turn off anonymous access to the kubelet and use webhook authorization for it (verified on box 1: `kubelet.yaml` has `authentication.anonymous.enabled: false` and `authorization.mode: Webhook`, and an anonymous request to the kubelet API on port 10250 returns **401 Unauthorized**). Checked with `talosctl -n <control-plane-ip> read /system/config/kubernetes/kube-apiserver/authorization-config.yaml`, which must list only `Node` and `RBAC`; documented in `docs/talos-hardening.md`.
   - **EKS:** AWS manages the API server and enables Node and RBAC, plus its own webhook for IAM-based access entries; ABAC can't be enabled. Under AWS's shared-responsibility model, the control plane is AWS's to secure, which the kube-bench summary states; kube-bench still checks the node-side settings (kubelet anonymous access and authorization mode).
   - **Both:** the Kubescape CLI scans flag risky RBAC, such as bindings that grant permissions to `system:anonymous` or `system:authenticated`.
-- **Trivy Operator** runs continuously in the cluster, producing CIS compliance reports, vulnerability reports for running images, and configuration audits.
+- **Trivy Operator** runs continuously in the cluster, producing CIS compliance reports, vulnerability reports for running images, and configuration audits. Its **compliance results are published as Prometheus metrics** on both clusters, feeding a **Grafana "Compliance" dashboard** that shows both sites side by side, and a `ComplianceFailuresIncreased` alert to `#rl-security` when the number of failing CIS controls rises. This is the continuous compliance signal; kube-bench adds deeper node-level checks on EKS.
 - **Kubescape CLI**, run on demand (monthly at home, once per AWS demo on EKS) from the workstation or the in-cluster CI runners, with **nothing installed in the cluster**: scores each cluster against the **NSA-CISA** and **MITRE ATT&CK** frameworks and analyses **RBAC** for risky permissions, the one area no other tool here covers. Reports are saved in `docs/` in `wp-gitops`. It complements kube-bench rather than replacing it: kube-bench checks node and control-plane configuration directly on the nodes; Kubescape checks workloads and permissions through the Kubernetes API. The in-cluster Kubescape operator is deliberately not used (0.5–1 GB of memory, mostly duplicating Trivy Operator and Falco); see `docs/adr/0003-kubescape-cli-not-operator.md`.
 - **Prowler**, for the **AWS account itself** (shared by the home lab's AWS resources and russetleaf.com): a scheduled GitHub Actions workflow in `wp-infra` runs it **monthly**, plus once per AWS demo with the stack up, using a **read-only audit role** through GitHub OIDC. It checks the account's actual settings (IAM users and keys, root MFA, CloudTrail, S3 public access, security groups, encryption defaults) against **CIS AWS Foundations** and **AWS Foundational Security Best Practices**, catching anything configured outside Terraform. Reports are kept as workflow artifacts with a summary in `docs/security/` and a short message to `#rl-security`. Deepfence ThreatMapper was considered and not used (its console needs more memory than box 1 has, and it duplicates the tools above); see `docs/adr/0007-prowler-not-threatmapper.md`.
 
@@ -967,7 +971,7 @@ These are approximate prices for **us-east-1**, on demand unless noted, for a sm
 | Amazon SQS + EventBridge | summary queue + dead-letter queue, KEDA polling, Karpenter interruption queue (within free tiers) | <$1 |
 | Amazon Bedrock | ~10–20 new or edited posts/month plus CI evaluation runs, on Haiku and Nova (~$1 per 1M input tokens, ~$5 per 1M output for Haiku; Nova less) | ~$1–$2 |
 | LiteLLM, ARC runners, KEDA, Argo Rollouts, Kyverno, Falco, Trivy Operator, OpenCost, Karpenter, Prometheus/Grafana | run on the existing worker nodes | $0 |
-| kube-bench | Job run on demand | $0 |
+| kube-bench | One Job per node pool, every demo (in `demo-up`) | $0 |
 | Loki log storage (S3) | 14-day retention, demo-hours volume | <$1 |
 | Tempo trace storage (S3) | 7-day retention, demo-hours volume | <$1 |
 | Alerting (SNS, Amazon Q Developer in chat applications, Slack free plan) | CloudWatch alarms and budget alerts to Slack | $0 |
@@ -1110,7 +1114,7 @@ spec:
 
 Two parts of the AWS design deliberately don't run at home:
 - **Karpenter** needs a cloud provider to create nodes; the home nodes are fixed hardware.
-- **kube-bench** looks for config files and processes where most Linux distributions keep them, and Talos doesn't, so many checks fail or come back "not applicable". Talos is hardened by default (no shell or SSH, read-only system, API-only management, only Node and RBAC authorization on the API server, no anonymous kubelet access), so the home lab documents how Talos meets the CIS benchmark instead, and relies on Trivy Operator's compliance reports for continuous checks.
+- **kube-bench** looks for config files and processes where most Linux distributions keep them, and Talos doesn't, so many checks fail or come back "not applicable". Talos is hardened by default (no shell or SSH, read-only system, API-only management, only Node and RBAC authorization on the API server, no anonymous kubelet access), so the home lab documents how Talos meets the CIS benchmark instead, and relies on Trivy Operator's compliance reports and metrics for continuous checks (see `docs/adr/0012-kube-bench-eks-only.md`).
 
 ### Home component mapping and costs
 
@@ -1237,8 +1241,10 @@ wp-gitops/
                             #   0004-ghcr-not-ecr.md, 0005-loki-alloy-for-logs.md,
                             #   0006-tempo-tracing.md, 0007-prowler-not-threatmapper.md,
                             #   0008-google-sign-in-for-admins.md, 0009-gvisor-sandboxing.md,
-                            #   0010-local-storage-no-ceph.md, 0011-update-strategy.md)
-                            # + diagrams, cost breakdown, Grafana screenshots, CIS/kube-bench reports,
+                            #   0010-local-storage-no-ceph.md, 0011-update-strategy.md,
+                            #   0012-kube-bench-eks-only.md)
+                            # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
+                            #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
   bootstrap/
     home/                   # root "app of apps" Application for the home cluster
@@ -1281,14 +1287,16 @@ wp-gitops/
     falco/                  # Falco (modern eBPF) + custom rules + Falcosidekick + ServiceMonitors and health
                             #   gVisor event source (home) for sandboxed pods
                             #   alerts (FalcoNotRunning, FalcosidekickOutputErrors, FalcoEventsDropped)
-    trivy-operator/         # continuous CIS compliance, running-image vulnerability and config reports
+    trivy-operator/         # continuous CIS compliance (+ Prometheus metrics, Compliance dashboard, alert),
+                            #   running-image vulnerability and config reports
     opencost/               # OpenCost (cost per namespace/workload/node)
     logging/                # Loki (single binary, S3 storage, ruler for log-based alerts) + Grafana Alloy
                             #   DaemonSet (labels, noise dropping, masking; Talos log receiver at home; OTLP
                             #   receiver forwarding traces to Tempo)
     tracing/                # Grafana Tempo (single binary, S3 storage); home: on demand, aws: always on
     karpenter/              # Karpenter general and GPU NodePools, EC2NodeClass (aws only)
-    kube-bench/             # CIS benchmark Job, EKS profile (aws only)
+    kube-bench/             # CIS benchmark Job templates per node pool, EKS profile (aws only; applied by the
+                            #   demo-up workflow, not synced by Argo CD)
     llm-gateway/            # LiteLLM + routing config: model list, fallbacks, canary weights, budgets
     llm-serving/            # llama.cpp model server, tolerations/node selector;
                             #   home: CPU build on box 2, aws: CUDA build on the GPU NodePool
