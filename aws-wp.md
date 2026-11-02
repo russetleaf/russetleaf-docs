@@ -721,6 +721,34 @@ An admin signs in once with Google at the edge, then once more (one click, no pa
 ### Cost
 **$0.** Google's OAuth for basic sign-in is free, the plugin is open source, Cloudflare Access is free for up to 50 users, and the ALB's OIDC rule adds no charge. **No AWS components are required**; Secrets Manager (already in use) holds the client secrets. Amazon Cognito isn't needed.
 
+## Site design and branding
+
+russetleaf.dev is the portfolio's front door, so it gets a **custom design and a logo**, built the same way as everything else: in Git, reviewed, and shipped in the image. The reasoning is recorded in `docs/adr/0027-site-design-in-git.md`.
+
+### A block theme kept in Git
+Modern WordPress **block themes** are styled through `theme.json` (colours, typography, spacing), templates and patterns. The **Site Editor** can change them, but it saves those changes **in the database**, which would let the live site drift from Git. So:
+1. **Design locally** in the Docker Compose WordPress, using the Site Editor and AI help.
+2. **Export to files** with the **Create Block Theme** plugin (from the WordPress team) as the project's own theme, `russetleaf`.
+3. **Commit** it to `wp-image/themes/russetleaf/` and build it into the image like any other theme; the same image serves both sites.
+4. **Lock the Site Editor in production:** a small must-use plugin removes the ability to change the theme's templates and global styles, so the design only changes through a pull request (and the staging and promotion pipeline).
+
+### Using AI to design it quickly
+- **A short design brief** (audience, tone, colours, the russet-leaf idea, a few sites you like) given to Claude, which generates the block theme: `theme.json` (palette, typography, spacing, a dark-mode variant), templates (home, post, page, archive, 404) and patterns (a hero section, post cards, an "about this project" section linking the repos and ADRs).
+- **Iterate with screenshots:** run it locally, take screenshots and show them to Claude, which can read images and suggest concrete changes.
+- **Feature the AI summaries:** a styled "AI summary" box at the top of each post, with the model and prompt version in small print, so visitors see the MLOps work.
+
+### Logo and brand assets
+- **Logo design:** a simple mark (e.g. a stylised russet leaf) plus a "RussetLeaf" wordmark, produced as **SVG** (vector, crisp at any size, tiny, easy to edit). The quickest route is to have Claude write the SVG directly and iterate on it; an AI image generator (e.g. Ideogram, ChatGPT's image generation, Adobe Firefly, Midjourney) can be used to explore concepts first, but its raster output then needs **vectorising** (e.g. Inkscape's trace) and cleaning up.
+- **Derived assets:** favicon set, WordPress site icon, Apple touch icon, and an **Open Graph share image** for links on social media, all generated from the SVG; the theme's **palette is derived from the logo**.
+- **Checks before public use:** the image generator's **commercial-use terms** (if one was used); that purely AI-generated images may not be protectable by copyright in some jurisdictions; and a quick **trademark search** for "RussetLeaf".
+- Brand assets live in `wp-image/brand/` (source SVG, exported icons, the palette).
+
+### Front-end quality gates
+In `wp-image` CI and the staging gate:
+- **Visual regression tests:** **Playwright** screenshots of key pages (home, a post with its AI summary, an archive, light and dark mode, mobile and desktop widths) compared with approved baselines; any unexpected change fails the check until a new baseline is approved in the pull request.
+- **Accessibility checks:** **axe-core** (through Playwright) on the same pages, failing on serious issues (contrast, headings, alt text, keyboard navigation).
+- **Lighthouse CI** performance budgets (page weight, Largest Contentful Paint, total blocking time), complementing the k6 load tests.
+
 ## AI post summaries
 
 ### How it works (event-driven)
@@ -1545,6 +1573,7 @@ Together with the home lab, the total stays within **$30–$50/month**. If the A
 - **Progressive delivery:** Argo Rollouts canaries with automatic rollback based on Prometheus metrics, plus gateway canaries for model changes.
 - **Architecture decision records:** documented choices with their trade-offs, e.g. why media is on S3 rather than the commonly recommended EFS, and why there's no service mesh and when one would be added, with an optional Istio ambient experiment to back it up.
 - **Defence in depth for containers:** seccomp `RuntimeDefault` everywhere, Falco process allow-lists per workload (with Tetragon enforcement as a stretch goal), and gVisor sandboxing for the self-hosted CI runners that run pull-request code (with a measured trial for WordPress), backed by an ADR comparing gVisor and Kata Containers.
+- **A custom, tested front end:** an AI-assisted block theme and SVG logo kept in Git (Site Editor locked in production), with visual regression, accessibility and Lighthouse checks in CI and staging.
 - **Passwordless admin access:** Google sign-in (OIDC) for WordPress, an edge login layer (Cloudflare Access at home, ALB OIDC on AWS), application passwords kept only for the REST API, and break-glass recovery with `wp-cli`.
 - **Layered intrusion detection and prevention:** WAFs and edge login, Cilium policies, Kyverno admission, runtime controls, plus detection at runtime (Falco), in the Kubernetes API (audit logs with alert rules) and in the AWS account (CloudTrail, GuardDuty), all reporting to Slack.
 - **Zero-trust networking with Cilium on both clusters:** WireGuard encryption between nodes, default-deny CiliumNetworkPolicies, outbound traffic allowed by DNS name, layer-7 rules where useful, and Hubble flow visibility with metrics, dashboards and alerts in the same Prometheus and Grafana.
@@ -1627,11 +1656,11 @@ The two build plans tier every step as **Core**, **Differentiator** or **Stretch
 
 | Plan | Core | Differentiator | Stretch | Staff | Total |
 |---|---|---|---|---|---|
-| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~120–208 | ~116–203 | ~19–35 | ~81–132 | ~336–578 |
+| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~126–220 | ~120–209 | ~19–35 | ~81–132 | ~346–596 |
 | [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~67–115 | ~14–27 | ~22–38 | ~10–15 | ~113–195 |
-| **Whole project** | ~187–323 | ~130–230 | ~41–73 | ~91–147 | **~449–773** |
+| **Whole project** | ~193–335 | ~134–236 | ~41–73 | ~91–147 | **~459–791** |
 
-At about **20 hours a week**, the home lab's Core tier takes roughly **6–10 weeks**, everything except the Staff tier roughly **4–7 months**, and the whole project including it roughly **5–9 months** (about **10–18 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
+At about **20 hours a week**, the home lab's Core tier takes roughly **6–11 weeks**, everything except the Staff tier roughly **4–7 months**, and the whole project including it roughly **5–9 months** (about **11–18 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
 
 **Portfolio level:** the home lab's **Core tier on its own reads as strong intermediate work**; adding the **Differentiators**, especially the AI pipeline with its evaluation gate and **evidence of operating the system** (rollback, node-failure and disaster drills, a restore from the Backup account, a recorded AWS demo), is what makes it **senior-level**. For **MLOps** roles specifically, the inference-side work (evaluation gate, gateway, self-hosted model, monitoring) reads as strong intermediate (senior for LLMOps); **MLflow, guardrails and online evaluation** (Differentiators) make it senior for LLM-focused MLOps; the **fine-tuning pipeline, DVC and the feedback loop** (Stretch) complete the full lifecycle expected of senior MLOps generally. The **Staff** tier (SLOs and error budgets, DORA metrics, the developer platform proven with a second service, fleet management, chaos and postmortems, the threat model, strategy documents and public writing) shows **staff-level judgement**; staff roles also expect evidence of leading people and teams, which comes from your work history rather than the project. A finished subset is worth more than an unfinished whole: finish Core first.
 
@@ -1697,7 +1726,7 @@ wp-gitops/
                             #   0020-aws-multi-account-sra.md, 0021-three-node-ha-home-cluster.md,
                             #   0022-mlops-lifecycle.md, 0023-slos-and-error-budgets.md,
                             #   0024-internal-developer-platform.md, 0025-reliability-practice.md,
-                            #   0026-performance-and-stress-testing.md)
+                            #   0026-performance-and-stress-testing.md, 0027-site-design-in-git.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
@@ -1853,12 +1882,18 @@ wp-image/
                             #   read-only root filesystem with emptyDir volumes for writable paths, seccomp
                             #   RuntimeDefault, optional runtimeClassName (gvisor at home, if the trial passes)
                             #   + apache_exporter sidecar, ServiceMonitor and PrometheusRule alerts
+  themes/
+    russetleaf/             # the project's block theme (theme.json, templates, patterns), exported from local
+                            #   design work with Create Block Theme
+  brand/                    # logo (source SVG), favicon set, site and touch icons, Open Graph image, palette
   mu-plugins/
+    lock-site-editor/       # removes template and global-style editing in production (design changes via Git)
     summary-queue/          # sends post IDs to SQS when a post is published or updated
     summary-feedback/       # editor-only rating of each summary (stored as post metadata)
     metrics/                # custom Prometheus metrics on an internal port (posts without summary, cron
                             #   backlog, cache hit ratio, versions)
-  tests/                    # smoke test: the container starts, plugins are active, health check passes
+  tests/                    # smoke test: the container starts, plugins are active, health check passes;
+                            #   Playwright visual regression and axe-core accessibility tests; Lighthouse CI budgets
   ci/                       # kind config, ci chart values (LocalStack, test credentials), integration tests
   compose.yaml              # local environment: WordPress + MariaDB + Valkey + LocalStack
   phpcs.xml, phpstan.neon   # PHP linting (WordPress Coding Standards) and static analysis

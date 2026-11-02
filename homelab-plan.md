@@ -21,21 +21,21 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.6, 5.1–5.7, 6.1, 6.3, 11.2 | **~120–208** |
-| **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model, MLflow tracking and registry, guardrails, online evaluation and drift monitoring), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 5.9, 6.2, 6.4, 6.5, 7.1–9.6, 10.1–10.6, 10.8–10.12 | **~116–203** |
+| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, the custom site design and logo, and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.6, 5.1–5.7, 5.10, 6.1, 6.3, 11.2 | **~126–220** |
+| **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model, MLflow tracking and registry, guardrails, online evaluation and drift monitoring), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–9.6, 10.1–10.6, 10.8–10.12 | **~120–209** |
 | **Stretch** | Extras: the rest of the MLOps lifecycle (feedback loop, DVC, deploying a fine-tuned model; valuable for MLOps roles specifically), custom seccomp profiles, keyless AWS access. | 9.7, 9.8, 10.7, 11.1 | **~19–35** |
 | **Staff** | Beyond senior: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management, chaos experiments and postmortems, a threat model and control matrix, strategy documents, and public writing. Shows staff-level judgement; staff roles also expect evidence of leading people. | 12.1–12.9 | **~81–132** |
-| **Total** | | | **~336–578** |
+| **Total** | | | **~346–596** |
 
 **Calendar time** (home lab only):
 
 | Hours per week | Core | + Differentiators | + Stretch | + Staff (everything) |
 |---|---|---|---|---|
-| ~10 | 3–5 months | 6–10 months | 6–10 months | 8–14 months |
-| ~20 | 6–10 weeks | 12–21 weeks | 13–22 weeks | 17–29 weeks |
-| ~40 | 3–5 weeks | 6–10 weeks | 6–11 weeks | 8–15 weeks |
+| ~10 | 3–5 months | 6–10 months | 6–11 months | 8–14 months |
+| ~20 | 6–11 weeks | 12–22 weeks | 13–23 weeks | 17–30 weeks |
+| ~40 | 3–6 weeks | 6–11 weeks | 7–12 weeks | 9–15 weeks |
 
-Add the AWS plan (~113–195 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~449–773 hours** (about **358–626** without the Staff tier).
+Add the AWS plan (~113–195 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~459–791 hours** (about **368–644** without the Staff tier).
 
 **Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to explain it in an interview**.
 
@@ -195,7 +195,7 @@ Record each answer in the [decision log](#decision-log).
 **Do:**
 - Rename this repo to **`wp-gitops`**. Create **`wp-infra`**, **`wp-image`** and **`llm-summarizer`**.
 - In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a `LICENSE` if public, branch protection on `main` (pull requests and passing checks required).
-- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) `0016-process-allow-listing.md` (finish in step 10.1) and `0017-rollback-strategy.md` (finish in steps 3.1, 5.7, 6.1, 7.4 and 10.8) and `0018-intrusion-detection-and-prevention.md` (finish in steps 2.1, 2.2, 2.3, 4.6 and 10.9) and `0019-disaster-recovery.md` (finish in steps 0.1, 2.5 and 10.10) and `0020-aws-multi-account-sra.md` (finish in steps 2.0, 2.0b and 2.4) and `0021-three-node-ha-home-cluster.md` (finish in steps 2.2, 4.5 and 10.11) and `0022-mlops-lifecycle.md` (finish in steps 9.4–9.8 and AWS step 4.5), `0023`–`0025` (SLOs, the developer platform, reliability practice; finish in phase 12) and `0026-performance-and-stress-testing.md` (finish in steps 5.9, 7.6 and 10.12); move them, and `docs/disaster-recovery.md`, with the other docs.
+- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) `0016-process-allow-listing.md` (finish in step 10.1) and `0017-rollback-strategy.md` (finish in steps 3.1, 5.7, 6.1, 7.4 and 10.8) and `0018-intrusion-detection-and-prevention.md` (finish in steps 2.1, 2.2, 2.3, 4.6 and 10.9) and `0019-disaster-recovery.md` (finish in steps 0.1, 2.5 and 10.10) and `0020-aws-multi-account-sra.md` (finish in steps 2.0, 2.0b and 2.4) and `0021-three-node-ha-home-cluster.md` (finish in steps 2.2, 4.5 and 10.11) and `0022-mlops-lifecycle.md` (finish in steps 9.4–9.8 and AWS step 4.5), `0023`–`0025` (SLOs, the developer platform, reliability practice; finish in phase 12) and `0026-performance-and-stress-testing.md` (finish in steps 5.9, 7.6 and 10.12) and `0027-site-design-in-git.md` (finish in steps 5.10 and 5.11); move them, and `docs/disaster-recovery.md`, with the other docs.
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo.
 - Add **OpenSSF Scorecard** (weekly scheduled workflow) and **zizmor** (on workflow changes) to every repo, and GitHub's **dependency-review action** to the repos with dependencies (`wp-image`, `llm-summarizer`).
 - Add **Checkov** to every repo's CI from the start, scanning the **GitHub Actions workflows** (unpinned actions, over-broad `permissions`, script injection), with a `.checkov.yaml` per repo. Later steps add each repo's other targets (Terraform, manifests, Dockerfiles, charts). Skips must carry a reason. See [Infrastructure and configuration scanning](aws-wp.md#infrastructure-and-configuration-scanning-checkov).
@@ -452,6 +452,21 @@ Check `kubectl top nodes` after each step.
 **Do:** as described in `aws-wp.md`'s [Performance and stress testing](aws-wp.md#performance-and-stress-testing): k6 scripts in `wp-gitops/perf/` (home page, posts, search, REST API, admin sign-in through the test identity provider) with thresholds in code; `platform/k6-operator/` for distributed in-cluster tests against the ingress (CiliumNetworkPolicy limiting targets to the ingress; images on the Kyverno allow-list); k6 results to Prometheus and a Grafana dashboard beside system metrics. Run a **load test** against production at a quiet time and record the **baseline** in `docs/performance/`. Add the **regression gate** to `staging-test`: a short load test compared with the latest baseline, failing promotion if more than about 20% slower or over the error threshold; record a new baseline after each promotion. See `docs/adr/0026-performance-and-stress-testing.md`.
 
 **Test:** the baseline exists; a deliberately slowed release (e.g. an artificial delay in a must-use plugin) fails the staging gate with the comparison in the promotion pull request; a normal release passes.
+
+### Step 5.10: Site design and brand
+**Do:** as described in `aws-wp.md`'s [Site design and branding](aws-wp.md#site-design-and-branding) and `docs/adr/0027-site-design-in-git.md`:
+- Write a short **design brief** (audience, tone, colours, the russet-leaf idea, a few sites you like).
+- **Logo design:** create the RussetLeaf logo (a mark plus wordmark) as **SVG**, with Claude writing the SVG directly or an image generator for concepts followed by vectorising; derive the **favicon set**, site icon, Apple touch icon and **Open Graph image**, and a colour **palette** from it; store them in `wp-image/brand/`. Check generator terms, AI-image copyright limits and a quick trademark search for "RussetLeaf" before publishing.
+- With Claude, generate the **`russetleaf` block theme** from the brief: `theme.json` (palette from the logo, typography, spacing, dark-mode variant), templates (home, post, page, archive, 404) and patterns (hero, post cards, "about this project" linking the repos and ADRs), plus a styled **AI summary** box on posts showing the model and prompt version. Iterate locally (Docker Compose) with screenshots.
+- **Export** with the Create Block Theme plugin (locally only) into `wp-image/themes/russetleaf/`, and make it the active theme in the chart values.
+- A **`lock-site-editor`** must-use plugin removing template and global-style editing in production.
+
+**Test:** russetleaf.dev and staging show the custom theme, logo, icons and share image (check a link preview); the AI summary box appears on posts; in production, the Site Editor can't change templates or styles; the theme comes entirely from the image (no design data in the database).
+
+### Step 5.11: Front-end quality gates
+**Do:** in `wp-image` CI and the staging gate: **Playwright** visual regression tests of key pages (home, a post with its summary, an archive, light and dark mode, mobile and desktop) against approved baselines; **axe-core** accessibility checks on the same pages (fail on serious issues); **Lighthouse CI** budgets (page weight, Largest Contentful Paint, total blocking time).
+
+**Test:** a deliberate layout change fails visual regression until its new baseline is approved; removing an image's alt text fails accessibility; adding a large unoptimised image fails the Lighthouse budget.
 
 ## Phase 6: Policy and progressive delivery
 
@@ -827,6 +842,8 @@ The home lab already builds most of what these need: the shared Terraform module
 | 5.7 Promotion pipeline | Core | 4–7 | ☐ | | | | |
 | 5.8 Google sign-in for admins | Differentiator | 4–7 | ☐ | | | | |
 | 5.9 Performance testing + regression gate | Differentiator | 5–8 | ☐ | | | | |
+| 5.10 Site design and brand (incl. logo) | Core | 6–12 | ☐ | | | | |
+| 5.11 Front-end quality gates | Differentiator | 4–6 | ☐ | | | | |
 | 6.1 Kyverno | Core | 6–10 | ☐ | | | | |
 | 6.2 Argo Rollouts | Differentiator | 4–7 | ☐ | | | | |
 | 6.3 CiliumNetworkPolicies | Core | 5–8 | ☐ | | | | |
