@@ -145,7 +145,7 @@ Separate workload accounts limit how far a compromise can spread, and give each 
   - deny disabling or modifying CloudTrail, GuardDuty, Config, Security Hub and Access Analyzer
   - allow only **us-east-1** and **us-west-2** (global services such as IAM, CloudFront, Route 53 excepted)
   - deny actions by member accounts' root users
-  - deny creating IAM users and access keys, with a narrow, named exception in `russetleaf-home` for the home cluster's scoped keys until the keyless OIDC stretch goal removes them
+  - deny creating IAM users and access keys, with a narrow, named exception in `russetleaf-home` for the home cluster's scoped keys until keyless OIDC access (home step 11.1, ADR 0035) removes them
   - deny deleting or weakening the Log Archive and Backup buckets (and their Object Lock settings)
 - **Centralised root access management:** root credentials are **removed from member accounts**, so only the management account's root login needs to be in the break-glass kit.
 - **IAM Identity Center** for all human access: permission sets for **admin**, **read-only** and **break-glass**, with MFA required; no IAM users for people.
@@ -301,12 +301,19 @@ The reasoning is recorded in `docs/adr/0009-gvisor-sandboxing.md`.
 
 ### Kubernetes component hardening
 Each Kubernetes component has explicit controls and a repeatable check, recorded in `docs/adr/0033-kubernetes-component-hardening.md` (which has the full table). The additions beyond the sections above:
-- **Pod Security Admission labels on every namespace, on both clusters** (EKS doesn't enforce Pod Security by default): `restricted` for application namespaces (WordPress, summarizer, gateway, model server, staging, tenants), `baseline` for most platform services, `privileged` only for node agents (Cilium, Falco, Alloy, the storage provisioner, the NVIDIA device plugin). Kyverno's **`restricted`** policy set enforces the same for application namespaces, so two independent controls apply.
+- **Pod Security Admission labels on every namespace, on both clusters** (EKS doesn't enforce Pod Security by default): `restricted` for application namespaces (WordPress, summarizer, gateway, model server, staging, tenants), `baseline` for most platform services, `privileged` only for node agents (Cilium, Falco, Alloy, the storage provisioner, the NVIDIA device plugin), with the **PSA version pinned** (`enforce-version`) so Kubernetes upgrades don't silently change enforcement. Kyverno's **`restricted`** policy set enforces the same for application namespaces, so two independent controls apply.
 - **Service-account tokens off by default:** a Kyverno rule sets `automountServiceAccountToken: false` unless a workload needs the Kubernetes API (operators, Argo CD, KEDA, External Secrets).
 - **Encryption at rest:** Secrets in etcd (Talos's built-in encryption at home; **EKS envelope encryption with a customer-managed KMS key**); **Talos disk encryption** of the system-state and data partitions on every home node, **sealed to the TPM**; etcd snapshots stored only in the KMS-encrypted backup bucket, readable only by the backup role.
 - **kubelet:** `seccompDefault: true` (RuntimeDefault even for pods that don't ask), the read-only port off, certificate rotation.
 - **Control-plane settings verified at home** (profiling off, local-only binding, NodeRestriction, per-controller service-account credentials) with `talosctl`, in `docs/talos-hardening.md`.
 - **Talos host firewall:** the Kubernetes API (6443) and Talos API (50000) reachable only from the LAN and the workstation.
+
+### Identity and access to the clusters
+How **people** sign in and what they may do, recorded in `docs/adr/0035-identity-and-access.md`:
+- **OIDC sign-in on the home cluster:** **Dex** (OIDC provider, with a Google connector) issues short-lived tokens; the API server trusts Dex through Kubernetes' structured authentication configuration; people use **kubelogin**. On EKS, people sign in through **IAM Identity Center**, mapped to **access entries** with the EKS view, edit and cluster-admin access policies.
+- **Human roles:** `platform-admin`, `operator` (deploy, restart, view logs; no RBAC or Secret changes) and `read-only` ClusterRoles bound to Dex groups or users. **No day-to-day cluster-admin**; Argo CD's service account is the identity that changes production.
+- **Break-glass:** the Talos-generated admin kubeconfig (a cluster-admin client certificate that can't be revoked) lives only in the break-glass kit; **`KubeBreakGlassAdminUsed`** alerts `#rl-security` and `#rl-critical` whenever it's used. Day-to-day Talos API access uses the read-only **`os:reader`** role.
+- **SSO inside the admin tools:** Argo CD, Grafana and Backstage sign in through Dex with roles mapped from groups, behind Cloudflare Access as well.
 
 ### Intrusion detection and prevention
 Falco is one layer among several. The design combines **prevention** (stopping attacks) and **detection** (noticing them) at every layer, so no single tool has to catch everything. The reasoning is recorded in `docs/adr/0018-intrusion-detection-and-prevention.md`.
@@ -322,7 +329,7 @@ Falco is one layer among several. The design combines **prevention** (stopping a
 | **Posture** | — | Trivy Operator, Kubescape, kube-bench, Prowler |
 
 **Kubernetes API audit monitoring:**
-- **Home:** Talos's API server **audit logging** with a focused audit policy (metadata for most requests; full detail for Secrets, RBAC, `exec` and `attach`). Alloy collects the audit log from all three control-plane nodes into **Loki**, and **Loki alert rules** (to `#rl-security`, with runbooks) flag suspicious activity. Because **Argo CD makes all normal changes**, a change to production resources by anyone else stands out.
+- **Home:** Talos's API server **audit logging** with a focused audit policy (metadata for most requests; full detail for Secrets, RBAC, `exec` and `attach`). Alloy collects the audit log from all three control-plane nodes into **Loki**, and **Loki alert rules** (to `#rl-security`, with runbooks) flag suspicious activity. Because **Argo CD makes all normal changes**, a change to production resources by anyone else stands out. Audit logs are also archived for **1 year** in the **Log Archive account's Object Lock bucket** (Alloy writes a copy), together with **Argo CD's audit events** (who synced or changed what); see ADR 0035.
 
 | Alert | Fires when |
 |---|---|
@@ -561,6 +568,9 @@ Each component's policies live in its `base/` (shared by both sites), with per-s
 | LiteLLM gateway | Summarizer, staging summarizer, ARC runners (evaluation), Prometheus | llama.cpp, `bedrock-runtime.<region>.amazonaws.com` |
 | llama.cpp (LLM nodes) | LiteLLM gateway, Prometheus | The model mirror bucket's S3 endpoint only (init container); nothing else |
 | MariaDB (home) | WordPress, the backup Job, Prometheus | `*.s3.<region>.amazonaws.com` (backups) |
+| Argo CD | Ingress (UI and API, behind Cloudflare Access), Prometheus | GitHub and GHCR (by DNS name), the API servers it manages, Dex |
+| External Secrets | Prometheus | `secretsmanager.<region>.amazonaws.com`, `sts.<region>.amazonaws.com`, the API server |
+| cert-manager, Kyverno, KEDA and other operators | The API server (webhooks), Prometheus | The API server (plus specific external endpoints where needed, e.g. KEDA → SQS) |
 | cloudflared (home) | — | Cloudflare's tunnel endpoints (by DNS name), ingress-nginx |
 
 Example (WordPress outbound, simplified):
@@ -588,6 +598,7 @@ spec:
 ```
 
 **Guardrails:**
+- **Platform namespaces are default-deny too** (Argo CD, monitoring, logging, External Secrets, Kyverno, cert-manager, Dex, KEDA, Argo Rollouts and others), each with least-privilege egress: e.g. Argo CD → GitHub, GHCR and the API server; External Secrets → Secrets Manager and the API server; cert-manager → the API server (ADR 0035).
 - A **Kyverno generate rule** adds the default-deny baseline's per-namespace allowances when a new application namespace is created, so no namespace is ever left open.
 - Policies are tested in CI: rendered and schema-checked with the Cilium CRD schemas (kubeconform), and exercised in the ci kind cluster (which also runs Cilium).
 - Falco's "unexpected outbound connection" rule **detects**; the FQDN egress policies **prevent**. Each covers the other's gaps.
@@ -959,7 +970,7 @@ Both sites send all logs to **Grafana Loki**, collected by **Grafana Alloy**, so
 | **Loki** (single-binary mode) | Stores and indexes logs; queried from Grafana | Index and log data in an **S3 bucket** per site (lifecycle rules matching retention), a small local cache volume; **7-day retention** at home, **14 days** for russetleaf.com (its bucket is in the always-on edge stack, so demo logs can be reviewed afterwards); multi-tenancy off |
 | **Grafana Alloy** (DaemonSet, one per node) | Collects every container's logs and sends them to Loki | Adds a **small, fixed label set**: `site`, `env`, `cluster`, `namespace`, `app`, `container`. Everything else (pod name, request IDs) stays in the log line or as structured metadata, because Loki's cost grows with the number of label combinations. Drops noisy debug lines and health-check access logs before sending. Masks obvious secrets (tokens, passwords in query strings) |
 | **Talos system logs** (home) | Kubelet, etcd and Talos service logs from the nodes themselves | Talos's machine logging setting sends them as JSON to Alloy on each node (a host port), so node-level problems are searchable too |
-| **EKS control plane** (AWS) | API server audit logs | Stay in **CloudWatch Logs** (short retention), as planned; not duplicated into Loki |
+| **EKS control plane** (AWS) | API server audit logs | **CloudWatch Logs** (short retention), plus a **subscription delivering them through Firehose** to the Log Archive account's Object Lock bucket for **1 year**; not duplicated into Loki |
 | **Log-based alerts** | Alerts on log patterns that metrics can't see | Loki's **ruler** evaluates log queries and sends alerts to the same **Alertmanager → Slack** routing (by `site`, `env` and `team`) |
 | **Grafana correlation** | From a metric spike to that pod's logs for the same time window (and to its traces, if Tempo is on) | Loki added as a Grafana data source, with links between dashboards, logs and traces |
 
@@ -1533,7 +1544,7 @@ The database is protected in two ways. Against a **node failure**, MariaDB Opera
 | Schedule | **Every 6 hours**, giving a recovery point of at most 6 hours of lost changes (the home cluster has no replicated storage; see `docs/adr/0010-local-storage-no-ceph.md`) |
 | Retention | 14 days (the operator's `maxRetention`), plus an S3 lifecycle rule as a safety net |
 | Bucket | `russetleaf-dev-db-backups` (example name), created in `wp-infra/envs/home` with the `s3-backups` module: versioning on, encryption on, public access blocked, objects and old versions expire after 30 days |
-| Credentials | IAM key allowed only to write to and read from that bucket, kept in Secrets Manager and synced by External Secrets (or a keyless IAM role once the OIDC stretch goal is done) |
+| Credentials | IAM key allowed only to write to and read from that bucket, kept in Secrets Manager and synced by External Secrets (or a keyless IAM role once keyless OIDC access (home step 11.1) is done) |
 | Monitoring | The `Backup` runs as a Kubernetes CronJob, so kube-state-metrics reports its last success. Alertmanager alerts if the last successful backup is more than 7 hours old. |
 | Restore test | Monthly: restore the latest backup into a scratch MariaDB instance in the cluster (the operator's `Restore` resource, or a new `MariaDB` that bootstraps from the backup), check the post count, then delete it |
 | Cost | Under $1/month (dumps of a small site are a few MB each, four a day, kept 14 days) |
@@ -1645,6 +1656,7 @@ Together with the home lab (~$18–40/month always on), the total is about **$30
 - **A custom, tested front end:** an AI-assisted block theme and SVG logo kept in Git (Site Editor locked in production), with visual regression, accessibility and Lighthouse checks in CI and staging.
 - **Passwordless admin access:** Google sign-in (OIDC) for WordPress, an edge login layer (Cloudflare Access at home, ALB OIDC on AWS), application passwords kept only for the REST API, and break-glass recovery with `wp-cli`.
 - **Security organised by layer (the 4 C's):** cloud (AWS SRA plus hardened GitHub, Cloudflare, Google and registrar accounts, lab VLAN, Secure Boot), cluster, container (signed images and charts, mirrored dependencies, user namespaces) and code (SAST, DAST, security headers, ASVS mapping).
+- **Identity and access:** OIDC sign-in through Dex for kubectl and the admin tools, group-based human roles with no day-to-day cluster-admin, an alerted break-glass path, Talos read-only access by default, and a year of tamper-evident audit logs.
 - **Kubernetes component hardening:** per-namespace Pod Security Admission with Kyverno's `restricted` set, service-account tokens off by default, Secrets and disks encrypted at rest (TPM-sealed at home, customer-managed KMS on EKS), kubelet `seccompDefault`, a Talos host firewall, and verified control-plane settings.
 - **Layered intrusion detection and prevention:** WAFs and edge login, Cilium policies, Kyverno admission, runtime controls, plus detection at runtime (Falco), in the Kubernetes API (audit logs with alert rules) and in the AWS account (CloudTrail, GuardDuty), all reporting to Slack.
 - **Zero-trust networking with Cilium on both clusters:** WireGuard encryption between nodes, default-deny CiliumNetworkPolicies, outbound traffic allowed by DNS name, layer-7 rules where useful, and Hubble flow visibility with metrics, dashboards and alerts in the same Prometheus and Grafana.
@@ -1653,7 +1665,7 @@ Together with the home lab (~$18–40/month always on), the total is about **$30
 - **Cost awareness (FinOps):** OpenCost shows cost per namespace and workload (including the GPU node and cost per summary) with cost-spike alerts; AWS Budgets and Cost Anomaly Detection alert on the real bill; and a per-demo report compares actual Cost Explorer costs with the estimates.
 - **EKS node autoscaling with Karpenter:** general and GPU NodePools, spot with interruption handling, and consolidation, with a documented reason it doesn't apply to fixed home hardware.
 - **Self-hosted CI on Kubernetes:** ephemeral GitHub Actions runners managed by ARC, with fork pull requests gated for a public repo.
-- **Pod permissions without stored keys at home (stretch goal):** publish the Talos cluster's service-account OIDC discovery files (e.g. in a public S3 bucket) and register them as an IAM OIDC provider. Pods such as WordPress (S3, SQS), the summarizer (SQS) and the gateway (Bedrock) then assume IAM roles without stored keys, just like IRSA on EKS. Until then, the home cluster uses narrowly scoped IAM user keys kept in Secrets Manager.
+- **Pod permissions without stored keys at home (Differentiator, home step 11.1; ADR 0035):** publish the Talos cluster's service-account OIDC discovery files (e.g. in a public S3 bucket) and register them as an IAM OIDC provider. Pods such as WordPress (S3, SQS), the summarizer (SQS) and the gateway (Bedrock) then assume IAM roles without stored keys, just like IRSA on EKS. Until then, the home cluster uses narrowly scoped IAM user keys kept in Secrets Manager.
 - **A gated Terraform pipeline:** linting (tflint + AWS ruleset), Checkov with custom project policies, module tests, Infracost cost diffs, secret scanning with push protection, and approved applies of the exact reviewed plan through a GitHub Environment.
 - **Terraform for both sides, in one repo (`wp-infra`):** shared modules, plus separate root modules for russetleaf.com's always-on edge, its demo stack (including Karpenter and its NodePools), and the russetleaf.dev home lab (Talos provider `siderolabs/talos` for all three nodes' machine configs, Cloudflare provider for the tunnel, DNS and WAF rules, and the AWS pieces used from home).
 - **CI on GitHub in every repo:** Terraform checks and plans in `wp-infra`; manifest validation and Kyverno policy tests in `wp-gitops`; image builds with SBOMs, scans and signing in `wp-image` and `llm-summarizer`; and the prompt evaluation gate in `llm-summarizer`. Employers see all of it without the AWS stack running.
@@ -1736,11 +1748,11 @@ The two build plans tier every step as **Core**, **Differentiator** or **Stretch
 
 | Plan | Core | Differentiator | Stretch | Staff | Total |
 |---|---|---|---|---|---|
-| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~148–245 | ~122–211 | ~19–35 | ~82–133 | ~371–624 |
-| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~71–119 | ~14–27 | ~22–38 | ~10–15 | ~117–199 |
-| **Whole project** | ~219–364 | ~136–238 | ~41–73 | ~92–148 | **~488–823** |
+| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~157–258 | ~127–221 | ~14–25 | ~82–133 | ~380–637 |
+| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~72–120 | ~15–28 | ~22–38 | ~10–15 | ~119–201 |
+| **Whole project** | ~229–378 | ~142–249 | ~36–63 | ~92–148 | **~499–838** |
 
-At about **20 hours a week**, the home lab's Core tier takes roughly **7–12 weeks**, everything except the Staff tier roughly **5–8 months**, and the whole project including it roughly **6–10 months** (about **11–19 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
+At about **20 hours a week**, the home lab's Core tier takes roughly **8–13 weeks**, everything except the Staff tier roughly **5–8 months**, and the whole project including it roughly **6–10 months** (about **12–19 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
 
 **Portfolio level:** the home lab's **Core tier on its own reads as strong intermediate work**; adding the **Differentiators**, especially the AI pipeline with its evaluation gate and **evidence of operating the system** (rollback, node-failure and disaster drills, a restore from the Backup account, a recorded AWS demo), is what makes it **senior-level**. For **MLOps** roles specifically, the inference-side work (evaluation gate, gateway, self-hosted model, monitoring) reads as strong intermediate (senior for LLMOps); **MLflow, guardrails and online evaluation** (Differentiators) make it senior for LLM-focused MLOps; the **fine-tuning pipeline, DVC and the feedback loop** (Stretch) complete the full lifecycle expected of senior MLOps generally. The **Staff** tier (SLOs and error budgets, DORA metrics, the developer platform proven with a second service, fleet management, chaos and postmortems, the threat model, strategy documents and public writing) shows **staff-level judgement**; staff roles also expect evidence of leading people and teams, which comes from your work history rather than the project. A finished subset is worth more than an unfinished whole: finish Core first.
 
@@ -1809,7 +1821,8 @@ wp-gitops/
                             #   0026-performance-and-stress-testing.md, 0027-site-design-in-git.md,
                             #   0028-cpu-limits.md, 0029-cilium-cni.md, 0030-internal-pki.md,
                             #   0031-on-demand-staging.md, 0032-github-actions-ci.md,
-                            #   0033-kubernetes-component-hardening.md, 0034-security-by-layer.md)
+                            #   0033-kubernetes-component-hardening.md, 0034-security-by-layer.md,
+                            #   0035-identity-and-access.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
@@ -1838,6 +1851,8 @@ wp-gitops/
     cloudflared/            # Cloudflare Tunnel connector (home only)
     storage/                # home: local-path-provisioner; aws: EBS CSI StorageClass
     cert-manager/           # cert-manager + trust-manager, internal CA ClusterIssuer, expiry alerts
+    dex/                    # Dex OIDC provider (Google connector) for kubectl, Argo CD, Grafana, Backstage
+    rbac/                   # human ClusterRoles (platform-admin, operator, read-only) and their bindings
     cilium/                 # Cilium + Hubble (home: full CNI; aws: chaining with the VPC CNI), cluster-wide
                             #   default-deny CiliumClusterwideNetworkPolicy, Cilium/Hubble ServiceMonitors,
                             #   dashboards and alert rules

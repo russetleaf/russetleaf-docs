@@ -24,13 +24,13 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the summarizer, the demo workflows, one rehearsed and **recorded demo**, and the docs. | 0.1–2.4, 3.1, 3.2, 4.1, 6.1, 6.2, 6.3 | **~71–119** |
-| **Differentiator** | kube-bench and Kubescape on EKS, the GPU model server, evaluation and tracing on AWS, the security and cost reviews, and the EKS rollback drill. | 2.5, 4.2, 4.3, 4.4, 5.1, 5.2, 6.1b | **~14–27** |
+| **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the summarizer, the demo workflows, one rehearsed and **recorded demo**, and the docs. | 0.1–2.4, 3.1, 3.2, 4.1, 6.1, 6.2, 6.3 | **~72–120** |
+| **Differentiator** | kube-bench and Kubescape on EKS, the GPU model server, evaluation and tracing on AWS, the security and cost reviews, and the EKS rollback drill. | 2.5, 4.2, 4.3, 4.4, 5.1, 5.2, 6.1b | **~15–28** |
 | **Stretch** | The fine-tuning (distillation) pipeline on the GPU (valuable for MLOps roles specifically), and the Istio ambient and Tetragon experiments. | 4.5, 5.3, 5.4 | **~22–38** |
 | **Staff** | Load, stress, spike and AI burst tests for the capacity plan, and management from the home Argo CD hub. | 6.4, 6.5 | **~10–15** |
-| **Total** | | | **~117–199** |
+| **Total** | | | **~119–201** |
 
-**Calendar time:** about **5–9 weeks at ~20 hours a week** for the whole AWS plan, after the home lab's Core tier is done (this plan depends on it). Allow for waiting: the **GPU quota** request (days; submit it in step 0.1 well ahead), **SES production access**, and **Bedrock model access** in the new account.
+**Calendar time:** about **6–10 weeks at ~20 hours a week** for the whole AWS plan, after the home lab's Core tier is done (this plan depends on it). Allow for waiting: the **GPU quota** request (days; submit it in step 0.1 well ahead), **SES production access**, and **Bedrock model access** in the new account.
 
 **Money:** the stack costs about **$1/hour** while running, so batch work into focused sessions and run `demo-down` at the end of each; record each session's cost in the checklist.
 
@@ -119,10 +119,10 @@ Record each answer in the [decision log](#decision-log).
 - A Kubernetes version within **standard support**. EKS charges about six times more per hour for clusters on versions in extended support.
 - **API endpoint:** public but **restricted to the home network's address** (private access also on, for the nodes). The demo workflows run on the **home ARC runners** (step 6.1), so they reach it from that address; your workstation does too (ADR 0032).
 - **Add-on versions pinned** in Terraform; the monthly version-age workflow (home plan step 10.6) checks `aws eks describe-addon-versions` and opens a pull request when newer compatible versions exist.
-- Access entries: your admin role, and the CI apply role.
-- Control plane logging: audit logs only, short retention (they're the useful ones and cost little). **GuardDuty's EKS audit-log monitoring** (turned on account-wide in home plan step 2.1) starts watching the cluster automatically.
+- **Access entries (ADR 0035):** IAM Identity Center permission-set roles mapped with EKS access policies: **view** (`AmazonEKSViewPolicy`) for day-to-day, **edit** (`AmazonEKSEditPolicy`) for operating, **cluster-admin** (`AmazonEKSClusterAdminPolicy`) only through a separate permission set; plus the CI apply role. Authentication mode **API only** (no `aws-auth` ConfigMap), and the cluster creator's automatic admin access turned off.
+- Control plane logging: audit logs only, short CloudWatch retention (they're the useful ones and cost little), with a **subscription filter → Firehose → the Log Archive account's Object Lock bucket**, kept **1 year** (ADR 0035). **GuardDuty's EKS audit-log monitoring** (turned on account-wide in home plan step 2.1) starts watching the cluster automatically.
 
-**Test:** `kubectl get nodes` shows the managed nodes; `cilium status` is green and `cilium connectivity test` passes; if WireGuard is on, `cilium encrypt status` lists the other nodes as peers; a gp3 PersistentVolumeClaim binds; tear down.
+**Test:** `kubectl get nodes` shows the managed nodes; `cilium status` is green and `cilium connectivity test` passes; if WireGuard is on, `cilium encrypt status` lists the other nodes as peers; a gp3 PersistentVolumeClaim binds; signing in with the view permission set can list pods but not read Secrets or delete anything; audit-log objects appear in the Log Archive bucket; tear down.
 
 ### Step 1.5: Karpenter infrastructure
 **Do:** Karpenter's IAM (controller role via Pod Identity, node role and instance profile), the **interruption SQS queue** with EventBridge rules (spot interruption, rebalance, instance state change), and the Karpenter Helm release installed by Terraform (NodePools come from GitOps in step 2.3).
@@ -266,7 +266,7 @@ Record each answer in the [decision log](#decision-log).
 ## Phase 5: Security and cost review
 
 ### Step 5.1: Security review
-**Do:** run an OWASP **ZAP baseline scan** against russetleaf.com (through CloudFront) and check the **security headers** (e.g. with `curl -I` and a header-checking tool); confirm and document the **component hardening checks** for EKS (ADR 0033: envelope encryption with the customer-managed key and endpoint access in `aws eks describe-cluster`, PSA labels on every namespace, no service-account token on WordPress pods, kubelet read-only port refused); **Security Hub** shows russetleaf-com with no unexplained critical or high findings (record the score; optionally turn on **Inspector** for the EKS nodes during this demo); no instance allows IMDSv1; the ALB rejects non-CloudFront traffic; RDS, RDS Proxy and Valkey aren't reachable from outside the VPC; no application holds a database password (IAM tokens through the proxy), and the master password is RDS-managed and rotating; no pod has an AWS key (Pod Identity everywhere); GuardDuty shows the EKS cluster under audit-log monitoring, with any findings explained (and `aws guardduty create-sample-findings` for EKS reaching `#rl-security`); AWS WAF blocks requests to `/xmlrpc.php` and rate-limits `/wp-login.php`; pod traffic between nodes is encrypted (WireGuard), or the ADR explains why not; CiliumNetworkPolicies enforce (from a WordPress pod, `curl https://example.com` is blocked; `hubble observe --verdict DROPPED` shows only expected drops); Kyverno enforces; Falco alerts fire on EKS (repeat the home lab's `kubectl exec` test); Trivy Operator reports; kube-bench and Kubescape reports committed for this demo; a **Prowler** run (the `wp-infra` workflow from home plan step 10.5, triggered by hand) with the demo stack up, covering EKS, RDS, ElastiCache, the ALB and the rest of `envs/aws`, with findings fixed in Terraform or explained (fill in the AWS open item in `docs/adr/0007-prowler-not-threatmapper.md`).
+**Do:** run an OWASP **ZAP baseline scan** against russetleaf.com (through CloudFront) and check the **security headers** (e.g. with `curl -I` and a header-checking tool); confirm and document the **component hardening checks** for EKS (ADR 0033: envelope encryption with the customer-managed key and endpoint access in `aws eks describe-cluster`, PSA labels with pinned versions on every namespace, no service-account token on WordPress pods, kubelet read-only port refused); **Security Hub** shows russetleaf-com with no unexplained critical or high findings (record the score; optionally turn on **Inspector** for the EKS nodes during this demo); no instance allows IMDSv1; the ALB rejects non-CloudFront traffic; RDS, RDS Proxy and Valkey aren't reachable from outside the VPC; no application holds a database password (IAM tokens through the proxy), and the master password is RDS-managed and rotating; no pod has an AWS key (Pod Identity everywhere); access entries match ADR 0035 (no unexpected cluster-admin, authentication mode API only) and the demo's audit logs reached the Log Archive bucket; platform namespaces are default-deny; GuardDuty shows the EKS cluster under audit-log monitoring, with any findings explained (and `aws guardduty create-sample-findings` for EKS reaching `#rl-security`); AWS WAF blocks requests to `/xmlrpc.php` and rate-limits `/wp-login.php`; pod traffic between nodes is encrypted (WireGuard), or the ADR explains why not; CiliumNetworkPolicies enforce (from a WordPress pod, `curl https://example.com` is blocked; `hubble observe --verdict DROPPED` shows only expected drops); Kyverno enforces; Falco alerts fire on EKS (repeat the home lab's `kubectl exec` test); Trivy Operator reports; kube-bench and Kubescape reports committed for this demo; a **Prowler** run (the `wp-infra` workflow from home plan step 10.5, triggered by hand) with the demo stack up, covering EKS, RDS, ElastiCache, the ALB and the rest of `envs/aws`, with findings fixed in Terraform or explained (fill in the AWS open item in `docs/adr/0007-prowler-not-threatmapper.md`).
 
 **Test:** a written checklist in `docs/` with each item checked.
 
@@ -349,7 +349,7 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 | 1.1 CI roles | Core | 2–3 | ☐ | | | | |
 | 1.2 Always-on edge | Core | 7–10 | ☐ | | | | |
 | 1.3 Network | Core | 3–5 | ☐ | | | | |
-| 1.4 EKS cluster | Core | 6–10 | ☐ | | | | |
+| 1.4 EKS cluster | Core | 7–11 | ☐ | | | | |
 | 1.5 Karpenter infrastructure | Core | 3–5 | ☐ | | | | |
 | 1.6 RDS for MariaDB + Valkey | Core | 6–10 | ☐ | | | | |
 | 1.7 App resources + permissions | Core | 4–7 | ☐ | | | | |
@@ -367,7 +367,7 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 | 4.3 Evaluation on AWS | Differentiator | 1–3 | ☐ | | | | |
 | 4.4 End-to-end tracing | Differentiator | 1–3 | ☐ | | | | |
 | 4.5 Fine-tuning pipeline | Stretch | 16–28 | ☐ | | | | |
-| 5.1 Security review | Differentiator | 2–4 | ☐ | | | | |
+| 5.1 Security review | Differentiator | 3–5 | ☐ | | | | |
 | 5.2 Cost review | Differentiator | 2–3 | ☐ | | | | |
 | 5.3 Istio ambient experiment (optional) | Stretch | 3–5 | ☐ | | | | |
 | 5.4 Tetragon enforcement (optional) | Stretch | 3–5 | ☐ | | | | |

@@ -44,7 +44,7 @@ Kept in your password manager, with a **printed copy** of the starred items stor
 - ★ Google: account recovery (for the Google Cloud project and Google sign-in)
 - ★ Domain registrar logins for russetleaf.com and russetleaf.dev
 - ★ Password manager's own emergency kit
-- Talos secrets bundle (`secrets.yaml`) and talosconfig
+- Talos secrets bundle (`secrets.yaml`), the `os:admin` talosconfig, and the Talos-generated **break-glass admin kubeconfig** (use of it raises an alert)
 - Where every backup is (this document's table), and the order of recovery (below)
 - Slack workspace owner login
 

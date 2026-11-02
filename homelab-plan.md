@@ -21,21 +21,21 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, the custom site design and logo, and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.6, 5.1–5.7, 5.10, 6.1, 6.3, 11.2 | **~148–245** |
-| **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model, MLflow tracking and registry, guardrails, online evaluation and drift monitoring), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–9.6, 10.1–10.6, 10.8–10.12 | **~122–211** |
-| **Stretch** | Extras: the rest of the MLOps lifecycle (feedback loop, DVC, deploying a fine-tuned model; valuable for MLOps roles specifically), custom seccomp profiles, keyless AWS access. | 9.7, 9.8, 10.7, 11.1 | **~19–35** |
+| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 6.1, 6.3, 11.2 | **~157–258** |
+| **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model, MLflow tracking and registry, guardrails, online evaluation and drift monitoring), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–9.6, 10.1–10.6, 10.8–10.12, 11.1 | **~127–221** |
+| **Stretch** | Extras: the rest of the MLOps lifecycle (feedback loop, DVC, deploying a fine-tuned model; valuable for MLOps roles specifically), custom seccomp profiles. | 9.7, 9.8, 10.7 | **~14–25** |
 | **Staff** | Beyond senior: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management, chaos experiments and postmortems, a threat model and control matrix, strategy documents, and public writing. Shows staff-level judgement; staff roles also expect evidence of leading people. | 12.1–12.9 | **~82–133** |
-| **Total** | | | **~371–624** |
+| **Total** | | | **~380–637** |
 
 **Calendar time** (home lab only):
 
 | Hours per week | Core | + Differentiators | + Stretch | + Staff (everything) |
 |---|---|---|---|---|
-| ~10 | 4–6 months | 6–11 months | 7–11 months | 9–14 months |
-| ~20 | 7–12 weeks | 14–23 weeks | 14–25 weeks | 19–31 weeks |
-| ~40 | 4–6 weeks | 7–11 weeks | 7–12 weeks | 9–16 weeks |
+| ~10 | 4–6 months | 7–11 months | 7–12 months | 9–15 months |
+| ~20 | 8–13 weeks | 14–24 weeks | 15–25 weeks | 19–32 weeks |
+| ~40 | 4–7 weeks | 7–12 weeks | 7–13 weeks | 10–16 weeks |
 
-Add the AWS plan (~117–199 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~488–823 hours** (about **396–675** without the Staff tier).
+Add the AWS plan (~119–201 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~499–838 hours** (about **407–690** without the Staff tier).
 
 **Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to explain it in an interview**.
 
@@ -239,6 +239,7 @@ Record each answer in the [decision log](#decision-log).
 | 0032 GitHub Actions and public repos | 1.1, 5.5 (and AWS 1.4, 6.1) |
 | 0033 Kubernetes component hardening | 2.2, 6.1, 10.2 (and AWS 1.4, 5.1) |
 | 0034 Security by layer | 0.1, 0.3, 1.1, 2.2, 2.3, 5.1, 5.2, 5.6, 5.7, 6.1, 7.4, 12.5 (and AWS 1.2, 2.4, 5.1) |
+| 0035 Identity and access | 4.6, 4.7, 6.1, 6.3, 11.1 (and AWS 1.4, 1.7) |
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo, scan each repo's **full history**, and then **make the repos public** (ADR 0032); turn on **secret scanning with push protection**.
 - **GitHub organisation settings** in `wp-infra/envs/github/` (Terraform's GitHub provider): default workflow token **read-only**, only verified or allow-listed Actions, branch protection and required reviews, environments, secret scanning with push protection.
 - Add **OpenSSF Scorecard** (weekly scheduled workflow) and **zizmor** (on workflow changes) to every repo, and GitHub's **dependency-review action** to the repos with dependencies (`wp-image`, `llm-summarizer`).
@@ -401,9 +402,22 @@ Check `kubectl top nodes` after each step.
 - In `wp-infra/envs/home`, point Talos's machine logging at Alloy's host port on each node.
 - A narrow Kyverno **`PolicyException`** for Alloy (host paths for log files, the host port).
 - Loki as a Grafana data source, with links from dashboards to logs; starter log-based alerts (`LokiIngestionErrors` now; the WordPress, summarizer and Bedrock ones are added in steps 5.2 and 7.5) with runbooks.
+- **Audit-log archive (ADR 0035):** Alloy also writes the API server audit log to the **Log Archive** account's Object Lock bucket (a write-only role), kept **1 year**, so the audit trail outlives Loki's 7 days and can't be changed from the home cluster.
+- **Argo CD audit events:** collect Argo CD's API server logs (who synced, changed or deleted which Application) with the label `job=argocd-audit`.
 - Record memory use in the checklist, and daily log volume and memory after a week in `docs/adr/0005-loki-alloy-for-logs.md`.
 
-**Test:** in Grafana, logs from every namespace and from the Talos nodes (kubelet, etcd) are searchable by `namespace` and `app`; `kubectl exec` into a production pod fires `KubeExecIntoProdPod`, and editing a RoleBinding by hand fires `KubeRBACChangedOutsideArgoCD`; a deleted pod's logs are still there; a secret in a test log line is masked; stopping Loki fires `LokiIngestionErrors` in `#rl-dev-alerts`; objects older than the retention period are removed from the bucket.
+**Test:** in Grafana, logs from every namespace and from the Talos nodes (kubelet, etcd) are searchable by `namespace` and `app`; `kubectl exec` into a production pod fires `KubeExecIntoProdPod`, and editing a RoleBinding by hand fires `KubeRBACChangedOutsideArgoCD`; a deleted pod's logs are still there; a secret in a test log line is masked; the day's audit log appears in the Log Archive bucket and can't be deleted; a manual sync in Argo CD shows up with the user's name; stopping Loki fires `LokiIngestionErrors` in `#rl-dev-alerts`; objects older than the retention period are removed from the bucket.
+
+### Step 4.7: Cluster access: OIDC sign-in, roles and SSO
+**Do:** as described in `aws-wp.md`'s [Identity and access to the clusters](aws-wp.md#identity-and-access-to-the-clusters) (ADR 0035):
+- **Dex** in `platform/dex/` with the **Google connector** (a separate Google OAuth client from the WordPress one), its client secret from External Secrets, behind the tunnel with Cloudflare Access in front.
+- **API server OIDC:** in `wp-infra/envs/home`, a Talos patch adding a **structured authentication configuration** that trusts Dex (issuer, audience, username and group claims with an `oidc:` prefix); install **kubelogin** on the workstation (pinned in `.mise.toml`) and switch the daily kubeconfig to it.
+- **Roles** in `platform/rbac/`: ClusterRoles **platform-admin**, **operator** (read everything, restart and scale workloads, no Secrets) and **read-only** (no Secrets), bound to Dex groups; your daily login is **operator**, platform-admin only when needed.
+- **Break-glass:** the Talos-generated admin kubeconfig goes into the break-glass kit only and is removed from the workstation; a Loki rule **`KubeBreakGlassAdminUsed`** fires in `#rl-security` whenever the admin certificate's identity appears in the audit log.
+- **Talos access:** a day-to-day talosconfig with the **`os:reader`** role; the `os:admin` talosconfig moves to the break-glass kit.
+- **SSO** through Dex for **Argo CD** (its RBAC mapped to the same groups; local admin disabled) and **Grafana** (roles mapped from groups); Backstage uses it when added in step 12.3.
+
+**Test:** `kubectl` prompts for Google sign-in and the operator login can restart a Deployment but can't read a Secret or change a ClusterRole; a Google account outside the allowed group is refused; Argo CD and Grafana sign in through Dex with the right role and their local admin logins are off; using the break-glass kubeconfig works and fires `KubeBreakGlassAdminUsed`; `talosctl` with the daily talosconfig can read logs but not reboot a node.
 
 ## Phase 5: WordPress
 
@@ -543,7 +557,7 @@ Check `kubectl top nodes` after each step.
 - **Unique Ingress Host and Path**
 - **Secrets Not From Env Vars** and (if supported) a **`hostUsers: false`** requirement for application namespaces.
 - **Mirrored third-party images:** a scheduled `mirror-images` workflow in `wp-gitops` copying the critical upstream images by digest into GHCR (verifying publishers' signatures where they exist, then re-signing); the registry allow-list and image references point at the mirror.
-- **Pod Security Admission labels** on every namespace (`restricted` for application namespaces; `baseline` for platform services; `privileged` only for Cilium, Falco, Alloy and the storage provisioner), set in each namespace's manifest, with a Kyverno rule requiring the label.
+- **Pod Security Admission labels** on every namespace (`restricted` for application namespaces; `baseline` for platform services; `privileged` only for Cilium, Falco, Alloy and the storage provisioner), set in each namespace's manifest with **`enforce-version` pinned** to the cluster's Kubernetes minor version (bumped deliberately during upgrades), and a Kyverno rule requiring the labels.
 - **Kyverno's Pod Security `restricted` set** for application namespaces (alongside PSA), and a **mutate rule turning off service-account token mounting** by default (`automountServiceAccountToken: false`), with an allow-list for workloads that call the Kubernetes API (operators, Argo CD, KEDA, External Secrets).
 - **Namespace quotas:** a generate rule giving every application namespace a **LimitRange** (default requests and memory limits) and a **ResourceQuota** (total CPU requests, memory, pod count); HPAs and KEDA objects set maximum replicas.
 - **Webhook exclusions and recovery:** Kyverno's webhooks exclude `kube-system`, `kyverno` and `argocd`, so Argo CD and Kyverno itself can always be repaired; write `docs/runbooks/rollback-kyverno.md` (revert in Git; in an emergency, delete Kyverno's webhook configurations so deployments go through, and let Kyverno recreate them once healthy).
@@ -566,10 +580,11 @@ Review the policy reports, fix violations, then switch to **enforce**.
 - A **`CiliumClusterwideNetworkPolicy`** baseline: default-deny for application namespaces, DNS to CoreDNS allowed with Cilium's **DNS proxy** on (needed for DNS-name rules), Prometheus scraping allowed.
 - Per-component **CiliumNetworkPolicies** in each component's `base/` (shared with the AWS site), with site-specific destinations in the overlays. Outbound traffic to AWS is allowed **by DNS name** (`toFQDNs`): WordPress → S3, SQS, SES and STS endpoints; summarizer → SQS, the gateway and WordPress's REST API (a **layer-7** rule: `GET`/`POST` on `/wp-json/*` only); gateway → llama.cpp and `bedrock-runtime`; llama.cpp's init container → the model mirror bucket only; MariaDB → S3 for backups; cloudflared → Cloudflare's tunnel endpoints.
 - A **Kyverno generate rule** that gives every new application namespace the baseline allowances, so none is ever left open.
+- **Platform namespaces too (ADR 0035):** default-deny for `argocd`, `external-secrets`, `kyverno`, `monitoring`, `dex` and the operators, with least-privilege egress: Argo CD → GitHub and GHCR plus the API server; External Secrets → Secrets Manager and STS; operators → the API server only.
 - CI: validate the policies against the Cilium CRD schemas, and exercise them in the ci kind cluster (install Cilium there too).
 - Roll out one namespace at a time, watching `hubble observe --verdict DROPPED` for anything legitimate being blocked.
 
-**Test:** from a test pod in another namespace, MariaDB is unreachable; from a WordPress pod, `curl https://example.com` is **blocked** while uploads to S3 still work; a non-REST-API request from the summarizer to WordPress is blocked at layer 7; a burst of blocked requests triggers `HubblePolicyDropsSpike` in `#rl-security`; the site, the summarizer, backups and monitoring all still work.
+**Test:** from a test pod in another namespace, MariaDB is unreachable; from a WordPress pod, `curl https://example.com` is **blocked** while uploads to S3 still work; a non-REST-API request from the summarizer to WordPress is blocked at layer 7; from a pod in `argocd`, a request to an unlisted site is blocked while syncs still work; a burst of blocked requests triggers `HubblePolicyDropsSpike` in `#rl-security`; the site, the summarizer, backups and monitoring all still work.
 
 ### Step 6.4: Service mesh decision (ADR) and optional Istio experiment
 **Do:**
@@ -816,7 +831,7 @@ Record each drill's time in the decision log and compare it with the expected ti
 
 **Test:** each test's results are recorded with graphs; the first bottleneck has an action item or an explanation; the soak shows no steadily growing memory or connections (or a fix is planned).
 
-### Step 11.1 (optional): Keyless AWS access for pods
+### Step 11.1: Keyless AWS access for pods
 **Do:** publish the Talos cluster's service-account OIDC discovery files (public S3 bucket), register it as an IAM OIDC provider in `wp-infra`, switch pods from scoped keys to IAM roles one at a time, then delete the keys.
 
 **Test:** each pod works with no AWS key in its Secrets; the old keys are deleted from IAM.
@@ -898,7 +913,8 @@ The home lab already builds most of what these need: the shared Terraform module
 | 4.3 Ingress + tunnel | Core | 3–6 | ☐ | | | | |
 | 4.4 Monitoring + Slack alerting | Core | 7–11 | ☐ | | | | |
 | 4.5 MariaDB + backups + Valkey | Core | 6–10 | ☐ | | | | |
-| 4.6 Logging (Loki + Alloy) | Core | 4–7 | ☐ | | | | |
+| 4.6 Logging (Loki + Alloy) | Core | 5–8 | ☐ | | | | |
+| 4.7 Cluster access (OIDC, roles, SSO) | Core | 6–10 | ☐ | | | | |
 | 5.1 WordPress image | Core | 14–22 | ☐ | | | | |
 | 5.2 WordPress deployment | Core | 9–15 | ☐ | | | | |
 | 5.3 Image promotion | Core | 2–4 | ☐ | | | | |
@@ -912,7 +928,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 5.11 Front-end quality gates | Differentiator | 4–6 | ☐ | | | | |
 | 6.1 Kyverno | Core | 11–15 | ☐ | | | | |
 | 6.2 Argo Rollouts | Differentiator | 4–7 | ☐ | | | | |
-| 6.3 CiliumNetworkPolicies | Core | 5–8 | ☐ | | | | |
+| 6.3 CiliumNetworkPolicies | Core | 7–10 | ☐ | | | | |
 | 6.4 Service mesh ADR (+ optional Istio experiment) | Differentiator | 2–6 | ☐ | | | | |
 | 6.5 Sandboxed runtime (gVisor) | Differentiator | 4–7 | ☐ | | | | |
 | 7.1 KEDA | Differentiator | 1–3 | ☐ | | | | |
@@ -943,7 +959,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 10.10 First full disaster drill | Differentiator | 6–10 | ☐ | | | | |
 | 10.11 Node-failure drills | Differentiator | 3–6 | ☐ | | | | |
 | 10.12 Stress, spike and soak tests | Differentiator | 5–8 | ☐ | | | | |
-| 11.1 Keyless AWS access (optional) | Stretch | 5–10 | ☐ | | | | |
+| 11.1 Keyless AWS access | Differentiator | 5–10 | ☐ | | | | |
 | 11.2 Docs + go public | Core | 6–10 | ☐ | | | | |
 | 12.1 SLOs and error budgets | Staff | 10–15 | ☐ | | | | |
 | 12.2 DORA metrics | Staff | 6–10 | ☐ | | | | |
