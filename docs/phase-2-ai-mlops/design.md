@@ -68,7 +68,7 @@ Prometheus also collects the gateway's metrics (requests, spend and fallbacks pe
 
 ## MLOps lifecycle
 
-The summary pipeline covers the **whole machine-learning lifecycle**, not just inference: **data → training → evaluation → registry → deployment → monitoring → retraining**. The reasoning is recorded in `docs/phase-2-ai-mlops/adr/0022-mlops-lifecycle.md`.
+The summary pipeline covers the **whole machine-learning lifecycle**, not just inference: **data → training → evaluation → registry → deployment → monitoring → retraining**. The reasoning is recorded in `docs/phase-2-ai-mlops/adr/2001-mlops-lifecycle.md`.
 
 ```
  feedback & production samples ─┐
@@ -100,10 +100,10 @@ Post content is untrusted input, so the summarizer treats it as data:
 - A **daily job** (Argo Workflows at home) samples a few percent of the day's new summaries, scores them with the same rule checks and judge as the CI gate, and logs the results to **MLflow** and to **Prometheus**.
 - It also tracks **input drift**: post length, language and topic distribution compared with the evaluation set.
 - **Grafana** shows quality and drift trends per model and prompt version; **Alertmanager** sends `SummaryQualityDegraded` and `InputDriftDetected` to `#rl-mlops`.
-- A sustained drop starts the response: compare the champion and challenger in the evaluation set, roll back routing (ADR 0017), or trigger retraining.
+- A sustained drop starts the response: compare the champion and challenger in the evaluation set, roll back routing (ADR 1016), or trigger retraining.
 
 ### Fine-tuning (in Phase 3)
-Fine-tuning the self-hosted model needs a GPU, which the home lab doesn't have, so the **fine-tuning pipeline and deploying a fine-tuned challenger** belong to Phase 3 (the EKS GPU node pool); see the [Phase 3 design](../phase-3-russetleaf-com/design.md#fine-tuning-on-the-gpu-pool-if-phase-2-is-built) and ADR 0042. Without Phase 3, the MLOps lifecycle here still covers evaluation, the registry, guardrails, online evaluation, drift and the feedback loop.
+Fine-tuning the self-hosted model needs a GPU, which the home lab doesn't have, so the **fine-tuning pipeline and deploying a fine-tuned challenger** belong to Phase 3 (the EKS GPU node pool); see the [Phase 3 design](../phase-3-russetleaf-com/design.md#fine-tuning-on-the-gpu-pool-if-phase-2-is-built) and ADR 3002. Without Phase 3, the MLOps lifecycle here still covers evaluation, the registry, guardrails, online evaluation, drift and the feedback loop.
 
 ### Data versioning and feedback
 - **DVC** versions the evaluation set, the adversarial cases and the training sets, with an S3 remote; MLflow runs record the dataset version they used, so every result can be traced back to its exact data.

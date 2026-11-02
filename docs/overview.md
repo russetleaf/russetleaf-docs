@@ -10,12 +10,12 @@ RussetLeaf is a portfolio project: a production-grade WordPress platform built t
 | **2. AI summaries and MLOps** | AI-generated post summaries on russetleaf.dev: an event-driven summarizer, an LLM gateway (Bedrock plus a self-hosted model on box 2), an evaluation gate, MLflow, guardrails, online evaluation and drift monitoring, feedback and data versioning | Phase 1 | [design](phase-2-ai-mlops/design.md) | [plan](phase-2-ai-mlops/plan.md) | [ADRs](phase-2-ai-mlops/adr/) |
 | **3. russetleaf.com** | The same site on the full AWS production design (EKS, Karpenter, RDS with RDS Proxy, ElastiCache, CloudFront, ALB, AWS WAF), brought up only for demos, with an always-on offline page; plus GPU fine-tuning if Phase 2 is built | Phase 1 (Phase 2 optional) | [design](phase-3-russetleaf-com/design.md) | [plan](phase-3-russetleaf-com/plan.md) | [ADRs](phase-3-russetleaf-com/adr/) |
 
-The reasoning for this split is in ADR 0039.
+The reasoning for this split is in ADR 1037.
 
 ## How the documents are organised
 - **This overview:** what's shared by all phases: how the two sites compare, security by layer, the threat model, platform security, compliance, portfolio highlights, the operations budget, effort and timelines, the repositories, and the index of all decisions.
 - **Each phase folder:** `design.md` (what's built and why), `plan.md` (the steps to build it, with a progress checklist) and `adr/` (the decisions first made in that phase).
-- **ADR numbers are global and permanent:** each decision keeps its number wherever it lives, and the [index](#architecture-decision-records) lists them all. The template is [`adr/0000-template.md`](adr/0000-template.md).
+- **ADR numbers start with their phase:** 1001 upwards for Phase 1, 2001 upwards for Phase 2, 3001 upwards for Phase 3. They're unique across the project and don't change once used; the [index](#architecture-decision-records) lists them all. The template is [`adr/0000-template.md`](adr/0000-template.md).
 - **Phase 1** also has the [disaster recovery plan](phase-1-russetleaf-dev/disaster-recovery.md).
 
 ## The two sites
@@ -65,7 +65,7 @@ Running MariaDB and Valkey inside the home cluster, instead of RDS and ElastiCac
 
 ## Security by layer (the 4 C's)
 
-Cloud-native security is commonly described in four layers, the **4 C's**: **Cloud**, **Cluster**, **Container** and **Code**, each depending on the one outside it. This table maps the project's controls to them; details are in the sections below and in `docs/phase-1-russetleaf-dev/adr/0034-security-by-layer.md`.
+Cloud-native security is commonly described in four layers, the **4 C's**: **Cloud**, **Cluster**, **Container** and **Code**, each depending on the one outside it. This table maps the project's controls to them; details are in the sections below and in `docs/phase-1-russetleaf-dev/adr/1032-security-by-layer.md`.
 
 | Layer | Controls |
 |---|---|
@@ -79,7 +79,7 @@ Cloud-native security is commonly described in four layers, the **4 C's**: **Clo
 These security views cover the whole project. Each row or control notes the phase that builds it; Phase 1 builds most of them.
 
 ### Kubernetes threat model coverage
-The design is checked against the common **Kubernetes threat model**, which groups threats into eight areas. Each area has named controls, a detection and a test; the gaps found in this check, and the controls added for them, are recorded in `docs/phase-1-russetleaf-dev/adr/0036-kubernetes-threat-model-coverage.md`. The full STRIDE threat model (Phase 1 step 8.5) builds on this.
+The design is checked against the common **Kubernetes threat model**, which groups threats into eight areas. Each area has named controls, a detection and a test; the gaps found in this check, and the controls added for them, are recorded in `docs/phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md`. The full STRIDE threat model (Phase 1 step 8.5) builds on this.
 
 **Trust boundaries and data flows** (both sites; the AWS names in brackets):
 
@@ -124,25 +124,25 @@ flowchart LR
 | **Denial of service** | Edge rate limits; namespace quotas and LimitRanges (CPU, memory, **ephemeral storage**); memory limits; **kubelet PID limit** and **hard eviction thresholds**; reserved resources for the system; HPA and KEDA maximums; API Priority and Fairness | Node pressure alerts; `KubeAPIRequestsRejected`; quota usage | A fork bomb in a test pod stops at the PID limit and the node stays healthy |
 | **Malicious code execution** | Signed images with SBOM and provenance, registry allow-list, digests, read-only root filesystem, seccomp, gVisor (CI runners), `DISALLOW_FILE_MODS` | Falco process allow-lists and writes to code; Trivy Operator | An unsigned image is rejected; a shell in WordPress fires Falco |
 | **Compromised applications in containers** | Non-root, no capabilities, no privilege escalation, no service-account token, Pod Security `restricted`, default-deny networking | Falco; Hubble drops | From a WordPress pod: no token, no route to other namespaces, no unlisted egress |
-| **Attacker on the network** | CiliumNetworkPolicies (default-deny, DNS-name egress, layer 7), WireGuard, internal TLS (ADR 0030), lab VLAN, host firewall, API endpoints restricted | Hubble (`HubblePolicyDropsSpike`), CrowdSec, GuardDuty | MariaDB unreachable from other namespaces; ports 6443 and 50000 refused from outside the LAN |
+| **Attacker on the network** | CiliumNetworkPolicies (default-deny, DNS-name egress, layer 7), WireGuard, internal TLS (ADR 1028), lab VLAN, host firewall, API endpoints restricted | Hubble (`HubblePolicyDropsSpike`), CrowdSec, GuardDuty | MariaDB unreachable from other namespaces; ports 6443 and 50000 refused from outside the LAN |
 | **Access to sensitive data** | Secrets encrypted at rest, External Secrets, Secrets as files, roles without Secret access, encrypted backups, IMDSv2 with hop limit 1, egress limited by DNS name | `KubeUnexpectedSecretRead`; audit archive; CloudTrail | **Exfiltration test:** sending data from each application pod to an unlisted destination is blocked and shows in Hubble |
 | **Privilege escalation** | Pod Security, no privileged pods or host access, NodeRestriction, least-privilege human roles; a Kyverno policy **rejecting risky RBAC** (`escalate`, `bind`, `impersonate`, `nodes/proxy`, wildcards, `cluster-admin` bindings) outside an allow-list | `KubeRBACChangedOutsideArgoCD`; Kubescape RBAC checks in CI and monthly | A Role with `impersonate` is rejected; the RBAC review lists who can create pods or read Secrets |
 
 ### Platform security
-The platform's own security (supply chain, registry, observability, mesh, PKI, mTLS and admission), checked against the common platform-security topics and recorded in `docs/phase-1-russetleaf-dev/adr/0037-platform-security.md`:
+The platform's own security (supply chain, registry, observability, mesh, PKI, mTLS and admission), checked against the common platform-security topics and recorded in `docs/phase-1-russetleaf-dev/adr/1035-platform-security.md`:
 
 | Topic | How it's covered |
 |---|---|
 | **Supply chain security** | Signed images with SBOM and SLSA provenance, verified at admission and pinned by digest; signed charts; mirrored upstream images; Renovate, Scorecard, zizmor, gitleaks, Checkov; accepted vulnerabilities as signed **OpenVEX** statements. See [Supply chain and policy](phase-1-russetleaf-dev/design.md#supply-chain-and-policy). |
 | **Image repository** | GHCR, each package linked to its repo with write access only from that repo's Actions; images pinned by digest; a monthly **cleanup workflow** that never deletes a digest referenced in `wp-gitops` in the last 90 days or one of the last 10 releases. |
 | **Observability** | Grafana through Cloudflare Access and Dex SSO; **two Loki tenants**, with the audit log and runtime-security events in a **Security** Grafana organisation visible only to platform admins; Loki, Prometheus, Tempo and Alertmanager reachable only by Grafana, Alloy and Prometheus (network policies are their access control; none is exposed); token masking in logs. |
-| **Service mesh** | Not used (ADR 0001); its features are covered by Cilium (WireGuard, layer-7 policies, Hubble) and Argo Rollouts; Istio ambient tried as an experiment. |
-| **Kubernetes PKI** | Talos manages the cluster CAs and rotates leaf certificates; **kubelet serving certificates signed by the cluster CA** (no `--kubelet-insecure-tls` anywhere); certificate expiry alerts; a rehearsed **CA rotation runbook**; yearly talosconfig renewal; the internal CA for applications (ADR 0030). On EKS, AWS runs the cluster PKI. |
-| **Mutual TLS** | etcd mTLS; WireGuard between nodes; TLS on every sensitive connection with the internal CA. Per-service cryptographic identity isn't used (ADR 0001): identity is enforced by Cilium policies. |
+| **Service mesh** | Not used (ADR 1001); its features are covered by Cilium (WireGuard, layer-7 policies, Hubble) and Argo Rollouts; Istio ambient tried as an experiment. |
+| **Kubernetes PKI** | Talos manages the cluster CAs and rotates leaf certificates; **kubelet serving certificates signed by the cluster CA** (no `--kubelet-insecure-tls` anywhere); certificate expiry alerts; a rehearsed **CA rotation runbook**; yearly talosconfig renewal; the internal CA for applications (ADR 1028). On EKS, AWS runs the cluster PKI. |
+| **Mutual TLS** | etcd mTLS; WireGuard between nodes; TLS on every sensitive connection with the internal CA. Per-service cryptographic identity isn't used (ADR 1001): identity is enforced by Cilium policies. |
 | **Admission controllers** | Kyverno with **three admission replicas** across nodes, **fail-closed** security policies with short timeouts, recovery exclusions and runbook; **ValidatingAdmissionPolicy backstops** (allowed registries, no `cluster-admin` bindings, no token Secrets) that hold even if Kyverno is down; Pod Security Admission; enabled admission plugins checked on both clusters. |
 
 ### Compliance and privacy
-Which compliance frameworks the project follows, and how, recorded in `docs/phase-1-russetleaf-dev/adr/0038-compliance-frameworks-and-privacy.md` and summarised in `docs/security/compliance.md`:
+Which compliance frameworks the project follows, and how, recorded in `docs/phase-1-russetleaf-dev/adr/1036-compliance-frameworks-and-privacy.md` and summarised in `docs/security/compliance.md`:
 
 | Framework | Applies? | How it's covered |
 |---|---|---|
@@ -180,7 +180,7 @@ What each phase lets you show. Phase 1 on its own is a complete portfolio projec
 - **Runtime security and compliance:** Falco rules written for this application (shells in pods, writes to WordPress code, unexpected egress from LLM nodes), alerts in Grafana, CIS benchmark reports from kube-bench on EKS, continuous Trivy Operator compliance reports on both clusters, periodic Kubescape NSA-CISA, MITRE ATT&CK and RBAC reports, and monthly Prowler scans of the AWS account against CIS AWS Foundations.
 - **Cost awareness (FinOps):** OpenCost shows cost per namespace and workload (including the GPU node and cost per summary) with cost-spike alerts; AWS Budgets and Cost Anomaly Detection alert on the real bill; and a per-demo report compares actual Cost Explorer costs with the estimates.
 - **Self-hosted CI on Kubernetes:** ephemeral GitHub Actions runners managed by ARC, with fork pull requests gated for a public repo.
-- **Pod permissions without stored keys at home (ADR 0035):** publish the Talos cluster's service-account OIDC discovery files (e.g. in a public S3 bucket) and register them as an IAM OIDC provider. Pods such as WordPress (S3, SQS), the summarizer (SQS) and the gateway (Bedrock) then assume IAM roles without stored keys, just like IRSA on EKS. Until then, the home cluster uses narrowly scoped IAM user keys kept in Secrets Manager.
+- **Pod permissions without stored keys at home (ADR 1033):** publish the Talos cluster's service-account OIDC discovery files (e.g. in a public S3 bucket) and register them as an IAM OIDC provider. Pods such as WordPress (S3, SQS), the summarizer (SQS) and the gateway (Bedrock) then assume IAM roles without stored keys, just like IRSA on EKS. Until then, the home cluster uses narrowly scoped IAM user keys kept in Secrets Manager.
 - **A gated Terraform pipeline:** linting (tflint + AWS ruleset), Checkov with custom project policies, module tests, Infracost cost diffs, secret scanning with push protection, and approved applies of the exact reviewed plan through a GitHub Environment.
 - **Terraform for both sides, in one repo (`wp-infra`):** shared modules, plus separate root modules for russetleaf.com's always-on edge, its demo stack (including Karpenter and its NodePools), and the russetleaf.dev home lab (Talos provider `siderolabs/talos` for all three nodes' machine configs, Cloudflare provider for the tunnel, DNS and WAF rules, and the AWS pieces used from home). *(Completed by Phase 3.)*
 - **CI on GitHub in every repo:** Terraform checks and plans in `wp-infra`; manifest validation and Kyverno policy tests in `wp-gitops`; image builds with SBOMs, scans and signing in `wp-image` and `llm-summarizer`; and the prompt evaluation gate in `llm-summarizer`. Employers see all of it without the AWS stack running.
@@ -278,7 +278,7 @@ wp-gitops/
   README.md                 # project hub: architecture diagram, links to all four repos, quick start
   docs/
     overview.md             # this document: phases, shared design, effort, repos, ADR index
-    adr/0000-template.md    # ADR template (ADR numbers are global)
+    adr/0000-template.md    # ADR template (numbers: 1001+ Phase 1, 2001+ Phase 2, 3001+ Phase 3)
     phase-1-russetleaf-dev/ # design.md, plan.md, disaster-recovery.md, adr/
     phase-2-ai-mlops/       # design.md, plan.md, adr/
     phase-3-russetleaf-com/ # design.md, plan.md, adr/
@@ -544,52 +544,51 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 
 | ADR | Decision | Phase |
 |---|---|---|
-| [0001](phase-1-russetleaf-dev/adr/0001-no-service-mesh.md) | No service mesh (Istio not used) | 1 |
-| [0002](phase-1-russetleaf-dev/adr/0002-s3-media-not-efs.md) | Media on S3, code in the image (not EFS) | 1 |
-| [0003](phase-1-russetleaf-dev/adr/0003-kubescape-cli-not-operator.md) | Kubescape as an on-demand CLI scan, not an in-cluster operator | 1 |
-| [0004](phase-1-russetleaf-dev/adr/0004-ghcr-not-ecr.md) | GitHub Container Registry (GHCR) instead of Amazon ECR | 1 |
-| [0005](phase-1-russetleaf-dev/adr/0005-loki-alloy-for-logs.md) | Loki and Grafana Alloy for logs | 1 |
-| [0006](phase-1-russetleaf-dev/adr/0006-tempo-tracing.md) | Distributed tracing with Tempo and OpenTelemetry | 1 |
-| [0007](phase-1-russetleaf-dev/adr/0007-prowler-not-threatmapper.md) | Prowler for AWS account posture; Deepfence ThreatMapper not used | 1 |
-| [0008](phase-1-russetleaf-dev/adr/0008-google-sign-in-for-admins.md) | Google sign-in (OIDC) for WordPress admins, plus an edge login layer | 1 |
-| [0009](phase-1-russetleaf-dev/adr/0009-gvisor-sandboxing.md) | seccomp everywhere; gVisor for CI runners (and WordPress if performance allows); Kata not used | 1 |
-| [0010](phase-1-russetleaf-dev/adr/0010-local-storage-no-ceph.md) | Local storage with S3 backups; no Ceph (Rook) or Longhorn | 1 |
-| [0011](phase-1-russetleaf-dev/adr/0011-update-strategy.md) | Update strategy: Git-driven, risk-tiered updates with Renovate | 1 |
-| [0012](phase-3-russetleaf-com/adr/0012-kube-bench-eks-only.md) | kube-bench on EKS only; Talos checked with its own hardening checks and Trivy Operator | 3 |
-| [0013](phase-1-russetleaf-dev/adr/0013-opencost-and-aws-billing.md) | OpenCost for in-cluster allocation, AWS billing for actual costs, and how cost alerts flow | 1 |
-| [0014](phase-1-russetleaf-dev/adr/0014-image-supply-chain.md) | Image supply chain: SLSA provenance, Semgrep for SAST, and the build pipeline's tools | 1 |
-| [0015](phase-1-russetleaf-dev/adr/0015-availability-levels.md) | Availability levels: home lab without HA; AWS designed for HA but run as a demo | 1 |
-| [0016](phase-1-russetleaf-dev/adr/0016-process-allow-listing.md) | Process allow-listing with Falco; AppArmor and SELinux not used; Tetragon and custom seccomp as stretch goals | 1 |
-| [0017](phase-1-russetleaf-dev/adr/0017-rollback-strategy.md) | Rollback strategy: Git revert by default, automatic canary rollback, back up before schema changes | 1 |
-| [0018](phase-1-russetleaf-dev/adr/0018-intrusion-detection-and-prevention.md) | Intrusion detection and prevention in layers | 1 |
-| [0019](phase-1-russetleaf-dev/adr/0019-disaster-recovery.md) | Disaster recovery with off-account immutable copies and a break-glass kit | 1 |
-| [0020](phase-1-russetleaf-dev/adr/0020-aws-multi-account-sra.md) | Multi-account AWS structure aligned with the AWS Security Reference Architecture | 1 |
-| [0021](phase-1-russetleaf-dev/adr/0021-three-node-ha-home-cluster.md) | Three-node home cluster with a highly available control plane | 1 |
-| [0022](phase-2-ai-mlops/adr/0022-mlops-lifecycle.md) | Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback | 2 |
-| [0023](phase-1-russetleaf-dev/adr/0023-slos-and-error-budgets.md) | SLOs with error budgets that gate promotions; DORA metrics | 1 |
-| [0024](phase-1-russetleaf-dev/adr/0024-internal-developer-platform.md) | Internal developer platform (Backstage, golden paths, multi-tenancy) and hub-and-spoke Argo CD | 1 |
-| [0025](phase-1-russetleaf-dev/adr/0025-reliability-practice.md) | Reliability practice: scheduled chaos experiments and blameless postmortems | 1 |
-| [0026](phase-1-russetleaf-dev/adr/0026-performance-and-stress-testing.md) | Performance and stress testing with k6, and a performance regression gate | 1 |
-| [0027](phase-1-russetleaf-dev/adr/0027-site-design-in-git.md) | A custom block theme built into the image; Site Editor locked in production | 1 |
-| [0028](phase-1-russetleaf-dev/adr/0028-cpu-limits.md) | No CPU limits by default; CPU limits only to protect a specific neighbour | 1 |
-| [0029](phase-1-russetleaf-dev/adr/0029-cilium-cni.md) | Cilium as the network plugin on both clusters | 1 |
-| [0030](phase-1-russetleaf-dev/adr/0030-internal-pki.md) | Internal certificates with cert-manager and an internal CA | 1 |
-| [0031](phase-1-russetleaf-dev/adr/0031-on-demand-staging.md) | On-demand, scale-to-zero staging on the home cluster | 1 |
-| [0032](phase-1-russetleaf-dev/adr/0032-github-actions-ci.md) | GitHub Actions for CI/CD, public repositories early, and the runner strategy | 1 |
-| [0033](phase-1-russetleaf-dev/adr/0033-kubernetes-component-hardening.md) | Kubernetes component hardening | 1 |
-| [0034](phase-1-russetleaf-dev/adr/0034-security-by-layer.md) | Security by layer (the 4 C's) and the remaining controls | 1 |
-| [0035](phase-1-russetleaf-dev/adr/0035-identity-and-access.md) | Identity and access to the clusters | 1 |
-| [0036](phase-1-russetleaf-dev/adr/0036-kubernetes-threat-model-coverage.md) | Kubernetes threat model coverage | 1 |
-| [0037](phase-1-russetleaf-dev/adr/0037-platform-security.md) | Platform security: admission resilience, cluster PKI, registry, observability access and VEX | 1 |
-| [0038](phase-1-russetleaf-dev/adr/0038-compliance-frameworks-and-privacy.md) | Compliance frameworks and privacy | 1 |
-| [0039](phase-1-russetleaf-dev/adr/0039-project-phases.md) | Build the project in three phases | 1 |
-| [0040](phase-2-ai-mlops/adr/0040-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
-| [0041](phase-2-ai-mlops/adr/0041-self-hosted-model-on-box-2.md) | Self-hosted model on box 2 (CPU llama.cpp), dedicated by taint | 2 |
-| [0042](phase-3-russetleaf-com/adr/0042-fine-tuning-on-eks-gpu.md) | Fine-tuning on the EKS GPU node pool, with the challenger served at home | 3 |
-| [0043](phase-3-russetleaf-com/adr/0043-cilium-chaining-on-eks.md) | Cilium on EKS in chaining mode with the VPC CNI | 3 |
-| [0044](phase-3-russetleaf-com/adr/0044-eks-component-hardening.md) | EKS component hardening | 3 |
-| [0045](phase-3-russetleaf-com/adr/0045-eks-access-and-audit-logs.md) | EKS access through Identity Center, and the EKS audit-log archive | 3 |
-| [0046](phase-3-russetleaf-com/adr/0046-on-demand-demo-stack.md) | russetleaf.com as an on-demand demo stack behind an always-on edge | 3 |
-| [0047](phase-3-russetleaf-com/adr/0047-rds-mariadb-with-rds-proxy.md) | RDS for MariaDB behind RDS Proxy, with IAM authentication | 3 |
-| [0048](phase-3-russetleaf-com/adr/0048-karpenter-node-pools.md) | Karpenter for EKS nodes, with general and GPU node pools | 3 |
-
+| [1001](phase-1-russetleaf-dev/adr/1001-no-service-mesh.md) | No service mesh (Istio not used) | 1 |
+| [1002](phase-1-russetleaf-dev/adr/1002-s3-media-not-efs.md) | Media on S3, code in the image (not EFS) | 1 |
+| [1003](phase-1-russetleaf-dev/adr/1003-kubescape-cli-not-operator.md) | Kubescape as an on-demand CLI scan, not an in-cluster operator | 1 |
+| [1004](phase-1-russetleaf-dev/adr/1004-ghcr-not-ecr.md) | GitHub Container Registry (GHCR) instead of Amazon ECR | 1 |
+| [1005](phase-1-russetleaf-dev/adr/1005-loki-alloy-for-logs.md) | Loki and Grafana Alloy for logs | 1 |
+| [1006](phase-1-russetleaf-dev/adr/1006-tempo-tracing.md) | Distributed tracing with Tempo and OpenTelemetry | 1 |
+| [1007](phase-1-russetleaf-dev/adr/1007-prowler-not-threatmapper.md) | Prowler for AWS account posture; Deepfence ThreatMapper not used | 1 |
+| [1008](phase-1-russetleaf-dev/adr/1008-google-sign-in-for-admins.md) | Google sign-in (OIDC) for WordPress admins, plus an edge login layer | 1 |
+| [1009](phase-1-russetleaf-dev/adr/1009-gvisor-sandboxing.md) | seccomp everywhere; gVisor for CI runners (and WordPress if performance allows); Kata not used | 1 |
+| [1010](phase-1-russetleaf-dev/adr/1010-local-storage-no-ceph.md) | Local storage with S3 backups; no Ceph (Rook) or Longhorn | 1 |
+| [1011](phase-1-russetleaf-dev/adr/1011-update-strategy.md) | Update strategy: Git-driven, risk-tiered updates with Renovate | 1 |
+| [1012](phase-1-russetleaf-dev/adr/1012-opencost-and-aws-billing.md) | OpenCost for in-cluster allocation, AWS billing for actual costs, and how cost alerts flow | 1 |
+| [1013](phase-1-russetleaf-dev/adr/1013-image-supply-chain.md) | Image supply chain: SLSA provenance, Semgrep for SAST, and the build pipeline's tools | 1 |
+| [1014](phase-1-russetleaf-dev/adr/1014-availability-levels.md) | Availability levels: home lab without HA; AWS designed for HA but run as a demo | 1 |
+| [1015](phase-1-russetleaf-dev/adr/1015-process-allow-listing.md) | Process allow-listing with Falco; AppArmor and SELinux not used; Tetragon and custom seccomp as stretch goals | 1 |
+| [1016](phase-1-russetleaf-dev/adr/1016-rollback-strategy.md) | Rollback strategy: Git revert by default, automatic canary rollback, back up before schema changes | 1 |
+| [1017](phase-1-russetleaf-dev/adr/1017-intrusion-detection-and-prevention.md) | Intrusion detection and prevention in layers | 1 |
+| [1018](phase-1-russetleaf-dev/adr/1018-disaster-recovery.md) | Disaster recovery with off-account immutable copies and a break-glass kit | 1 |
+| [1019](phase-1-russetleaf-dev/adr/1019-aws-multi-account-sra.md) | Multi-account AWS structure aligned with the AWS Security Reference Architecture | 1 |
+| [1020](phase-1-russetleaf-dev/adr/1020-three-node-ha-home-cluster.md) | Three-node home cluster with a highly available control plane | 1 |
+| [1021](phase-1-russetleaf-dev/adr/1021-slos-and-error-budgets.md) | SLOs with error budgets that gate promotions; DORA metrics | 1 |
+| [1022](phase-1-russetleaf-dev/adr/1022-internal-developer-platform.md) | Internal developer platform (Backstage, golden paths, multi-tenancy) and hub-and-spoke Argo CD | 1 |
+| [1023](phase-1-russetleaf-dev/adr/1023-reliability-practice.md) | Reliability practice: scheduled chaos experiments and blameless postmortems | 1 |
+| [1024](phase-1-russetleaf-dev/adr/1024-performance-and-stress-testing.md) | Performance and stress testing with k6, and a performance regression gate | 1 |
+| [1025](phase-1-russetleaf-dev/adr/1025-site-design-in-git.md) | A custom block theme built into the image; Site Editor locked in production | 1 |
+| [1026](phase-1-russetleaf-dev/adr/1026-cpu-limits.md) | No CPU limits by default; CPU limits only to protect a specific neighbour | 1 |
+| [1027](phase-1-russetleaf-dev/adr/1027-cilium-cni.md) | Cilium as the network plugin on both clusters | 1 |
+| [1028](phase-1-russetleaf-dev/adr/1028-internal-pki.md) | Internal certificates with cert-manager and an internal CA | 1 |
+| [1029](phase-1-russetleaf-dev/adr/1029-on-demand-staging.md) | On-demand, scale-to-zero staging on the home cluster | 1 |
+| [1030](phase-1-russetleaf-dev/adr/1030-github-actions-ci.md) | GitHub Actions for CI/CD, public repositories early, and the runner strategy | 1 |
+| [1031](phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md) | Kubernetes component hardening | 1 |
+| [1032](phase-1-russetleaf-dev/adr/1032-security-by-layer.md) | Security by layer (the 4 C's) and the remaining controls | 1 |
+| [1033](phase-1-russetleaf-dev/adr/1033-identity-and-access.md) | Identity and access to the clusters | 1 |
+| [1034](phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md) | Kubernetes threat model coverage | 1 |
+| [1035](phase-1-russetleaf-dev/adr/1035-platform-security.md) | Platform security: admission resilience, cluster PKI, registry, observability access and VEX | 1 |
+| [1036](phase-1-russetleaf-dev/adr/1036-compliance-frameworks-and-privacy.md) | Compliance frameworks and privacy | 1 |
+| [1037](phase-1-russetleaf-dev/adr/1037-project-phases.md) | Build the project in three phases | 1 |
+| [2001](phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback | 2 |
+| [2002](phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
+| [2003](phase-2-ai-mlops/adr/2003-self-hosted-model-on-box-2.md) | Self-hosted model on box 2 (CPU llama.cpp), dedicated by taint | 2 |
+| [3001](phase-3-russetleaf-com/adr/3001-kube-bench-eks-only.md) | kube-bench on EKS only; Talos checked with its own hardening checks and Trivy Operator | 3 |
+| [3002](phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md) | Fine-tuning on the EKS GPU node pool, with the challenger served at home | 3 |
+| [3003](phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md) | Cilium on EKS in chaining mode with the VPC CNI | 3 |
+| [3004](phase-3-russetleaf-com/adr/3004-eks-component-hardening.md) | EKS component hardening | 3 |
+| [3005](phase-3-russetleaf-com/adr/3005-eks-access-and-audit-logs.md) | EKS access through Identity Center, and the EKS audit-log archive | 3 |
+| [3006](phase-3-russetleaf-com/adr/3006-on-demand-demo-stack.md) | russetleaf.com as an on-demand demo stack behind an always-on edge | 3 |
+| [3007](phase-3-russetleaf-com/adr/3007-rds-mariadb-with-rds-proxy.md) | RDS for MariaDB behind RDS Proxy, with IAM authentication | 3 |
+| [3008](phase-3-russetleaf-com/adr/3008-karpenter-node-pools.md) | Karpenter for EKS nodes, with general and GPU node pools | 3 |

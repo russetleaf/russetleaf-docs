@@ -27,7 +27,7 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | **Models** | **Claude Haiku** (default) and **Amazon Nova Lite** on Bedrock, plus a 4-bit **3B model** (e.g. Qwen2.5-3B or Llama 3.2 3B) on box 2 with llama.cpp. | Sets the budgets, the evaluation set and box 2's memory use. |
 | **AWS access for the AI components** | Pod roles through the cluster's OIDC provider if Phase 1 step 9.1 (keyless AWS access) is done; otherwise scoped IAM keys, like the rest of Phase 1. | Avoids adding new static keys if they can be avoided. |
 
-ADRs for this phase: 0022 (MLOps lifecycle), 0040 (summary pipeline architecture) and 0041 (self-hosted model on box 2), in [`adr/`](adr/).
+ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture) and 2003 (self-hosted model on box 2), in [`adr/`](adr/).
 
 ## Stage 1: Foundations
 
@@ -181,7 +181,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Test:** publishing a post produces **one trace** covering WordPress → the queue message → the summarizer → the gateway → the model call → saving the summary, showing which model answered, with no post text, prompts or summaries in any span; OpenCost shows the LLM namespace's cost; the re-summarize drill restores the earlier summaries; with box 2 off, summaries still arrive through Bedrock.
 
 ### Step 5.3: Documentation
-**Do:** finish ADRs 0022, 0040 and 0041 (resolve their open items); update the Phase 2 design wherever the build differed; add the LLM dashboard, an evaluation report and an MLflow run to the hub README's screenshots; add the AI pipeline to the hub README's architecture diagram; optionally an article on evaluation gates for LLMs.
+**Do:** finish ADRs 2001, 2002 and 2003 (resolve their open items); update the Phase 2 design wherever the build differed; add the LLM dashboard, an evaluation report and an MLflow run to the hub README's screenshots; add the AI pipeline to the hub README's architecture diagram; optionally an article on evaluation gates for LLMs.
 
 **Test:** every Phase 2 ADR's open items are resolved or moved to a later phase; the README shows the pipeline.
 

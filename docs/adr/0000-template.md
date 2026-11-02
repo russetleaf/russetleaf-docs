@@ -5,7 +5,7 @@
 - **Applies to:** russetleaf.dev, russetleaf.com, or both
 - **Phase:** the phase that first implements it (1, 2 or 3), and what later phases add
 
-<!-- ADR numbers are global and permanent. Save the file in docs/phase-N-.../adr/ for the phase that first implements it, and add it to the index in docs/overview.md. -->
+<!-- ADR numbers start with the phase that first implements the decision (Phase 1: 1001, 1002...; Phase 2: 2001...; Phase 3: 3001...) and never change once used. Take the next free number in that phase, save the file in docs/phase-N-.../adr/, and add it to the index in docs/overview.md. -->
 
 ## Context
 What problem or question prompted this decision? What constraints apply (cost, memory, team size, security, portability between the two sites)?
