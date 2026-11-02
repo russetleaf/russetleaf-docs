@@ -217,6 +217,30 @@ How it's run:
 - **Overlap with Kyverno is intended:** Checkov checks manifests *before* they're merged, using its own rule set; Kyverno enforces the project's policies *at admission* in the cluster (and its CLI tests the same policies in CI).
 
 
+### Terraform pipeline (`wp-infra`)
+All Terraform runs through **GitHub Actions** (apart from the first local applies of `bootstrap/` and `envs/home`), with every check passing before anything reaches AWS, Cloudflare or Talos.
+
+| Stage | Tool | What it does |
+|---|---|---|
+| Before each commit | **pre-commit-terraform** hooks (plus gitleaks) | Runs fmt, validate, tflint, terraform-docs, Checkov and the secret scan locally, so most problems never reach CI |
+| Formatting | `terraform fmt -check` | Fails on unformatted code |
+| Validation | `terraform validate` | Syntax and internal consistency |
+| Linting | **tflint** with the **`tflint-ruleset-aws`** plugin | Catches mistakes and AWS-specific errors (invalid instance types, deprecated settings) before AWS rejects them |
+| Static security analysis | **Checkov**, including **custom policies** | Insecure settings in the source and the plan (SARIF to GitHub code scanning), plus project rules: every resource tagged `Project`/`Site`/`Env`, only `us-east-1`, only approved instance families, Block Public Access on every S3 bucket. Custom policies keep one policy tool for Terraform, as Kyverno is for Kubernetes (no OPA/Conftest) |
+| Module tests | **`terraform test`** | Tests the shared modules, with mocked providers where possible |
+| Secret scanning | **gitleaks**, plus **GitHub secret scanning with push protection** (free on public repos) | Push protection blocks a commit containing a recognised secret before it's pushed |
+| Plan | `terraform plan -out` | The plan is **saved** as a short-lived, private workflow artifact (plan files can contain secret values) and posted as a pull-request comment |
+| Plan analysis | **Checkov on the plan**; **Infracost** | Checks the resolved plan; Infracost comments the **monthly cost difference** of the change on the pull request (open-source CLI; check current terms for CI use) |
+| Approval | **GitHub Environment** `apply`, with required reviewers, limited to `main` | The OIDC *apply* role trusts only this environment, so nothing else can apply |
+| Apply | `terraform apply <saved plan>` | Applies **exactly the plan that was reviewed**, never a fresh one |
+| Drift | Scheduled `terraform plan` (weekly) | Alerts if anything changed outside Terraform |
+| Documentation | **terraform-docs** | Generates each module's inputs and outputs into its README |
+| Provider integrity | `.terraform.lock.hcl` with hashes for **every platform** (`terraform providers lock -platform=linux_amd64 -platform=<workstation>`) | CI and local runs use the same verified providers |
+
+**Pull request flow:** fmt → validate → tflint (+ AWS ruleset) → Checkov (source + custom policies) → `terraform test` → plan (saved) → Checkov on the plan → Infracost comment → plan comment → gitleaks. **After merge:** approval in the `apply` environment → apply the saved plan. For `envs/aws`, applies are done only by the demo workflows (never on merge), so merging never starts a paid stack.
+
+**Deliberately not used:** tfsec or Trivy's Terraform scanning (they overlap heavily with Checkov); Atlantis, Terraform Cloud or Spacelift (GitHub Actions with OIDC, Environments and saved plans covers a single maintainer); OPA/Conftest (Checkov custom policies cover the project's rules).
+
 ### Runtime security and compliance
 - **Falco** watches running containers (using its modern eBPF driver) and alerts on suspicious behaviour. Kyverno only checks resources when they're created; Falco covers what happens after. Custom rules for this design:
   - a **shell started** in a WordPress, summarizer or gateway pod, which normally never happens
@@ -1223,6 +1247,7 @@ Together with the home lab, the total stays within **$30–$50/month**. If the A
 - **EKS node autoscaling with Karpenter:** general and GPU NodePools, spot with interruption handling, and consolidation, with a documented reason it doesn't apply to fixed home hardware.
 - **Self-hosted CI on Kubernetes:** ephemeral GitHub Actions runners managed by ARC, with fork pull requests gated for a public repo.
 - **Pod permissions without stored keys at home (stretch goal):** publish the Talos cluster's service-account OIDC discovery files (e.g. in a public S3 bucket) and register them as an IAM OIDC provider. Pods such as WordPress (S3, SQS), the summarizer (SQS) and the gateway (Bedrock) then assume IAM roles without stored keys, just like IRSA on EKS. Until then, the home cluster uses narrowly scoped IAM user keys kept in Secrets Manager.
+- **A gated Terraform pipeline:** linting (tflint + AWS ruleset), Checkov with custom project policies, module tests, Infracost cost diffs, secret scanning with push protection, and approved applies of the exact reviewed plan through a GitHub Environment.
 - **Terraform for both sides, in one repo (`wp-infra`):** shared modules, plus separate root modules for russetleaf.com's always-on edge, its demo stack (including Karpenter and its NodePools), and the russetleaf.dev home lab (Talos provider `siderolabs/talos` for both nodes' machine configs, Cloudflare provider for the tunnel, DNS and WAF rules, and the AWS pieces used from home).
 - **CI on GitHub in every repo:** Terraform checks and plans in `wp-infra`; manifest validation and Kyverno policy tests in `wp-gitops`; image builds with SBOMs, scans and signing in `wp-image` and `llm-summarizer`; and the prompt evaluation gate in `llm-summarizer`. Employers see all of it without the AWS stack running.
 - **A defined update strategy:** every update is a Renovate pull request, risk-tiered (patches auto-merge; minors and majors rehearsed; applications through staging and canaries), with WPScan for WordPress plugin vulnerabilities, 48-hour security releases, and a monthly end-of-life report.
@@ -1385,12 +1410,16 @@ wp-infra/
                             #   (media, database-backup and model mirror buckets, SQS, Secrets Manager,
                             #   SES identity, Bedrock IAM), plus a second, smaller set of the same modules
                             #   for staging (Env=staging)
-  .github/workflows/        # fmt, validate, tflint, Checkov (source + plan, SARIF), `terraform test` (modules) and plan on every pull
-                            #   request (plan posted as a comment); apply on merge to main, with approval
+  .github/workflows/        # pull requests: fmt, validate, tflint (+ AWS ruleset), Checkov (source + plan + custom
+                            #   policies, SARIF), `terraform test`, saved plan, Infracost and plan comments; after
+                            #   merge: approval in the `apply` GitHub Environment, then apply the saved plan;
+                            #   scheduled drift-check plans
+  .pre-commit-config.yaml   # pre-commit-terraform hooks (fmt, validate, tflint, terraform-docs, Checkov) + gitleaks
+  .checkov/                 # Checkov custom policies (required tags, allowed region and instance families, S3)
 ```
 
 - **State:** all three environments store state in the S3 bucket from `bootstrap/`, under separate keys, using Terraform's built-in S3 state locking (`use_lockfile = true`, Terraform 1.10+; no DynamoDB table needed).
-- **CI permissions without stored keys:** GitHub Actions authenticates to AWS through **GitHub's OIDC provider**. Pull requests get a read-only *plan* role; merges to `main` get the *apply* role. The Cloudflare API token is a GitHub secret.
+- **CI permissions without stored keys:** GitHub Actions authenticates to AWS through **GitHub's OIDC provider**. Pull requests get a read-only *plan* role; the *apply* role trusts only the **`apply` GitHub Environment** (required reviewers, `main` only), which applies the **saved, reviewed plan**; see [Terraform pipeline](#terraform-pipeline-wp-infra). The Cloudflare API token is a GitHub secret.
 - **The home environment needs local network access:** the Talos provider talks to the boxes directly, which GitHub's hosted runners can't reach. Run the first `envs/home` apply from your own machine. After the cluster and ARC are up, later home applies can run on the in-cluster ARC runners.
 - **Why the AWS side has two environments:** `envs/aws-edge` holds what russetleaf.com needs even when the demo is down (DNS, CloudFront, the offline page, media), and is never destroyed. `envs/aws` holds the expensive demo stack and is created and destroyed for each demo. Destroying one can never touch the other's state.
 - **Tearing down the AWS demo:** delete the Argo CD Applications first (or scale the root app to nothing) so the AWS Load Balancer Controller removes the ALB, ExternalDNS removes `origin.russetleaf.com`, and Karpenter removes its nodes. Otherwise `terraform destroy` can hang on resources Terraform didn't create. `terraform destroy` then takes the final RDS snapshot that the next demo restores from.

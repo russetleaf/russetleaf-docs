@@ -73,7 +73,7 @@ Tools to pin (check each name with `mise registry | grep <tool>`; pin `kubectl` 
 
 | Tool | Used for |
 |---|---|
-| `terraform` (1.10+), `tflint` | Infrastructure (`wp-infra`) |
+| `terraform` (1.10+), `tflint` (with `tflint-ruleset-aws`), `terraform-docs`, `infracost` | Infrastructure (`wp-infra`) |
 | `talosctl` | Talos clusters (home and local Talos-in-Docker) |
 | `kubectl`, `helm`, `kustomize` | Kubernetes and charts |
 | `kind` | Local and ci test clusters |
@@ -107,7 +107,7 @@ PHP and Composer aren't needed locally: the WordPress image installs plugins ins
 - **AWS:** set up **IAM Identity Center (SSO)** and a profile (e.g. `russetleaf-admin`) with `aws configure sso`; sign in with `aws sso login --profile russetleaf-admin`. Keep **no long-lived AWS access keys** on the workstation.
 - **Cloudflare and Slack tokens:** don't put them in `~/.bashrc`. Use per-repo **direnv** files (`.envrc`, listed in `.gitignore`) that load them from a password manager CLI or from AWS Secrets Manager when you enter the repo folder.
 - **Cluster access files:** keep kubeconfig contexts named clearly (`talos-home`, `kind-ci`, `talos-local`) and talosconfig at `~/.talos/config`, both with `chmod 600`. Back them up in your password manager. (If they're lost, they can be regenerated from the Talos machine secrets in Terraform state.)
-- **Pre-commit hooks:** run `pre-commit install` in each repo after cloning (secret scan, Terraform formatting, YAML checks).
+- **Pre-commit hooks:** run `pre-commit install` in each repo after cloning (secret scan, YAML checks; in `wp-infra`, the **pre-commit-terraform** hooks: fmt, validate, tflint, terraform-docs, Checkov).
 - **Editor (optional):** VS Code with the HashiCorp Terraform, YAML (Red Hat), Kubernetes and Docker extensions.
 
 ### 5. Check the setup
@@ -207,9 +207,14 @@ Record each answer in the [decision log](#decision-log).
 **Test:** with each scoped key, the allowed action works and a disallowed one fails (e.g. the WordPress key can't read the backup bucket); `aws bedrock-runtime converse` with the LiteLLM key returns a response; the tunnel shows as created in Cloudflare.
 
 ### Step 2.4: `wp-infra` CI
-**Do:** GitHub Actions: `terraform fmt -check`, `validate`, `tflint`, **Checkov on the Terraform source and on the plan** (`terraform show -json` output), and `plan` on pull requests (plan posted as a comment). Applies to `envs/home` stay **local** for now (the Talos provider needs your home network); they can move to in-cluster runners after step 9.2.
+**Do:** the pipeline described in `aws-wp.md` ([Terraform pipeline](aws-wp.md#terraform-pipeline-wp-infra)):
+- **Pull requests:** `terraform fmt -check` → `validate` → **tflint** with **`tflint-ruleset-aws`** → **Checkov** on the source with **custom policies** in `.checkov/` (required `Project`/`Site`/`Env` tags, `us-east-1` only, approved instance families, S3 Block Public Access) → **`terraform test`** for the modules → `terraform plan -out` (saved as a private workflow artifact with short retention) → **Checkov on the plan** → **Infracost** cost-difference comment → plan comment → gitleaks.
+- **After merge:** a GitHub Environment **`apply`** with required reviewers (you), limited to `main`; the OIDC apply role trusts only that environment; the job applies **the saved plan from the pull request**, not a fresh plan.
+- **Weekly scheduled** drift-check plan.
+- **Repo hygiene:** `.pre-commit-config.yaml` with the **pre-commit-terraform** hooks plus gitleaks; **terraform-docs** generating module READMEs; `.terraform.lock.hcl` with hashes for Linux and your workstation (`terraform providers lock -platform=...`); turn on **GitHub secret scanning with push protection** when the repo goes public.
+- Applies to `envs/home` stay **local** for now (the Talos provider needs your home network); they can move to in-cluster runners after step 5.5.
 
-**Test:** a pull request with a harmless change shows a passing check run and a plan comment; a deliberately insecure change (e.g. a public bucket) fails Checkov.
+**Test:** a pull request with a harmless change shows passing checks, a plan comment and an Infracost comment; a deliberately insecure change (e.g. a public bucket) fails Checkov; an untagged resource fails the custom tag policy; an invalid instance type fails tflint; after merge, the apply waits for approval in the `apply` environment and applies the saved plan.
 
 ## Phase 3: GitOps foundation (`wp-gitops`)
 

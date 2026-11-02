@@ -131,9 +131,9 @@ Record each answer in the [decision log](#decision-log).
 **Test:** Argo CD lists the AWS root app (it will show missing components until Phase 2), and its first sync appears in `#rl-deploys`.
 
 ### Step 1.9: `wp-infra` CI for AWS
-**Do:** extend CI to plan `envs/aws-edge` and `envs/aws` on pull requests, run **Checkov** on the source and plans of both AWS environments (with results in GitHub code scanning, as for the home environment), and run **`terraform test`** (with mocked providers where possible) for the AWS-specific modules (`alerting`, the CloudFront edge, RDS restore logic). Applies are done by the demo workflows (Phase 6) or locally, never automatically on merge, so merging never starts a paid stack.
+**Do:** extend the home lab's Terraform pipeline (home plan step 2.4) to `envs/aws-edge` and `envs/aws`: tflint with the AWS ruleset, **Checkov** with the custom policies on the source and saved plans (results in GitHub code scanning), **Infracost** comments (especially useful here: they show the monthly cost of the always-on edge and of the demo stack if left running), and **`terraform test`** (with mocked providers where possible) for the AWS-specific modules (`alerting`, the CloudFront edge, RDS restore logic). `envs/aws-edge` applies go through the `apply` GitHub Environment after merge, like `envs/home`. `envs/aws` applies are done only by the demo workflows (Phase 6), which also require approval in the `apply` environment, never automatically on merge, so merging never starts a paid stack.
 
-**Test:** a pull request shows plans for all three environments, and `terraform test` passes (and fails on a deliberately broken module input).
+**Test:** a pull request shows plans and Infracost comments for all three environments; `terraform test` passes (and fails on a deliberately broken module input); a resource outside `us-east-1` or using an unapproved instance family fails the custom Checkov policies.
 
 ## Phase 2: AWS platform (`wp-gitops`)
 
