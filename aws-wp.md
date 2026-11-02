@@ -29,6 +29,7 @@ The two sites are **fully independent**: each has its own URL, database, cache, 
 | Email | Amazon SES, its own domain identity (DKIM records in Route 53) | Amazon SES, its own domain identity (DKIM records in Cloudflare) |
 | Networking (CNI) | **Cilium** in chaining mode with the Amazon VPC CNI | **Cilium** as the full CNI (replaces Flannel and kube-proxy) |
 | Network policies | **CiliumNetworkPolicies** (default-deny, DNS-name egress rules), enforced by Cilium | **CiliumNetworkPolicies**, same base policies |
+| Intrusion detection | Falco, Hubble, CloudWatch audit logs + GuardDuty EKS audit-log monitoring, GuardDuty and CloudTrail (account) | Falco, Hubble, Talos API audit logs in Loki with alert rules, GuardDuty and CloudTrail (account) |
 | Encryption in transit | TLS on sensitive connections; Cilium WireGuard between nodes, if supported in chaining mode | TLS on sensitive connections; Cilium WireGuard between nodes |
 | Service mesh | None, by decision (ADR) | None, by decision (ADR) |
 | Container isolation | seccomp `RuntimeDefault` for every workload; no gVisor | seccomp `RuntimeDefault`; **gVisor** for the CI runners (and WordPress, if its load test passes) |
@@ -45,7 +46,7 @@ The two sites are **fully independent**: each has its own URL, database, cache, 
 | Environments | prod only (demo); versions arrive after passing home staging and russetleaf.dev | local → ci → staging (on demand) → prod |
 | Availability | **Highly available design within one region while running** (EKS control plane, nodes across zones, RDS Multi-AZ, ElastiCache replica, multi-zone ALB, CloudFront), with two demo cuts (one NAT Gateway, one spot GPU node); runs **only during demos** | **Not highly available**: single control plane, single database and cache, local disks, one home power supply and internet connection |
 | Recovery targets | While running: seconds to minutes for a node, zone or database failure; between demos: content kept in the final snapshot | Recovery point ≤ 6 hours (backup interval); recovery time a few hours (rebuild from Git, restore backup) |
-| Monthly cost | ~$1 always on, plus ~$1/hour during demos | ~$8–$15 |
+| Monthly cost | ~$1 always on, plus ~$1/hour during demos | ~$9–$20 (including account-wide GuardDuty) |
 
 Running MariaDB and Valkey inside the home cluster, instead of RDS and ElastiCache, is the biggest saving in the home lab: those two managed services alone would cost about $130/month at the AWS design's sizes. Both sites use the **MariaDB** engine (in-cluster at home, RDS for MariaDB on AWS), so database backups move between them without conversion.
 
@@ -202,6 +203,41 @@ Normally every container shares the node's Linux kernel, so a kernel exploit fro
 **Kata Containers** (a lightweight VM per pod) was considered and not used: each pod's VM needs its own memory, which 8 GB nodes can't spare, and on AWS it needs hardware virtualization inside the instance (historically bare-metal instances only).
 
 The reasoning is recorded in `docs/adr/0009-gvisor-sandboxing.md`.
+
+### Intrusion detection and prevention
+Falco is one layer among several. The design combines **prevention** (stopping attacks) and **detection** (noticing them) at every layer, so no single tool has to catch everything. The reasoning is recorded in `docs/adr/0018-intrusion-detection-and-prevention.md`.
+
+| Layer | Prevention | Detection |
+|---|---|---|
+| **Edge / HTTP** (traffic from the internet) | **Cloudflare WAF** with its free **managed rule set**, a **rate-limiting rule** on `/wp-login.php` and **`/xmlrpc.php` blocked** (home); **AWS WAF** with managed rules (core, known bad inputs, WordPress, IP reputation) and login rate limiting (AWS); Cloudflare Access / ALB login in front of the admin area; Google sign-in, no passwords; XML-RPC also disabled inside WordPress | WAF logs; external uptime checks |
+| **Inside the cluster** (traffic between pods) | **Default-deny CiliumNetworkPolicies**, DNS-name egress rules, WireGuard encryption | **Hubble** policy drops (`HubblePolicyDropsSpike`) |
+| **Kubernetes API** | RBAC (Node and RBAC authorization only), Google/edge-protected admin tools, no anonymous access | **API audit logs** with alert rules (below) |
+| **Admission** | **Kyverno**: signed images with SBOM and provenance, Pod Security, non-root, read-only filesystem, seccomp | Policy Reporter |
+| **Runtime** | seccomp, **gVisor** (CI runners), read-only filesystems, lean images; **Tetragon** enforcement (optional) | **Falco**: shells, processes not on the allow-list, writes to code, unexpected egress |
+| **AWS account** | IAM least privilege, no long-lived keys in the clusters (except home's scoped keys), `prevent_destroy` | **CloudTrail** and **GuardDuty** (below) |
+| **Posture** | — | Trivy Operator, Kubescape, kube-bench, Prowler |
+
+**Kubernetes API audit monitoring:**
+- **Home:** Talos's API server **audit logging** with a focused audit policy (metadata for most requests; full detail for Secrets, RBAC, `exec` and `attach`). Alloy collects the audit log from box 1 into **Loki**, and **Loki alert rules** (to `#rl-security`, with runbooks) flag suspicious activity. Because **Argo CD makes all normal changes**, a change to production resources by anyone else stands out.
+
+| Alert | Fires when |
+|---|---|
+| `KubeExecIntoProdPod` | Someone runs `exec` or `attach` in a production pod (outside a recorded break-glass) |
+| `KubeUnexpectedSecretRead` | A Secret is read by an identity other than the workloads and controllers expected to read it |
+| `KubeRBACChangedOutsideArgoCD` | A Role, ClusterRole or binding is changed by anything other than Argo CD |
+| `KubeAnonymousOrForbiddenSpike` | A burst of anonymous or forbidden requests |
+| `KubeAuditLogMissing` | No audit events have arrived for 15 minutes (the monitoring itself is broken) |
+
+- **EKS:** audit logs go to **CloudWatch** (already planned), and **GuardDuty's EKS audit-log monitoring** flags known attack patterns automatically.
+
+**AWS account threat detection (always on, shared by both sites):**
+- **CloudTrail:** one multi-region trail of management events to its own S3 bucket, with log-file validation (proves logs weren't altered) and `prevent_destroy`. The first trail's management events are free; storage costs pennies.
+- **GuardDuty:** detects compromised credentials, unusual API calls, crypto-mining, and contact with known-malicious addresses, plus EKS audit-log monitoring whenever the demo cluster exists. About **$1–5/month** for an account this size after the 30-day free trial (check current pricing).
+- **Findings to Slack:** GuardDuty findings (medium severity and above) go through **EventBridge → SNS → Amazon Q Developer** to `#rl-security` (high severity also to `#rl-critical`).
+
+**Optional: CrowdSec.** CrowdSec analyses the ingress logs and **bans abusive IP addresses** through a Cloudflare "bouncer" (a modern, shared-intelligence fail2ban). It's a stretch goal at home (about 100–200 MB of memory).
+
+**Deliberately not used: a network IDS** (Suricata or Zeek) inside the cluster. It needs a lot of CPU and memory, and the traffic it would inspect is already covered: TLS ends at Cloudflare and the ALB, where the WAFs inspect it, and Cilium and Hubble cover traffic inside the cluster. A home-network IDS on the router (e.g. OPNsense with Suricata) is worthwhile but outside this project.
 
 ### Process allow-listing
 The goal of process allow-listing is "**only these programs may run in this container**". It's done with Falco (detection, both sites) rather than AppArmor or SELinux profiles. The reasoning is recorded in `docs/adr/0016-process-allow-listing.md`.
@@ -809,7 +845,7 @@ One Slack workspace for the project. The free plan is enough: it keeps 90 days o
 | `#rl-dev-alerts` | All russetleaf.dev warnings and criticals | Alertmanager (home), Cloudflare notifications, uptime checks |
 | `#rl-com-alerts` | All russetleaf.com warnings and criticals, plus demo started/stopped messages | Alertmanager (EKS), CloudWatch alarms (ALB, RDS, ElastiCache), uptime checks, demo workflows |
 | `#rl-deploys` | Syncs, failed syncs, unhealthy apps, canary progress and automatic rollbacks, merged version-bump pull requests | Argo CD Notifications, Argo Rollouts notifications, GitHub |
-| `#rl-security` | Falco alerts, Kyverno policy violations, critical vulnerabilities in running images | Falcosidekick, Policy Reporter (Kyverno's reporting add-on), Trivy Operator metrics → Alertmanager |
+| `#rl-security` | Falco alerts, Kyverno policy violations, critical vulnerabilities in running images, Kubernetes API audit alerts, GuardDuty findings | Falcosidekick, Policy Reporter (Kyverno's reporting add-on), Trivy Operator metrics → Alertmanager, Loki ruler, EventBridge → SNS → Amazon Q Developer |
 | `#rl-mlops` | Evaluation gate results, summarizer releases, Bedrock spend, dead-letter queue, model server down | GitHub, Alertmanager |
 | `#rl-costs` | AWS Budgets, Cost Anomaly Detection, Bedrock budget, OpenCost-based alerts (`GPUNodeRunningLong`, `NamespaceDailyCostSpike`), the weekly OpenCost summary, the per-demo actual-cost report, the demo safety net | Amazon Q Developer in chat applications (formerly AWS Chatbot), Alertmanager, scheduled workflows |
 | `#rl-staging` | Staging test runs: started, passed, failed (with results); staging alerts | `staging-test` workflow, Alertmanager (`env=staging`) |
@@ -1146,8 +1182,9 @@ These are approximate prices for **us-east-1**, on demand unless noted, for a sm
 | kube-bench | One Job per node pool, every demo (in `demo-up`) | $0 |
 | Loki log storage (S3) | 14-day retention, demo-hours volume | <$1 |
 | Tempo trace storage (S3) | 7-day retention, demo-hours volume | <$1 |
+| CloudTrail + GuardDuty | One trail (management events); GuardDuty incl. EKS audit-log monitoring | ~$1–5 |
 | Alerting (SNS, Amazon Q Developer in chat applications, Slack free plan) | CloudWatch alarms and budget alerts to Slack | $0 |
-| **Total** | | **~$720–$820 / month** |
+| **Total** | | **~$720–$825 / month** |
 
 Without the self-hosted model (Bedrock only behind the gateway), the total is **~$510–$560 / month**. GuardDuty EKS Runtime Monitoring, if used instead of Falco, is billed per vCPU monitored and would add roughly $10–$20/month at this size. New AWS accounts usually have a **GPU instance quota of 0**, so request a quota increase for G-family instances (both on-demand and spot) before the first deploy.
 
@@ -1322,8 +1359,9 @@ The cost column is what russetleaf.dev costs to run 24/7, plus russetleaf.com's 
 | ci test clusters | kind in GitHub Actions with LocalStack and a mock LLM | Same | $0 |
 | Logs | Loki (single binary, S3 storage) + Alloy, 7-day retention | Same, 14-day retention | <$1 |
 | Alerting | Alertmanager → Slack, dead man's switch, uptime checks, Cloudflare notifications | Same, plus CloudWatch alarms via SNS and Amazon Q Developer | $0 |
+| Account threat detection | CloudTrail + GuardDuty (account-wide, always on) | Same account | ~$1–5 |
 | russetleaf.com always-on edge | n/a | Route 53 zone, CloudFront, offline page, media bucket, RDS snapshot (`envs/aws-edge`) | ~$1 |
-| **Total (24/7)** | | | **~$8–$15 / month** |
+| **Total (24/7)** | | | **~$9–$20 / month** |
 
 ### Short AWS demos
 The full AWS design costs roughly **$1.00/hour** while running, including about $0.25–$0.35/hour for the spot GPU node. Run `terraform apply` in `envs/aws`, record a walkthrough of russetleaf.com or take screenshots, then tear it down. The `demo-up` and `demo-down` GitHub Actions workflows in `wp-infra` do this in the right order, and a scheduled safety-net workflow alerts (or tears down) if the stack is left running too long; see [Building it from scratch](#building-it-from-scratch). The always-on edge (`envs/aws-edge`) is never destroyed, so russetleaf.com switches to its offline page automatically.
@@ -1351,6 +1389,7 @@ Together with the home lab, the total stays within **$30–$50/month**. If the A
 - **Architecture decision records:** documented choices with their trade-offs, e.g. why media is on S3 rather than the commonly recommended EFS, and why there's no service mesh and when one would be added, with an optional Istio ambient experiment to back it up.
 - **Defence in depth for containers:** seccomp `RuntimeDefault` everywhere, Falco process allow-lists per workload (with Tetragon enforcement as a stretch goal), and gVisor sandboxing for the self-hosted CI runners that run pull-request code (with a measured trial for WordPress), backed by an ADR comparing gVisor and Kata Containers.
 - **Passwordless admin access:** Google sign-in (OIDC) for WordPress, an edge login layer (Cloudflare Access at home, ALB OIDC on AWS), application passwords kept only for the REST API, and break-glass recovery with `wp-cli`.
+- **Layered intrusion detection and prevention:** WAFs and edge login, Cilium policies, Kyverno admission, runtime controls, plus detection at runtime (Falco), in the Kubernetes API (audit logs with alert rules) and in the AWS account (CloudTrail, GuardDuty), all reporting to Slack.
 - **Zero-trust networking with Cilium on both clusters:** WireGuard encryption between nodes, default-deny CiliumNetworkPolicies, outbound traffic allowed by DNS name, layer-7 rules where useful, and Hubble flow visibility with metrics, dashboards and alerts in the same Prometheus and Grafana.
 - **Supply-chain security and policy as code:** linting and Semgrep SAST for the project's own code, dependency and workflow audits (dependency review, zizmor), SBOMs and SLSA build provenance attached as signed, Rekor-logged attestations, vulnerability and secret scans and signed images in CI, OpenSSF Scorecard on every repo, signature checks on upstream images too, with the same Kyverno policies tested in CI and enforced in the cluster (signatures, tags, resource limits), plus Checkov scanning Terraform, rendered manifests, Helm charts, Dockerfiles and GitHub Actions workflows in all four repos, with results in GitHub code scanning.
 - **Runtime security and compliance:** Falco rules written for this application (shells in pods, writes to WordPress code, unexpected egress from LLM nodes), alerts in Grafana, CIS benchmark reports from kube-bench on EKS, continuous Trivy Operator compliance reports on both clusters, periodic Kubescape NSA-CISA, MITRE ATT&CK and RBAC reports, and monthly Prowler scans of the AWS account against CIS AWS Foundations.
@@ -1419,7 +1458,8 @@ wp-gitops/
                             #   0010-local-storage-no-ceph.md, 0011-update-strategy.md,
                             #   0012-kube-bench-eks-only.md, 0013-opencost-and-aws-billing.md,
                             #   0014-image-supply-chain.md, 0015-availability-levels.md,
-                            #   0016-process-allow-listing.md, 0017-rollback-strategy.md)
+                            #   0016-process-allow-listing.md, 0017-rollback-strategy.md,
+                            #   0018-intrusion-detection-and-prevention.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
@@ -1469,7 +1509,8 @@ wp-gitops/
                             #   running-image vulnerability and config reports
     opencost/               # OpenCost (cost per namespace/workload/node) + cost alerts (GPUNodeRunningLong,
                             #   NamespaceDailyCostSpike) + weekly summary workflow config
-    logging/                # Loki (single binary, S3 storage, ruler for log-based alerts) + Grafana Alloy
+    logging/                # Loki (single binary, S3 storage, ruler for log-based and Kubernetes audit alerts)
+                            #   + Grafana Alloy (also collecting the Talos API audit log at home)
                             #   DaemonSet (labels, noise dropping, masking; Talos log receiver at home; OTLP
                             #   receiver forwarding traces to Tempo)
     tracing/                # Grafana Tempo (single binary, S3 storage); home: on demand, aws: always on
@@ -1499,7 +1540,8 @@ wp-gitops/
 wp-infra/
   bootstrap/                # applied once, locally: S3 bucket for Terraform state, GitHub OIDC provider,
                             #   IAM roles for each repo's CI (plan, apply, image push), read-only audit role
-                            #   for Prowler, cost allocation tag activation
+                            #   for Prowler, cost allocation tag activation, CloudTrail trail and bucket, GuardDuty
+                            #   (with EKS audit-log monitoring), findings routed to Slack via EventBridge and SNS
   modules/                  # reusable modules shared by both environments
     s3-media/               # media bucket, versioning, IAM policy
     s3-logs/                # Loki log and Tempo trace buckets: encryption, lifecycle matching retention, IAM policy

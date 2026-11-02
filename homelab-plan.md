@@ -167,7 +167,7 @@ Record each answer in the [decision log](#decision-log).
 **Do:**
 - Rename this repo to **`wp-gitops`**. Create **`wp-infra`**, **`wp-image`** and **`llm-summarizer`**.
 - In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a `LICENSE` if public, branch protection on `main` (pull requests and passing checks required).
-- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) `0016-process-allow-listing.md` (finish in step 10.1) and `0017-rollback-strategy.md` (finish in steps 3.1, 5.7, 6.1, 7.4 and 10.8); move them with the other docs.
+- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) `0016-process-allow-listing.md` (finish in step 10.1) and `0017-rollback-strategy.md` (finish in steps 3.1, 5.7, 6.1, 7.4 and 10.8) and `0018-intrusion-detection-and-prevention.md` (finish in steps 2.1, 2.2, 2.3, 4.6 and 10.9); move them with the other docs.
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo.
 - Add **OpenSSF Scorecard** (weekly scheduled workflow) and **zizmor** (on workflow changes) to every repo, and GitHub's **dependency-review action** to the repos with dependencies (`wp-image`, `llm-summarizer`).
 - Add **Checkov** to every repo's CI from the start, scanning the **GitHub Actions workflows** (unpinned actions, over-broad `permissions`, script injection), with a `.checkov.yaml` per repo. Later steps add each repo's other targets (Terraform, manifests, Dockerfiles, charts). Skips must carry a reason. See [Infrastructure and configuration scanning](aws-wp.md#infrastructure-and-configuration-scanning-checkov).
@@ -183,9 +183,10 @@ Record each answer in the [decision log](#decision-log).
 - S3 bucket for Terraform state: versioning, encryption, public access blocked. Backends use `use_lockfile = true`.
 - GitHub OIDC provider in IAM, plus roles for `wp-infra` CI: a read-only **plan** role (pull requests), an **apply** role (`main` only), and a read-only **audit** role for Prowler (AWS's `SecurityAudit` and `ViewOnlyAccess` managed policies; used in step 10.5).
 - The AWS Budget alert (import the one from step 0.1 or recreate it).
+- **Account threat detection** (see `aws-wp.md`'s [Intrusion detection and prevention](aws-wp.md#intrusion-detection-and-prevention)): a multi-region **CloudTrail** trail (management events, log-file validation) to its own S3 bucket with `prevent_destroy`; **GuardDuty** (with EKS audit-log monitoring turned on for when the demo cluster exists); an **EventBridge** rule sending GuardDuty findings (medium severity and above) to an SNS topic connected to Slack `#rl-security` through **Amazon Q Developer in chat applications** (authorise the Slack workspace once in the AWS console; high severity also to `#rl-critical`).
 - **Activate the cost allocation tags** (`Project`, `Site`, `Env`, `Stack`, `ManagedBy`) with Terraform (`aws_ce_cost_allocation_tag`). A tag can only be activated once it exists on at least one resource, so apply this after the first tagged resources exist (re-run this step after step 2.3 if needed); activation can take up to a day to show.
 
-**Test:** a scratch root module with the S3 backend runs `terraform init` and `plan`; a GitHub Actions job in `wp-infra` assumes the plan role and runs `aws sts get-caller-identity`.
+**Test:** GuardDuty sample findings (`aws guardduty create-sample-findings`) appear in `#rl-security`; CloudTrail log-file validation passes (`aws cloudtrail validate-logs`); a scratch root module with the S3 backend runs `terraform init` and `plan`; a GitHub Actions job in `wp-infra` assumes the plan role and runs `aws sts get-caller-identity`.
 
 ### Step 2.2: Talos cluster (box 1 + box 2)
 **Do** (`wp-infra/envs/home/`, applied locally; uses the `siderolabs/talos` provider):
@@ -193,6 +194,7 @@ Record each answer in the [decision log](#decision-log).
 - Box 2: node label `workload=llm`, taint `dedicated=llm:NoSchedule`.
 - Both nodes: the Talos image includes the **gVisor system extension** (built through Talos's Image Factory and referenced in the machine config), used in step 6.5.
 - Both nodes: kubelet extra mount for `/var/local-path-provisioner` (needed in step 4.1).
+- **API server audit logging:** a focused Talos audit policy (metadata for most requests; request details for Secrets, RBAC, `exec` and `attach`), writing to the audit log on box 1 (collected in step 4.6).
 - **Cilium:** in the machine config, set `cluster.network.cni.name: none` and `cluster.proxy.disabled: true` (Cilium replaces kube-proxy). Install Cilium with Terraform's Helm provider right after bootstrap (nothing else can run without a CNI), using Talos's documented Cilium values: `kubeProxyReplacement: true`, `k8sServiceHost: localhost`, `k8sServicePort: 7445` (KubePrism), and the cgroup and capability settings Talos requires. Turn on Hubble and Hubble Relay, and **WireGuard transparent encryption** (`encryption.enabled: true`, `encryption.type: wireguard`). Keep Cilium's ServiceMonitors **off** here (the Prometheus Operator doesn't exist yet; step 4.4 turns them on). Use `lifecycle { ignore_changes }` so Terraform installs Cilium once and Argo CD manages it afterwards (step 3.1).
 - Apply configs, bootstrap etcd, output kubeconfig and talosconfig (save them outside Git).
 - Install **metrics-server** here or in step 4.1, so `kubectl top` works.
@@ -209,11 +211,11 @@ The cluster is deliberately **not highly available** (one control-plane node); s
 - **Staging resources** (a second, smaller set of the same modules, tagged `Env=staging`): staging media bucket, summary queue + dead-letter queue, Secrets Manager entries, and a scoped IAM key that can **read** the production backup bucket but write only to staging resources. Used from step 5.6.
 - **Email:** an SES domain identity for russetleaf.dev, with its DKIM and SPF records created in Cloudflare, and SES SMTP credentials stored in Secrets Manager. (New SES accounts are in the "sandbox" and can only send to verified addresses; verify your own address for testing, or request production access.)
 - Scoped IAM users and keys for the home cluster, one per job: External Secrets (read the russetleaf.dev secrets only), WordPress (media bucket + send to queue), MariaDB backups (backup bucket), summarizer (read from queue), LiteLLM (`bedrock:InvokeModel` on the chosen models only). Store each key in Secrets Manager.
-- Cloudflare (Cloudflare provider): the tunnel, its token (stored in Secrets Manager), DNS records for `russetleaf.dev` and `www`, basic WAF/security settings, **Cloudflare Access** policies for admin UIs (Argo CD, Grafana) so they're never public, with **Google** configured as Cloudflare Access's login provider (used for WordPress admin paths in step 5.8), **Cloudflare notifications** (tunnel health, security events) to a Slack webhook for `#rl-dev-alerts`, and a `staging.russetleaf.dev` hostname behind Cloudflare Access (used from step 5.6).
+- Cloudflare (Cloudflare provider): the tunnel, its token (stored in Secrets Manager), DNS records for `russetleaf.dev` and `www`, basic WAF/security settings plus Cloudflare's free **managed rule set**, a **rate-limiting rule** on `/wp-login.php`, and a rule **blocking `/xmlrpc.php`**, **Cloudflare Access** policies for admin UIs (Argo CD, Grafana) so they're never public, with **Google** configured as Cloudflare Access's login provider (used for WordPress admin paths in step 5.8), **Cloudflare notifications** (tunnel health, security events) to a Slack webhook for `#rl-dev-alerts`, and a `staging.russetleaf.dev` hostname behind Cloudflare Access (used from step 5.6).
 - The Slack bot token in Secrets Manager (set by hand; Terraform creates the empty entry).
 - Bedrock: confirm access to Claude Haiku and Amazon Nova Lite in the chosen region (Anthropic models may need a one-time use-case form in the console).
 
-**Test:** with each scoped key, the allowed action works and a disallowed one fails (e.g. the WordPress key can't read the backup bucket); `aws bedrock-runtime converse` with the LiteLLM key returns a response; the tunnel shows as created in Cloudflare.
+**Test:** with each scoped key, the allowed action works and a disallowed one fails (e.g. the WordPress key can't read the backup bucket); `aws bedrock-runtime converse` with the LiteLLM key returns a response; the tunnel shows as created in Cloudflare; requests to `/xmlrpc.php` are blocked at Cloudflare, and rapid repeated requests to `/wp-login.php` are rate-limited.
 
 ### Step 2.4: `wp-infra` CI
 **Do:** the pipeline described in `aws-wp.md` ([Terraform pipeline](aws-wp.md#terraform-pipeline-wp-infra)):
@@ -286,13 +288,14 @@ Check `kubectl top nodes` after each step.
 ### Step 4.6: Logging (Loki + Alloy)
 **Do:** `platform/logging/`, as described in `aws-wp.md` ([Logging](aws-wp.md#logging-loki--alloy)):
 - **Loki** in single-binary mode, storing data in the Loki S3 bucket (scoped key from External Secrets), a small local cache volume, **7-day retention**, the **ruler** sending alerts to Alertmanager.
+- **Kubernetes audit logs:** Alloy also collects the **API server audit log** from box 1 (label `job=kube-audit`), and Loki's ruler gets the audit alerts from `aws-wp.md` (`KubeExecIntoProdPod`, `KubeUnexpectedSecretRead`, `KubeRBACChangedOutsideArgoCD`, `KubeAnonymousOrForbiddenSpike`, `KubeAuditLogMissing`), routed to `#rl-security` with runbooks. Argo CD's service account is the expected source of production changes.
 - **Grafana Alloy** DaemonSet: an **OTLP receiver** for traces (forwarding to Tempo once it exists; until then traces are dropped); collect all container logs; labels `site=dev`, `env`, `cluster`, `namespace`, `app`, `container` only; drop debug lines and health-check access logs; mask tokens and passwords in query strings; a host port receiving **Talos system logs**.
 - In `wp-infra/envs/home`, point Talos's machine logging at Alloy's host port on each node.
 - A narrow Kyverno **`PolicyException`** for Alloy (host paths for log files, the host port).
 - Loki as a Grafana data source, with links from dashboards to logs; starter log-based alerts (`LokiIngestionErrors` now; the WordPress, summarizer and Bedrock ones are added in steps 5.2 and 7.5) with runbooks.
 - Record memory use in the checklist, and daily log volume and memory after a week in `docs/adr/0005-loki-alloy-for-logs.md`.
 
-**Test:** in Grafana, logs from every namespace and from the Talos nodes (kubelet, etcd) are searchable by `namespace` and `app`; a deleted pod's logs are still there; a secret in a test log line is masked; stopping Loki fires `LokiIngestionErrors` in `#rl-dev-alerts`; objects older than the retention period are removed from the bucket.
+**Test:** in Grafana, logs from every namespace and from the Talos nodes (kubelet, etcd) are searchable by `namespace` and `app`; `kubectl exec` into a production pod fires `KubeExecIntoProdPod`, and editing a RoleBinding by hand fires `KubeRBACChangedOutsideArgoCD`; a deleted pod's logs are still there; a secret in a test log line is masked; stopping Loki fires `LokiIngestionErrors` in `#rl-dev-alerts`; objects older than the retention period are removed from the bucket.
 
 ## Phase 5: WordPress
 
@@ -311,6 +314,7 @@ Check `kubectl top nodes` after each step.
 - A **`db.php` drop-in** whose behaviour is chosen by the chart setting **`database.auth`**. Build only the **`password`** mode now (reads the password from a Secret, connects over TLS); it's what the home lab uses, and it's the AWS fallback too. Leave a clear extension point for an **`iam`** mode, which is written **only after** the AWS plan's early test (step 1.6) shows that PHP can log in to RDS Proxy with an IAM token. That way no work is wasted if the test fails. Add the **RDS CA certificate bundle** to the image now (harmless at home, needed on AWS).
 - The **metrics must-use plugin** (`mu-plugins/metrics/`), as described in `aws-wp.md` ([WordPress monitoring](aws-wp.md#wordpress-monitoring)): `wordpress_posts_without_summary`, `wordpress_cron_overdue_events`, `wordpress_object_cache_hit_ratio`, `wordpress_info`, and simple counts, served on a **separate internal port** (a second Apache listener, e.g. 9117), cached for about a minute. Also turn on Apache's `mod_status`, reachable from localhost only (for the apache_exporter sidecar). Unit-test the output format.
 - **OpenTelemetry tracing, built in but off by default:** the OpenTelemetry **PHP extension** and **Composer packages** (SDK, OTLP exporter, and auto-instrumentation for WordPress, database access and HTTP calls; check current package names in the OpenTelemetry PHP contrib project). **No WordPress plugin** is needed; it's switched on by environment variables (`OTEL_PHP_AUTOLOAD_ENABLED`, `OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`, sampler settings) set in the chart values. Include trace IDs in WordPress's log lines.
+- **XML-RPC disabled** inside WordPress (a must-use plugin returning `false` from the `xmlrpc_enabled` filter), as well as being blocked at the edge.
 - The **summary-queue must-use plugin**: on publish or update, send `{"post_id": ...}` to SQS, adding the current trace context (W3C `traceparent`) as a **message attribute** when tracing is on (AWS SDK for PHP, installed with Composer at build time).
 - `tests/`: a smoke test (Docker Compose with MariaDB: the container starts, plugins are active, health check passes).
 - `chart/`: the WordPress Helm chart (see step 5.2 for what it deploys), versioned with the image.
@@ -571,6 +575,11 @@ Record each drill's time in the decision log and compare it with the expected ti
 
 **Test:** every runbook has been followed at least once in a drill; each rollback restored a working state within its expected time (or the runbook was corrected).
 
+### Step 10.9 (optional): CrowdSec
+**Do:** install **CrowdSec** reading ingress-nginx's logs, with its **Cloudflare bouncer** so abusive IP addresses (repeated login failures, scanners) are blocked at Cloudflare's edge; alerts and decisions to `#rl-security`. Record memory use; remove it if box 1 can't afford it.
+
+**Test:** a simulated brute-force from a test address (in staging) gets that address banned at Cloudflare, and the ban expires as configured; normal visitors aren't affected.
+
 ## Phase 11: Optional and finishing
 
 ### Step 11.1 (optional): Keyless AWS access for pods
@@ -599,6 +608,7 @@ These keep russetleaf.dev healthy once it's running. Add each as a calendar remi
 | Check for Terraform drift | Weekly | A scheduled `terraform plan` in `wp-infra` CI for the AWS and Cloudflare resources (alerts if anything changed outside Terraform) |
 | Check staging still works | Monthly, if nothing has been promoted | Run `staging-test` by hand, so a broken staging setup is found before it blocks a real release |
 | Check the staging scrub | After any plugin that stores personal data is added | Confirm the `staging-data` Job also clears that plugin's tables |
+| Review GuardDuty findings and audit alerts | Weekly (findings also alert in real time) | Check GuardDuty's console for low-severity findings not sent to Slack; tune audit alert rules that fire on expected activity |
 | Prowler AWS account scan | Monthly (automatic) | Review the workflow's summary and Slack message; fix new failures in Terraform or record why they're accepted |
 | Kubescape posture scan | Monthly | Run the Kubescape CLI against the home cluster; save the report in `docs/security/`; compare scores with the previous run and investigate any drop |
 | Review the admin allow-list | Quarterly | Remove people who no longer need access, in the plugin's allow-list and the Cloudflare Access policy |
@@ -671,6 +681,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 10.6 Version-age report | ☐ | | | |
 | 10.7 Custom seccomp profiles (optional) | ☐ | | | |
 | 10.8 Rollback runbooks and drills | ☐ | | | |
+| 10.9 CrowdSec (optional) | ☐ | | | |
 | 11.1 Keyless AWS access (optional) | ☐ | | | |
 | 11.2 Docs + go public | ☐ | | | |
 
