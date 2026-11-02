@@ -24,21 +24,22 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.6, 5.1–5.7, 6.1, 6.3, 11.2 | **~120–208** |
 | **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model, MLflow tracking and registry, guardrails, online evaluation and drift monitoring), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, Google sign-in, always-on tracing, CrowdSec, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 6.2, 6.4, 6.5, 7.1–9.6, 10.1–10.6, 10.8–10.11 | **~103–182** |
 | **Stretch** | Extras: the rest of the MLOps lifecycle (feedback loop, DVC, deploying a fine-tuned model; valuable for MLOps roles specifically), custom seccomp profiles, keyless AWS access. | 9.7, 9.8, 10.7, 11.1 | **~19–35** |
-| **Total** | | | **~242–425** |
+| **Staff** | Beyond senior: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management, chaos experiments and postmortems, a threat model and control matrix, strategy documents, and public writing. Shows staff-level judgement; staff roles also expect evidence of leading people. | 12.1–12.9 | **~81–132** |
+| **Total** | | | **~323–557** |
 
 **Calendar time** (home lab only):
 
-| Hours per week | Core | Core + differentiators | Everything |
-|---|---|---|---|
-| ~10 | 3–5 months | 5–9 months | 6–10 months |
-| ~20 | 6–10 weeks | 11–20 weeks | 12–21 weeks |
-| ~40 | 3–5 weeks | 6–10 weeks | 6–11 weeks |
+| Hours per week | Core | + Differentiators | + Stretch | + Staff (everything) |
+|---|---|---|---|---|
+| ~10 | 3–5 months | 5–9 months | 6–10 months | 8–13 months |
+| ~20 | 6–10 weeks | 11–20 weeks | 12–21 weeks | 16–28 weeks |
+| ~40 | 3–5 weeks | 6–10 weeks | 6–11 weeks | 8–14 weeks |
 
-Add the AWS plan (~103–180 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~345–605 hours**.
+Add the AWS plan (~111–192 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~434–749 hours** (about **345–605** without the Staff tier).
 
 **Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to explain it in an interview**.
 
-**Recommended order:** finish **all Core steps first** (in plan order), and publish them; then add Differentiators, starting with the AI pipeline (phases 7–9) and the drills (10.8, 10.10, 10.11), which give the most interview material; leave Stretch steps until everything else is done. A finished subset is worth more than an unfinished whole.
+**Recommended order:** finish **all Core steps first** (in plan order), and publish them; then add Differentiators, starting with the AI pipeline (phases 7–9) and the drills (10.8, 10.10, 10.11), which give the most interview material; leave Stretch and Staff steps until Core and Differentiators are done (for staff-level roles, the Staff tier matters more than Stretch). A finished subset is worth more than an unfinished whole.
 
 ## Starting point (as of 2026-10-31)
 
@@ -194,7 +195,7 @@ Record each answer in the [decision log](#decision-log).
 **Do:**
 - Rename this repo to **`wp-gitops`**. Create **`wp-infra`**, **`wp-image`** and **`llm-summarizer`**.
 - In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a `LICENSE` if public, branch protection on `main` (pull requests and passing checks required).
-- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) `0016-process-allow-listing.md` (finish in step 10.1) and `0017-rollback-strategy.md` (finish in steps 3.1, 5.7, 6.1, 7.4 and 10.8) and `0018-intrusion-detection-and-prevention.md` (finish in steps 2.1, 2.2, 2.3, 4.6 and 10.9) and `0019-disaster-recovery.md` (finish in steps 0.1, 2.5 and 10.10) and `0020-aws-multi-account-sra.md` (finish in steps 2.0, 2.0b and 2.4) and `0021-three-node-ha-home-cluster.md` (finish in steps 2.2, 4.5 and 10.11) and `0022-mlops-lifecycle.md` (finish in steps 9.4–9.8 and AWS step 4.5); move them, and `docs/disaster-recovery.md`, with the other docs.
+- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) `0016-process-allow-listing.md` (finish in step 10.1) and `0017-rollback-strategy.md` (finish in steps 3.1, 5.7, 6.1, 7.4 and 10.8) and `0018-intrusion-detection-and-prevention.md` (finish in steps 2.1, 2.2, 2.3, 4.6 and 10.9) and `0019-disaster-recovery.md` (finish in steps 0.1, 2.5 and 10.10) and `0020-aws-multi-account-sra.md` (finish in steps 2.0, 2.0b and 2.4) and `0021-three-node-ha-home-cluster.md` (finish in steps 2.2, 4.5 and 10.11) and `0022-mlops-lifecycle.md` (finish in steps 9.4–9.8 and AWS step 4.5), and `0023`–`0025` (SLOs, the developer platform, reliability practice; finish in phase 12); move them, and `docs/disaster-recovery.md`, with the other docs.
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo.
 - Add **OpenSSF Scorecard** (weekly scheduled workflow) and **zizmor** (on workflow changes) to every repo, and GitHub's **dependency-review action** to the repos with dependencies (`wp-image`, `llm-summarizer`).
 - Add **Checkov** to every repo's CI from the start, scanning the **GitHub Actions workflows** (unpinned actions, over-broad `permissions`, script injection), with a `.checkov.yaml` per repo. Later steps add each repo's other targets (Terraform, manifests, Dockerfiles, charts). Skips must carry a reason. See [Infrastructure and configuration scanning](aws-wp.md#infrastructure-and-configuration-scanning-checkov).
@@ -669,6 +670,55 @@ Record each drill's time in the decision log and compare it with the expected ti
 
 **Test:** russetleaf.dev's content (posts, summaries, media) is fully restored from the off-account copies; the total time is recorded in `docs/disaster-recovery.md` and ADR 0019.
 
+## Phase 12: Staff-level practices
+
+(Placed before Phase 11 in this document because Phase 11's final documentation step should come last.) These steps are the **Staff** tier; see `aws-wp.md`'s [Staff-level practices](aws-wp.md#staff-level-practices). Do them after Core and most Differentiators.
+
+### Step 12.1: SLOs and error budgets
+**Do:** SLO definitions in `wp-gitops/docs/slos/` and `platform/sloth/` (site availability and latency, summary freshness and quality, home Kubernetes API); **Sloth** generating recording rules and multi-window, multi-burn-rate alerts (fast burn to `#rl-critical`, slow burn to the site channel); Grafana SLO dashboards; retire the threshold alerts they replace. Write the **error-budget policy** and enforce it: `promote-to-prod` (step 5.7) checks the remaining budgets and blocks promotions, except changes labelled `fix` or `reliability`, when a budget is exhausted. See `docs/adr/0023-slos-and-error-budgets.md`.
+
+**Test:** the SLO dashboards show real budgets; injecting errors in staging (or lowering a target temporarily) burns the budget, fires the burn-rate alert, and blocks a normal promotion while a `fix` promotion still goes through.
+
+### Step 12.2: DORA metrics
+**Do:** a scheduled workflow that computes **deployment frequency**, **lead time for changes**, **change failure rate** and **time to restore** from GitHub (pull requests, releases), Argo CD (syncs) and the rollback and incident records, publishes them to Prometheus, and feeds a Grafana dashboard with monthly trends.
+
+**Test:** the dashboard shows the four metrics over the last 30 days, and each can be traced back to its source records.
+
+### Step 12.3: Developer portal and golden path (Backstage)
+**Do:** `platform/backstage/` (on box 3, PostgreSQL by the CloudNativePG operator, behind Cloudflare Access with Google sign-in): a **catalogue** of every component with owners, links to dashboards, runbooks and SLOs; **TechDocs** from the repos' documentation; and a **software template** that creates a complete new service: repo with the full CI and supply-chain pipeline, a Kyverno-compliant chart, CiliumNetworkPolicies, SLO definitions, a dashboard and alerts, a runbook stub, and Argo CD registration through an **ApplicationSet**. See `docs/adr/0024-internal-developer-platform.md`.
+
+**Test:** the catalogue lists every component with its owner and links; the template produces a repo whose CI passes on the first run and whose manifests pass the Kyverno CLI tests.
+
+### Step 12.4: Second service and multi-tenancy
+**Do:** create a **second, different service** from the template (e.g. a small Go API serving summary statistics from WordPress), and take it through ci, staging and promotion to production. Add **multi-tenancy** in `platform/tenants/`: a namespace and **Argo CD project** per tenant, **resource quotas and limit ranges**, scoped **RBAC**, per-tenant Kyverno policies, and **cost showback** per tenant in OpenCost. Measure and publish the **time from template to first production deploy**.
+
+**Test:** the second service runs in production with its own SLOs, dashboard and alerts; it can't exceed its quota or deploy outside its namespace; OpenCost shows its cost separately; the onboarding time is recorded.
+
+### Step 12.5: Threat model and control matrix
+**Do:** `docs/security/threat-model.md`: a **STRIDE** analysis of the whole system (trust boundaries, data flows, threats, mitigations), linked to the ADRs. `docs/security/controls-matrix.md`: every implemented control mapped to the **CIS Controls** (and SOC 2-style criteria), each with its evidence (policy, configuration, report or test).
+
+**Test:** every trust boundary has its threats and mitigations listed; every control in the matrix links to evidence that exists.
+
+### Step 12.6: Chaos experiments and postmortems
+**Do:** `platform/chaos-mesh/` with scheduled experiments, each with a written hypothesis, expected outcome, blast radius and abort condition (kill the MariaDB primary; add latency to Bedrock calls; kill a WordPress pod mid-canary; fill a node's disk; partition box 2), run in staging first, then in production at quiet times; results in `docs/chaos/`. A **blameless postmortem template** in `docs/postmortems/`, and postmortems for at least two real incidents or notable drills from the build. See `docs/adr/0025-reliability-practice.md`.
+
+**Test:** each experiment's outcome is recorded against its hypothesis; any surprise produced an action item; two postmortems exist with completed or scheduled action items.
+
+### Step 12.7: Strategy documents
+**Do:** in `docs/strategy/`: a **technical roadmap**; a **capacity and cost plan** (using the EKS load-test results from AWS plan step 6.4: how the HPA and Karpenter respond, the limits found, **cost per 1,000 visitors** at several traffic levels); a **migration plan** (e.g. moving russetleaf.dev fully into AWS, or going multi-region: phases, risks, rollback points); and a **build-vs-buy analysis** (the self-hosted stack against managed alternatives, with costs and trade-offs).
+
+**Test:** each document states its recommendations and the evidence behind them, and is linked from the hub README.
+
+### Step 12.8: Fleet management (hub-and-spoke Argo CD)
+**Do:** make the home Argo CD the **hub**: **ApplicationSets with cluster generators** for the AWS overlays, a scoped AWS identity for Argo CD to authenticate to EKS (IAM), and documentation for `demo-up` to register the EKS cluster (AWS plan step 6.5). Keep the per-cluster Argo CD as a documented fallback.
+
+**Test:** with a demo running, the hub shows both clusters and syncs the AWS overlays to EKS; after `demo-down`, the EKS cluster is gone from the hub with no errors left behind.
+
+### Step 12.9: Public writing
+**Do:** a series of **articles on russetleaf.dev** explaining the main design decisions (from the ADRs): e.g. S3 rather than EFS, no service mesh, the SRA account structure, evaluation gates for LLMs, error-budget-gated promotion. Link them from the hub README and your CV.
+
+**Test:** at least four articles published, each linking to the relevant ADRs and code.
+
 ## Phase 11: Optional and finishing
 
 ### Step 10.11: Node-failure drills
@@ -794,6 +844,15 @@ The home lab already builds most of what these need: the shared Terraform module
 | 10.11 Node-failure drills | Differentiator | 3–6 | ☐ | | | | |
 | 11.1 Keyless AWS access (optional) | Stretch | 5–10 | ☐ | | | | |
 | 11.2 Docs + go public | Core | 6–10 | ☐ | | | | |
+| 12.1 SLOs and error budgets | Staff | 10–15 | ☐ | | | | |
+| 12.2 DORA metrics | Staff | 6–10 | ☐ | | | | |
+| 12.3 Backstage and golden path | Staff | 15–25 | ☐ | | | | |
+| 12.4 Second service + multi-tenancy | Staff | 10–15 | ☐ | | | | |
+| 12.5 Threat model + control matrix | Staff | 8–12 | ☐ | | | | |
+| 12.6 Chaos experiments + postmortems | Staff | 10–15 | ☐ | | | | |
+| 12.7 Strategy documents | Staff | 6–10 | ☐ | | | | |
+| 12.8 Fleet management (hub) | Staff | 6–10 | ☐ | | | | |
+| 12.9 Public writing | Staff | 10–20 | ☐ | | | | |
 
 ## Decision log
 

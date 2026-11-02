@@ -1506,6 +1506,7 @@ Together with the home lab, the total stays within **$30–$50/month**. If the A
 - **Real AWS integration from home:** S3 media offload, SQS, Secrets Manager, S3 backups, Bedrock and IAM are all managed by Terraform.
 - **Generative AI run like production software:** Bedrock integration with least-privilege IAM, event-driven scaling to zero, a dead-letter queue, and cost controls, with the same code running on both clusters.
 - **Model serving on Kubernetes:** a self-hosted model on dedicated nodes (labels, taints, tolerations, node selectors), behind an LLM gateway with routing, fallback, canary splits, rate limits and budgets, so no single model provider is a dependency.
+- **Staff-level practices:** SLOs with error budgets that block promotions automatically, DORA metrics, an internal developer platform (Backstage, a golden-path template proven with a second service, multi-tenancy), hub-and-spoke fleet management, chaos experiments and blameless postmortems, a threat model and control matrix, strategy documents, and public writing.
 - **The full MLOps lifecycle:** MLflow experiment tracking and model registry with lineage, guardrails against prompt injection and personal-data leaks, online evaluation and drift alerts, a LoRA fine-tuning (distillation) pipeline on a spot GPU with evaluation against the base model, DVC-versioned data, and an editor feedback loop.
 - **A standalone MLOps repo (`llm-summarizer`):** versioned prompts, an evaluation set, a CI gate that compares every model and blocks changes that lower summary quality, releases gated on evaluation, a model card, a published Helm chart, and a local demo anyone can run. It's the repo to link on a CV for AI and MLOps roles.
 - **A four-repo GitOps structure:** infrastructure, deployment config, the WordPress image and the summarizer are separated by purpose and permissions, with automated, reviewed promotion of signed images and charts into the GitOps repo.
@@ -1536,19 +1537,72 @@ Together with the home lab, the total stays within **$30–$50/month**. If the A
 - **Operational alerting:** alerts as code with tests and runbooks, routed to Slack by site and severity, with inhibition rules, a dead man's switch, external uptime checks and silences during demo teardown.
 - **Documentation:** architecture diagrams for both environments, the cost breakdown, Grafana dashboard screenshots, Slack alert screenshots, runbooks, sample evaluation reports comparing models, and demo recordings.
 
+## Staff-level practices
+
+These practices move the project from "a well-built system" towards **staff-level** work: running a platform as a product for other engineers, letting reliability targets drive decisions, measuring delivery, and setting technical direction in writing. A solo portfolio can show staff-level **judgement**; staff roles also expect evidence of **leading people and teams**, which interviews will ask about separately.
+
+### SLOs and error budgets that drive decisions
+- **Service level objectives** (SLOs) with their indicators (SLIs):
+
+| Service | SLI | SLO (28-day window) |
+|---|---|---|
+| russetleaf.dev site | Successful requests (non-5xx) at ingress-nginx | 99.5% |
+| russetleaf.dev site | Page requests served under 1 second | 95% |
+| AI summaries | Posts summarized within 15 minutes of publishing (**freshness**) | 99% |
+| AI summaries | Daily online-evaluation pass rate (quality) | 95% |
+| Kubernetes API (home) | Successful API requests | 99.9% |
+
+- **Sloth** generates the Prometheus recording rules and **multi-window, multi-burn-rate alerts** from short SLO definitions in Git; these replace many of the earlier threshold alerts (page on fast burn to `#rl-critical`, ticket on slow burn to the site channel).
+- **An error-budget policy, enforced in automation:** when an SLO's budget for the window is exhausted, the `promote-to-prod` workflow **blocks promotions** except changes labelled `fix` or `reliability`, until the budget recovers; the policy document explains the rule and its exceptions. See `docs/adr/0023-slos-and-error-budgets.md`.
+- **Grafana SLO dashboards** show each objective, the remaining budget and the burn rate.
+
+### Delivery measurement (DORA metrics)
+A scheduled workflow computes the four **DORA metrics** from GitHub (pull requests, releases), Argo CD (syncs) and the incident and rollback records: **deployment frequency**, **lead time for changes**, **change failure rate** and **time to restore**. It publishes them to Prometheus for a Grafana dashboard with monthly trends, reviewed in the monthly operations review.
+
+### Internal developer platform: golden paths and multi-tenancy
+- **Backstage** (on box 3, with a small PostgreSQL database run by the CloudNativePG operator) as the **developer portal**: a **service catalogue** of every component and its owner, **TechDocs** built from the repos' documentation, and links to dashboards, runbooks and SLOs.
+- **A software template (golden path)** that creates a **new service** with everything the platform expects: a repo with the CI pipeline (linting, SAST, tests, signed and attested images), a Helm chart that passes the Kyverno policies, CiliumNetworkPolicies, SLO definitions, a Grafana dashboard and alerts, a runbook stub, and registration with Argo CD through an **ApplicationSet**, all from one form.
+- **Proof:** a **second, different service** is created from the template (e.g. a small Go API serving summary statistics), and the **time from template to first production deploy** is measured and published.
+- **Multi-tenancy:** each team (or service) gets a **namespace**, an **Argo CD project**, **resource quotas and limit ranges**, scoped **RBAC**, per-tenant Kyverno policies, and **cost showback** per tenant (OpenCost). See `docs/adr/0024-internal-developer-platform.md`.
+
+### Fleet management: one Argo CD for both clusters
+The home Argo CD becomes the **hub**: `demo-up` registers the EKS cluster with it (an Argo CD cluster secret using IAM authentication to EKS, with the EKS API endpoint restricted to the home network's address), and **ApplicationSets with cluster generators** deploy the AWS overlays to it automatically; `demo-down` removes the registration. EKS no longer needs its own Argo CD, and both clusters are managed from one place. (The per-cluster Argo CD from the AWS plan remains the fallback.) Recorded in ADR 0024.
+
+### Reliability practice: chaos experiments and postmortems
+- **Chaos Mesh** runs **scheduled experiments**, each with a written hypothesis and expected outcome: kill the MariaDB primary, add latency to Bedrock calls, kill a WordPress pod mid-canary, fill a node's disk, partition box 2 from the others. Results go into `docs/chaos/`.
+- **Blameless postmortems** (`docs/postmortems/`, from a template: summary, impact, timeline, root causes, what went well, action items with owners) for every real incident and notable drill; at least two from the build itself.
+- **SLO-based paging** (above) and runbook standards: every page links a runbook. See `docs/adr/0025-reliability-practice.md`.
+
+### Security architecture documents
+- **Threat model** (`docs/security/threat-model.md`): a **STRIDE** analysis of the whole system (trust boundaries, data flows, threats, mitigations), linked to the ADRs and controls.
+- **Control matrix** (`docs/security/controls-matrix.md`): the implemented controls mapped to the **CIS Controls** (and SOC 2-style criteria), each with its evidence (policy, configuration, report or test).
+
+### Strategy documents
+ADRs record decisions; these set direction:
+- **Technical roadmap** (`docs/strategy/roadmap.md`): what comes next, in what order, and why.
+- **Capacity and cost plan** (`docs/strategy/capacity-plan.md`): **load tests on EKS** (k6) showing how the HPA and Karpenter respond, the limits found, and **cost per 1,000 visitors** at different traffic levels.
+- **Migration plan** (`docs/strategy/migration-plan.md`): e.g. moving russetleaf.dev fully into AWS, or going multi-region: phases, risks, rollback points.
+- **Build-vs-buy analysis** (`docs/strategy/build-vs-buy.md`): the self-hosted stack compared with managed alternatives (e.g. Grafana Cloud, managed Argo CD, Kubecost, Security Hub-only), with costs and trade-offs.
+
+### Public writing
+A series of **articles on russetleaf.dev** explaining the design decisions (the ADRs are the raw material): S3 rather than EFS, no service mesh, the SRA account structure, evaluation gates for LLMs, error-budget-gated promotion. The site is then both the system and the evidence of communicating it.
+
+### Cost and memory
+Backstage (~1–1.5 GB with its database), Chaos Mesh and Sloth's rules fit on the three-node cluster (mostly box 3); the EKS load tests add a few demo hours. About **$0 always on**, plus a few dollars of demo time.
+
 ## Build plans, priorities and effort
 
 The two build plans tier every step as **Core**, **Differentiator** or **Stretch**, with hour estimates (focused hours with Claude's help; expect ±50%):
 
-| Plan | Core | Differentiator | Stretch | Total |
-|---|---|---|---|---|
-| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~120–208 | ~103–182 | ~19–35 | ~242–425 |
-| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~67–115 | ~14–27 | ~22–38 | ~103–180 |
-| **Whole project** | ~187–323 | ~117–209 | ~41–73 | **~345–605** |
+| Plan | Core | Differentiator | Stretch | Staff | Total |
+|---|---|---|---|---|---|
+| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~120–208 | ~103–182 | ~19–35 | ~81–132 | ~323–557 |
+| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~67–115 | ~14–27 | ~22–38 | ~8–12 | ~111–192 |
+| **Whole project** | ~187–323 | ~117–209 | ~41–73 | ~89–144 | **~434–749** |
 
-At about **20 hours a week**, the home lab's Core tier takes roughly **6–10 weeks**, and the whole project roughly **4–7 months** (about **8–14 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
+At about **20 hours a week**, the home lab's Core tier takes roughly **6–10 weeks**, everything except the Staff tier roughly **4–7 months**, and the whole project including it roughly **5–9 months** (about **10–17 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
 
-**Portfolio level:** the home lab's **Core tier on its own reads as strong intermediate work**; adding the **Differentiators**, especially the AI pipeline with its evaluation gate and **evidence of operating the system** (rollback, node-failure and disaster drills, a restore from the Backup account, a recorded AWS demo), is what makes it **senior-level**. For **MLOps** roles specifically, the inference-side work (evaluation gate, gateway, self-hosted model, monitoring) reads as strong intermediate (senior for LLMOps); **MLflow, guardrails and online evaluation** (Differentiators) make it senior for LLM-focused MLOps; the **fine-tuning pipeline, DVC and the feedback loop** (Stretch) complete the full lifecycle expected of senior MLOps generally. A finished subset is worth more than an unfinished whole: finish Core first.
+**Portfolio level:** the home lab's **Core tier on its own reads as strong intermediate work**; adding the **Differentiators**, especially the AI pipeline with its evaluation gate and **evidence of operating the system** (rollback, node-failure and disaster drills, a restore from the Backup account, a recorded AWS demo), is what makes it **senior-level**. For **MLOps** roles specifically, the inference-side work (evaluation gate, gateway, self-hosted model, monitoring) reads as strong intermediate (senior for LLMOps); **MLflow, guardrails and online evaluation** (Differentiators) make it senior for LLM-focused MLOps; the **fine-tuning pipeline, DVC and the feedback loop** (Stretch) complete the full lifecycle expected of senior MLOps generally. The **Staff** tier (SLOs and error budgets, DORA metrics, the developer platform proven with a second service, fleet management, chaos and postmortems, the threat model, strategy documents and public writing) shows **staff-level judgement**; staff roles also expect evidence of leading people and teams, which comes from your work history rather than the project. A finished subset is worth more than an unfinished whole: finish Core first.
 
 ## Repository structure (four repos)
 
@@ -1593,6 +1647,11 @@ wp-gitops/
     runbooks/               # one page per alert (what it means, how to check, how to fix), plus
                             #   rollback-<layer>.md runbooks
     disaster-recovery.md    # DR plan: asset inventory, scenarios, bootstrap order from zero, drills
+    slos/                   # SLO definitions (Sloth) and the error-budget policy
+    postmortems/            # blameless postmortems (template + incidents and drills)
+    chaos/                  # chaos experiment hypotheses and results
+    strategy/               # roadmap, capacity and cost plan, migration plan, build-vs-buy
+    security/               # also threat-model.md and controls-matrix.md
     adr/                    # architecture decision records (e.g. 0001-no-service-mesh.md,
                             #   0002-s3-media-not-efs.md, 0003-kubescape-cli-not-operator.md,
                             #   0004-ghcr-not-ecr.md, 0005-loki-alloy-for-logs.md,
@@ -1604,7 +1663,8 @@ wp-gitops/
                             #   0016-process-allow-listing.md, 0017-rollback-strategy.md,
                             #   0018-intrusion-detection-and-prevention.md, 0019-disaster-recovery.md,
                             #   0020-aws-multi-account-sra.md, 0021-three-node-ha-home-cluster.md,
-                            #   0022-mlops-lifecycle.md)
+                            #   0022-mlops-lifecycle.md, 0023-slos-and-error-budgets.md,
+                            #   0024-internal-developer-platform.md, 0025-reliability-practice.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
@@ -1663,6 +1723,11 @@ wp-gitops/
     kube-bench/             # CIS benchmark Job templates per node pool, EKS profile (aws only; applied by the
                             #   demo-up workflow, not synced by Argo CD)
     mlflow/                 # MLflow tracking server and model registry (MariaDB metadata, S3 artifacts)
+    backstage/              # Backstage developer portal (+ CloudNativePG PostgreSQL), catalogue, TechDocs,
+                            #   golden-path software templates
+    tenants/                # per-tenant namespaces, Argo CD projects, quotas, limit ranges, RBAC, Kyverno policies
+    sloth/                  # SLO rule generation (Sloth) and SLO dashboards
+    chaos-mesh/             # Chaos Mesh and scheduled experiments
     argo-workflows/         # Argo Workflows (online evaluation, data export, the fine-tuning pipeline on EKS)
     llm-gateway/            # LiteLLM + routing config: model list, fallbacks, canary weights, budgets
     llm-serving/            # llama.cpp model server, tolerations/node selector;
