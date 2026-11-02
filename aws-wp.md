@@ -43,6 +43,8 @@ The two sites are **fully independent**: each has its own URL, database, cache, 
 | GitOps overlay (`wp-gitops`) | `overlays/aws` | `overlays/home` |
 | Alerts (Slack) | `#rl-com-alerts` (+ `#rl-critical` for criticals) | `#rl-dev-alerts` (+ `#rl-critical` for criticals) |
 | Environments | prod only (demo); versions arrive after passing home staging and russetleaf.dev | local → ci → staging (on demand) → prod |
+| Availability | **Highly available design within one region while running** (EKS control plane, nodes across zones, RDS Multi-AZ, ElastiCache replica, multi-zone ALB, CloudFront), with two demo cuts (one NAT Gateway, one spot GPU node); runs **only during demos** | **Not highly available**: single control plane, single database and cache, local disks, one home power supply and internet connection |
+| Recovery targets | While running: seconds to minutes for a node, zone or database failure; between demos: content kept in the final snapshot | Recovery point ≤ 6 hours (backup interval); recovery time a few hours (rebuild from Git, restore backup) |
 | Monthly cost | ~$1 always on, plus ~$1/hour during demos | ~$8–$15 |
 
 Running MariaDB and Valkey inside the home cluster, instead of RDS and ElastiCache, is the biggest saving in the home lab: those two managed services alone would cost about $130/month at the AWS design's sizes. Both sites use the **MariaDB** engine (in-cluster at home, RDS for MariaDB on AWS), so database backups move between them without conversion.
@@ -120,6 +122,7 @@ MariaDB         Valkey          Amazon SQS ──► Post-summarizer pods (KEDA:
 - **RDS for MariaDB** with **Multi-AZ** turned on. (Aurora doesn't offer MariaDB; if the site outgrew RDS, Aurora MySQL would be the next step, at the cost of switching engines.) **RDS Proxy** in front of it keeps failovers to seconds.
 - At least **2–3 WordPress replicas** spread across availability zones, plus a **HorizontalPodAutoscaler** and **PodDisruptionBudgets**.
 - EKS worker nodes in **multiple AZs**, provisioned by **Karpenter** (see Delivery and operations).
+- **What this project actually runs:** this design is highly available within one region **while the demo runs**, with two deliberate demo cuts (one NAT Gateway instead of three; one spot GPU node, with the gateway falling back to Bedrock). The home lab isn't highly available at all. Both are explained, with recovery targets and the changes (and costs) that would add HA, in `docs/adr/0015-availability-levels.md`.
 
 ### Traffic and edge
 - **Application Load Balancer** through the AWS Load Balancer Controller, with **TLS certificates from ACM**. Its DNS name (`origin.russetleaf.com`) is managed by **ExternalDNS**.
@@ -1150,7 +1153,7 @@ Box 1 is the tight one: Talos, Cilium and Hubble, Argo CD, monitoring and loggin
 - Keep **Prometheus retention** short (e.g. 7 days) and scrape every 30–60 seconds rather than 15.
 - Set requests and memory limits on everything (Kyverno already requires them), so a busy pod can't starve the others.
 
-The cluster still has a single control plane, so it isn't highly available. That's acceptable for a home lab; the AWS design covers high availability.
+The cluster still has a single control plane, so it isn't highly available. That's acceptable for a home lab; the AWS design covers high availability. The recovery targets (≤ 6 hours of data, a few hours to rebuild) and the changes that would make the home lab highly available (a third node and three control-plane nodes, replicated storage, database replication, a UPS) are in `docs/adr/0015-availability-levels.md`.
 
 ### russetleaf.dev database backups
 Because the home cluster uses **local disks with no replicated storage** (no Ceph or Longhorn; see `docs/adr/0010-local-storage-no-ceph.md`), these backups are what protects the database if box 1's disk fails. They run **every 6 hours**, so at most 6 hours of posts and settings can be lost.
@@ -1335,7 +1338,7 @@ wp-gitops/
                             #   0008-google-sign-in-for-admins.md, 0009-gvisor-sandboxing.md,
                             #   0010-local-storage-no-ceph.md, 0011-update-strategy.md,
                             #   0012-kube-bench-eks-only.md, 0013-opencost-and-aws-billing.md,
-                            #   0014-image-supply-chain.md)
+                            #   0014-image-supply-chain.md, 0015-availability-levels.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
