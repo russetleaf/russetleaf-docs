@@ -219,6 +219,8 @@ Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-acc
 | Required labels | **Require Labels** (`require-labels`), plus a **mutate** rule | Workloads carry `app.kubernetes.io/name`, `app.kubernetes.io/part-of` and `env`; the mutate rule fills in `env` from the namespace, so the validate rule is only a backstop. These labels drive alert routing, OpenCost and policy selectors |
 | Requests and limits | **Require Requests and Limits** (`require-requests-limits`) | CPU and memory **requests** and a **memory limit** on every container. **CPU limits are deliberately not required by default** (they cause throttling even on idle nodes); they're used only where a neighbour needs protecting: llama.cpp and the CI runners on box 2 (to protect etcd) and k6 load generators. See `docs/adr/0028-cpu-limits.md` |
 | No privileged containers | **Disallow Privileged Containers** (`disallow-privileged-containers`), within Kyverno's **Pod Security Standards** `baseline` rule set | No privileged containers, host paths or host namespaces (network, PID, IPC). Talos already enforces Pod Security `baseline`; Kyverno adds reporting, CI tests and narrow exceptions |
+| Pod Security `restricted` (app namespaces) | Kyverno's **Pod Security Standards `restricted`** rule set, for application namespaces | Everything in the `restricted` profile (non-root, no privilege escalation, all capabilities dropped, seccomp), matching the namespaces' Pod Security Admission `restricted` labels |
+| No service-account token by default | A **mutate** rule | Sets `automountServiceAccountToken: false` unless the workload is on the list that needs the Kubernetes API |
 | Run as non-root | **Require Run As Non-Root** (`require-run-as-nonroot`), from the Pod Security `restricted` set | Containers run as a non-root user. The WordPress image runs Apache as `www-data` on port 8080 (non-root processes can't use port 80) |
 | seccomp profile | **Restrict Seccomp (Strict)** (`restrict-seccomp-strict`), from the Pod Security `restricted` set | Every container runs with `seccompProfile: RuntimeDefault`, which blocks dozens of rarely needed, risky system calls at no cost; see [Sandboxed runtimes](#sandboxed-runtimes-gvisor) |
 | Sandboxed CI runners (home) | A validate rule on `runtimeClassName` | Pods in the ARC runners' namespace must use the `gvisor` RuntimeClass |
@@ -260,6 +262,15 @@ Normally every container shares the node's Linux kernel, so a kernel exploit fro
 **Kata Containers** (a lightweight VM per pod) was considered and not used: each pod's VM needs its own memory, which 8 GB nodes can't spare, and on AWS it needs hardware virtualization inside the instance (historically bare-metal instances only).
 
 The reasoning is recorded in `docs/adr/0009-gvisor-sandboxing.md`.
+
+### Kubernetes component hardening
+Each Kubernetes component has explicit controls and a repeatable check, recorded in `docs/adr/0033-kubernetes-component-hardening.md` (which has the full table). The additions beyond the sections above:
+- **Pod Security Admission labels on every namespace, on both clusters** (EKS doesn't enforce Pod Security by default): `restricted` for application namespaces (WordPress, summarizer, gateway, model server, staging, tenants), `baseline` for most platform services, `privileged` only for node agents (Cilium, Falco, Alloy, the storage provisioner, the NVIDIA device plugin). Kyverno's **`restricted`** policy set enforces the same for application namespaces, so two independent controls apply.
+- **Service-account tokens off by default:** a Kyverno rule sets `automountServiceAccountToken: false` unless a workload needs the Kubernetes API (operators, Argo CD, KEDA, External Secrets).
+- **Encryption at rest:** Secrets in etcd (Talos's built-in encryption at home; **EKS envelope encryption with a customer-managed KMS key**); **Talos disk encryption** of the system-state and data partitions on every home node, **sealed to the TPM**; etcd snapshots stored only in the KMS-encrypted backup bucket, readable only by the backup role.
+- **kubelet:** `seccompDefault: true` (RuntimeDefault even for pods that don't ask), the read-only port off, certificate rotation.
+- **Control-plane settings verified at home** (profiling off, local-only binding, NodeRestriction, per-controller service-account credentials) with `talosctl`, in `docs/talos-hardening.md`.
+- **Talos host firewall:** the Kubernetes API (6443) and Talos API (50000) reachable only from the LAN and the workstation.
 
 ### Intrusion detection and prevention
 Falco is one layer among several. The design combines **prevention** (stopping attacks) and **detection** (noticing them) at every layer, so no single tool has to catch everything. The reasoning is recorded in `docs/adr/0018-intrusion-detection-and-prevention.md`.
@@ -1449,6 +1460,8 @@ All three nodes are **control-plane nodes** that also run workloads, so etcd kee
 
 **The model:** box 2 has about **5–5.5 GB** free for the model once its control-plane components are running. A **3B model** (4-bit) is the best fit: about 2.5–3.5 GB of RAM, and roughly 1–2 minutes per summary on an i3. That's fine for a queue handling 10–20 posts a month. A 7–8B model would be tight on box 2; moving the model to box 3 (6 cores, more memory) is a possible later experiment.
 
+**Disk encryption:** Talos encrypts each node's system-state and data partitions, **sealed to the node's TPM 2.0** (ADR 0033).
+
 **Disks:** all three nodes must use **SSD or NVMe** storage, because etcd runs on every node and is sensitive to disk latency. Check boxes 1 and 2; a spinning disk should be replaced with an inexpensive SATA SSD before installing Talos.
 
 **Memory budget** (estimates with every tier installed, including Staff):
@@ -1593,6 +1606,7 @@ Together with the home lab (~$18–40/month always on), the total is about **$30
 - **Defence in depth for containers:** seccomp `RuntimeDefault` everywhere, Falco process allow-lists per workload (with Tetragon enforcement as a stretch goal), and gVisor sandboxing for the self-hosted CI runners that run pull-request code (with a measured trial for WordPress), backed by an ADR comparing gVisor and Kata Containers.
 - **A custom, tested front end:** an AI-assisted block theme and SVG logo kept in Git (Site Editor locked in production), with visual regression, accessibility and Lighthouse checks in CI and staging.
 - **Passwordless admin access:** Google sign-in (OIDC) for WordPress, an edge login layer (Cloudflare Access at home, ALB OIDC on AWS), application passwords kept only for the REST API, and break-glass recovery with `wp-cli`.
+- **Kubernetes component hardening:** per-namespace Pod Security Admission with Kyverno's `restricted` set, service-account tokens off by default, Secrets and disks encrypted at rest (TPM-sealed at home, customer-managed KMS on EKS), kubelet `seccompDefault`, a Talos host firewall, and verified control-plane settings.
 - **Layered intrusion detection and prevention:** WAFs and edge login, Cilium policies, Kyverno admission, runtime controls, plus detection at runtime (Falco), in the Kubernetes API (audit logs with alert rules) and in the AWS account (CloudTrail, GuardDuty), all reporting to Slack.
 - **Zero-trust networking with Cilium on both clusters:** WireGuard encryption between nodes, default-deny CiliumNetworkPolicies, outbound traffic allowed by DNS name, layer-7 rules where useful, and Hubble flow visibility with metrics, dashboards and alerts in the same Prometheus and Grafana.
 - **Supply-chain security and policy as code:** linting and Semgrep SAST for the project's own code, dependency and workflow audits (dependency review, zizmor), SBOMs and SLSA build provenance attached as signed, Rekor-logged attestations, vulnerability and secret scans and signed images in CI, OpenSSF Scorecard on every repo, signature checks on upstream images too, with the same Kyverno policies tested in CI and enforced in the cluster (signatures, tags, resource limits), plus Checkov scanning Terraform, rendered manifests, Helm charts, Dockerfiles and GitHub Actions workflows in all four repos, with results in GitHub code scanning.
@@ -1683,11 +1697,11 @@ The two build plans tier every step as **Core**, **Differentiator** or **Stretch
 
 | Plan | Core | Differentiator | Stretch | Staff | Total |
 |---|---|---|---|---|---|
-| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~132–227 | ~120–209 | ~19–35 | ~81–132 | ~352–603 |
-| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~69–117 | ~14–27 | ~22–38 | ~10–15 | ~115–197 |
-| **Whole project** | ~201–344 | ~134–236 | ~41–73 | ~91–147 | **~467–800** |
+| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~136–231 | ~121–210 | ~19–35 | ~81–132 | ~357–608 |
+| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~70–118 | ~14–27 | ~22–38 | ~10–15 | ~116–198 |
+| **Whole project** | ~206–349 | ~135–237 | ~41–73 | ~91–147 | **~473–806** |
 
-At about **20 hours a week**, the home lab's Core tier takes roughly **7–11 weeks**, everything except the Staff tier roughly **4–8 months**, and the whole project including it roughly **5–9 months** (about **11–18 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
+At about **20 hours a week**, the home lab's Core tier takes roughly **7–12 weeks**, everything except the Staff tier roughly **4–8 months**, and the whole project including it roughly **5–9 months** (about **11–18 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
 
 **Portfolio level:** the home lab's **Core tier on its own reads as strong intermediate work**; adding the **Differentiators**, especially the AI pipeline with its evaluation gate and **evidence of operating the system** (rollback, node-failure and disaster drills, a restore from the Backup account, a recorded AWS demo), is what makes it **senior-level**. For **MLOps** roles specifically, the inference-side work (evaluation gate, gateway, self-hosted model, monitoring) reads as strong intermediate (senior for LLMOps); **MLflow, guardrails and online evaluation** (Differentiators) make it senior for LLM-focused MLOps; the **fine-tuning pipeline, DVC and the feedback loop** (Stretch) complete the full lifecycle expected of senior MLOps generally. The **Staff** tier (SLOs and error budgets, DORA metrics, the developer platform proven with a second service, fleet management, chaos and postmortems, the threat model, strategy documents and public writing) shows **staff-level judgement**; staff roles also expect evidence of leading people and teams, which comes from your work history rather than the project. A finished subset is worth more than an unfinished whole: finish Core first.
 
@@ -1755,7 +1769,8 @@ wp-gitops/
                             #   0024-internal-developer-platform.md, 0025-reliability-practice.md,
                             #   0026-performance-and-stress-testing.md, 0027-site-design-in-git.md,
                             #   0028-cpu-limits.md, 0029-cilium-cni.md, 0030-internal-pki.md,
-                            #   0031-on-demand-staging.md, 0032-github-actions-ci.md)
+                            #   0031-on-demand-staging.md, 0032-github-actions-ci.md,
+                            #   0033-kubernetes-component-hardening.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
@@ -1794,6 +1809,7 @@ wp-gitops/
     keda/                   # KEDA operator (event-driven autoscaling)
     argo-rollouts/          # Argo Rollouts controller (canary releases)
     kyverno/                # Kyverno + policies (signed images and digests, allowed registries, no :latest,
+                            #   + Pod Security restricted set for app namespaces, service-account token default
                             #   required labels, requests/memory limits, Pod Security baseline, non-root,
                             #   read-only root filesystem, probes, no NodePort/LoadBalancer Services, unique
                             #   Ingress hosts) + PolicyExceptions + the default-deny Cilium generate rule
@@ -1880,7 +1896,8 @@ wp-infra/
                             #   points it at wp-gitops/bootstrap/aws; reads aws-edge outputs (zone, certificate,
                             #   secret header) from its remote state
     home/                   # russetleaf.dev: Talos machine configs (three control-plane nodes with a shared
-                            #   virtual IP and system/kubelet reservations; box 2 labelled and tainted for the LLM), Cloudflare tunnel/DNS/WAF, plus the shared modules
+                            #   virtual IP and system/kubelet reservations; TPM-sealed disk encryption, host
+                            #   firewall, kubelet seccompDefault, Pod Security Admission defaults; box 2 labelled and tainted for the LLM), Cloudflare tunnel/DNS/WAF, plus the shared modules
                             #   (media, database-backup and model mirror buckets, SQS, Secrets Manager,
                             #   SES identity, Bedrock IAM), plus a second, smaller set of the same modules
                             #   for staging (Env=staging)

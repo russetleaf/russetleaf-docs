@@ -17,7 +17,8 @@ This plan covers recovering from losses bigger than a single bad change or faile
 | russetleaf.com database | RDS snapshots (us-east-1) | A **logical dump** taken at every `demo-down`, written to the russetleaf.com backup bucket and **replicated** to the backup account | 30-day lock | No (or re-seed from russetleaf.dev) |
 | Media (both sites) | S3 media buckets (us-east-1) | **Replicated** to the backup account (Object Lock) | 30-day lock | No |
 | CloudTrail logs | Organisation trail in the **Log Archive** account's Object Lock bucket (separate from every workload account) | Already isolated; optionally replicated to us-west-2 | 30-day lock (longer retention by lifecycle) | No |
-| Talos machine secrets, talosconfig | Terraform state; your workstation | Break-glass kit | Until rotated | No (losing them means rebuilding the cluster from scratch) |
+| Cluster state (etcd snapshots; contain every Secret) | Weekly snapshots in the KMS-encrypted backup bucket (russetleaf-home), readable only by the backup role | **Replicated** to the Backup account (Object Lock) | 30-day lock | Partly (GitOps rebuilds workloads; the snapshot speeds recovery) |
+| Talos machine secrets, talosconfig (and the disk-encryption recovery procedure for each node's TPM) | Terraform state; your workstation | Break-glass kit | Until rotated | No (losing them means rebuilding the cluster from scratch) |
 | Secrets in Secrets Manager | The workload accounts (russetleaf-home, russetleaf-com) | Most are **regenerated** rather than copied (see below) | — | Mostly yes |
 | Account access (root logins, MFA recovery codes) | Password manager | Break-glass kit, including a printed copy | Until changed | No |
 | Logs and traces (Loki, Tempo) | S3 | None (short-lived operational data) | — | Not needed |
