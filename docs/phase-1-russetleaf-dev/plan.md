@@ -169,7 +169,7 @@ gh auth status
 - Create an **AWS Budget** with an email alert at about $25/month (by hand in the console is fine; Terraform takes over in step 2.1).
 - Pick an AWS region for the home lab's AWS resources (e.g. `us-east-1`) and use it everywhere.
 
-- **SaaS account hardening** (`docs/phase-1-russetleaf-dev/adr/1032-security-by-layer.md`): **passkeys or hardware security keys** on GitHub, Cloudflare, Google, Slack, the registrars and AWS Identity Center; **registrar lock** on russetleaf.com and russetleaf.dev; Cloudflare **API tokens scoped** to the zones and permissions each job needs.
+- **SaaS account hardening** (`docs/phase-1-russetleaf-dev/adr/1032-defense-in-depth.md`): **passkeys or hardware security keys** on GitHub, Cloudflare, Google, Slack, the registrars and AWS Identity Center; **registrar lock** on russetleaf.com and russetleaf.dev; Cloudflare **API tokens scoped** to the zones and permissions each job needs.
 - **Break-glass kit** (see `docs/phase-1-russetleaf-dev/disaster-recovery.md`): in your password manager, record the AWS root login and **MFA recovery**, GitHub, Cloudflare and Google recovery codes, and the domain registrar logins; print the essentials and store the printed copy safely (ideally a second copy elsewhere). Add the Talos secrets bundle after step 2.2.
 - **Slack:** create the project workspace and the channels from the Phase 1 design ([Alerting and notifications](design.md#alerting-and-notifications-slack)): `#rl-critical`, `#rl-dev-alerts`, `#rl-com-alerts`, `#rl-deploys`, `#rl-security`, `#rl-mlops`, `#rl-costs`, `#rl-staging`. Create the custom Slack app ("russetleaf-bot") with a bot token allowed to post to those channels, and install the **GitHub** app for Slack. Turn on phone notifications for `#rl-critical` only.
 - **Outside monitoring accounts** (free plans): a heartbeat service (e.g. healthchecks.io) and an uptime checker (e.g. UptimeRobot or Better Stack), both posting to Slack.
@@ -195,7 +195,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 0.3: Home network segmentation
 
-**Do:** put the three nodes on a **lab VLAN** (or a separate subnet on a second router) with firewall rules: the lab can reach the internet and your workstation can reach the lab (Kubernetes API, Talos API, SSH-free management), but the lab **can't reach household devices**, and nothing is allowed in from the internet (the Cloudflare Tunnel is outbound-only). Give the nodes fixed addresses there. Set **BIOS passwords** on all three nodes. See the overview's [Security by layer](../overview.md#security-by-layer-the-4-cs).
+**Do:** put the three nodes on a **lab VLAN** (or a separate subnet on a second router) with firewall rules: the lab can reach the internet and your workstation can reach the lab (Kubernetes API, Talos API, SSH-free management), but the lab **can't reach household devices**, and nothing is allowed in from the internet (the Cloudflare Tunnel is outbound-only). Give the nodes fixed addresses there. Set **BIOS passwords** on all three nodes. See the overview's [Defense in depth](../overview.md#defense-in-depth).
 
 **Test:** from a test pod, a household device's address is unreachable while the internet is reachable; from the workstation, the Talos and Kubernetes APIs are reachable; from another household device, they aren't.
 
@@ -242,7 +242,7 @@ Record each answer in the [decision log](#decision-log).
 | 1029 On-demand staging | 5.6, 5.7 | — | — |
 | 1030 GitHub Actions and public repos | 1.1, 5.5 | — | 1.4, 6.1 |
 | 1031 Kubernetes component hardening | 2.2, 6.1, 7.2 | — | 1.4, 5.1 |
-| 1032 Security by layer | 0.1, 0.3, 1.1, 2.2, 2.3, 5.1, 5.2, 5.6, 5.7, 6.1, 8.5 | 2.4, 5.1 | 1.2, 2.4, 5.1 |
+| 1032 Defense in depth | 0.1, 0.3, 1.1, 2.2, 2.3, 5.1, 5.2, 5.6, 5.7, 6.1, 8.5 | 2.4, 5.1 | 1.2, 2.4, 5.1 |
 | 1033 Identity and access | 4.6, 4.7, 6.1, 6.3, 9.1 | — | 1.4, 1.7 |
 | 1034 Kubernetes threat model coverage | 2.2, 3.1, 4.4, 4.6, 6.1, 6.3, 7.2, 8.5 | 5.1 | 1.4, 2.3, 5.1 |
 | 1035 Platform security | 2.2, 4.4, 4.6, 5.1, 6.1, 7.2 | — | 5.1 |
@@ -818,7 +818,7 @@ These steps are most of the **Advanced** tier; see the Phase 1 design's [Enginee
 
 ### Step 8.5: Threat model and control matrix
 
-**Do:** `docs/security/threat-model.md`: a **STRIDE** analysis of the whole system (trust boundaries, data flows, threats, mitigations), **organized by the 4 C's** (Cloud, Cluster, Container, Code), linked to the ADRs, building on the trust boundaries in the overview's [Kubernetes threat model coverage](../overview.md#kubernetes-threat-model-coverage) and **cross-checked against the Kubernetes threat model's eight areas** (ADR 1034). The control matrix is **organized by NIST Cybersecurity Framework 2.0** functions (Govern, Identify, Protect, Detect, Respond, Recover), with **NIST SP 800-190** (container security) and **SP 800-218 (SSDF)** checklists as appendices, and links to the **CIS** results (kube-bench, Trivy Operator, Security Hub's CIS AWS Foundations, the CIS Docker check) and the ATT&CK map as evidence (ADR 1036). `docs/security/controls-matrix.md`: every implemented control mapped to the **CIS Controls** (and SOC 2-style criteria), plus an **OWASP ASVS** mapping for the web application, each with its evidence (policy, configuration, report or test).
+**Do:** `docs/security/threat-model.md`: a **STRIDE** analysis of the whole system (trust boundaries, data flows, threats, mitigations), **organized by layer** (cloud, cluster, container, code; see the overview's defense in depth section), linked to the ADRs, building on the trust boundaries in the overview's [Kubernetes threat model coverage](../overview.md#kubernetes-threat-model-coverage) and **cross-checked against the Kubernetes threat model's eight areas** (ADR 1034). The control matrix is **organized by NIST Cybersecurity Framework 2.0** functions (Govern, Identify, Protect, Detect, Respond, Recover), with **NIST SP 800-190** (container security) and **SP 800-218 (SSDF)** checklists as appendices, and links to the **CIS** results (kube-bench, Trivy Operator, Security Hub's CIS AWS Foundations, the CIS Docker check) and the ATT&CK map as evidence (ADR 1036). `docs/security/controls-matrix.md`: every implemented control mapped to the **CIS Controls** (and SOC 2-style criteria), plus an **OWASP ASVS** mapping for the web application, each with its evidence (policy, configuration, report or test).
 
 **Test:** every trust boundary has its threats and mitigations listed, and each of the eight threat areas maps to controls with evidence; every CSF 2.0 function, SP 800-190 item and SSDF practice is marked met, partly met (with a reason) or not applicable; every control in the matrix links to evidence that exists.
 

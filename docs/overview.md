@@ -39,7 +39,7 @@ flowchart LR
 ## How the documents are organized
 
 - **Where to read it:** in the `russetleaf-docs` repo, or as the docs site built from it (ADR 1038).
-- **This overview:** what's shared by all phases: how the two sites compare, security by layer, the threat model, platform security, compliance, portfolio highlights, the operations budget, effort and timelines, the repositories, and the index of all decisions.
+- **This overview:** what's shared by all phases: how the two sites compare, defense in depth, the threat model, platform security, compliance, portfolio highlights, the operations budget, effort and timelines, the repositories, and the index of all decisions.
 - **Each phase folder:** `design.md` (what's built and why), `plan.md` (the steps to build it, with a progress checklist), `roadmap.md` (milestones with target and actual dates; Phase 1's [roadmap](phase-1-russetleaf-dev/roadmap.md)) and `adr/` (the decisions first made in that phase).
 - **Tracking and step specs:** each step becomes a GitHub issue in its roadmap milestone (created by `tools/plan_to_issues.py`), and each step starts with a short spec written from [`specs/TEMPLATE.md`](specs/TEMPLATE.md) and kept in `docs/specs/`, linked from the issue and its pull request. Together with the plans' estimate-vs-actual columns and milestone retros, they show the work was planned, measured and adjusted.
 - **ADR numbers start with their phase:** 1001 upwards for Phase 1, 2001 upwards for Phase 2, 3001 upwards for Phase 3. They're unique across the project and don't change once used; the [index](#architecture-decision-records) lists them all. The template is [`adr/0000-template.md`](adr/0000-template.md).
@@ -90,16 +90,18 @@ The two sites are **fully independent**: each has its own URL, database, cache, 
 
 Running MariaDB and Valkey inside the home cluster, instead of RDS and ElastiCache, is the biggest saving in the home lab: those two managed services alone would cost about $130/month at the AWS design's sizes. Both sites use the **MariaDB** engine (in-cluster at home, RDS for MariaDB on AWS), so database backups move between them without conversion.
 
-## Security by layer (the 4 C's)
+## Defense in depth
 
-Cloud-native security is commonly described in four layers, the **4 C's**: **Cloud**, **Cluster**, **Container** and **Code**, each depending on the one outside it. This table maps the project's controls to them; details are in the sections below and in `docs/phase-1-russetleaf-dev/adr/1032-security-by-layer.md`.
+Security is layered, so a failure at one layer is caught at another. The layers are the four that Kubernetes' security documentation uses (cloud, cluster, container, code); each depends on the one outside it. The reasoning, and the gaps this closed, are in ADR 1032.
 
-| Layer | Controls |
-|---|---|
-| **Cloud** (providers, accounts, infrastructure) | **AWS:** SRA multi-account structure, SCPs, root access removed, Identity Center with MFA, GuardDuty, Security Hub, Config, organization CloudTrail, Access Analyzer, KMS, Prowler, VPC design with private subnets, endpoints and flow logs, WAF, DNSSEC. **Other providers:** hardened GitHub, Cloudflare, Google Cloud, Slack and registrar accounts (below). **Home infrastructure:** lab VLAN, Talos (immutable, API-only), Secure Boot with TPM-sealed disk encryption, host firewall, BIOS passwords, Cloudflare Tunnel (no inbound ports). **IaC:** Checkov with custom policies, Access Analyzer policy checks, reviewed saved plans. |
-| **Cluster** (Kubernetes) | Node and RBAC authorization only; audit logging with alerts; Secrets encrypted at rest; per-namespace Pod Security Admission with Kyverno's restricted set; admission policies (signatures, provenance, registries, quotas); CiliumNetworkPolicies (default-deny, DNS-name egress, layer 7), WireGuard, Hubble; service-account tokens off by default; least-privilege RBAC with risky permissions rejected; alerts for objects created outside GitOps; kubelet PID limits and eviction thresholds; isolation by namespace, node taints and gVisor; kubelet hardening; etcd mutual TLS and encrypted snapshots; Kubescape, kube-bench, Trivy Operator. |
-| **Container** (images and runtime) | Minimal, signed images with SBOM and SLSA provenance, verified at admission and pinned by digest; Trivy (vulnerabilities, secrets, misconfiguration) in CI and in the cluster; non-root, read-only root filesystem, all capabilities dropped, seccomp RuntimeDefault, **user namespaces** where supported; gVisor for CI runners; Falco process allow-lists and Tetragon (optional); Secrets as files, not environment variables. |
-| **Code** (application and dependencies) | Semgrep, PHPCS (WordPress security checks), PHPStan, ruff and mypy; dependency audits and hash-pinned lock files; WPScan; gitleaks and push protection; prompt-injection guardrails; Google sign-in, no passwords; XML-RPC off; **HTTP security headers**, **DAST** (ZAP), WordPress user-enumeration blocking, rotated keys and salts; an **OWASP ASVS** mapping in the control matrix. |
+| Layer | What it protects against | Main controls | Details |
+|---|---|---|---|
+| **Cloud** | Account takeover, misconfigured cloud resources, leaked keys | Separate AWS accounts with organization-wide guardrails; GuardDuty and Security Hub; no long-lived keys; hardened GitHub, Cloudflare and Google accounts; a lab network separated from the home LAN | [AWS accounts](phase-1-russetleaf-dev/design.md#aws-account-structure-and-best-practices-security-reference-architecture), [security foundations](phase-1-russetleaf-dev/design.md#security-foundations) |
+| **Cluster** | Unauthorized access, unsafe workloads, lateral movement | Sign-in through Dex with least-privilege roles; Kyverno admission policies; default-deny network policies; audit logs with alerts | [Hardening](phase-1-russetleaf-dev/design.md#kubernetes-component-hardening), [identity](phase-1-russetleaf-dev/design.md#identity-and-access-to-the-clusters), [networking](phase-1-russetleaf-dev/design.md#networking-cilium-and-hubble) |
+| **Container** | Tampered or vulnerable images, compromised containers | Signed images with SBOM and provenance; non-root, read-only containers; Falco runtime detection | [Supply chain](phase-1-russetleaf-dev/design.md#supply-chain-and-policy), [runtime security](phase-1-russetleaf-dev/design.md#runtime-security-and-compliance) |
+| **Code** | Vulnerable WordPress code and plugins, malicious input | Code scanning and dependency checks in CI; Google sign-in with no passwords; WAF and security headers | [Web application security](phase-1-russetleaf-dev/design.md#web-application-security), [admin sign-in](phase-1-russetleaf-dev/design.md#admin-sign-in-with-google) |
+
+The sections below look at the same controls from other angles: the Kubernetes threat model, platform security, and compliance frameworks.
 
 ## Security across the phases
 
@@ -199,7 +201,7 @@ What each phase builds and shows. Phase 1 on its own is a complete project; Phas
 - **Defense in depth for containers:** seccomp `RuntimeDefault` everywhere, Falco process allow-lists per workload (with Tetragon enforcement as an optional extra), and gVisor sandboxing for the self-hosted CI runners that run pull-request code (with a measured trial for WordPress), backed by an ADR comparing gVisor and Kata Containers.
 - **A custom, tested front end:** an AI-assisted block theme and SVG logo kept in Git (Site Editor locked in production), with visual regression, accessibility and Lighthouse checks in CI and staging.
 - **Passwordless admin access:** Google sign-in (OIDC) for WordPress, an edge login layer (Cloudflare Access at home, ALB OIDC on AWS), application passwords kept only for the REST API, and break-glass recovery with `wp-cli`.
-- **Security organized by layer (the 4 C's):** cloud (AWS SRA plus hardened GitHub, Cloudflare, Google and registrar accounts, lab VLAN, Secure Boot), cluster, container (signed images and charts, mirrored dependencies, user namespaces) and code (SAST, DAST, security headers, ASVS mapping).
+- **Defense in depth:** cloud (AWS SRA plus hardened GitHub, Cloudflare, Google and registrar accounts, lab VLAN, Secure Boot), cluster, container (signed images and charts, mirrored dependencies, user namespaces) and code (SAST, DAST, security headers, ASVS mapping).
 - **Identity and access:** OIDC sign-in through Dex for kubectl and the admin tools, group-based human roles with no day-to-day cluster-admin, an alerted break-glass path, Talos read-only access by default, and a year of tamper-evident audit logs.
 - **Kubernetes threat model coverage:** trust boundaries and data flows drawn, and every one of the Kubernetes threat model's eight areas (persistence, denial of service, privilege escalation and the rest) mapped to prevention, detection and a test, including alerts for objects created outside GitOps, PID limits and a policy rejecting risky RBAC.
 - **Platform security:** fail-closed, highly available admission with built-in backstop policies, CA-signed kubelet certificates and a rehearsed CA rotation, a registry cleanup that protects rollback images, security logs visible only to admins, and signed VEX statements for accepted vulnerabilities.
@@ -635,7 +637,7 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [1029](phase-1-russetleaf-dev/adr/1029-on-demand-staging.md) | On-demand, scale-to-zero staging on the home cluster | 1 |
 | [1030](phase-1-russetleaf-dev/adr/1030-github-actions-ci.md) | GitHub Actions for CI/CD, public repositories early, and the runner strategy | 1 |
 | [1031](phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md) | Kubernetes component hardening | 1 |
-| [1032](phase-1-russetleaf-dev/adr/1032-security-by-layer.md) | Security by layer (the 4 C's) and the remaining controls | 1 |
+| [1032](phase-1-russetleaf-dev/adr/1032-defense-in-depth.md) | Defense in depth: controls by layer, and the gaps closed | 1 |
 | [1033](phase-1-russetleaf-dev/adr/1033-identity-and-access.md) | Identity and access to the clusters | 1 |
 | [1034](phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md) | Kubernetes threat model coverage | 1 |
 | [1035](phase-1-russetleaf-dev/adr/1035-platform-security.md) | Platform security: admission resilience, cluster PKI, registry, observability access and VEX | 1 |

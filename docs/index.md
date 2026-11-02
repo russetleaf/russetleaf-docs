@@ -14,7 +14,7 @@ The live site it runs is **[russetleaf.dev](https://russetleaf.dev)**.
 
 ## Where to start
 
-- **[Overview](overview.md):** the phases, how the two sites compare, security by layer, the threat model, compliance, effort and the repositories.
+- **[Overview](overview.md):** the phases, how the two sites compare, defense in depth, the threat model, compliance, effort and the repositories.
 - **[Phase 1 design](phase-1-russetleaf-dev/design.md):** the architecture of russetleaf.dev, with diagrams.
 - **[Architecture decision records](overview.md#architecture-decision-records):** every significant decision, with the alternatives considered and when it would be revisited.
 - **[Phase 1 plan](phase-1-russetleaf-dev/plan.md)** and **[roadmap](phase-1-russetleaf-dev/roadmap.md):** the build steps, each with a test, estimates against actual hours, and milestones with target and actual dates.

@@ -103,7 +103,7 @@ nav:
           - "1029 On-demand, scale-to-zero staging on the home cluster": phase-1-russetleaf-dev/adr/1029-on-demand-staging.md
           - "1030 GitHub Actions for CI/CD, public repositories early, and the runner strategy": phase-1-russetleaf-dev/adr/1030-github-actions-ci.md
           - "1031 Kubernetes component hardening": phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md
-          - "1032 Security by layer (the 4 C's) and the remaining controls": phase-1-russetleaf-dev/adr/1032-security-by-layer.md
+          - "1032 Defense in depth: controls by layer, and the gaps closed": phase-1-russetleaf-dev/adr/1032-defense-in-depth.md
           - "1033 Identity and access to the clusters": phase-1-russetleaf-dev/adr/1033-identity-and-access.md
           - "1034 Kubernetes threat model coverage": phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md
           - "1035 Platform security: admission resilience, cluster PKI, registry, observability access and VEX": phase-1-russetleaf-dev/adr/1035-platform-security.md

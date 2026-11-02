@@ -1,13 +1,13 @@
-# ADR 1032: Security by layer (the 4 C's) and the remaining controls
+# ADR 1032: Defense in depth: controls by layer, and the gaps closed
 
-- **Status:** Accepted
+- **Status:** Accepted (retitled on 2026-11-02; formerly "Security by layer (the 4 C's) and the remaining controls")
 - **Date:** 2026-11-02
 - **Applies to:** both sites, the AWS accounts and the supporting SaaS accounts
 - **Phase:** 1 (most controls). Later: Phase 2 adds prompt-injection guardrails; Phase 3 adds the AWS edge and VPC controls.
 
 ## Context
 
-Cloud-native security is commonly described in four layers, the **4 C's**: **Cloud** (the provider and infrastructure), **Cluster** (Kubernetes), **Container** (images and runtime) and **Code** (the application and its dependencies); each layer depends on the one outside it. A review against that model, and against cloud provider, infrastructure, isolation, artifact, image, workload and application-code security, found the design strong in depth but with gaps:
+Defense in depth means layering controls so a failure at one layer is caught at another. For a Kubernetes platform, the layers are commonly named after Kubernetes' security documentation (the "4 C's"): **Cloud** (the provider and infrastructure), **Cluster** (Kubernetes), **Container** (images and runtime) and **Code** (the application and its dependencies); each depends on the one outside it. A review against those layers, and against cloud provider, infrastructure, isolation, artifact, image, workload and application-code security, found the design strong in depth but with gaps:
 
 - the project's **other providers** (GitHub, Cloudflare, Google Cloud, Slack, the domain registrars) weren't hardened like AWS
 - the **home network** put the nodes on the same LAN as household devices; **Secure Boot** and **BIOS passwords** weren't decided
@@ -20,7 +20,7 @@ Cloud-native security is commonly described in four layers, the **4 C's**: **Clo
 
 ## Decision
 
-- **Summarize every control by layer** in the Phase 1 design ("Security by layer"), and organize the threat model and control matrix (Phase 1 step 8.5) by the 4 C's, with an **OWASP ASVS** mapping for the application.
+- **Summarize the controls by layer** in the overview's "Defense in depth" section (what each layer protects against, its main controls, and where the details are), and organize the threat model and control matrix (Phase 1 step 8.5) by the same layers, with an **OWASP ASVS** mapping for the application.
 - **SaaS account hardening:** passkeys or hardware security keys for GitHub, Cloudflare, Google, AWS (Identity Center), Slack and the registrars; **registrar lock** on both domains; GitHub organization settings (default workflow token **read-only**, only verified or allow-listed Actions, required reviews, environment protections), managed with Terraform's **GitHub provider** where possible; Cloudflare **least-privilege API tokens** and audit-log review; a minimal Google Cloud project; a **quarterly access review** of all of them.
 - **Home network and boot:** a **lab VLAN** (or separate router subnet) with rules allowing the cluster out to the internet and in from the workstation only, and blocking it from household devices; **Talos Secure Boot images** with the TPM-sealed disk encryption (ADR 1031); **BIOS passwords**.
 - **User namespaces** (`hostUsers: false`) for application pods where the Kubernetes and Talos versions support them (root in a container then maps to an unprivileged user on the node).

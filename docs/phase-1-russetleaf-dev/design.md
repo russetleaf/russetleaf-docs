@@ -4,7 +4,7 @@
 
 - **Build plan:** [`plan.md`](plan.md)
 - **Decisions:** this phase's ADRs, in the `adr/` folder and listed in the [overview's index](../overview.md#architecture-decision-records)
-- **Shared design** (the phases, security by layer, threat model, compliance, repositories, effort): [`../overview.md`](../overview.md)
+- **Shared design** (the phases, defense in depth, threat model, compliance, repositories, effort): [`../overview.md`](../overview.md)
 - **Later phases:** [Phase 2: AI summaries and MLOps](../phase-2-ai-mlops/design.md) and [Phase 3: russetleaf.com on EKS](../phase-3-russetleaf-com/design.md), both optional
 
 Where a shared design choice gains AI components in Phase 2 or differs on russetleaf.com in Phase 3, this document says so in a short note; the details are in that phase's design.
@@ -128,7 +128,7 @@ Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-acc
 
 ## Security foundations
 
-How every control maps to the 4 C's (Cloud, Cluster, Container, Code) is in the overview's [Security by layer](../overview.md#security-by-layer-the-4-cs), alongside the threat model, platform security and compliance views. These are the Phase 1 foundations beyond the AWS accounts.
+How the controls fit together by layer (cloud, cluster, container, code) is in the overview's [Defense in depth](../overview.md#defense-in-depth), alongside the threat model, platform security and compliance views. These are the Phase 1 foundations beyond the AWS accounts.
 
 ### SaaS account hardening
 
