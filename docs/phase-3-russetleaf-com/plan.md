@@ -16,6 +16,7 @@ Each step ends with a **test** that must pass before moving on. Unlike the home 
 ## Workstation
 
 Use the same Ubuntu 24.04 setup as the home lab ([Local workstation setup](../phase-1-russetleaf-dev/plan.md#local-workstation-setup-ubuntu-2404)). Additions for AWS:
+
 - An AWS SSO profile for the demo account (or the same account), and `aws eks update-kubeconfig --name <cluster> --alias eks-com --profile <profile>` after each `demo-up`, so the kubeconfig context is clearly named.
 - Nothing else to install: `terraform`, `kubectl`, `helm`, `argocd` and the AWS CLI from the home lab setup cover EKS. Pin the `kubectl` version in `russetleaf-infra`'s `.mise.toml` within one minor version of the EKS version.
 
@@ -61,6 +62,7 @@ These steps must be done first, because this plan builds on them:
 
 ### Step 0.1: Long-lead items and guardrails
 **Do:**
+
 - **All of russetleaf.com lives in its own account, `russetleaf-com`** (Workloads OU), created in this step by adding it to `russetleaf-infra/envs/org` (the Organization itself is from Phase 1 step 2.0; see the Phase 1 design's [AWS account structure](../phase-1-russetleaf-dev/design.md#aws-account-structure-and-best-practices-security-reference-architecture) and ADR 1019). Quotas, SES sandbox status and Bedrock model access are **per account**, so the items below apply to `russetleaf-com`.
 - *(If Phase 2 is built)* **Request a GPU quota increase** for G-family instances (both on-demand and spot) in **russetleaf-com**, in your region. New accounts usually start at 0 and approval can take days, so do this first.
 - **SES production access** (or a verified test address) for russetleaf.com; *(if Phase 2 is built)* **Bedrock model access** for Claude Haiku and Nova Lite in russetleaf-com.
@@ -94,6 +96,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 1.2: Always-on edge (`envs/aws-edge`)
 **Do:**
+
 - Route 53 hosted zone for russetleaf.com (point the registrar's name servers at it if needed), with **DNSSEC signing** (an asymmetric KMS key in us-east-1, about $1/month) and the **DS record** added at the registrar.
 - ACM certificates: `russetleaf.com` + `www` in us-east-1 (CloudFront), and `origin.russetleaf.com` in the ALB's region (the same region if you chose us-east-1).
 - S3 offline-page bucket with the offline page ("The AWS demo is offline. Visit russetleaf.dev."), the russetleaf.com **media bucket**, a **model mirror bucket** (the self-hosted model's file, so demo startup doesn't depend on Hugging Face), a **Loki log bucket** (14-day lifecycle) and a **Tempo trace bucket** (7-day lifecycle), both kept in the always-on stack so demo logs and traces can be reviewed after teardown. Origin Access Control on all of them.
@@ -114,6 +117,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 1.4: EKS cluster
 **Do:**
+
 - EKS cluster with a small **managed node group** (2 nodes, e.g. t3.medium) for Karpenter, CoreDNS and other system pods.
 - **Secrets envelope encryption** with a **customer-managed KMS key** (ADR 1031), and kubelet `seccompDefault` on the nodes, plus a **per-pod PID limit** and **hard eviction thresholds** (ADR 1034), through the managed node group's launch template (AL2023 node configuration) and Karpenter's node configuration (step 2.3).
 - Add-ons: VPC CNI (with its own network policy enforcement **off**, since Cilium enforces policies), CoreDNS, kube-proxy, **EBS CSI driver**, **Pod Identity agent**.
@@ -133,11 +137,12 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 1.6: Database and cache
 **Do:**
+
 - **RDS for MariaDB**, the same major version as the home lab (e.g. 11.4), Multi-AZ, private subnets, **`manage_master_user_password = true`** (RDS generates, stores and rotates the master password in Secrets Manager), security group allowing only the EKS nodes/pods, parameter group with `require_secure_transport = ON`, automated backups (7 days), encryption, `deletion_protection = false` (demo), `skip_final_snapshot = false` with a timestamped final snapshot name.
 - **RDS Proxy** in front of it (engine family `MYSQL`, which covers MariaDB): `require_tls = true`; an auth entry for the `wordpress` user with **`iam_auth = REQUIRED`**, backed by a Secrets Manager secret holding a Terraform-generated password; a proxy IAM role that can read only that secret; security groups allowing EKS pods → proxy → RDS only. Optionally turn on Secrets Manager rotation for the `wordpress` secret.
 - **Spike early (do this first in this step, and record the result in the decision log):** bring up a minimal RDS for MariaDB (single-AZ, smallest instance) with an RDS Proxy (`iam_auth = REQUIRED`), then from a test pod running the WordPress image, use a short PHP script to log in to the proxy with an IAM token over TLS. Costs a few cents for an hour. This decides between:
-  - **Pass →** finish the `iam` mode of the `db.php` drop-in in `russetleaf-wordpress` (released through ci → staging → prod like any change), and continue with IAM auth as designed.
-  - **Fail →** use the **fallback** from the Phase 3 design ([Risk: confirm IAM tokens work from PHP first](design.md#risk-confirm-iam-tokens-work-from-php-first-with-a-fallback)): set the proxy's auth to `iam_auth = DISABLED`; create the `wordpress` secret with **Secrets Manager automatic rotation** using the **alternating-users** strategy (`wordpress_a` / `wordpress_b`, e.g. every 30 days); sync it into the cluster with External Secrets; install **Reloader** (or use Rollouts restarts) so WordPress restarts on a new password; set `database.auth: password` in `overlays/aws`; drop `rds-db:connect` from the WordPress and seed-Job roles and grant them read access to the secret through External Secrets instead. Update steps 1.7, 3.1 and 3.2 accordingly.
+    - **Pass →** finish the `iam` mode of the `db.php` drop-in in `russetleaf-wordpress` (released through ci → staging → prod like any change), and continue with IAM auth as designed.
+    - **Fail →** use the **fallback** from the Phase 3 design ([Risk: confirm IAM tokens work from PHP first](design.md#risk-confirm-iam-tokens-work-from-php-first-with-a-fallback)): set the proxy's auth to `iam_auth = DISABLED`; create the `wordpress` secret with **Secrets Manager automatic rotation** using the **alternating-users** strategy (`wordpress_a` / `wordpress_b`, e.g. every 30 days); sync it into the cluster with External Secrets; install **Reloader** (or use Rollouts restarts) so WordPress restarts on a new password; set `database.auth: password` in `overlays/aws`; drop `rds-db:connect` from the WordPress and seed-Job roles and grant them read access to the secret through External Secrets instead. Update steps 1.7, 3.1 and 3.2 accordingly.
 - **Restore logic:** look up the most recent `russetleaf-com-final-*` snapshot; if one exists, restore from it, otherwise create an empty database.
 - **ElastiCache Valkey** replication group (primary + replica, Multi-AZ), TLS in transit, AUTH token in Secrets Manager.
 - Snapshot housekeeping: keep the last 3 final snapshots (a small Lambda or a scheduled GitHub Action deletes older ones).
@@ -146,6 +151,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 1.7: russetleaf.com app resources and permissions
 **Do:**
+
 - Using the shared modules: Secrets Manager entries for russetleaf.com; *(if Phase 2 is built)* the summary SQS queue + dead-letter queue and Bedrock access (gateway role + budget alert).
 - **WAF web ACL** for the ALB (AWS managed rule groups: core rule set, known bad inputs, WordPress, IP reputation; rate limiting on `/wp-login.php`).
 - **Pod Identity associations** (one IAM role per service account, least privilege; the summarizer, LiteLLM, KEDA, llama.cpp and training roles only if Phase 2 is built): WordPress (media bucket, send to queue, SES send, **`rds-db:connect` on the proxy's `wordpress` user**), summarizer (read from queue), LiteLLM (Bedrock invoke on chosen models), External Secrets (russetleaf.com secrets), KEDA (queue attributes), ExternalDNS (the russetleaf.com zone), Load Balancer Controller, llama.cpp init container (model mirror bucket, read only), seed Job (read russetleaf.dev's backup and media buckets **in the russetleaf-home account**, granted by bucket policies there (and KMS key policies if those buckets use customer-managed keys), write russetleaf.com media bucket, `rds-db:connect` through the proxy), `db-setup` Job (read the RDS-managed master secret and the `wordpress` secret), **fine-tuning training role** (step 4.5: write to the MLflow artifact and DVC buckets in **russetleaf-home**, granted there by the `s3-mlops` module's cross-account bucket policy; read the training data), Falcosidekick/OpenCost if they need AWS APIs.
@@ -173,6 +179,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 2.2: AWS-only platform components
 **Do:**
+
 - `platform/ingress/overlays/aws`: AWS Load Balancer Controller (Pod Identity).
 - `platform/external-dns/`: ExternalDNS for the russetleaf.com zone, `--policy=sync`, a domain filter limited to `origin.russetleaf.com`, TXT ownership records.
 - `platform/storage/overlays/aws`: gp3 StorageClass as default.
@@ -181,12 +188,14 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 2.3: Karpenter NodePools
 **Do:** `platform/karpenter/`: `EC2NodeClass` (AL2023 with a **pinned AMI version**, tracked by Renovate rather than "latest", so node images only change through a reviewed pull request; subnets and security groups by tag, encrypted gp3 root volume, **IMDSv2 required with a hop limit of 1** so pods can't reach the node's instance credentials; kubelet settings for `systemReserved`, `kubeReserved`, hard eviction thresholds and the **per-pod PID limit** from ADR 1034, set through the EC2NodeClass's kubelet settings or AL2023 node configuration, whichever the installed Karpenter version supports); **general NodePool** (spot + on-demand, several instance families, consolidation on, disruption budget); **GPU NodePool** (g6 family, spot preferred, label `workload=llm`, taint `dedicated=llm:NoSchedule`, consolidation off or limited so the model isn't moved needlessly). Both NodePools add the **startup taint** `node.cilium.io/agent-not-ready=true:NoExecute`, so no pod is scheduled on a new node until Cilium is running there.
+
 - **NVIDIA device plugin** (DaemonSet) so pods can request `nvidia.com/gpu`. (The AL2023 NVIDIA AMI includes the drivers.)
 
 **Test:** scaling a test Deployment up adds nodes, scaling down removes them; a pod requesting a GPU gets a g6 node from the GPU pool; new nodes only accept pods once Cilium is ready (the startup taint is removed); simulate a spot interruption (e.g. AWS FIS or by hand) and watch Karpenter replace the node.
 
 ### Step 2.4: Shared platform services on AWS
 **Do:** add `overlays/aws` for each shared component, changing only what AWS needs:
+
 - External Secrets: Pod Identity instead of the bootstrap key.
 - Monitoring: same stack; add CloudWatch metrics (ALB, RDS, RDS Proxy, ElastiCache) per the step 0.2 decision, in place of the home lab's MariaDB and Valkey exporters. The WordPress chart's apache_exporter, custom metrics and alerts work unchanged; point the blackbox_exporter probes at WordPress's in-cluster Service. Grafana is reached by `kubectl port-forward` only (there's no Cloudflare Access on this site). Alertmanager overlay: external labels `site=com`, `cluster=eks`; receivers for `#rl-com-alerts` and `#rl-critical`, plus the shared `#rl-security`, `#rl-mlops` and `#rl-costs` routes; the `Watchdog` heartbeat goes to its **own** heartbeat check, which is paused when the demo stack is down.
 - **CiliumNetworkPolicies:** the same cluster-wide baseline and per-component policies from each component's `base/` (Phase 1 step 6.3), with AWS-specific destinations in `overlays/aws`: WordPress → the **RDS Proxy** and **ElastiCache** endpoints **by DNS name** instead of in-cluster MariaDB and Valkey; inbound to WordPress from the ALB (target-type `ip`, so traffic arrives from the VPC; allow the VPC's CIDR or the ALB's subnets); no cloudflared policy.
@@ -207,10 +216,11 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 2.5: kube-bench and Kubescape scan
 **Do:**
+
 - **kube-bench** (see `docs/phase-3-russetleaf-com/adr/3001-kube-bench-eks-only.md`): `platform/kube-bench/` holds **Job templates, one per node pool** (managed node group, Karpenter general pool, GPU pool with the `dedicated=llm` toleration), using the **EKS CIS benchmark** profile, writing **JSON and text** output, with `ttlSecondsAfterFinished` so they clean up. They're applied by the `demo-up` workflow (step 6.1), not synced by Argo CD. For now, run them by hand:
-  - the JSON output reaches **Loki** through Alloy; add a Grafana panel (pass/fail/warn counts per node pool, per run) using Loki's JSON parsing
-  - commit a summary to `docs/security/kube-bench-eks-<date>.md`, and create `docs/security/kube-bench-accepted.yaml` listing accepted findings with reasons
-  - the summary covers each node pool, with any failures and why they're accepted or fixed. The summary states that the **control plane is AWS-managed** (shared-responsibility model): EKS enables only Node and RBAC authorization plus AWS's access-entry webhook, and ABAC can't be enabled; kube-bench's node-side checks (kubelet anonymous access off, webhook authorization) must pass. As a direct check, from a test pod an anonymous request to a node's kubelet API (`curl -sk -o /dev/null -w '%{http_code}' https://<node-ip>:10250/pods`) must return `401`, for a managed node-group node and a Karpenter-created node alike.
+    - the JSON output reaches **Loki** through Alloy; add a Grafana panel (pass/fail/warn counts per node pool, per run) using Loki's JSON parsing
+    - commit a summary to `docs/security/kube-bench-eks-<date>.md`, and create `docs/security/kube-bench-accepted.yaml` listing accepted findings with reasons
+    - the summary covers each node pool, with any failures and why they're accepted or fixed. The summary states that the **control plane is AWS-managed** (shared-responsibility model): EKS enables only Node and RBAC authorization plus AWS's access-entry webhook, and ABAC can't be enabled; kube-bench's node-side checks (kubelet anonymous access off, webhook authorization) must pass. As a direct check, from a test pod an anonymous request to a node's kubelet API (`curl -sk -o /dev/null -w '%{http_code}' https://<node-ip>:10250/pods`) must return `401`, for a managed node-group node and a Karpenter-created node alike.
 - A **Kubescape CLI** scan of the EKS cluster from the workstation (NSA-CISA and MITRE ATT&CK frameworks, plus RBAC analysis; nothing installed in the cluster), saved in `docs/security/` with a summary, and compared with the home cluster's scores. Fill in the EKS open item in `docs/phase-1-russetleaf-dev/adr/1003-kubescape-cli-not-operator.md`.
 
 **Test:** a kube-bench Job runs on each node pool and completes; its results appear in the Grafana panel (from Loki); the summary and accepted-findings file are committed; the Kubescape report is committed; the Compliance dashboard shows EKS next to the home cluster (Trivy Operator metrics); any differences between the home and EKS Kubescape scores are explained (e.g. AWS-managed components).
@@ -219,6 +229,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 3.1: WordPress AWS overlay
 **Do:** `apps/wordpress/overlays/aws`:
+
 - `WP_HOME`/`WP_SITEURL` = `https://russetleaf.com`; the HTTPS-behind-proxy setting.
 - 3 replicas, HPA (3–10), PDB, **topology spread** across AZs.
 - **`database.auth: iam`** with the **RDS Proxy endpoint**, region and the RDS CA bundle (no database password Secret at all); Valkey endpoint (TLS);
@@ -231,6 +242,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 3.2: Content
 **Do:**
+
 - `apps/seed-from-dev/`: the one-off seed Job (manual sync): download the latest russetleaf.dev backup, import into RDS **through RDS Proxy with an IAM token**, `wp search-replace 'russetleaf.dev' 'russetleaf.com' --all-tables`, `aws s3 sync` the media.
 - Run it once for the first demo.
 
@@ -240,6 +252,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 4.1: Summarizer and gateway
 **Do:**
+
 - `overlays/aws` for `post-summarizer` (russetleaf.com queue, Pod Identity, gateway URL, WordPress's in-cluster Service URL) and `llm-gateway` (Pod Identity for Bedrock, same routing config as home).
 - A **russetleaf.com application password** for the summarizer's WordPress user, created with `wp-cli` and stored in russetleaf.com's Secrets Manager entries. (After a seed from russetleaf.dev, the user exists but the russetleaf.dev password shouldn't be reused; revoke it on russetleaf.com and create a new one.)
 
@@ -296,6 +309,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 6.1: Demo workflows
 **Do:** GitHub Actions in `russetleaf-infra`, started by hand (`workflow_dispatch`), running on the **home ARC runners** (Phase 1 step 5.5), so the restricted EKS API endpoint accepts them:
+
 - **`demo-up`:** `terraform apply` in `envs/aws`; wait for Argo CD to sync; wait until russetleaf.com returns 200; resume the russetleaf.com heartbeat check; **run the kube-bench Jobs** (one per node pool), wait for them to finish, collect their JSON and text output as workflow artifacts, compare with `docs/security/kube-bench-accepted.yaml`, commit the summary to `docs/security/` (through a pull request on `russetleaf-gitops`), and post pass/fail/warn counts to `#rl-security`, flagging new failures; post the start time (e.g. as a tag on the VPC) and "russetleaf.com demo started" to `#rl-com-alerts`.
 - **`demo-down`:** take a **logical dump** of the RDS database (a one-off Job through RDS Proxy) into the russetleaf.com backup bucket, which replicates to the backup account (see `docs/phase-1-russetleaf-dev/disaster-recovery.md`); create an Alertmanager **silence** for `site=com` and pause the russetleaf.com heartbeat check; suspend Argo CD auto-sync; delete the Applications in reverse order; wait until the ALB, the `origin` record and the Karpenter nodes are gone (with timeouts); `terraform destroy` in `envs/aws`; confirm russetleaf.com returns the 503 offline page and no tagged demo resources remain; post "russetleaf.com demo stopped" (with the run time) to `#rl-com-alerts`.
 - **Safety net:** a scheduled workflow (hourly) that alerts `#rl-costs` and `#rl-critical` (and optionally runs `demo-down`) if the demo stack has been up longer than a set limit (e.g. 6 hours).

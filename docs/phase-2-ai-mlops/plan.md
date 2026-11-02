@@ -48,6 +48,7 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 ### Step 1.4: WordPress side of the pipeline (`russetleaf-wordpress`)
 **Do:**
+
 - The **summary-queue must-use plugin**: on publish or update, send `{"post_id": ...}` to SQS, adding the current trace context (W3C `traceparent`) as a **message attribute** when tracing is on (AWS SDK for PHP, installed with Composer at build time); the queue URL from an environment variable.
 - The `wordpress_posts_without_summary` metric in the metrics must-use plugin, and the **`WordPressPostsMissingSummaries`** alert in the chart (turned on in step 2.4).
 - The styled **AI summary** box on posts in the `russetleaf` theme (model and prompt version in small print), with new visual-regression baselines.
@@ -71,6 +72,7 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 ### Step 2.3: Summarizer code (`russetleaf-llm-summarizer`)
 **Do:**
+
 - A dedicated WordPress user for the summarizer (role: editor or a custom role that can edit posts only), with an **application password** created by `wp-cli` and stored in Secrets Manager.
 - `src/`: SQS consumer (long polling, delete only after success, retries then dead-letter queue), WordPress adapter (REST API with that application password, calling WordPress's in-cluster Service rather than going out through Cloudflare: read the post, write the summary to the excerpt or a custom field), OpenAI-compatible model client pointed at the gateway, prompt loading from `prompts/` with the version recorded alongside each summary.
 - **OpenTelemetry tracing** with the Python SDK (auto-instrumentation for boto3 and HTTP clients), built in and off unless an OTLP endpoint is configured: read `traceparent` from each SQS message and continue the trace; spans for reading the post, calling the gateway and saving the summary; metadata attributes only (model, prompt version, tokens), **never post text, prompts or summaries**; trace IDs in log lines.
@@ -81,6 +83,7 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 ### Step 2.4: Summarizer chart, release and deployment
 **Do:**
+
 - `chart/`: Deployment (Rollout later), KEDA `ScaledObject` on the SQS queue (0–N), daily sweep CronJob, ServiceAccount, resources.
 - **Image and dependencies:** a **multi-stage** build with a **distroless or slim** runtime base; uv's lock file **with hashes**; chart signing as for `russetleaf-wordpress`; Secrets as files.
 - **Code and image checks** (as for `russetleaf-wordpress`, see Phase 1 step 5.1): **ruff**, **mypy**, **Semgrep**, **pip-audit**, dependency review, hadolint, Checkov, zizmor, `helm lint` / `ct lint`, container-structure-test, Trivy (vulnerability, secret and misconfiguration scanners).
@@ -131,6 +134,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 4.3: Evaluation gate and releases
 **Do:**
+
 - Pull request workflow (on ARC runners): run the evaluation, post per-model scores as a pull request comment compared with `main`, fail below the threshold.
 - Release workflow: run the gate again, then publish (step 2.4, into staging first), attach the report to the GitHub release, update `MODEL_CARD.md`.
 - Post gate results (pass/fail, per-model scores, link to the report) to `#rl-mlops`.
@@ -162,6 +166,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 5.1: Security for the AI components
 **Do:** extend Phase 1's controls to the new workloads:
+
 - **Kyverno:** add the `russetleaf-llm-summarizer` release workflow's signing identity to image verification (signature, SBOM and provenance); Pod Security Admission labels (`restricted`) and quotas on the summarizer, gateway and model namespaces; KEDA on the service-account token allow-list; a `PolicyException` for llama.cpp's image only if it genuinely can't run read-only or as non-root.
 - **CiliumNetworkPolicies:** summarizer → SQS, the gateway and WordPress's REST API (a **layer-7** rule: `GET`/`POST` on `/wp-json/*` only); gateway → llama.cpp and `bedrock-runtime`; llama.cpp's init container → the model mirror bucket only.
 - **Falco:** process allow-lists for the summarizer and gateway (`python`) and llama.cpp (`llama-server`); a rule for unexpected outbound connections from box 2.
@@ -171,6 +176,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 5.2: Observability and operations for the AI components
 **Do:**
+
 - **Tracing:** turn tracing on in the summarizer and gateway values, sampling 100% of summary jobs.
 - **Cost:** OpenCost with box 2 attributed to the LLM namespace and the Bedrock spend shown alongside; the Bedrock row in the monthly cost review.
 - **SLOs:** summary **freshness** (99% within 15 minutes) and daily **quality** (95%) in Sloth, with the error-budget policy covering summarizer releases (if Phase 1 step 8.1 is done).

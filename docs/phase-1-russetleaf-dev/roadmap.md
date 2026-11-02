@@ -3,6 +3,7 @@
 The milestones for building [Phase 1](plan.md), with target dates, and the actual dates once each is reached. The steps, tiers and estimates come from the plan's [progress checklist](plan.md#progress-checklist); day-to-day work is tracked as GitHub Issues (one per step) grouped into these milestones, on a public GitHub Projects board.
 
 ## Assumptions (baseline of 2026-11-02)
+
 - **Start:** Monday, November 2, 2026.
 - **Pace:** about **60 hours a week**, worked as **10 hours a day, six days a week**, with **Saturdays off**.
 - **Order:** the Core tier first (in plan order), then the Differentiators, then the Staff and Stretch steps, as the plan recommends.
@@ -23,6 +24,7 @@ The milestones for building [Phase 1](plan.md), with target dates, and the actua
 | **Total** | | **330–546** | | | | |
 
 What each milestone shows when it's done:
+
 - **M1:** accounts, tools, budget alert, network segmentation, decisions recorded, the repos public with their CI guardrails.
 - **M2:** the AWS Organization with its security services, the three-node Talos cluster with Cilium, the home AWS and Cloudflare resources, and the Terraform pipeline.
 - **M3:** Argo CD managing everything; storage, secrets and certificates, ingress through the tunnel, monitoring and alerting, MariaDB and Valkey, logging, and OIDC sign-in.
@@ -32,6 +34,7 @@ What each milestone shows when it's done:
 - **M7:** SLOs and error budgets, DORA metrics, Backstage and a second service, the threat model and control matrix, chaos and postmortems, strategy documents, fleet management, and public writing.
 
 ## Tracking and reporting
+
 - **Issues:** one per step, created from the plan by `tools/plan_to_issues.py` (see its usage notes), labeled by tier and stage, in the milestone above, with the step's substeps as a checklist and its test as acceptance criteria.
 - **Step specs:** before starting a step, write its spec with Claude from [`../specs/TEMPLATE.md`](../specs/TEMPLATE.md); the pull request links the issue and the spec.
 - **Actuals:** record actual hours per step in the plan's checklist, and fill in this table's **Actual** columns when a milestone closes.

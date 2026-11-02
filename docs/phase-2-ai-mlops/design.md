@@ -7,6 +7,7 @@
 - **Builds on:** [Phase 1 design](../phase-1-russetleaf-dev/design.md); shared design in [`../overview.md`](../overview.md)
 
 ## What Phase 2 adds to Phase 1
+
 - A fourth repo, **`russetleaf-llm-summarizer`** (prompts, evaluation set, the summarizer service and its chart).
 - **Box 2 becomes the dedicated LLM node** (label `workload=llm`, taint `dedicated=llm:NoSchedule`) running llama.cpp, with the CI runners next to it.
 - AWS resources in russetleaf-home: the **SQS** summary queue and dead-letter queue, **Bedrock** access with a budget, the **model mirror bucket**, and staging equivalents.
@@ -37,6 +38,7 @@ flowchart LR
 ## AI post summaries
 
 ### How it works (event-driven)
+
 1. When a post is published or updated, a small **must-use plugin** in the custom WordPress image sends the post ID to an **SQS queue**.
 2. **KEDA** watches the queue and scales the **post-summarizer** Deployment from **0 to N pods** based on how many messages are waiting. With nothing to do, no summarizer pods run.
 3. The summarizer reads the post through the **WordPress REST API** and sends the text to the **LLM gateway**, which picks a model (see below). The summarizer writes the summary back as the post excerpt or a custom field.
@@ -46,20 +48,21 @@ flowchart LR
 The summarizer authenticates to WordPress with an **application password** stored in **Secrets Manager** and synced by External Secrets. It reaches SQS through **EKS Pod Identity** (scoped IAM keys at home). **Bedrock model access** must be enabled for each chosen model in the region.
 
 ### LLM gateway and model serving
+
 - **LiteLLM** runs in the cluster as the single entry point for all model calls. It gives the summarizer one OpenAI-compatible API, whichever model answers.
 - Models behind the gateway:
-  - **Amazon Bedrock: Claude Haiku** (default)
-  - **Amazon Bedrock: Amazon Nova Lite** (lower-cost alternative)
-  - **Self-hosted model** served by **llama.cpp** (OpenAI-compatible server), e.g. a 3B model such as Qwen2.5-3B or Llama 3.2 3B, 4-bit quantized
+    - **Amazon Bedrock: Claude Haiku** (default)
+    - **Amazon Bedrock: Amazon Nova Lite** (lower-cost alternative)
+    - **Self-hosted model** served by **llama.cpp** (OpenAI-compatible server), e.g. a 3B model such as Qwen2.5-3B or Llama 3.2 3B, 4-bit quantized
 - The gateway handles:
-  - **routing and fallback** (e.g. Bedrock first, the self-hosted model if Bedrock fails or is throttled)
-  - **canary splits** for model changes (e.g. send 10% of requests to a new model, then compare quality scores and cost before switching)
-  - **rate limits and spending budgets** per app
+    - **routing and fallback** (e.g. Bedrock first, the self-hosted model if Bedrock fails or is throttled)
+    - **canary splits** for model changes (e.g. send 10% of requests to a new model, then compare quality scores and cost before switching)
+    - **rate limits and spending budgets** per app
 - The self-hosted model runs on **dedicated LLM nodes** (a Karpenter GPU NodePool on AWS, box 2 at home):
-  - The nodes carry the label `workload=llm` and the taint `dedicated=llm:NoSchedule`, so only the model server (plus cluster-wide agents such as node-exporter) runs there.
-  - The model server Deployment has a matching **toleration** and **node selector**.
-  - Model files are downloaded once by an init container from each site's **model mirror bucket** in S3 (so rebuilds don't depend on Hugging Face) into a volume on the node.
-  - The model **stays loaded**, since the node is dedicated to it; KEDA scales only the summarizer.
+    - The nodes carry the label `workload=llm` and the taint `dedicated=llm:NoSchedule`, so only the model server (plus cluster-wide agents such as node-exporter) runs there.
+    - The model server Deployment has a matching **toleration** and **node selector**.
+    - Model files are downloaded once by an init container from each site's **model mirror bucket** in S3 (so rebuilds don't depend on Hugging Face) into a volume on the node.
+    - The model **stays loaded**, since the node is dedicated to it; KEDA scales only the summarizer.
 - On AWS, the LLM nodes come from Karpenter's **GPU NodePool** (e.g. g6.xlarge on spot), using a CUDA build of llama.cpp. At home, it's a **dedicated CPU worker node** (see the home lab section). The same manifests deploy both, with per-environment overlays. On EKS, the **NVIDIA device plugin** (a DaemonSet) lets the model server request the GPU (`nvidia.com/gpu: 1`); the Amazon Linux 2023 NVIDIA AMI already includes the drivers.
 
 ### Prompt versioning and evaluation in CI
@@ -69,16 +72,17 @@ The summarizer is its own repo, `russetleaf-llm-summarizer`, built to stand alon
 - A fixed **evaluation set** of 20–30 sample posts lives in `russetleaf-llm-summarizer/evals/`.
 - The gateway's **routing settings** (which models run in production, fallbacks, canary weights) are deployment config, so they live in `russetleaf-gitops`. A routing change there should link to the evaluation report that justifies it.
 - On every `russetleaf-llm-summarizer` pull request that changes a prompt, the model list being evaluated, or the summarizer code, a GitHub Actions job:
-  - generates summaries for the evaluation set **with each model behind the gateway**
-  - scores them with **rule-based checks** (length, required keywords, no made-up links) and an **LLM-as-judge** call that grades how faithful each summary is to its post
-  - posts the scores **per model** as a **PR comment**, comparing them with the main branch
-  - **fails the check** if quality drops below a set threshold
+    - generates summaries for the evaluation set **with each model behind the gateway**
+    - scores them with **rule-based checks** (length, required keywords, no made-up links) and an **LLM-as-judge** call that grades how faithful each summary is to its post
+    - posts the scores **per model** as a **PR comment**, comparing them with the main branch
+    - **fails the check** if quality drops below a set threshold
 - The job runs on **self-hosted GitHub Actions runners inside the cluster**, managed by **Actions Runner Controller (ARC)**, so it can reach the gateway and the self-hosted model. Runners are **ephemeral** (a fresh pod per job), and jobs from pull requests opened from forks require manual approval, since the repo is public.
 - The same gate runs again on a **release tag**. Only if it passes does CI publish the image and Helm chart, attach the evaluation report to the GitHub release, update `MODEL_CARD.md`, and open a version-bump pull request on `russetleaf-gitops`.
 - New code rolls out through the Argo Rollouts canary; new models roll out through the gateway's canary split.
 
 ### LLM monitoring
 The summarizer reports **OpenTelemetry metrics** to Prometheus, labeled by model and prompt version:
+
 - input and output **tokens**
 - **latency** per model call
 - **errors**, throttling and **gateway fallbacks**
@@ -103,16 +107,18 @@ flowchart LR
 ```
 
 ### Experiment tracking and model registry (MLflow)
+
 - **MLflow** runs on the home cluster (on box 3), with its metadata in MariaDB and its artifacts in an S3 bucket.
 - **Every evaluation run is an MLflow run:** the CI evaluation gate, the online evaluation and every fine-tuning run log their **parameters** (Git commit, prompt version, model and its registry version, dataset version), **metrics** (rule-check pass rate, judge scores, latency, cost per summary) and **artifacts** (reports, sample outputs).
 - **Registered models**, with lineage back to the runs that produced them:
-  - `summarizer-config`: the prompt, model choice and generation settings as one versioned unit
-  - `local-summarizer`: the self-hosted model's file (base or fine-tuned, in llama.cpp's GGUF format)
+    - `summarizer-config`: the prompt, model choice and generation settings as one versioned unit
+    - `local-summarizer`: the self-hosted model's file (base or fine-tuned, in llama.cpp's GGUF format)
 - **Aliases** mark the roles: `champion` (production) and `challenger` (in the gateway canary). Promotion is a reviewed change: the pipeline proposes it, a pull request on `russetleaf-gitops` changes the gateway's routing to the registered version, and the MLflow alias is updated when it merges.
 - The model mirror bucket keeps serving files to llama.cpp; it's fed **from the registry**, so every file in use has a registry entry.
 
 ### Guardrails
 Post content is untrusted input, so the summarizer treats it as data:
+
 - **Prompt-injection defences:** post text is clearly delimited and labeled as content to summarize, never instructions; the system prompt says so and is never echoed back.
 - **Output validation** before anything is saved: length limits, plain text only, no URLs, no instructions or role-play, no text from the system prompt; a failing summary is retried once and then left unsaved with an alert.
 - **Personal-data redaction:** email addresses, phone numbers and similar patterns are removed from post text before it leaves the cluster for Bedrock.
@@ -120,6 +126,7 @@ Post content is untrusted input, so the summarizer treats it as data:
 - Guardrail outcomes (blocked, retried, redacted) are metrics in Prometheus, with an alert on unusual spikes.
 
 ### Online evaluation and drift monitoring
+
 - A **daily job** (Argo Workflows at home) samples a few percent of the day's new summaries, scores them with the same rule checks and judge as the CI gate, and logs the results to **MLflow** and to **Prometheus**.
 - It also tracks **input drift**: post length, language and topic distribution compared with the evaluation set.
 - **Grafana** shows quality and drift trends per model and prompt version; **Alertmanager** sends `SummaryQualityDegraded` and `InputDriftDetected` to `#rl-mlops`.
@@ -129,6 +136,7 @@ Post content is untrusted input, so the summarizer treats it as data:
 Fine-tuning the self-hosted model needs a GPU, which the home lab doesn't have, so the **fine-tuning pipeline and deploying a fine-tuned challenger** belong to Phase 3 (the EKS GPU node pool); see the [Phase 3 design](../phase-3-russetleaf-com/design.md#fine-tuning-on-the-gpu-pool-if-phase-2-is-built) and ADR 3002. Without Phase 3, the MLOps lifecycle here still covers evaluation, the registry, guardrails, online evaluation, drift and the feedback loop.
 
 ### Data versioning and feedback
+
 - **DVC** versions the evaluation set, the adversarial cases and the training sets, with an S3 remote; MLflow runs record the dataset version they used, so every result can be traced back to its exact data.
 - **Feedback loop:** a small must-use plugin adds an **editor-only rating** (helpful / not helpful, with an optional note) to each summary in the WordPress admin, stored as post metadata. A nightly job exports ratings (with the summary's model and prompt version) to the DVC-tracked dataset; poor-rated summaries become new evaluation cases, and good ones become training candidates.
 
@@ -174,6 +182,7 @@ russetleaf-llm-summarizer/
 ```
 
 Design choices that make it stand on its own:
+
 - **Clear interfaces:** jobs come in from a queue (`{"post_id": ...}`), content is read and written through an **adapter** (WordPress is the first), and models are reached through any **OpenAI-compatible endpoint**. LiteLLM (and Bedrock through it) and llama.cpp both qualify, so the summarizer has no hard dependency on any one provider.
 - **Its own Helm chart**, published to an OCI registry with the same version as the image. `russetleaf-gitops` only supplies values (queue URL, gateway URL, scaling limits, IAM role). The chart also ships the summarizer's alerts and Grafana dashboard, so whoever deploys it gets monitoring too.
 - **Releases gated on quality:** a release tag runs the evaluation gate first; only a passing release is published, with its evaluation report attached to the GitHub release.
@@ -223,7 +232,7 @@ These parts of Phase 1's shared platform sections exist only once the AI pipelin
 
 ### Runtime security and compliance scanning
 
-  - **unexpected outbound connections** from the LLM nodes, which should only download model files (the CiliumNetworkPolicies also block these; Falco detects any attempt)
+    - **unexpected outbound connections** from the LLM nodes, which should only download model files (the CiliumNetworkPolicies also block these; Falco detects any attempt)
 
 ### Network policies
 
@@ -269,7 +278,7 @@ One trace then shows: a post is published → queued → picked up by the summar
 
 ### ci tests
 
-  - Summarizer: a queued post gets a (mock) summary written back to WordPress; a failing message ends up in the dead-letter queue
+    - Summarizer: a queued post gets a (mock) summary written back to WordPress; a failing message ends up in the dead-letter queue
 
 ### Performance tests
 

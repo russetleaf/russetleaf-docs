@@ -13,12 +13,14 @@ The live site it runs is **[russetleaf.dev](https://russetleaf.dev)**.
 | **[3. russetleaf.com](phase-3-russetleaf-com/design.md)** | The same site on the full AWS production design (EKS, RDS, CloudFront), brought up only for demos | Planned (optional) |
 
 ## Where to start
+
 - **[Overview](overview.md):** the phases, how the two sites compare, security by layer, the threat model, compliance, effort and the repositories.
 - **[Phase 1 design](phase-1-russetleaf-dev/design.md):** the architecture of russetleaf.dev, with diagrams.
 - **[Architecture decision records](overview.md#architecture-decision-records):** every significant decision, with the alternatives considered and when it would be revisited.
 - **[Phase 1 plan](phase-1-russetleaf-dev/plan.md)** and **[roadmap](phase-1-russetleaf-dev/roadmap.md):** the build steps, each with a test, estimates against actual hours, and milestones with target and actual dates.
 
 ## How this documentation is kept
+
 - Written as Markdown in the [`russetleaf-docs`](https://github.com/smscully/russetleaf-docs) repo, reviewed in pull requests, and published here by GitHub Actions; the build fails on any broken link.
 - Diagrams are written as code (Mermaid, following the C4 model) next to the text they illustrate.
 - Each build step starts with a short spec and ends with its actual hours and what changed; each milestone ends with a short retro.

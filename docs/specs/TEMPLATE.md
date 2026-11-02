@@ -16,11 +16,13 @@ the same pull request if the work turns out differently. Delete these comments.
 One or two sentences: what exists when this step is done, and why it matters.
 
 ## Context
+
 - Design: the sections of the phase design this step implements (links).
 - Decisions: the ADRs it implements or depends on (e.g. ADR 1033), and any open items it resolves.
 - Depends on: earlier steps that must be done, and anything to check first (versions, quotas, access).
 
 ## Scope
+
 - **In:** what this step builds.
 - **Out:** what it deliberately leaves for later steps or phases.
 
@@ -31,19 +33,23 @@ instead of deciding it here.
 
 ## Tasks
 Small enough to finish and check in a sitting each (roughly 1–3 hours).
+
 - [ ] ...
 - [ ] ...
 
 ## Acceptance criteria
 Copied from the step's **Test** in the plan, made specific (commands, expected output).
+
 - [ ] ...
 
 ## Risks and rollback
+
 - What could go wrong, and how to tell.
 - How to undo it (see the rollback strategy and its runbooks).
 
 ## Outcome
 Filled in when the step is done.
+
 - **Actual hours:** <hours> (estimate <low–high>); why it differed, if it did.
 - **What changed from this spec, and why.**
 - **Follow-ups:** issues opened, ADRs or design sections updated, decision-log entries.

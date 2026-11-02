@@ -30,21 +30,25 @@ On the home cluster, Talos manages the control-plane components and their settin
 | **Storage** | **Talos disk encryption** for the system-state and data partitions on every node, **sealed to the TPM** (TPM 2.0 required); host paths only for the storage provisioner; EBS, RDS and S3 encrypted on AWS; S3 TLS-only; Object Lock backups | `talosctl get volumestatus` (or equivalent) shows encrypted partitions; Security Hub checks on AWS |
 
 ## Alternatives considered
+
 - **Relying on Talos and EKS defaults without verification:** the defaults are good, but unverified claims don't hold up in an audit or interview; the checks make them evidence.
 - **Kyverno only (no PSA labels):** one enforcement point; adding PSA gives a second, built-in one at almost no cost.
 - **PSA only (no Kyverno restricted set):** the built-in controller can't produce reports or CI tests, and can't express project-specific rules.
 - **Disk encryption with a static key or node ID instead of the TPM:** works on hardware without a TPM, but the key is less protected; TPM sealing is preferred where available.
 
 ## Consequences
+
 - Every component has explicit controls and a repeatable check, recorded in the Talos hardening document and the security review.
 - Workloads that need API access must opt in to a token, and anything new must meet `restricted` in application namespaces.
 - Disk encryption depends on each node's TPM; replacing a node's TPM or motherboard needs the documented recovery procedure.
 
 ## When to revisit
+
 - A node lacks TPM 2.0: use Talos's static-key option and record the weaker protection.
 - Talos or EKS defaults change (re-run the checks after upgrades).
 
 ## Open items
+
 - Phase 1 step 2.2: disk encryption, host firewall, `seccompDefault`, PSA defaults.
 - Phase 1 step 6.1: PSA namespace labels, Kyverno `restricted` set, service-account token default.
 - Phase 1 step 7.2: the verification checks, recorded in `docs/talos-hardening.md`.

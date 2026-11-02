@@ -29,30 +29,35 @@ Nothing checked the AWS account's actual settings (IAM users and keys, root MFA,
 ThreatMapper's management console bundles several databases and services; its documented requirements are on the order of 16 GB of RAM and 4 CPU cores for the console alone, more than box 1 has in total.
 
 ## Decision
+
 - **Don't use ThreatMapper.**
 - **Use Prowler** (open source) to scan the AWS account against **CIS AWS Foundations**, **AWS Foundational Security Best Practices** and related checks:
-  - a **scheduled GitHub Actions workflow** in `russetleaf-infra`, **monthly** (the account exists permanently), plus manual runs; it assumes a **read-only audit role** through GitHub OIDC (AWS's `SecurityAudit` and `ViewOnlyAccess` managed policies), so no keys are stored
-  - an extra run **once per AWS demo** with the demo stack up, to check EKS, RDS, the ALB and the rest while they exist
-  - reports kept as workflow artifacts, a summary committed to `russetleaf-gitops/docs/security/`, and a short Slack message to `#rl-security` with the counts of failed high and critical checks
-  - accepted findings explained in the summary (e.g. checks that don't apply to a demo account)
+    - a **scheduled GitHub Actions workflow** in `russetleaf-infra`, **monthly** (the account exists permanently), plus manual runs; it assumes a **read-only audit role** through GitHub OIDC (AWS's `SecurityAudit` and `ViewOnlyAccess` managed policies), so no keys are stored
+    - an extra run **once per AWS demo** with the demo stack up, to check EKS, RDS, the ALB and the rest while they exist
+    - reports kept as workflow artifacts, a summary committed to `russetleaf-gitops/docs/security/`, and a short Slack message to `#rl-security` with the counts of failed high and critical checks
+    - accepted findings explained in the summary (e.g. checks that don't apply to a demo account)
 
 ## Alternatives considered
+
 - **ThreatMapper:** broadest single tool, but its console needs more memory than box 1 has, and it duplicates tools already built into CI and the clusters.
 - ~~**AWS Security Hub** (with the Foundational Security Best Practices standard): continuous and AWS-native, but billed per check, and covers only AWS; a reasonable upgrade if the account ever holds production data.~~ **Superseded by ADR 1019:** Security Hub is now used as the continuous check, with Prowler as a second opinion.
 - **Kubescape or Trivy for cloud posture:** focused on Kubernetes and images rather than full AWS account configuration.
 - **No account scanning:** leaves configuration done outside Terraform unchecked.
 
 ## Consequences
+
 - The AWS account is checked against recognized frameworks at no cost, with nothing to run in the clusters.
 - Scans are periodic, not continuous; AWS Budgets, Cost Anomaly Detection and CloudWatch alarms remain the continuous signals.
 - No attack-path ranking or malware scanning; acceptable at this scale.
 
 ## When to revisit
+
 - Much more memory available (e.g. a dedicated security node), making ThreatMapper's console affordable.
 - ~~The AWS account holding production or personal data: consider AWS Security Hub for continuous checks.~~ Done (ADR 1019).
 - Many more services, where attack-path ranking would help prioritize findings.
 
 ## Open items
+
 - Phase 1 step 7.5: first Prowler run; record the baseline and accepted findings.
 - Phase 3 step 5.1: first run with the demo stack up.
 - Check ThreatMapper's current project status if this decision is revisited.

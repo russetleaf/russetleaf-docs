@@ -5,6 +5,7 @@ Design, plans, roadmap and architecture decisions for **RussetLeaf**, a producti
 **Read it as a website:** https://docs.russetleaf.dev
 
 ## Contents
+
 - [`docs/index.md`](docs/index.md): start here
 - [`docs/overview.md`](docs/overview.md): the phases, shared design, security, compliance, effort, repositories and the index of all ADRs
 - `docs/phase-1-russetleaf-dev/`, `docs/phase-2-ai-mlops/`, `docs/phase-3-russetleaf-com/`: each phase's `design.md`, `plan.md`, roadmap and `adr/`

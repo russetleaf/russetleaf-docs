@@ -26,6 +26,7 @@ This plan covers recovering from losses bigger than a single bad change or faile
 **Secrets that are regenerated, not copied:** database passwords (MariaDB Operator generates new ones; RDS manages its own), the Cloudflare tunnel token, the Slack bot token, Google OAuth client secrets, scoped IAM keys, the WordPress application passwords. The break-glass kit holds only what can't be regenerated (account access and the Talos secrets bundle).
 
 ## Backup account and immutable copies
+
 - A separate **Backup** account in the **Security OU** of the AWS Organization (whose **dedicated management account** runs nothing; see ADR 1019 and the Phase 1 design's [AWS account structure](design.md#aws-account-structure-and-best-practices-security-reference-architecture)). Nothing runs in it; it only holds copies.
 - Its buckets are in a **second region (us-west-2)** with **S3 Object Lock** (30-day retention, governance mode at first, compliance mode once proven), versioning and encryption.
 - Buckets in **russetleaf-home**, **russetleaf-infra** and (in Phase 3) **russetleaf-com** **replicate** into them (S3 replication with roles that can only write, not delete); SCPs stop any account from deleting or weakening them.
@@ -66,6 +67,7 @@ Kept in your password manager, with a **printed copy** of the starred items stor
 | **Ransomware or malicious deletion of backups** | Up to the last locked copy | 1–2 days | The Object Lock copies can't be deleted or overwritten for 30 days; restore from them. |
 
 ## Bootstrap order from zero
+
 1. **Access:** password manager → break-glass kit → AWS (management account, then IAM Identity Center into the others), GitHub, Cloudflare, Google, registrar.
 2. **Code:** restore the four repos (from GitHub, or the mirrors in the backup account).
 3. **Terraform state:** use the russetleaf-infra state bucket, or copy it back from the Backup account.
@@ -79,6 +81,7 @@ Kept in your password manager, with a **printed copy** of the starred items stor
 11. **russetleaf.com** (Phase 3, if needed): re-apply `envs/aws-edge`, then `demo-up` when wanted.
 
 ## Drills
+
 | Drill | How often | What it proves |
 |---|---|---|
 | Restore a MariaDB backup into a scratch instance | Monthly | Backups are usable |

@@ -58,12 +58,14 @@ flowchart TB
 ## Production design on AWS
 
 ### High availability
+
 - **RDS for MariaDB** with **Multi-AZ** turned on. (Aurora doesn't offer MariaDB; if the site outgrew RDS, Aurora MySQL would be the next step, at the cost of switching engines.) **RDS Proxy** in front of it keeps failovers to seconds.
 - At least **2–3 WordPress replicas** spread across availability zones, plus a **HorizontalPodAutoscaler** and **PodDisruptionBudgets**.
 - EKS worker nodes in **multiple AZs**, provisioned by **Karpenter** (see Delivery and operations).
 - **What this project actually runs:** this design is highly available within one region **while the demo runs**, with two deliberate demo cuts (one NAT Gateway instead of three; one spot GPU node, with the gateway falling back to Bedrock). The home lab, with three control-plane nodes, replicated MariaDB and spread workloads, **survives any single node failure**, but its home power supply and internet connection remain single points of failure (ADR 1020). Both are explained, with recovery targets and the changes (and costs) that would add HA, in `docs/phase-1-russetleaf-dev/adr/1014-availability-levels.md`.
 
 ### Traffic and edge
+
 - **Application Load Balancer** through the AWS Load Balancer Controller, with **TLS certificates from ACM**. Its DNS name (`origin.russetleaf.com`) is managed by **ExternalDNS**.
 - **CloudFront** in front of both the site and the S3 media. In this project CloudFront is **always on** (it costs almost nothing idle), so it can show an offline page when the demo stack is down; see [russetleaf.com between demos](#russetleafcom-between-demos).
 - **The ALB accepts only CloudFront traffic:** its security group allows only AWS's CloudFront origin-facing IP list, and a listener rule requires a secret header that CloudFront adds to every request.
@@ -103,6 +105,7 @@ The one uncertain part of this design is whether **PHP's MariaDB client (mysqlnd
 | Chart setting | `database.auth: iam` | `database.auth: password` (the same mode the home lab uses) |
 
 Switching between the two is an **overlay change** in `russetleaf-gitops` (`database.auth` and the credential source) plus the proxy's auth setting in `russetleaf-infra`; the WordPress image supports both.
+
 - **Cost:** RDS Proxy is billed per vCPU of the database instance, about $0.015 per vCPU-hour: roughly **$0.03/hour** for a db.t4g.medium (pennies per demo; about $22/month if it ran 24/7).
 
 ### How it fits the repos
@@ -124,6 +127,7 @@ The WordPress Rollout, Service, HPA and the rest of the base are the same for bo
 This extends Phase 2's MLOps lifecycle with the one part that needs a GPU (ADR 3002).
 
 ### Fine-tuning pipeline (distillation)
+
 - **Goal:** improve the small self-hosted model by **fine-tuning** it (LoRA) on high-quality example summaries, then compare it with the base model.
 - **Training data:** curated summaries from the feedback loop and the evaluation set, plus summaries from a stronger **teacher** model. **Check the teacher's terms first:** some model providers' terms restrict using their outputs to train other models. An **open-weights teacher** (e.g. a larger open model run on the GPU) avoids the question.
 - **The pipeline**, defined as an **Argo Workflows** template in `russetleaf-llm-summarizer/training/` and run on **EKS's GPU NodePool** during an AWS session (spot GPU; a few dollars per run): fetch the versioned dataset (DVC) → fine-tune (LoRA) → **evaluate against the base model** on the evaluation set (including the adversarial cases) → convert to GGUF → **register** in MLflow as a `local-summarizer` version with its scores → if it beats the champion, propose it as the **challenger**.
@@ -133,6 +137,7 @@ This extends Phase 2's MLOps lifecycle with the one part that needs a GPU (ADR 3
 ## Demo operations
 
 ### Demo noise control (russetleaf.com)
+
 - `demo-down` creates an Alertmanager **silence** for russetleaf.com before tearing anything down, then posts "russetleaf.com demo stopped" to `#rl-com-alerts`.
 - `demo-up` posts "russetleaf.com demo started" once the site returns 200. CloudWatch alarms are created with the demo stack and deleted with it.
 
@@ -264,6 +269,7 @@ When the EKS demo stack isn't running, **russetleaf.com must still answer** with
 
 ### Mechanism: an always-on CloudFront edge with error fallback (recommended)
 Split the AWS Terraform into two root modules in `russetleaf-infra`:
+
 - **`envs/aws-edge` (always on, ~$1/month):** the Route 53 hosted zone for russetleaf.com, ACM certificates, the CloudFront distribution, the S3 bucket holding the offline page, the russetleaf.com **media bucket**, the **model mirror bucket**, and the secret header value CloudFront sends to the ALB.
 - **`envs/aws` (demo stack):** everything else (VPC, EKS, Karpenter, RDS, ElastiCache, WAF, SQS, ...). The ALB itself is created by the AWS Load Balancer Controller from the WordPress Ingress, and **ExternalDNS** creates the `origin.russetleaf.com` record pointing at it.
 
@@ -280,6 +286,7 @@ The CloudFront distribution is set up like this:
 | Origin custom header | `X-Origin-Verify: <secret>` (checked by the ALB listener rule) |
 
 How the switch works:
+
 1. **Demo stack down:** `origin.russetleaf.com` doesn't exist, so CloudFront can't reach the origin and gets a 502. The custom error response serves the offline page instead. Visitors see "The AWS demo of this site is offline. Visit russetleaf.dev to see the live site."
 2. **Demo stack up:** Argo CD deploys WordPress, the Load Balancer Controller creates the ALB, and ExternalDNS creates `origin.russetleaf.com`. Within a minute or so (the DNS record's TTL plus the 10-second error cache), CloudFront reaches the origin and serves the live site.
 3. **Demo stack torn down:** removing the Argo CD Applications deletes the Ingress, so the ALB is removed and ExternalDNS deletes the DNS record (run ExternalDNS with `--policy=sync` so it removes records it created). CloudFront falls back to the offline page again.
@@ -292,13 +299,14 @@ This also works for any HTTP method (logins and form posts get the offline page 
 
 ### Keeping russetleaf.com content between demos
 Each demo creates a new RDS instance, so content needs a plan:
+
 - **Final snapshot on destroy (recommended):** set `skip_final_snapshot = false` on the RDS instance, and have the next `terraform apply` restore from the most recent snapshot. Posts, summaries and settings carry over. Snapshot storage costs a few cents a month for a site this size.
 - **Media is never lost:** the russetleaf.com media bucket lives in `envs/aws-edge`, so uploads survive between demos.
 - **Optional: seed from russetleaf.dev.** For the first demo, or to refresh russetleaf.com with the live site's content, run the **seed Job** (`russetleaf-gitops/apps/seed-from-dev/`, an Argo CD Application set to manual sync, AWS only). It:
-  1. downloads the latest backup of russetleaf.dev from its S3 backup bucket (see [russetleaf.dev database backups](../phase-1-russetleaf-dev/design.md#russetleafdev-database-backups))
-  2. imports it into RDS for MariaDB through RDS Proxy, logging in with an IAM auth token like WordPress (same engine, so no conversion is needed)
-  3. runs `wp search-replace 'russetleaf.dev' 'russetleaf.com' --all-tables` to fix links and settings
-  4. copies the media with `aws s3 sync` from the russetleaf.dev media bucket to the russetleaf.com media bucket
+    1. downloads the latest backup of russetleaf.dev from its S3 backup bucket (see [russetleaf.dev database backups](../phase-1-russetleaf-dev/design.md#russetleafdev-database-backups))
+    2. imports it into RDS for MariaDB through RDS Proxy, logging in with an IAM auth token like WordPress (same engine, so no conversion is needed)
+    3. runs `wp search-replace 'russetleaf.dev' 'russetleaf.com' --all-tables` to fix links and settings
+    4. copies the media with `aws s3 sync` from the russetleaf.dev media bucket to the russetleaf.com media bucket
 
   Its IAM role (Pod Identity) may only read the russetleaf.dev backup and media buckets, write to the russetleaf.com media bucket, and `rds-db:connect` through the proxy. After it runs, russetleaf.com shows the same posts as the live site, and the next final snapshot keeps them.
 
@@ -337,9 +345,9 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 ### Workload permissions and database security
 
 - S3, SQS, SES and Bedrock access through **EKS Pod Identity** (IRSA only for any component that doesn't support Pod Identity), not stored AWS access keys. Each role gets only what it needs:
-  - WordPress may write to its S3 bucket, send to the queue, and `rds-db:connect` as the `wordpress` user through RDS Proxy.
-  - The summarizer may read from the queue; it reaches models only through the gateway.
-  - The LLM gateway may call `bedrock:InvokeModel` on the chosen Bedrock models only.
+    - WordPress may write to its S3 bucket, send to the queue, and `rds-db:connect` as the `wordpress` user through RDS Proxy.
+    - The summarizer may read from the queue; it reaches models only through the gateway.
+    - The LLM gateway may call `bedrock:InvokeModel` on the chosen Bedrock models only.
 - **No application database password on russetleaf.com:** WordPress logs in to RDS Proxy with IAM auth tokens; the master password is generated and rotated by RDS. At home, MariaDB Operator generates and rotates the passwords. See [Database access and credentials](../phase-1-russetleaf-dev/design.md#database-access-and-credentials).
 - RDS in **private subnets**, with **TLS required** on connections.
 
@@ -350,11 +358,11 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 ### Runtime security and compliance scanning
 
 - **kube-bench** (EKS only; see `docs/phase-3-russetleaf-com/adr/3001-kube-bench-eks-only.md`) audits the worker nodes against the **CIS Kubernetes Benchmark** with the **EKS profile**. It runs on **every demo**, as a step in the `demo-up` workflow (not a CronJob, since the cluster only lives a few hours):
-  - **one Job per node pool** (managed node group, Karpenter general pool, GPU pool), each cleaning itself up afterwards
-  - **JSON and text output**: the JSON reaches **Loki** automatically through Alloy (a Grafana panel shows pass/fail/warn counts per demo and node pool); both are kept as workflow artifacts
-  - a summary committed to `docs/security/kube-bench-eks-<date>.md`, compared with `docs/security/kube-bench-accepted.yaml` (accepted findings, each with a reason) so only **new** failures stand out
-  - counts posted to `#rl-security`, flagging new failures
-  - **EKS:** AWS manages the API server and enables Node and RBAC, plus its own webhook for IAM-based access entries; ABAC can't be enabled. Under AWS's shared-responsibility model, the control plane is AWS's to secure, which the kube-bench summary states; kube-bench still checks the node-side settings (kubelet anonymous access and authorization mode).
+    - **one Job per node pool** (managed node group, Karpenter general pool, GPU pool), each cleaning itself up afterwards
+    - **JSON and text output**: the JSON reaches **Loki** automatically through Alloy (a Grafana panel shows pass/fail/warn counts per demo and node pool); both are kept as workflow artifacts
+    - a summary committed to `docs/security/kube-bench-eks-<date>.md`, compared with `docs/security/kube-bench-accepted.yaml` (accepted findings, each with a reason) so only **new** failures stand out
+    - counts posted to `#rl-security`, flagging new failures
+    - **EKS:** AWS manages the API server and enables Node and RBAC, plus its own webhook for IAM-based access entries; ABAC can't be enabled. Under AWS's shared-responsibility model, the control plane is AWS's to secure, which the kube-bench summary states; kube-bench still checks the node-side settings (kubelet anonymous access and authorization mode).
 
 ### Backup and recovery
 
@@ -363,9 +371,9 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 ### Node autoscaling (Karpenter)
 
 - **Node autoscaling** with **Karpenter** instead of fixed managed node groups. A small managed node group runs Karpenter itself; Karpenter then creates EC2 nodes directly from two **NodePools**:
-  - a **general pool** (spot and on-demand, several instance types) for WordPress and platform services, with **consolidation** to remove idle or underused nodes
-  - a **GPU pool** for the self-hosted model, with the `workload=llm` label and `dedicated=llm:NoSchedule` taint, on spot
-  - **spot interruption handling** through an SQS queue fed by EventBridge, so pods move before AWS reclaims a spot node
+    - a **general pool** (spot and on-demand, several instance types) for WordPress and platform services, with **consolidation** to remove idle or underused nodes
+    - a **GPU pool** for the self-hosted model, with the `workload=llm` label and `dedicated=llm:NoSchedule` taint, on spot
+    - **spot interruption handling** through an SQS queue fed by EventBridge, so pods move before AWS reclaims a spot node
 
 ### Encryption in transit
 
@@ -389,7 +397,7 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 
 ### Uptime checks
 
-  - russetleaf.com must return **either** the live site (200) **or** the offline page (503 with its known text). Either is fine; anything else means the always-on edge is broken.
+    - russetleaf.com must return **either** the live site (200) **or** the offline page (503 with its known text). Either is fine; anything else means the always-on edge is broken.
 
 ### Environments
 

@@ -25,6 +25,7 @@ High availability (HA) means a site keeps working when a single component (a nod
 | Region | One home | One AWS region (us-east-1) |
 
 ## Decision
+
 - **russetleaf.dev: no high availability.** Single points of failure are accepted because the hardware (two 8 GB nodes) and the budget don't allow redundancy. Protection comes from **recovery**, not redundancy: everything is rebuilt from Git (Terraform, Argo CD), and the database is restored from S3 backups.
 - **russetleaf.com: a highly available design, run in demo mode.** It's HA *within one region while running* (EKS control plane, nodes across zones, RDS Multi-AZ, ElastiCache replica, multi-zone ALB, CloudFront), with two deliberate demo cuts (one NAT Gateway, one spot GPU node), and it isn't always running.
 - **Recovery targets** (recovery point = how much data can be lost; recovery time = how long until the site is back):
@@ -42,6 +43,7 @@ High availability (HA) means a site keeps working when a single component (a nod
 ## Future changes that would enable HA
 
 **Home (russetleaf.dev):**
+
 1. ~~**A third node, and three control-plane nodes** (Talos supports control-plane nodes that also run workloads), with Talos's **shared virtual IP** for the Kubernetes API. Roughly **$150–300** for a used mini PC.~~ **Done (ADR 1020).**
 2. **Replicated storage** (Rook-Ceph or Longhorn) once three nodes with spare disks and memory exist (ADR 1010).
 3. ~~**MariaDB replication** (MariaDB Operator supports replicated and Galera clusters)~~ **Done (ADR 1020):** primary–replica replication with automatic failover. ~~and **Valkey with Sentinel**~~ Not planned: Valkey stays single, since it's a cache and WordPress falls back to the database (ADR 1020).
@@ -49,29 +51,34 @@ High availability (HA) means a site keeps working when a single component (a nod
 5. A **UPS** for all three nodes and the router (roughly **$100–200**), and optionally a **backup internet connection** (a 4G/5G failover router, roughly **$15–30/month** for a data plan).
 
 **AWS (russetleaf.com):**
+
 1. **Three NAT Gateways** (one per zone): about **+$65/month** if running 24/7.
 2. **More GPU capacity:** on-demand or a second GPU node, about **+$350/month** for on-demand; or rely on the existing Bedrock fallback.
 3. **Always-on operation:** the full **~$720–820/month** in the Phase 1 design's cost table.
 4. **Multi-region disaster recovery:** cross-region copies of RDS snapshots and S3 data (backup-and-restore costs little more than storage), or a warm standby in a second region with **Route 53 failover** (roughly doubles the cost).
 
 ## Alternatives considered
+
 - **Building HA at home now:** needs a third node, more memory and replicated storage; not affordable with the current hardware, and recovery from Git plus backups is adequate for a portfolio site.
 - **Running russetleaf.com always-on with full HA:** about $725–840/month, far over the $30–60/month budget.
 - **Removing the demo cuts (three NAT Gateways, on-demand GPU) during demos:** adds cost for every demo hour, for resilience that a demo rarely needs; documented as "production would use three" instead.
 
 ## Consequences
+
 - Both sites' limits are explicit, with numbers, rather than implied.
 - russetleaf.dev will have outages when box 1, its disk, the home power or the internet fails; the uptime check and dead man's switch alert on them.
 - russetleaf.com demonstrates an HA design without paying for it around the clock.
 - Recovery depends on the backups, Terraform and GitOps working, which makes the monthly restore test and occasional rebuild rehearsal important.
 
 ## When to revisit
+
 - russetleaf.com starts serving real users, or must be always-on.
 - A third home node (with spare disks and memory) becomes available.
 - Home outages become frequent enough to justify a UPS or backup internet connection.
 - A requirement for regional disaster recovery appears.
 
 ## Open items
+
 - Phase 1 step 2.2: rehearse a full rebuild of the cluster from Git and record the actual recovery time.
 - Phase 1 step 4.5: confirm the 6-hour recovery point with the backup schedule.
 - Phase 3 step 3.1: test a forced RDS failover (already planned) and a node loss; record recovery times.

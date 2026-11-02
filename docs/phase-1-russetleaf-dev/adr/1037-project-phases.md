@@ -23,19 +23,23 @@ Build in **three phases**, each complete and demonstrable on its own, with its o
 - **Phase 1 stands alone:** nothing in it waits for AI or EKS. Box 2 is an ordinary third node until Phase 2; fleet management uses a local spoke cluster until Phase 3; the capacity plan uses home load tests until Phase 3.
 
 ## Alternatives considered
+
 - **One plan, tiers only (Core, Differentiator, Stretch, Staff):** tiers rank steps by value, but the AI and EKS work was interleaved through every stage, so no subset was complete without the rest.
 - **Two phases (home with AI, then EKS):** keeps the AI pipeline in the first build, but delays a finished site by a few months, and the AI work is the part least needed for platform roles.
 - **Separate documents per site:** duplicates the shared platform design, which is most of it.
 
 ## Consequences
+
 - A complete, publishable project after Phase 1 (about 330–546 hours, or 169–275 for its Core tier).
 - Phases 2 and 3 can be skipped, reordered or done years apart without leaving half-built work.
 - Some integration work is repeated per phase (policies, network rules, monitoring for new components), adding roughly 15–25 hours overall.
 - Phase 1's design mentions later phases only in short notes; the details live in their own design documents.
 
 ## When to revisit
+
 - A job target makes one later phase more valuable (e.g. MLOps roles: do Phase 2 next; cloud platform roles: Phase 3).
 - A phase turns out too large to finish: split it further rather than leaving it half done.
 
 ## Open items
+
 - ~~Phase 1 step 1.1: move the `docs/` tree into `russetleaf-gitops`~~: the docs stay in their own repo (ADR 1038).

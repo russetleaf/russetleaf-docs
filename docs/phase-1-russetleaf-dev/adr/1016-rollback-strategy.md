@@ -7,6 +7,7 @@
 
 ## Context
 Rollback mechanisms existed in pieces (Argo Rollouts canaries, Git reverts, `talosctl rollback`, database backups and snapshots, staging gates), but there was no single strategy. Several cases weren't covered:
+
 - **Database schema changes:** WordPress core upgrades change the database structure on first run, so rolling back the image afterwards can break the site.
 - **Argo CD auto-sync:** a manual `argocd app rollback` is immediately overwritten by auto-sync.
 - **Components that rollback depends on:** a broken Cilium (networking) or Kyverno (admission) can prevent the fix from being deployed.
@@ -16,6 +17,7 @@ Rollback mechanisms existed in pieces (Argo Rollouts canaries, Git reverts, `tal
 - No decision rules, and no practice.
 
 ## Decision
+
 - **Rules:** roll back first and investigate after (user-facing errors not clearing within 5 minutes); fix forward only when rollback is riskier or the fix is trivial and ships within 15 minutes; record every rollback.
 - **Default mechanism: Git revert**, synced by Argo CD (applications, platform, configuration, model routing, Terraform).
 - **Automatic rollback** for application releases through **Argo Rollouts** canary analysis.
@@ -29,12 +31,14 @@ Rollback mechanisms existed in pieces (Argo Rollouts canaries, Git reverts, `tal
 - **Drills:** monthly in staging, quarterly locally for Talos, Cilium and Kyverno, and once on EKS, with timings recorded.
 
 ## Alternatives considered
+
 - **`argocd app rollback` as the default:** quick, but conflicts with auto-sync and leaves Git out of step with the cluster.
 - **Always fixing forward:** avoids schema-rollback problems, but keeps users on a broken site while the fix is written and tested.
 - **Blue/green deployments for every release:** cleaner cut-overs, but doubles the running workload; box 1 can't afford it, and canaries achieve most of the benefit.
 - **Database migration tooling with down-migrations:** WordPress core doesn't provide reversible migrations, so backups are the practical safety net.
 
 ## Consequences
+
 - Rollback is mostly a Git revert, so it's fast, reviewable and leaves Git as the record of what runs.
 - Schema-changing releases take a few extra minutes (the backup) before promotion.
 - Cilium upgrades need a manual sync and a little more care.
@@ -42,11 +46,13 @@ Rollback mechanisms existed in pieces (Argo Rollouts canaries, Git reverts, `tal
 - Runbooks and drills need maintaining; drills also catch broken backups and recovery paths early.
 
 ## When to revisit
+
 - A third node (or more memory) makes blue/green deployments affordable.
 - russetleaf.com becomes always-on: add blue/green or regional failover to its rollback options.
 - WordPress or a plugin adopts reversible migrations.
 
 ## Open items
+
 - Phase 1 step 5.7: the `schema-change` label and the pre-promotion backup.
 - Phase 1 step 6.1: Kyverno webhook exclusions and the emergency procedure, tested.
 - Phase 1 step 3.1: Cilium on manual sync, and the `helm rollback` recovery path tested locally.

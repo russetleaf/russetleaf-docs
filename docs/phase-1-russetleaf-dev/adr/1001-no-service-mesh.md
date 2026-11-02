@@ -22,22 +22,26 @@ Don't run a service mesh. Cover a mesh's benefits with tools already in the desi
 | Per-service request metrics | **Hubble** HTTP metrics, ingress and ALB metrics, and the apps' own **OpenTelemetry** metrics |
 
 ## Alternatives considered
+
 - **Istio, sidecar mode:** a proxy in every pod (roughly 50–100 MB each) plus `istiod` (~300–500 MB). Didn't fit box 1's memory on the original two-node cluster; still a large share of the three-node cluster's memory (ADR 1020).
 - **Istio, ambient mode:** no per-pod proxies; a small proxy per node plus optional layer-7 "waypoint" proxies. Much lighter, but still a few hundred MB, a second policy system overlapping Cilium's, specific settings to run alongside Cilium, and more to upgrade and debug.
 - **Linkerd:** lighter than Istio, but the same overlap with Cilium and the same small benefit at this scale.
 - **Cilium's own mutual authentication:** not used, as it adds little over WireGuard plus layer-7 policies for four services.
 
 ## Consequences
+
 - Simpler operations: one networking and policy system (Cilium) on both clusters.
 - Memory stays available for the actual workloads on box 1.
 - Not covered: **per-connection service identity checks** (every call proving which service it comes from). Network policies restrict *who can connect* by labels, and encryption protects traffic in transit, but neither proves service identity cryptographically on each request.
 
 ## When to revisit
+
 - Many more services calling each other (roughly ten or more), where per-service retries, timeouts and metrics become hard to manage without a mesh.
 - A requirement (e.g. compliance) to verify service identity on every connection.
 - Traffic between several clusters that needs consistent identity and encryption.
 - More memory on the home nodes (e.g. 16 GB), making Istio ambient mode affordable.
 
 ## Open items
+
 - **EKS WireGuard support:** confirm whether Cilium's WireGuard encryption is supported in chaining mode with the VPC CNI for the Cilium version installed (Phase 3 step 1.4). If not, record it here; application-level TLS then covers encryption in transit on EKS.
 - **Optional Istio ambient experiments:** if run, add the findings (memory used, latency added, setup issues with Cilium, what it added) from the local kind experiment (Phase 1 step 6.4) and the EKS experiment (Phase 3 step 5.3).

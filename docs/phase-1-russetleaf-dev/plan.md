@@ -163,6 +163,7 @@ gh auth status
 
 ### Step 0.1: Accounts, tools and budget alert
 **Do:**
+
 - Accounts: AWS: your **existing account** (which becomes `russetleaf-home`) plus a **new, dedicated management account** (its own email address, root MFA on) for the AWS Organization in step 2.0; GitHub; Cloudflare (russetleaf.dev zone).
 - Set up the workstation: see [Local workstation setup](#local-workstation-setup-ubuntu-2404).
 - Create an **AWS Budget** with an email alert at about $25/month (by hand in the console is fine; Terraform takes over in step 2.1).
@@ -200,6 +201,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 1.1: Create the repos
 **Do:**
+
 - Create **`russetleaf-gitops`**, **`russetleaf-infra`** and **`russetleaf-wordpress`** (`russetleaf-llm-summarizer` is created in Phase 2). The project documentation stays in this repo, **`russetleaf-docs`** (ADR 1038).
 - In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a `LICENSE` if public, branch protection on `main` (pull requests and passing checks required).
 - In `russetleaf-docs`: the design, plans, roadmap, ADRs and spec template already exist (ADR template in `docs/adr/0000-template.md`). Record the big step 0.2 decisions as ADRs (the next number in the phase, e.g. 1039) and link them from the decision log. Operational docs (runbooks, SLO definitions, performance and security reports, Talos hardening notes) go in `docs/` of the repo that produces or uses them, mostly `russetleaf-gitops`. Each ADR's **Open items** are finished in these steps:
@@ -255,6 +257,7 @@ Record each answer in the [decision log](#decision-log).
 | 3007 RDS for MariaDB behind RDS Proxy | — | — | 1.6, 3.1 |
 | 3008 Karpenter node pools | — | — | 1.5, 2.3 |
 | 1038 Separate documentation repo and docs site | 1.1 | — | — |
+
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo, scan each repo's **full history**, and then **make the repos public** (ADR 1030); turn on **secret scanning with push protection**.
 - **GitHub organization settings** in `russetleaf-infra/envs/github/` (Terraform's GitHub provider): default workflow token **read-only**, only verified or allow-listed Actions, branch protection and required reviews, environments, secret scanning with push protection.
 - Add **OpenSSF Scorecard** (weekly scheduled workflow) and **zizmor** (on workflow changes) to every repo, and GitHub's **dependency-review action** to the repos with dependencies (`russetleaf-wordpress`; `russetleaf-llm-summarizer` in Phase 2).
@@ -270,6 +273,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 2.0: AWS Organization and accounts (Security Reference Architecture)
 **Do** (`russetleaf-infra/envs/org/`, applied locally with the new management account), following the Phase 1 design's [AWS account structure](design.md#aws-account-structure-and-best-practices-security-reference-architecture) and ADR 1019:
+
 - Create the **Organization** from the dedicated management account; **OUs**: Security, Infrastructure, Workloads.
 - **Accounts:** create **Security Tooling**, **Log Archive** and **Backup** (Security OU), and **russetleaf-infra** (Infrastructure OU); **invite the existing account** and move it into Workloads as **russetleaf-home**. (russetleaf-com is created in Phase 3.)
 - **IAM Identity Center:** permission sets for admin, read-only and break-glass, MFA required; assign yourself per account.
@@ -282,6 +286,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 2.0b: Organization security services
 **Do** (`russetleaf-infra/envs/security/`, applied with Security Tooling and Log Archive access):
+
 - **Log Archive:** S3 Object Lock buckets with **KMS customer-managed keys** for the **organization CloudTrail trail** (management events, all accounts and regions, log-file validation), Config history and (later) VPC flow logs.
 - **Security Tooling:** organization-wide **GuardDuty** (with EKS audit-log monitoring, auto-enabled for new accounts), **Security Hub** (AWS Foundational Security Best Practices and CIS standards in every account), **AWS Config** with **focused recording** (IAM, S3, security groups, KMS, EKS, RDS and other key types) and a **CIS conformance pack**, aggregated here, and **IAM Access Analyzer** (organization external-access analyzer).
 - **Findings to Slack:** EventBridge rules for GuardDuty findings (medium and above) and Security Hub findings (critical and high) to SNS topics connected through **Amazon Q Developer in chat applications** (authorize the Slack workspace once) to `#rl-security` (critical also to `#rl-critical`).
@@ -291,6 +296,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 2.1: Bootstrap (state bucket and CI roles)
 **Do** (`russetleaf-infra/bootstrap/`, applied locally):
+
 - In **russetleaf-infra**: the S3 bucket for Terraform state (versioning, KMS encryption, public access blocked, TLS required, `prevent_destroy`). Backends use `use_lockfile = true`. Bucket policy granting each account's CI roles access to their own state keys only.
 - In **each account** that CI deploys to (russetleaf-home, russetleaf-infra and the security accounts; russetleaf-com in Phase 3): the GitHub OIDC provider, a read-only **plan** role (pull requests), an **apply** role (only from the `apply` GitHub Environment), and a read-only **audit** role for Prowler (AWS's `SecurityAudit` and `ViewOnlyAccess` managed policies; used in step 7.5).
 
@@ -298,6 +304,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 2.2: Talos cluster (three control-plane nodes)
 **Do** (`russetleaf-infra/envs/home/`, applied locally; uses the `siderolabs/talos` provider):
+
 - Generate machine secrets; machine configs for **three control-plane nodes**, all schedulable: **box 3** (main workloads), **box 1** (secondary workloads) and **box 2** (general workloads and CI runners; it becomes the LLM node in Phase 2). Give each a fixed IP (DHCP reservations or static addresses).
 - **Shared virtual IP** for the Kubernetes API (Talos's `vip` setting on the nodes' network interface), on a free address in your LAN; kubeconfig and Talos endpoints point at it.
 - **Reservations on every node** (kubelet `systemReserved` and `kubeReserved` for CPU and memory), so workloads can't starve etcd, the API server or the kubelet; plus a **per-pod PID limit** (`podPidsLimit`, e.g. 4096; check WordPress's process counts first; Phase 2 rechecks it for llama.cpp) and **hard eviction thresholds** for memory, disk and inodes (ADR 1034).
@@ -319,6 +326,7 @@ The cluster is **highly available for a single node failure** (three etcd member
 
 ### Step 2.3: AWS and Cloudflare resources for the home lab
 **Do** (`russetleaf-infra/modules/` + `envs/home/`; all AWS resources in the **russetleaf-home** account):
+
 - Modules: `s3-media`, `s3-backups`, `secrets` (Phase 2 adds `sqs-queue` and `bedrock-access`).
 - russetleaf.dev resources: media bucket, database-backup bucket (lifecycle: expire after 30 days), **Loki log bucket** (lifecycle: expire after 7 days, used in step 4.6, plus a scoped IAM key for Loki), **Tempo trace bucket** (lifecycle: expire after 3 days, used in step 7.4, with its own scoped key), Secrets Manager entries (empty placeholders; values set by hand or generated).
 - **`prevent_destroy`** on every stateful resource (the state bucket, media, backup, log, trace and model mirror buckets, and Secrets Manager entries), so no plan, including a revert's, can delete them without a deliberate code change (see the Phase 1 design's [Rollback strategy](design.md#rollback-strategy)).
@@ -333,6 +341,7 @@ The cluster is **highly available for a single node failure** (three etcd member
 
 ### Step 2.4: `russetleaf-infra` CI
 **Do:** the pipeline described in the Phase 1 design ([Terraform pipeline](design.md#terraform-pipeline-russetleaf-infra)):
+
 - **Pull requests:** `terraform fmt -check` → `validate` → **tflint** with **`tflint-ruleset-aws`** → **Checkov** on the source with **custom policies** in `.checkov/` (required `Project`/`Site`/`Env` tags, `us-east-1` only, approved instance families, S3 Block Public Access) → **`terraform test`** for the modules → `terraform plan -out` (saved as a private workflow artifact with short retention) → **Checkov on the plan** → **IAM Access Analyzer** policy checks (`validate-policy`, and its custom checks for new public or cross-account access) → **Infracost** cost-difference comment → plan comment → gitleaks.
 - **After merge:** a GitHub Environment **`apply`** with required reviewers (you), limited to `main`; the OIDC apply role trusts only that environment; the job applies **the saved plan from the pull request**, not a fresh plan.
 - **Weekly scheduled** drift-check plan.
@@ -343,6 +352,7 @@ The cluster is **highly available for a single node failure** (three etcd member
 
 ### Step 2.5: Disaster recovery copies
 **Do:** as described in `docs/phase-1-russetleaf-dev/disaster-recovery.md` and ADR 1018:
+
 - The **Backup** account already exists (step 2.0).
 - `russetleaf-infra/envs/dr/`: in the Backup account, **S3 Object Lock** buckets in **us-west-2** (30-day retention, governance mode at first), versioned and **KMS-encrypted**; **replication** rules (with write-only roles) from the Terraform state bucket (russetleaf-infra) and the MariaDB backup and media buckets (russetleaf-home). (CloudTrail logs are already isolated in the Log Archive account.)
 - A **daily repo-mirror** workflow (`git bundle` of each repo) uploading to the backup account through a write-only OIDC role.
@@ -354,6 +364,7 @@ The cluster is **highly available for a single node failure** (three etcd member
 
 ### Step 3.1: Structure and Argo CD bootstrap
 **Do:**
+
 - Create the layout from the Phase 1 design: `bootstrap/home/`, `apps/`, `platform/`, each component with `base/` and `overlays/home/`.
 - Install Argo CD with Helm on the new cluster, then add Argo CD itself to `platform/argocd/` so it manages its own upgrades. Applications use **auto-sync with self-heal** by default (Cilium and staging excepted), with **`ignoreDifferences`** for replica counts set by HPAs and KEDA. Add **`platform/cilium/`** with the **same values** Terraform used, so Argo CD adopts Cilium without changing it. Set the Cilium Application to **manual sync** (a broken networking upgrade would stop Argo CD from syncing a revert), and write `docs/runbooks/rollback-cilium.md`: recover with `helm rollback cilium` from the workstation (the API server runs on the host network, so it stays reachable), then revert in Git. Test the procedure on a local kind or Talos-in-Docker cluster.
 - `bootstrap/home/`: the root "app of apps" that creates one Argo CD Application per component, with **sync waves** (Cilium and the `prometheus-operator-crds` chart, from the prometheus-community Helm repository, first, then storage and secrets, then ingress, monitoring, operators, then apps).
@@ -375,6 +386,7 @@ Check `kubectl top nodes` after each step.
 
 ### Step 4.2: Secrets and internal certificates
 **Do:** `platform/external-secrets/`: External Secrets Operator plus a `ClusterSecretStore` for AWS Secrets Manager.
+
 - `platform/cert-manager/`: **cert-manager** and **trust-manager**, with an **internal CA** (a self-signed root issuing an intermediate, used by a ClusterIssuer); copy the root to the break-glass kit; trust-manager distributes the CA bundle to namespaces that need it. See `docs/phase-1-russetleaf-dev/adr/1028-internal-pki.md`.
 - **Bootstrap credential:** External Secrets needs one AWS key to start. Create it once by hand as a Kubernetes Secret from the Terraform output (document the exact command in the README, never commit it). Everything else comes from Secrets Manager.
 
@@ -382,6 +394,7 @@ Check `kubectl top nodes` after each step.
 
 ### Step 4.3: Ingress and the Cloudflare Tunnel
 **Do:**
+
 - `platform/ingress/`: ingress-nginx (**2 replicas** spread across box 3 and box 1, with a PodDisruptionBudget), with its **Prometheus metrics enabled** (the Argo Rollouts analysis in step 6.2 uses them).
 - `platform/cloudflared/`: cloudflared Deployment (2 replicas, **spread across nodes**) using the tunnel token from External Secrets, routing `russetleaf.dev` and the admin hostnames to ingress-nginx.
 - Put the Argo CD, Grafana and **Hubble UI** hostnames behind Cloudflare Access.
@@ -390,6 +403,7 @@ Check `kubectl top nodes` after each step.
 
 ### Step 4.4: Monitoring
 **Do:** `platform/monitoring/`: kube-prometheus-stack (placed on box 3): 15-day retention, 30 s scrape interval, resource limits on every part. Grafana behind Cloudflare Access. Then the alerting setup from the Phase 1 design:
+
 - **Platform health alerts:** **etcd** (disk sync latency, leader changes, proposal failures; important on small nodes, and more so once box 2 runs the model in Phase 2; ADR 1026), **`ArgoCDAppOutOfSync`** (an app out of sync or degraded for 15 minutes, from Argo CD's metrics), and **certificate expiry** (cert-manager), each with a runbook.
 - **Kubelet scraping verifies TLS** against the cluster CA (no `insecureSkipVerify`, now that the kubelets have CA-signed serving certificates), and the **certificate expiry alerts** are on: kubelet client and serving certificate lifetimes, and kube-prometheus-stack's API server client-certificate expiry alerts (ADR 1035).
 - Prometheus external labels `site=dev`, `cluster=talos-home`; `serviceMonitorSelectorNilUsesHelmValues: false` (and the PodMonitor and rule equivalents) so Prometheus finds ServiceMonitors in every namespace.
@@ -404,6 +418,7 @@ Check `kubectl top nodes` after each step.
 
 ### Step 4.5: Database and cache
 **Do:**
+
 - `platform/mariadb/`: MariaDB Operator; a `MariaDB` instance pinned to the **same major version RDS offers** (e.g. 9.4 LTS), a `Database`, `User` and `Grant` for WordPress, with the password **generated by the operator** into a Kubernetes Secret (no External Secrets for the database). Same for the backup user and root.
 - **Replication:** two MariaDB members with **primary–replica replication** and **automatic failover** (MariaDB Operator's replication mode), the primary preferring box 3 and the replica on box 1 (anti-affinity), a PodDisruptionBudget, and a Service that always points at the current primary. Backups run from the replica where the operator supports it.
 - **TLS** turned on in MariaDB (certificates from the **internal CA**, step 4.2) and **required** for the `wordpress` user.
@@ -415,6 +430,7 @@ Check `kubectl top nodes` after each step.
 
 ### Step 4.6: Logging (Loki + Alloy)
 **Do:** `platform/logging/`, as described in the Phase 1 design ([Logging](design.md#logging-loki--alloy)):
+
 - **Loki** in single-binary mode, storing data in the Loki S3 bucket (scoped key from External Secrets), a small local cache volume, **7-day retention**, the **ruler** sending alerts to Alertmanager.
 - **Kubernetes audit logs:** Alloy also collects the **API server audit log** from box 1 (label `job=kube-audit`), and Loki's ruler gets the audit alerts from the Phase 1 design (`KubeExecIntoProdPod`, `KubeUnexpectedSecretRead`, `KubeRBACChangedOutsideArgoCD`, `KubeAnonymousOrForbiddenSpike`, `KubeAuditLogMissing`, and the persistence alerts `KubeWorkloadCreatedOutsideArgoCD`, `KubeAdmissionWebhookChanged` and `KubeTokenSecretCreated` from ADR 1034, with the controllers that create objects legitimately (operators, KEDA, Argo Rollouts, the HPA) on the expected-identity list), routed to `#rl-security` with runbooks. Argo CD's service account is the expected source of production changes.
 - **Grafana Alloy** DaemonSet: an **OTLP receiver** for traces (forwarding to Tempo once it exists; until then traces are dropped); collect all container logs; labels `site=dev`, `env`, `cluster`, `namespace`, `app`, `container` only; drop debug lines and health-check access logs; mask tokens and passwords in query strings; a host port receiving **Talos system logs**.
@@ -430,6 +446,7 @@ Check `kubectl top nodes` after each step.
 
 ### Step 4.7: Cluster access: OIDC sign-in, roles and SSO
 **Do:** as described in the Phase 1 design's [Identity and access to the clusters](design.md#identity-and-access-to-the-clusters) (ADR 1033):
+
 - **Dex** in `platform/dex/` with the **Google connector** (a separate Google OAuth client from the WordPress one), its client secret from External Secrets, behind the tunnel with Cloudflare Access in front.
 - **API server OIDC:** in `russetleaf-infra/envs/home`, a Talos patch adding a **structured authentication configuration** that trusts Dex (issuer, audience, username and group claims with an `oidc:` prefix); install **kubelogin** on the workstation (pinned in `.mise.toml`) and switch the daily kubeconfig to it.
 - **Roles** in `platform/rbac/`: ClusterRoles **platform-admin**, **operator** (read everything, restart and scale workloads, no Secrets) and **read-only** (no Secrets), bound to Dex groups; your daily login is **operator**, platform-admin only when needed.
@@ -443,12 +460,13 @@ Check `kubectl top nodes` after each step.
 
 ### Step 5.1: The WordPress image (`russetleaf-wordpress`)
 **Do:**
+
 - `Dockerfile` based on the official `wordpress` image (pinned version), with plugins and themes pinned in **`composer.json` through WPackagist** (so Renovate can update them) and installed with Composer at build time: an S3 media offload plugin (see the comparison below), Redis Object Cache, an SMTP plugin (configured for Amazon SES). WordPress code is copied into `/var/www/html` **at build time**, so the image's startup script has nothing to copy at runtime.
 - **WPScan:** run it in CI (free API token stored as a GitHub secret) against the plugins and themes in `composer.json`, failing the build on a known vulnerability, plus a **weekly scheduled run** that alerts `#rl-security`. Also schedule a **weekly rebuild** of the image so base-image OS patches are picked up even without code changes.
 - **Choose the S3 offload plugin** (see [Media storage: S3, not EFS](design.md#media-storage-s3-not-efs-by-decision)). Try both in the Compose setup against LocalStack (or MinIO) and record the choice in the decision log:
-  - **S3-Uploads** (Human Made, open source): uploads go **directly to S3**, so no writable uploads directory is needed. Preferred if it works with a custom S3 endpoint (for the ci stand-ins) and with CloudFront as the media URL.
-  - **WP Offload Media Lite**: writes locally first, then copies to S3; needs a writable uploads `emptyDir`.
-  - Check for both: upload, image resizing (thumbnails), deleting media, and the media URL pointing at the right place (S3 at home, CloudFront on AWS).
+    - **S3-Uploads** (Human Made, open source): uploads go **directly to S3**, so no writable uploads directory is needed. Preferred if it works with a custom S3 endpoint (for the ci stand-ins) and with CloudFront as the media URL.
+    - **WP Offload Media Lite**: writes locally first, then copies to S3; needs a writable uploads `emptyDir`.
+    - Check for both: upload, image resizing (thumbnails), deleting media, and the media URL pointing at the right place (S3 at home, CloudFront on AWS).
 - **Finish `docs/phase-1-russetleaf-dev/adr/1002-s3-media-not-efs.md`** (already drafted): fill in its open item with the plugin chosen and why, and whether the uploads `emptyDir` is needed.
 - **Lean final image:** no download tools (`curl`, `wget`) or package managers in the final image where practical (keep what the official image's startup script needs); container-structure-test checks they're absent.
 - **Built to pass the Kyverno policies from step 6.1:** Apache runs as **`www-data`** listening on **port 8080** (non-root can't use port 80), and the container works with a **read-only root filesystem** given writable `emptyDir` volumes for `/tmp`, Apache's run and lock directories, PHP sessions, and the uploads directory only if the chosen plugin needs it. Test both in the Compose smoke test.
@@ -472,6 +490,7 @@ Check `kubectl top nodes` after each step.
 
 ### Step 5.2: WordPress chart and deployment (`russetleaf-gitops/apps/wordpress/`)
 **Do:**
+
 - The `russetleaf-wordpress` chart, which sets the pod security context (non-root user, read-only root filesystem, no privilege escalation, dropped capabilities, **seccomp `RuntimeDefault`**, and an optional `runtimeClassName` used in step 6.5), the `emptyDir` volumes above, **readiness and liveness probes**, the required labels (`app.kubernetes.io/name`, `app.kubernetes.io/part-of`, `env`) and **CPU/memory requests with a memory limit (no CPU limit)**, deployed from `russetleaf-gitops` with the home overlay (values only): russetleaf.dev hostname, MariaDB and Valkey hosts, `database.auth: password` pointing at the **MariaDB Operator-generated Secret**, media bucket and queue settings, other credentials from External Secrets, resources, `persistence` off, WP-Cron as a Kubernetes CronJob.
 - **Secrets as files:** database, SMTP and other credentials mounted as files, not environment variables; **user namespaces** (`hostUsers: false`) on the WordPress pods if step 2.2 confirmed support.
 - **Replicas and spreading:** WordPress runs **2–3 replicas** spread across box 3 and box 1 (topology spread or anti-affinity) with a PodDisruptionBudget, so a node failure or a rolling upgrade never takes the site down.
@@ -489,6 +508,7 @@ Check `kubectl top nodes` after each step.
 
 ### Step 5.4: ci test clusters (kind + AWS stand-ins)
 **Do:**
+
 - `russetleaf-wordpress/ci/`: a kind cluster config and `ci` chart values (LocalStack, or MinIO + ElasticMQ, per step 0.2; a MariaDB and Valkey installed into the kind cluster; test credentials).
 - Integration tests (e.g. a shell or Python test script run after `helm install`): the site installs and loads; an upload lands in the stand-in S3 bucket.
 - A pull request workflow on **GitHub-hosted** runners: create the kind cluster (`helm/kind-action`), load the freshly built image, install the chart with `ct install` or `helm install`, run the tests, collect logs on failure.
@@ -504,6 +524,7 @@ Check `kubectl top nodes` after each step.
 
 ### Step 5.6: On-demand staging
 **Do:**
+
 - `overlays/home-staging` for WordPress (1 replica, `staging.russetleaf.dev`, no Valkey), a small staging **MariaDB** (MariaDB Operator, with its own generated passwords), and the staging AWS resources and secrets from step 2.3. Label everything `env=staging`.
 - Staging Argo CD Applications in their own **Argo CD project**, with **auto-sync off**, so nothing runs until a test starts.
 - `apps/staging-data/`: a Job that downloads the latest russetleaf.dev production backup from S3, imports it into the staging MariaDB, and **scrubs personal data** (user emails replaced with `user<ID>@example.invalid`, commenter names/emails/IPs cleared, application passwords and sessions deleted), then runs `wp search-replace 'russetleaf.dev' 'staging.russetleaf.dev'`.
@@ -516,6 +537,7 @@ Check `kubectl top nodes` after each step.
 
 ### Step 5.7: Promotion pipeline (staging → prod)
 **Do:**
+
 - Change the `russetleaf-wordpress` release bot (step 5.3) to bump **`overlays/home-staging`** instead of prod, with **auto-merge** once `russetleaf-gitops` CI passes.
 - Trigger `staging-test` on pushes to `main` that change a staging version.
 - **Schema changes:** CI in `russetleaf-wordpress` compares WordPress's database version (`$wp_db_version`) between the old and new images (and plugin release notes flag schema changes), labeling such releases **`schema-change`**. For those, the promotion workflow runs an **on-demand MariaDB backup** and waits for it to succeed before the prod pull request can be merged; the rollback runbook explains restore-and-roll-back versus fix-forward.
@@ -526,6 +548,7 @@ Check `kubectl top nodes` after each step.
 
 ### Step 5.8: Google sign-in for admins
 **Do:** as described in the Phase 1 design ([Admin sign-in with Google](design.md#admin-sign-in-with-google)):
+
 - **Google Cloud:** a project with an OAuth consent screen (basic scopes only: `openid`, `email`, `profile`), and OAuth clients for **russetleaf.dev** (with staging.russetleaf.dev as a second redirect URL) and **local testing**. Document them in `russetleaf-infra`'s README; store the client secrets in Secrets Manager.
 - **`russetleaf-wordpress`:** add an OIDC client plugin (e.g. "OpenID Connect Generic Client"; check it's maintained and can be configured entirely from constants or environment variables) to `composer.json` (WPackagist). Configure it from chart values: Google's endpoints, client ID and secret (External Secrets), the **allow-list** of email addresses, and automatic account linking for allowed emails only.
 - **Turn off password logins for people**, while keeping **application passwords** for the REST API (the staging smoke tests, and from Phase 2 the summarizer, depend on them).
@@ -544,6 +567,7 @@ Check `kubectl top nodes` after each step.
 
 ### Step 5.10: Site design and brand
 **Do:** as described in the Phase 1 design's [Site design and branding](design.md#site-design-and-branding) and `docs/phase-1-russetleaf-dev/adr/1025-site-design-in-git.md`:
+
 - Write a short **design brief** (audience, tone, colors, the russet-leaf idea, a few sites you like).
 - **Logo design:** create the RussetLeaf logo (a mark plus wordmark) as **SVG**, with Claude writing the SVG directly or an image generator for concepts followed by vectorizing; derive the **favicon set**, site icon, Apple touch icon and **Open Graph image**, and a color **palette** from it; store them in `russetleaf-wordpress/brand/`. Check generator terms, AI-image copyright limits and a quick trademark search for "RussetLeaf" before publishing.
 - With Claude, generate the **`russetleaf` block theme** from the brief: `theme.json` (palette from the logo, typography, spacing, dark-mode variant), templates (home, post, page, archive, 404) and patterns (hero, post cards, "about this project" linking the repos and ADRs). Iterate locally (Docker Compose) with screenshots.
@@ -559,6 +583,7 @@ Check `kubectl top nodes` after each step.
 
 ### Step 5.12: Compliance scope and privacy (GDPR basics)
 **Do:** as described in the overview's [Compliance and privacy](../overview.md#compliance-and-privacy) (ADR 1036):
+
 - `docs/security/compliance.md`: which frameworks apply (GDPR lightly, CIS, NIST guidance, MITRE ATT&CK) and which don't, with reasons (HIPAA: no health data; PCI DSS: no card data, and a hosted payment page if a shop is ever added).
 - A **privacy notice** page in the `russetleaf` theme (who runs the site, what's collected, why, how long, which processors, how to make a request), linked from every footer and the comment form.
 - `docs/privacy/record-of-processing.md`: each kind of personal data (commenters' names and emails, visitors' IPs in logs, admins' Google accounts, anything in Slack alerts), where it's stored, why, and for how long; the **processors list** (Cloudflare, AWS, Google, GitHub, Slack) with their data processing terms; the **retention schedule** (logs 7–14 days, backups 30 days locked plus lifecycle, audit logs 1 year, unapproved comments deleted after 30 days by a scheduled WP-Cron task).
@@ -571,6 +596,7 @@ Check `kubectl top nodes` after each step.
 
 ### Step 6.1: Kyverno
 **Do:** `platform/kyverno/`: Kyverno plus the policy set from the Phase 1 design ([Supply chain and policy](design.md#supply-chain-and-policy)), all in **audit mode** first:
+
 - **Signed images** (`verifyImages`): images signed by the `russetleaf-wordpress` release workflow (cosign keyless, GitHub OIDC issuer, subject matching the repo's workflow; Phase 2 adds `russetleaf-llm-summarizer`'s identity), with **`mutateDigest`** so tags are pinned to digests at admission
 - **SBOM attestations:** the project's own images must also carry a signed SBOM attestation from the same workflow
 - **Build provenance:** they must also carry the **SLSA provenance** attestation from GitHub's attestation action, issued to the project's **reusable build workflow** (confirm Kyverno's support for GitHub attestation bundles; start in audit mode)
@@ -612,6 +638,7 @@ Review the policy reports, fix violations, then switch to **enforce**.
 
 ### Step 6.3: CiliumNetworkPolicies
 **Do:** use **CiliumNetworkPolicies**, not plain NetworkPolicies (see [Policies](design.md#policies-ciliumnetworkpolicies-not-plain-networkpolicies) in the Phase 1 design):
+
 - A **`CiliumClusterwideNetworkPolicy`** baseline: default-deny for application namespaces, DNS to CoreDNS allowed with Cilium's **DNS proxy** on (needed for DNS-name rules), Prometheus scraping allowed.
 - Per-component **CiliumNetworkPolicies** in each component's `base/` (shared with the AWS site), with site-specific destinations in the overlays. Outbound traffic to AWS is allowed **by DNS name** (`toFQDNs`): WordPress → S3, SES and STS endpoints; MariaDB → S3 for backups; cloudflared → Cloudflare's tunnel endpoints. (Phase 2 adds the summarizer, gateway and llama.cpp policies, including a **layer-7** rule.)
 - A **Kyverno generate rule** that gives every new application namespace the baseline allowances, so none is ever left open.
@@ -623,6 +650,7 @@ Review the policy reports, fix violations, then switch to **enforce**.
 
 ### Step 6.4: Service mesh decision (ADR) and optional Istio experiment
 **Do:**
+
 - Finish `docs/phase-1-russetleaf-dev/adr/1001-no-service-mesh.md` (already drafted; review it and resolve its open items as they're done): what a mesh like Istio would add, how Cilium (WireGuard, layer-7 policies, Hubble), Argo Rollouts and LiteLLM already cover it, the memory and complexity cost on a small cluster, and **when you'd revisit** (many more services, a requirement to verify service identity on every connection, multi-cluster traffic). See [Service mesh (Istio): not used, by decision](design.md#service-mesh-istio-not-used-by-decision).
 - **Optional experiment (local only):** in a kind cluster on your workstation running Cilium, install **Istio ambient mode** (following Istio's instructions for running alongside Cilium), deploy the WordPress chart with test values, and enable mTLS and one layer-7 authorization policy. Record memory use, setup issues and what it added in the ADR. Delete the cluster afterwards; nothing in either site depends on it.
 
@@ -630,6 +658,7 @@ Review the policy reports, fix violations, then switch to **enforce**.
 
 ### Step 6.5: Sandboxed runtime (gVisor)
 **Do:** as described in the Phase 1 design ([Sandboxed runtimes](design.md#sandboxed-runtimes-gvisor)):
+
 - Confirm the gVisor extension is active on all three nodes (step 2.2), and add `platform/runtime-classes/` with a **`gvisor` RuntimeClass**.
 - **ARC runners:** set `runtimeClassName: gvisor` on the runner pods, and add a Kyverno rule requiring it in the runners' namespace. Run every workflow that uses the runners (evaluation gate, staging test) and fix anything that doesn't work under gVisor.
 - **WordPress trial:** load-test russetleaf.dev's WordPress in **staging** with `k6` (home page, a post, the REST API) with and without `runtimeClassName: gvisor`. Keep gVisor for WordPress only if response times and error rates stay within an agreed margin (e.g. 95th-percentile latency no more than 20% worse); record the numbers and decision in `docs/phase-1-russetleaf-dev/adr/1009-gvisor-sandboxing.md`.
@@ -641,6 +670,7 @@ Review the policy reports, fix violations, then switch to **enforce**.
 
 ### Step 7.1: Falco
 **Do:** `platform/falco/`: Falco with the **modern eBPF** driver (Talos doesn't allow kernel modules) and its **gVisor event source** for pods running under gVisor (step 6.5), Falcosidekick to Alertmanager, Grafana and Slack (`#rl-security`, warning priority and above), and custom rules: shell in WordPress pods; writes under `/var/www/html`; and **process allow-lists** per workload (WordPress: `apache2`, `php`, and `bash` **only as the container's first process running the entrypoint scripts** `docker-entrypoint.sh` and `apache2-foreground`; Phase 2 adds the summarizer, gateway and llama.cpp lists and a box 2 egress rule), alerting on any other process (see the Phase 1 design's [Process allow-listing](design.md#process-allow-listing) and `docs/phase-1-russetleaf-dev/adr/1015-process-allow-listing.md`).
+
 - **MITRE ATT&CK detection map (ADR 1036):** `docs/security/attack-coverage.md` mapping each detection (Falco rules with their MITRE tags, the Kubernetes audit alerts, GuardDuty finding types, Hubble drops, CrowdSec) to the **ATT&CK for Containers** techniques it covers, listing the uncovered techniques as accepted or planned; a Grafana panel of Falco alerts by technique.
 - **Falco's own health:** Falco and Falcosidekick metrics with ServiceMonitors, and the alerts `FalcoNotRunning` (fewer ready Falco pods than nodes for 10 minutes; to `#rl-security` and `#rl-critical`), `FalcosidekickOutputErrors` and `FalcoEventsDropped` (to `#rl-security`), each with a runbook.
 
@@ -653,6 +683,7 @@ Review the policy reports, fix violations, then switch to **enforce**.
 
 ### Step 7.3: OpenCost
 **Do:** `platform/opencost/` using the existing Prometheus, with custom prices for the home hardware (electricity per node). Then, as in the Phase 1 design ([Cost monitoring and alerts](design.md#cost-monitoring-and-alerts)):
+
 - `PrometheusRule` cost alerts from OpenCost's metrics, labeled `team=cost` (to `#rl-costs`), with runbooks: `NamespaceDailyCostSpike` now, and `GPUNodeRunningLong` in the AWS overlay later.
 - A **weekly summary** workflow (scheduled GitHub Actions on the in-cluster runners) that queries OpenCost's API for the last 7 days, grouped by namespace, and posts the top items to `#rl-costs`.
 - Record the decisions in `docs/phase-1-russetleaf-dev/adr/1012-opencost-and-aws-billing.md`.
@@ -682,6 +713,7 @@ Review the policy reports, fix violations, then switch to **enforce**.
 
 ### Step 7.8: Rollback runbooks and drills
 **Do:** write `docs/runbooks/rollback-<layer>.md` for each layer in the Phase 1 design's [Rollback strategy](design.md#rollback-strategy) (applications, platform, configuration, Terraform, Talos, Kubernetes, secrets, data; Cilium and Kyverno already exist), then run the first **drills**:
+
 - in staging: roll back a release with a Git revert, abort a canary, and restore a MariaDB backup
 - locally: a `talosctl rollback` on a Talos-in-Docker cluster, and the Cilium and Kyverno recovery paths in a kind cluster
 - a secret rollback to `AWSPREVIOUS`
@@ -816,6 +848,7 @@ These keep russetleaf.dev healthy once it's running. Add each as a calendar remi
 ## Later phases
 
 Not part of this plan:
+
 - **[Phase 2: AI summaries and MLOps](../phase-2-ai-mlops/plan.md)** (optional): the `russetleaf-llm-summarizer` repo, SQS and Bedrock, box 2 as the LLM node, the summarizer, the LLM gateway, the self-hosted model, the evaluation gate, MLflow, guardrails, online evaluation and the feedback loop.
 - **[Phase 3: russetleaf.com on EKS](../phase-3-russetleaf-com/plan.md)** (optional): the russetleaf-com account, `russetleaf-infra/envs/aws-edge` and `envs/aws` (Route 53, CloudFront, the offline page, VPC, EKS, RDS for MariaDB, ElastiCache, WAF), `overlays/aws` for every component, Karpenter, the AWS Load Balancer Controller, ExternalDNS, the EBS CSI driver, kube-bench, Pod Identity roles, the `seed-from-dev` Job, and EKS as a second spoke of the Argo CD hub.
 

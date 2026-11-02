@@ -13,22 +13,27 @@ The network plugin (CNI) is one of the most consequential and hardest-to-change 
 The design needs: enforced default-deny policies, **outbound rules by DNS name** (AWS service IPs change constantly), some **layer-7** rules, flow visibility, encryption between nodes, and the same policy model on both clusters.
 
 ## Decision
+
 - **Cilium** on both clusters, with **CiliumNetworkPolicies** (and a cluster-wide default-deny baseline), **Hubble** for flow visibility and metrics, and **WireGuard** transparent encryption.
 - **Talos:** Cilium as the full CNI, replacing Flannel **and kube-proxy**.
 - **EKS:** see ADR 3003.
 
 ## Alternatives considered
+
 - **Flannel (Talos default):** simple, but no network policy enforcement at all.
 - **Calico:** mature, enforces standard and its own policies, supports DNS-based rules in some editions and WireGuard; a credible choice. Cilium was preferred for its eBPF data path (replacing kube-proxy), Hubble's built-in flow visibility and metrics, layer-7 policies, and its strong fit with Tetragon.
 - EKS-specific alternatives (the VPC CNI alone, Cilium in ENI mode): see ADR 3003.
 
 ## Consequences
+
 - One policy model, one observability tool and one set of alerts across both clusters.
 - DNS-name outbound rules make "WordPress may only reach S3, SQS, SES and STS" enforceable.
 - More moving parts than the defaults: Cilium upgrades are high-risk (ADR 1016's Cilium recovery path), and Talos requires specific Cilium settings.
 
 ## When to revisit
+
 - A managed alternative (e.g. AWS adding DNS-based policies to the VPC CNI) closes the gap.
 
 ## Open items
+
 - Phase 1 step 2.2: install and connectivity tests (EKS: ADR 3003).

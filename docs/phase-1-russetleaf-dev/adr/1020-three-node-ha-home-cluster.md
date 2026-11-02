@@ -12,6 +12,7 @@
 The home lab had two nodes with 8 GB of RAM each: box 1 (single control plane, all workloads, about 6–7 GB in use) and box 2 (worker dedicated to the LLM). Memory ruled out several useful tools (always-on tracing, Tetragon, CrowdSec), and the cluster had single points of failure everywhere (ADR 1014). A third machine was bought: an **Intel i5-8500T (6 cores, 35 W) with 16 GB of RAM and an NVMe SSD**.
 
 ## Decision
+
 - **Three control-plane nodes**, each also running workloads, so etcd keeps quorum when any one node fails, with **Talos's shared virtual IP** for the Kubernetes API:
 
 | Node | Hardware | Roles |
@@ -30,6 +31,7 @@ The home lab had two nodes with 8 GB of RAM each: box 1 (single control plane, a
 - **Still not HA:** one home power supply and one internet connection; a **UPS** is recommended now that the cluster survives a node loss.
 
 ## Alternatives considered
+
 - **One control plane (box 3) plus two workers:** simpler, but no control-plane HA; losing box 3 would stop the cluster.
 - **Two control planes:** worse than one, since etcd needs a majority (2 of 2) and so tolerates no failures.
 - **Moving the LLM to box 3** (6 cores, more memory): a 7–8B model would run faster, but crowds the main workloads; kept as a later experiment.
@@ -37,6 +39,7 @@ The home lab had two nodes with 8 GB of RAM each: box 1 (single control plane, a
 - **MariaDB Galera (multi-primary):** needs three database members, but box 2 is reserved for the LLM; primary–replica replication with automatic failover covers a single-node loss.
 
 ## Consequences
+
 - The home site survives the loss of any one node; Talos and Kubernetes upgrades become **rolling, with no downtime**.
 - Database recovery point for a node loss drops from **≤ 6 hours** to **seconds** (replication lag); recovery time from **hours** to **about a minute** (failover).
 - Memory pressure is gone; tools previously ruled out become possible.
@@ -45,11 +48,13 @@ The home lab had two nodes with 8 GB of RAM each: box 1 (single control plane, a
 - Power and internet remain single points of failure.
 
 ## When to revisit
+
 - Summary quality matters more: move the model to box 3, or add a fourth node for workloads.
 - A UPS and backup internet are added: update ADR 1014's home targets again.
 - More nodes with spare disks: reconsider replicated storage (Longhorn) for volumes other than the database.
 
 ## Open items
+
 - Phase 1 step 2.2: the three-node Talos configuration with the virtual IP and reservations; record etcd health under LLM load.
 - Phase 1 step 4.5: MariaDB replication and a failover test.
 - Phase 1 step 7.11: the first node-failure drills; record timings in ADR 1014.

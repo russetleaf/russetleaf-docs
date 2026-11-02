@@ -37,6 +37,7 @@ flowchart LR
 ```
 
 ## How the documents are organized
+
 - **Where to read it:** in the `russetleaf-docs` repo, or as the docs site built from it (ADR 1038).
 - **This overview:** what's shared by all phases: how the two sites compare, security by layer, the threat model, platform security, compliance, portfolio highlights, the operations budget, effort and timelines, the repositories, and the index of all decisions.
 - **Each phase folder:** `design.md` (what's built and why), `plan.md` (the steps to build it, with a progress checklist), `roadmap.md` (milestones with target and actual dates; Phase 1's [roadmap](phase-1-russetleaf-dev/roadmap.md)) and `adr/` (the decisions first made in that phase).
@@ -184,6 +185,7 @@ Which compliance frameworks the project follows, and how, recorded in `docs/phas
 What each phase lets you show. Phase 1 on its own is a complete portfolio project; Phases 2 and 3 add to it.
 
 ### Phase 1: russetleaf.dev
+
 - **One set of GitOps manifests, two live sites.** Argo CD deploys the same Helm charts and values to russetleaf.dev and russetleaf.com, with small per-environment overrides (`overlays/home`, `overlays/aws`). Only the domain and backing services change: in-cluster MariaDB vs RDS, Valkey vs ElastiCache, Cloudflare vs CloudFront, a CPU worker vs a Karpenter GPU NodePool for the model. *(Completed by Phase 3.)*
 - **Real AWS integration from home:** S3 media offload, SQS, Secrets Manager, S3 backups, Bedrock and IAM are all managed by Terraform.
 - **Performance engineering:** smoke, load, stress, spike, soak and AI-burst tests with k6 (distributed in-cluster), results beside system metrics in Grafana, a performance regression gate in promotion, and capacity numbers that set SLOs and costs.
@@ -222,6 +224,7 @@ What each phase lets you show. Phase 1 on its own is a complete portfolio projec
 - **Documentation:** architecture diagrams for both environments, the cost breakdown, Grafana dashboard screenshots, Slack alert screenshots, runbooks, sample evaluation reports comparing models, and demo recordings.
 
 ### Phase 2: AI summaries and MLOps
+
 - **Generative AI run like production software:** Bedrock integration with least-privilege IAM, event-driven scaling to zero, a dead-letter queue, and cost controls, with the same code running on both clusters.
 - **Model serving on Kubernetes:** a self-hosted model on dedicated nodes (labels, taints, tolerations, node selectors), behind an LLM gateway with routing, fallback, canary splits, rate limits and budgets, so no single model provider is a dependency.
 - **The full MLOps lifecycle:** MLflow experiment tracking and model registry with lineage, guardrails against prompt injection and personal-data leaks, online evaluation and drift alerts, a LoRA fine-tuning (distillation) pipeline on a spot GPU (Phase 3) with evaluation against the base model, DVC-versioned data, and an editor feedback loop.
@@ -229,12 +232,14 @@ What each phase lets you show. Phase 1 on its own is a complete portfolio projec
 - **LLM monitoring:** token, latency, error, fallback and cost metrics per model and prompt version, plus model-server throughput, in Prometheus and Grafana, with alerts.
 
 ### Phase 3: russetleaf.com on EKS
+
 - **An always-on edge for an on-demand stack:** russetleaf.com's CloudFront distribution falls back to an offline page automatically whenever the EKS stack is down, with ExternalDNS and the Load Balancer Controller handling the switch, and RDS snapshots carrying content between demos.
 - **EKS node autoscaling with Karpenter:** general and GPU NodePools, spot with interruption handling, and consolidation, with a documented reason it doesn't apply to fixed home hardware.
 
 ## Operations budget
 
 Running this many systems is a lot for one person, so operations have a deliberate budget:
+
 - **Automate first:** Renovate auto-merges patches; scans, reports, version-age checks, cost reports and backups run on schedules and post results to Slack; drills are scripted where possible. Most weeks need no manual work beyond reading Slack.
 - **Minimum cadence** (when time is short): **one monthly maintenance window of 2–4 hours**: review Renovate pull requests and Security Hub, read the automated reports, run one drill (alternating restore, rollback, node failure), and apply Talos patches. Security releases (48 hours) and real alerts are always handled.
 - **Full cadence** (when time allows): everything in the plans' ongoing-operations tables (weekly reviews, monthly and quarterly drills, demos).
@@ -279,6 +284,7 @@ The project's code is split across four Git repositories, by **what each one con
 | **`russetleaf-llm-summarizer`** | The **standalone MLOps project**: summarizer code, prompts, evaluation set and gate, Helm chart, model card, local demo | Signed image + **Helm chart** (OCI), evaluation reports | Its own CI | Code, prompt or model-evaluation changes |
 
 ### Why four repos instead of one
+
 - **Config is kept separate from code** (standard Argo CD practice). Argo CD watches only `russetleaf-gitops`, so building an image never triggers a deploy by accident, and every deploy is a reviewed commit in one place.
 - **Permissions stay limited by repo.** Only `russetleaf-infra`'s CI can change cloud infrastructure. The image repos can push images and open pull requests, nothing more. Argo CD only reads.
 - **Each repo changes at its own pace**, with its own history, CI and releases.
@@ -511,6 +517,7 @@ russetleaf-wordpress/
 ```
 
 ### Release and promotion flow
+
 1. A change is merged in `russetleaf-wordpress` or `russetleaf-llm-summarizer` after its unit tests and **ci** kind-cluster tests pass (for `russetleaf-llm-summarizer`, a release tag such as `v1.4.0`, after the evaluation gate passes).
 2. CI builds the image (and chart), generates the SBOM, scans it, signs it with cosign, and pushes it to the registry.
 3. The bot opens a pull request on `russetleaf-gitops` that changes only the version in **`overlays/home-staging`**, linking the release notes (and, for the summarizer, the evaluation report). It merges automatically once `russetleaf-gitops` CI (rendering, schema checks, Kyverno policy tests) passes.
@@ -533,23 +540,27 @@ russetleaf-wordpress/
 
 ### Making a change that spans repos
 Work **infrastructure first, then code, then config**, so nothing is deployed before what it depends on exists. Example: the summarizer needs a new SQS queue.
+
 1. `russetleaf-infra`: add the queue and its IAM permission; merge and apply.
 2. `russetleaf-llm-summarizer`: add support for it in code; release.
 3. `russetleaf-gitops`: merge the bot's chart-bump pull request and add the new queue URL to the values for each environment.
 
 ### Building it from scratch
 **russetleaf.dev home lab (once):**
+
 1. `russetleaf-infra/bootstrap`: apply locally to create the Terraform state bucket and the GitHub OIDC roles.
 2. `russetleaf-infra/envs/home`: apply locally to create the Talos cluster on all three boxes, the Cloudflare tunnel and DNS for russetleaf.dev, and the AWS resources used from home. Save the kubeconfig and talosconfig it produces somewhere safe (not in Git).
 3. Install Argo CD once with Helm, then apply `russetleaf-gitops/bootstrap/home`. From then on, Argo CD manages everything else, including itself if you add Argo CD to `platform/`.
 4. Add the secrets the cluster needs to AWS Secrets Manager (WordPress admin and application passwords; **not** the database passwords, which MariaDB Operator generates; Cloudflare tunnel token, scoped IAM keys for home until the OIDC stretch goal is done); External Secrets syncs them in.
 
 **russetleaf.com always-on edge (once):**
+
 1. If russetleaf.com is registered outside Route 53, point the domain's name servers at the Route 53 hosted zone after the first apply.
 2. `terraform apply` in `russetleaf-infra/envs/aws-edge`. This creates the hosted zone, certificates, CloudFront distribution, offline page and media bucket.
 3. Check that russetleaf.com shows the offline page with a link to russetleaf.dev.
 
 **russetleaf.com demo (each time):** run the `demo-up` and `demo-down` workflows in `russetleaf-infra`, which perform these steps:
+
 1. `terraform apply` in `russetleaf-infra/envs/aws`. This creates the stack (restoring RDS from the latest snapshot) and installs Argo CD pointed at `russetleaf-gitops/bootstrap/aws`.
 2. Wait for Argo CD to sync. Once ExternalDNS creates `origin.russetleaf.com`, russetleaf.com switches from the offline page to the live site on its own, and the workflow posts "demo started" to `#rl-com-alerts`. Demo.
 3. Silence russetleaf.com's alerts in Alertmanager, remove the Argo CD Applications (the ALB and `origin.russetleaf.com` are deleted, and russetleaf.com falls back to the offline page), then `terraform destroy` in `envs/aws`, and post "demo stopped" to `#rl-com-alerts`. Never destroy `envs/aws-edge`.
