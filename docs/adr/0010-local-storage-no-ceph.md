@@ -9,7 +9,7 @@
 ## Context
 **Ceph** is a distributed storage system that pools several servers' disks into replicated block, file and S3-compatible object storage, healing itself when a disk or server fails. **Rook** is the Kubernetes operator that runs Ceph inside a cluster, and Rook-Ceph is a standard choice for on-premises Kubernetes needing resilient storage. **Longhorn** is a lighter distributed block storage system for Kubernetes. Earlier versions of the design listed "local-path-provisioner or Longhorn" for home storage.
 
-The home cluster has two nodes with 8 GB of RAM each (box 1 already uses about 6–7 GB; box 2 is dedicated to the LLM), and probably one disk per node, used by Talos. The design keeps state **out of the cluster** on purpose: media, logs, traces and database backups are in S3, and code is in the image. Only MariaDB, Valkey and a few caches use local disk.
+*[Original two-node state; see ADR 0021 for the current three-node cluster.]* The home cluster has two nodes with 8 GB of RAM each (box 1 already uses about 6–7 GB; box 2 is dedicated to the LLM), and probably one disk per node, used by Talos. The design keeps state **out of the cluster** on purpose: media, logs, traces and database backups are in S3, and code is in the image. Only MariaDB, Valkey and a few caches use local disk.
 
 ## Decision
 - Use **local-path-provisioner** for all home persistent volumes.
@@ -21,7 +21,7 @@ The home cluster has two nodes with 8 GB of RAM each (box 1 already uses about 6
 - **Rook-Ceph:** needs at least three nodes for a healthy cluster (monitor quorum, three data copies), spare disks for Ceph to manage, and a lot of memory: each storage daemon (OSD) defaults to about 4 GB, plus monitors and a manager at roughly 1–2 GB each. The home cluster has none of this to spare.
 - **Longhorn:** lighter than Ceph, but also wants three nodes to replicate volumes, and still adds memory and disk overhead on box 1.
 - **Daily backups only (the previous plan):** simpler, but up to a day of posts could be lost.
-- **MariaDB replication to a second instance:** would need box 2's memory, which is reserved for the model.
+- ~~**MariaDB replication to a second instance:** would need box 2's memory, which is reserved for the model.~~ **Superseded by ADR 0021:** with a third node, the replica runs on box 1 (box 3 took over the main workloads), so replication is now used.
 
 ## Consequences
 - No storage system to run, upgrade or debug; no memory spent on storage daemons.

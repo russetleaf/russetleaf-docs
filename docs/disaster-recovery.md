@@ -69,7 +69,7 @@ Kept in your password manager, with a **printed copy** of the starred items stor
 2. **Code:** restore the four repos (from GitHub, or the mirrors in the backup account).
 3. **Terraform state:** use the russetleaf-infra state bucket, or copy it back from the Backup account.
 4. **Account foundations:** apply `wp-infra/envs/org/` (Organization, accounts, SCPs, Identity Center) and `envs/security/` (CloudTrail, GuardDuty, Security Hub, Config), then `bootstrap/` (state bucket, CI roles).
-5. **Home infrastructure:** apply `wp-infra/envs/home` (Talos on both boxes, Cloudflare, the AWS resources used from home).
+5. **Home infrastructure:** apply `wp-infra/envs/home` (Talos on all three boxes, Cloudflare, the AWS resources used from home).
 6. **Secrets:** create or regenerate the entries in Secrets Manager; create the External Secrets bootstrap credential.
 7. **GitOps:** install Argo CD and apply `wp-gitops/bootstrap/home`; let the platform come up in sync-wave order.
 8. **Data:** restore MariaDB from the latest backup (from russetleaf-home or the Backup account); confirm media is present (or copy it back).

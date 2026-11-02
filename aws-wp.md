@@ -169,7 +169,7 @@ Separate workload accounts limit how far a compromise can spread, and give each 
 - **AWS Well-Architected review:** a review of the design with the free **Well-Architected Tool** (Security pillar first), with the report kept in `docs/` and revisited yearly.
 
 ### Cost
-Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-access findings are free. **Security Hub, Config and KMS** add roughly **$5–15/month**, depending mostly on how many resources Config records (focused recording keeps the demo stack's churn in check). That brings the always-on total to about **$15–35/month**: still within the $30–50 budget with demos, nearer its top.
+Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-access findings are free. **Security Hub, Config and KMS** add roughly **$5–15/month**, depending mostly on how many resources Config records (focused recording keeps the demo stack's churn in check). That brought the always-on total to about $15–35/month; with box 3's electricity (ADR 0021) it's now about **$18–40/month**. That figure is the **whole** always-on cost (the security services are already included in it, not added on top). With about 20 demo hours a month (~$20), the total is **$30–60/month**; keeping demos to about 10 hours keeps it **under $50**.
 
 ## What production-ready adds
 
@@ -177,7 +177,7 @@ Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-acc
 - **RDS for MariaDB** with **Multi-AZ** turned on. (Aurora doesn't offer MariaDB; if the site outgrew RDS, Aurora MySQL would be the next step, at the cost of switching engines.) **RDS Proxy** in front of it keeps failovers to seconds.
 - At least **2–3 WordPress replicas** spread across availability zones, plus a **HorizontalPodAutoscaler** and **PodDisruptionBudgets**.
 - EKS worker nodes in **multiple AZs**, provisioned by **Karpenter** (see Delivery and operations).
-- **What this project actually runs:** this design is highly available within one region **while the demo runs**, with two deliberate demo cuts (one NAT Gateway instead of three; one spot GPU node, with the gateway falling back to Bedrock). The home lab isn't highly available at all. Both are explained, with recovery targets and the changes (and costs) that would add HA, in `docs/adr/0015-availability-levels.md`.
+- **What this project actually runs:** this design is highly available within one region **while the demo runs**, with two deliberate demo cuts (one NAT Gateway instead of three; one spot GPU node, with the gateway falling back to Bedrock). The home lab, with three control-plane nodes, replicated MariaDB and spread workloads, **survives any single node failure**, but its home power supply and internet connection remain single points of failure (ADR 0021). Both are explained, with recovery targets and the changes (and costs) that would add HA, in `docs/adr/0015-availability-levels.md`.
 
 ### Traffic and edge
 - **Application Load Balancer** through the AWS Load Balancer Controller, with **TLS certificates from ACM**. Its DNS name (`origin.russetleaf.com`) is managed by **ExternalDNS**.
@@ -210,7 +210,7 @@ Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-acc
 |---|---|---|
 | Signed images | Image verification (`verifyImages`, cosign keyless) | Only images signed by the `wp-image` and `llm-summarizer` release workflows run as the project's own workloads; tags are replaced with **digests** at admission (`mutateDigest`), so a re-pushed tag can't change what runs |
 | SBOM attestations | Image verification with an `attestations` check | The project's own images must also carry a **signed SBOM attestation** from the same release workflow; an image without one is rejected |
-| Build provenance | Image verification with an `attestations` check for **SLSA provenance** | The project's own images must also carry a **SLSA build provenance** attestation from GitHub's attestation action, issued to the same release workflow (check Kyverno's current support for GitHub attestation bundles) |
+| Build provenance | Image verification with an `attestations` check for **SLSA provenance** | The project's own images must also carry a **SLSA build provenance** attestation from GitHub's attestation action, issued to the project's **reusable build workflow** (check Kyverno's current support for GitHub attestation bundles) |
 | Signed upstream images | Image verification (`verifyImages`) per upstream publisher | Third-party images from publishers that sign with cosign (e.g. **Kyverno** and **Cilium**; check each upstream's current practice before relying on it) must carry a valid signature from **that publisher's** release identity, so a tampered or substituted upstream image is rejected, not just one from an unknown registry. Images from publishers that don't sign stay covered by the registry allow-list and digest pinning. The list of verified publishers and their identities is kept in the policy, and new entries start in audit mode. Kyverno's own namespace is excluded from these checks, so Kyverno can always start (otherwise it could block itself) |
 | Allowed registries | **Restrict Image Registries** (`restrict-image-registries`) | Every container (including init and ephemeral containers) comes from `ghcr.io/<you>/*` or an explicit list of upstream registries used by the platform charts (Cilium, Falco, Argo CD, MariaDB, ...); on EKS, also AWS's own add-on registries |
 | No `latest` tag | **Disallow Latest Tag** (`disallow-latest-tag`) | Every image has an explicit tag or digest |
@@ -310,7 +310,7 @@ The goal of process allow-listing is "**only these programs may run in this cont
 
 | Workload | Expected processes | Anything else |
 |---|---|---|
-| WordPress | `apache2`, `php` (and the image's startup script at container start) | Alert (e.g. a shell, `curl`, `wget`, a crypto miner) |
+| WordPress | `apache2`, `php`, and **`bash` only as the container's first process, running the image's entrypoint scripts** (`docker-entrypoint.sh`, `apache2-foreground`); any other shell alerts | Alert (e.g. a shell, `curl`, `wget`, a crypto miner) |
 | Post-summarizer | `python` | Alert |
 | LiteLLM gateway | `python` (LiteLLM) | Alert |
 | llama.cpp | the `llama-server` binary (and the init container's download step) | Alert |
@@ -380,7 +380,7 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
 | Publish | Push **by digest** to GHCR (image and chart) | Only after everything above passes |
 | Sign | **cosign** keyless (GitHub OIDC → Fulcio certificate) | Signature recorded in **Rekor** |
 | SBOM | **Syft** SBOM, attached with **cosign attest** | Attestation recorded in **Rekor** |
-| Build provenance | GitHub's **`actions/attest-build-provenance`** | A signed **SLSA provenance** record of how and where the image was built (repo, commit, workflow, runner), stored with the image and, on public repos, recorded in **Rekor** |
+| Build provenance | GitHub's **`actions/attest-build-provenance`**, with the build run as a **reusable workflow** | A signed **SLSA provenance** record of how and where the image was built (repo, commit, workflow, runner), stored with the image and, on public repos, recorded in **Rekor**. On its own this is **SLSA Build Level 2**; running the build in a reusable workflow (a shared build workflow each repo's release calls) reaches **Build Level 3** as GitHub documents it |
 | Verify | `cosign verify`, `cosign verify-attestation`, `gh attestation verify` on the pushed digest | A broken signature or attestation fails the release, not the deploy |
 | Release notes | GitHub release | Image and chart **digests** plus **Rekor log entry** links, so anyone can audit the transparency log (e.g. with `rekor-cli`) |
 | Repo practices | **OpenSSF Scorecard** (weekly, all four repos) | Scores branch protection, pinned dependencies, token permissions, signed releases and more; badge on each README |
@@ -612,7 +612,7 @@ dashboards:
 ```
 
 What else is needed for this to work:
-- **Install order:** the ServiceMonitor resource type comes from the Prometheus Operator, which arrives after Cilium. Install the **`prometheus-operator-crds`** chart in the first Argo CD sync wave, and have Terraform's bootstrap install of Cilium keep its ServiceMonitors **off**; the Argo CD-managed Cilium values then turn them on.
+- **Install order:** the ServiceMonitor resource type comes from the Prometheus Operator, which arrives after Cilium. Install the **`prometheus-operator-crds`** chart (from the **prometheus-community** Helm repository, `https://prometheus-community.github.io/helm-charts`) in the first Argo CD sync wave, and have Terraform's bootstrap install of Cilium keep its ServiceMonitors **off**; the Argo CD-managed Cilium values then turn them on.
 - **Prometheus must look in Cilium's namespace:** in kube-prometheus-stack, set `serviceMonitorSelectorNilUsesHelmValues: false` (and the same for PodMonitors and rules) so Prometheus picks up ServiceMonitors from every namespace, including `kube-system` where Cilium runs.
 - **Grafana must load the dashboards:** keep kube-prometheus-stack's Grafana dashboard sidecar watching all namespaces (or the `monitoring` namespace the dashboards are written to), with its default `grafana_dashboard: "1"` label.
 - **Layer-7 metrics** (`httpV2`) only appear for traffic that a layer-7 policy rule inspects (e.g. summarizer → WordPress REST API). That's intended: full HTTP visibility everywhere would cost memory box 1 doesn't have.
@@ -1033,7 +1033,7 @@ Changes never go straight to a live site. Every change to the WordPress image, t
 |---|---|---|---|---|
 | **local** | Your Ubuntu workstation: Docker Compose, plus a local Kubernetes cluster (kind, or Talos in Docker with `talosctl cluster create`) | Fast build-and-try loop for the image, charts and summarizer; rehearse Talos upgrades and manifest changes | On demand | $0 |
 | **ci** | A temporary **kind** cluster inside GitHub Actions, created for each pull request | Install the changed charts and run integration tests against **LocalStack** (local stand-ins for S3, SQS and Secrets Manager) and a **mock LLM** (LiteLLM's mock responses), so no AWS account or model is needed | Minutes per pull request | $0 (GitHub-hosted runners are free for public repos) |
-| **staging** | The home cluster, in its own namespaces, at `staging.russetleaf.dev` behind Cloudflare Access | Run each new version against **real** AWS services and real models, with real (scrubbed) content, before production | **On demand only (scale-to-zero):** created for each promotion, deleted when tests finish | ~$0–1/month; ~0.7–1 GB of box 1's memory, only while running |
+| **staging** | The home cluster, in its own namespaces, at `staging.russetleaf.dev` behind Cloudflare Access | Run each new version against **real** AWS services and real models, with real (scrubbed) content, before production | **On demand only (scale-to-zero):** created for each promotion, deleted when tests finish | ~$0–1/month; ~0.7–1 GB of memory (on box 1), only while running |
 | **prod (home)** | russetleaf.dev | The live site | 24/7 | see the home lab costs |
 | **prod (AWS demo)** | russetleaf.com | The full production design, for demos | On demand | see the AWS costs |
 
@@ -1053,7 +1053,7 @@ Staging exists **only while it's being tested** (scale-to-zero): it keeps the cl
   1. Syncs the staging Applications and waits until they're healthy.
   2. Runs the **data Job**: copies the latest russetleaf.dev production backup from S3, imports it into the staging MariaDB, and **scrubs personal data** (user emails, commenter names and emails, application passwords) before anything else touches it.
   3. Runs the **smoke-test Job**: the home page and a few posts load, an upload goes to the staging S3 bucket, publishing a post produces a summary through the real gateway and real Bedrock models.
-  4. Runs a **short load test** and compares it with the last production baseline: a release more than about 20% slower, or over the error threshold, **fails** (see [Performance and stress testing](#performance-and-stress-testing)).
+  4. Load-tests the **current production version and the candidate back to back in staging** (three runs each, comparing medians): a release more than about 20% slower, or over the error threshold, **fails** (see [Performance and stress testing](#performance-and-stress-testing)).
   5. **Soaks** briefly (e.g. 30 minutes), checking Prometheus for errors and crash loops.
   6. Records the results, then **deletes** the staging Applications and their volumes (with cascade), returning staging to zero.
 - **Separate everything at runtime:** staging has its own namespaces, MariaDB instance (no Valkey, to save memory), media bucket, SQS queue, Secrets Manager entries and a **LiteLLM key with its own small Bedrock budget**. It shares the gateway and the llama.cpp model with production. Its IAM key can **read** the production backup bucket but write only to staging resources.
@@ -1092,7 +1092,7 @@ Performance is tested on purpose, at several levels, not just checked for correc
 - **Results** go to **Prometheus** (k6's remote-write output), shown in Grafana beside the system metrics (CPU, memory, database, queue depth, Bedrock calls) for the same time window, and are summarised in `docs/performance/`.
 
 ### Performance regression gate
-The `staging-test` workflow also runs a **short load test** (a few minutes at expected traffic) and compares its 95th-percentile latency and error rate with the **last production baseline** (recorded after each promotion). A release that is more than about **20% slower**, or above the error threshold, **fails promotion**, in the same way an exhausted error budget does. The baseline and the comparison are attached to the promotion pull request.
+The `staging-test` workflow also load-tests the **current production version and the candidate back to back in staging**: same hardware and conditions, minutes apart, a few minutes at expected traffic, **three runs each**, comparing the **medians** of 95th-percentile latency and error rate. A candidate more than about **20% slower**, or above the error threshold, **fails promotion**, in the same way an exhausted error budget does. The gate **waits** while box 2 is busy with a summarization burst or a stress test is running, so shared-cluster load doesn't cause false failures. The comparison is attached to the promotion pull request; production baselines (measured after each promotion) are kept for trends and the capacity plan.
 
 ### How results are used
 - **SLO targets** (ADR 0023) are set from measured capacity, not guesses.
@@ -1434,14 +1434,26 @@ The full AWS stack costs too much to run 24/7 as a portfolio project. Instead:
 | Node | Hardware | Role |
 |---|---|---|
 | Box 3 | **Intel i5-8500T** (6 cores, 35 W), **16 GB** RAM, NVMe SSD | Talos **control plane** + **main workloads**: Argo CD, monitoring, Loki, Tempo, platform services, a WordPress replica, the **MariaDB primary** |
-| Box 1 | Intel i3, 8 GB RAM | Talos **control plane** + **secondary workloads**: a WordPress replica, the **MariaDB replica**, second ingress-nginx and cloudflared replicas, staging runs |
-| Box 2 | Intel i3, 8 GB RAM | Talos **control plane** + **dedicated LLM** (label `workload=llm`, taint `dedicated=llm:NoSchedule`, set in its Talos machine config) and the CI runners |
+| Box 1 | Intel i3, 8 GB RAM, **SSD required** | Talos **control plane** + **secondary workloads**: a WordPress replica, the **MariaDB replica**, second ingress-nginx and cloudflared replicas, staging runs |
+| Box 2 | Intel i3, 8 GB RAM, **SSD required** | Talos **control plane** + **dedicated LLM** (label `workload=llm`, taint `dedicated=llm:NoSchedule`, set in its Talos machine config) and the CI runners |
 
 All three nodes are **control-plane nodes** that also run workloads, so etcd keeps quorum and the Kubernetes API stays up when any one node fails; **Talos's shared virtual IP** gives the API a single address that moves to a healthy node. The layout is recorded in `docs/adr/0021-three-node-ha-home-cluster.md`.
 
 **Protecting etcd:** etcd is sensitive to CPU starvation and disk latency. llama.cpp on box 2 gets a **CPU limit that leaves about one core free**, every node sets Talos's **system and kubelet reservations**, and every node uses an NVMe or SSD disk.
 
 **The model:** box 2 has about **5–5.5 GB** free for the model once its control-plane components are running. A **3B model** (4-bit) is the best fit: about 2.5–3.5 GB of RAM, and roughly 1–2 minutes per summary on an i3. That's fine for a queue handling 10–20 posts a month. A 7–8B model would be tight on box 2; moving the model to box 3 (6 cores, more memory) is a possible later experiment.
+
+**Disks:** all three nodes must use **SSD or NVMe** storage, because etcd runs on every node and is sensitive to disk latency. Check boxes 1 and 2; a spinning disk should be replaced with an inexpensive SATA SSD before installing Talos.
+
+**Memory budget** (estimates with every tier installed, including Staff):
+
+| Node | Main memory users | Estimated use |
+|---|---|---|
+| Box 3 (16 GB) | Talos control plane and etcd (~1.5 GB), Prometheus/Grafana/Alertmanager (~2 GB), Argo CD (~0.7 GB), Loki and Tempo (~0.8 GB), platform services (Kyverno, KEDA, External Secrets, Trivy Operator, OpenCost, LiteLLM, Argo Rollouts: ~2 GB), node agents (Cilium, Falco, Alloy: ~0.7 GB), MariaDB primary and a WordPress replica (~1.3 GB), MLflow and Argo Workflows (~0.6 GB), Backstage with PostgreSQL (~1.2 GB), Chaos Mesh, CrowdSec and Tetragon (~0.6 GB) | **~11–14 GB** |
+| Box 1 (8 GB) | Talos control plane and etcd (~1.5 GB), node agents (~0.7 GB), a WordPress replica, the MariaDB replica, ingress-nginx and cloudflared replicas (~1.5 GB), staging runs while they exist (~1 GB) | **~4.5–5 GB** |
+| Box 2 (8 GB) | Talos control plane and etcd (~1.5 GB), node agents (~0.7 GB), llama.cpp with a 3B model (~3.5 GB), CI runners while running (~0.5–1 GB) | **~6.5–7 GB** |
+
+**Rule:** if box 3 passes about **85%** memory use, move MLflow or Backstage to box 1 (which has the headroom), or upgrade box 3 to 32 GB (i5-8500T mini PCs take up to 64 GB). The plan checks memory at the steps that add large components.
 
 **Memory:** about **32 GB** in total, so the earlier squeeze on box 1 is gone. Requests and memory limits on everything (Kyverno requires them) still keep a busy pod from starving the others, and the extra room allows **Tempo always on**, **CrowdSec** and (after the EKS trial) **Tetragon** at home, and longer Prometheus retention (e.g. 15 days).
 
@@ -1554,7 +1566,7 @@ The full AWS design costs roughly **$1.00/hour** while running, including about 
 | 10 hours | ~$10 |
 | 20 hours | ~$20 |
 
-Together with the home lab, the total stays within **$30–$50/month**. If the AWS accounts are new, their free-tier credits can cover some of this.
+Together with the home lab (~$18–40/month always on), the total is about **$30–60/month** at 20 demo hours; keep demos to about **10 hours a month** to stay **under $50**. If the AWS accounts are new, their free-tier credits can cover some of this.
 
 **Tip:** set an AWS Budget with an email alert (e.g. at $25) so a forgotten `terraform destroy` doesn't run up a bill. The GPU node is the most expensive item to leave running.
 
@@ -1584,7 +1596,7 @@ Together with the home lab, the total stays within **$30–$50/month**. If the A
 - **Self-hosted CI on Kubernetes:** ephemeral GitHub Actions runners managed by ARC, with fork pull requests gated for a public repo.
 - **Pod permissions without stored keys at home (stretch goal):** publish the Talos cluster's service-account OIDC discovery files (e.g. in a public S3 bucket) and register them as an IAM OIDC provider. Pods such as WordPress (S3, SQS), the summarizer (SQS) and the gateway (Bedrock) then assume IAM roles without stored keys, just like IRSA on EKS. Until then, the home cluster uses narrowly scoped IAM user keys kept in Secrets Manager.
 - **A gated Terraform pipeline:** linting (tflint + AWS ruleset), Checkov with custom project policies, module tests, Infracost cost diffs, secret scanning with push protection, and approved applies of the exact reviewed plan through a GitHub Environment.
-- **Terraform for both sides, in one repo (`wp-infra`):** shared modules, plus separate root modules for russetleaf.com's always-on edge, its demo stack (including Karpenter and its NodePools), and the russetleaf.dev home lab (Talos provider `siderolabs/talos` for both nodes' machine configs, Cloudflare provider for the tunnel, DNS and WAF rules, and the AWS pieces used from home).
+- **Terraform for both sides, in one repo (`wp-infra`):** shared modules, plus separate root modules for russetleaf.com's always-on edge, its demo stack (including Karpenter and its NodePools), and the russetleaf.dev home lab (Talos provider `siderolabs/talos` for all three nodes' machine configs, Cloudflare provider for the tunnel, DNS and WAF rules, and the AWS pieces used from home).
 - **CI on GitHub in every repo:** Terraform checks and plans in `wp-infra`; manifest validation and Kyverno policy tests in `wp-gitops`; image builds with SBOMs, scans and signing in `wp-image` and `llm-summarizer`; and the prompt evaluation gate in `llm-summarizer`. Employers see all of it without the AWS stack running.
 - **A highly available home cluster:** three Talos control-plane nodes with a virtual IP, replicated MariaDB with automatic failover, workloads spread across nodes, rolling upgrades without downtime, and recorded node-failure drills (unplug a node, the site stays up).
 - **An AWS Security Reference Architecture foundation:** separate management, security tooling, log archive, backup, infrastructure and workload accounts; SCP guardrails; centralised root access management; Identity Center with MFA; organisation-wide Security Hub, GuardDuty, Config, Access Analyzer and CloudTrail, all in Terraform; and a Well-Architected review.
@@ -1629,7 +1641,7 @@ A scheduled workflow computes the four **DORA metrics** from GitHub (pull reques
 The home Argo CD becomes the **hub**: `demo-up` registers the EKS cluster with it (an Argo CD cluster secret using IAM authentication to EKS, with the EKS API endpoint restricted to the home network's address), and **ApplicationSets with cluster generators** deploy the AWS overlays to it automatically; `demo-down` removes the registration. EKS no longer needs its own Argo CD, and both clusters are managed from one place. (The per-cluster Argo CD from the AWS plan remains the fallback.) Recorded in ADR 0024.
 
 ### Reliability practice: chaos experiments and postmortems
-- **Chaos Mesh** runs **scheduled experiments**, each with a written hypothesis and expected outcome: kill the MariaDB primary, add latency to Bedrock calls, kill a WordPress pod mid-canary, fill a node's disk, partition box 2 from the others. Results go into `docs/chaos/`.
+- **Chaos Mesh** runs **scheduled experiments**, each with a written hypothesis and expected outcome: kill the MariaDB primary, add latency to model calls (injected at the LLM gateway with a Toxiproxy sidecar, since Chaos Mesh's network rules can't reliably target AWS endpoints whose addresses change), kill a WordPress pod mid-canary, fill a node's disk, partition box 2 from the others. Results go into `docs/chaos/`.
 - **Blameless postmortems** (`docs/postmortems/`, from a template: summary, impact, timeline, root causes, what went well, action items with owners) for every real incident and notable drill; at least two from the build itself.
 - **SLO-based paging** (above) and runbook standards: every page links a runbook. See `docs/adr/0025-reliability-practice.md`.
 
@@ -1996,7 +2008,7 @@ Work **infrastructure first, then code, then config**, so nothing is deployed be
 ### Building it from scratch
 **russetleaf.dev home lab (once):**
 1. `wp-infra/bootstrap`: apply locally to create the Terraform state bucket and the GitHub OIDC roles.
-2. `wp-infra/envs/home`: apply locally to create the Talos cluster on both boxes, the Cloudflare tunnel and DNS for russetleaf.dev, and the AWS resources used from home. Save the kubeconfig and talosconfig it produces somewhere safe (not in Git).
+2. `wp-infra/envs/home`: apply locally to create the Talos cluster on all three boxes, the Cloudflare tunnel and DNS for russetleaf.dev, and the AWS resources used from home. Save the kubeconfig and talosconfig it produces somewhere safe (not in Git).
 3. Install Argo CD once with Helm, then apply `wp-gitops/bootstrap/home`. From then on, Argo CD manages everything else, including itself if you add Argo CD to `platform/`.
 4. Add the secrets the cluster needs to AWS Secrets Manager (WordPress admin and application passwords; **not** the database passwords, which MariaDB Operator generates; Cloudflare tunnel token, scoped IAM keys for home until the OIDC stretch goal is done); External Secrets syncs them in.
 

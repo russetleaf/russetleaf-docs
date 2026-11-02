@@ -37,7 +37,7 @@ ThreatMapper's management console bundles several databases and services; its do
 
 ## Alternatives considered
 - **ThreatMapper:** broadest single tool, but its console needs more memory than box 1 has, and it duplicates tools already built into CI and the clusters.
-- **AWS Security Hub** (with the Foundational Security Best Practices standard): continuous and AWS-native, but billed per check, and covers only AWS; a reasonable upgrade if the account ever holds production data.
+- ~~**AWS Security Hub** (with the Foundational Security Best Practices standard): continuous and AWS-native, but billed per check, and covers only AWS; a reasonable upgrade if the account ever holds production data.~~ **Superseded by ADR 0020:** Security Hub is now used as the continuous check, with Prowler as a second opinion.
 - **Kubescape or Trivy for cloud posture:** focused on Kubernetes and images rather than full AWS account configuration.
 - **No account scanning:** leaves configuration done outside Terraform unchecked.
 
@@ -48,7 +48,7 @@ ThreatMapper's management console bundles several databases and services; its do
 
 ## When to revisit
 - Much more memory available (e.g. a dedicated security node), making ThreatMapper's console affordable.
-- The AWS account holding production or personal data: consider AWS Security Hub for continuous checks.
+- ~~The AWS account holding production or personal data: consider AWS Security Hub for continuous checks.~~ Done (ADR 0020).
 - Many more services, where attack-path ranking would help prioritise findings.
 
 ## Open items

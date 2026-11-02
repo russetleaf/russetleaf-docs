@@ -142,7 +142,7 @@ Record each answer in the [decision log](#decision-log).
 **Do:**
 - Using the shared modules: summary SQS queue + dead-letter queue, Secrets Manager entries for russetleaf.com, Bedrock access (gateway role + budget alert).
 - **WAF web ACL** for the ALB (AWS managed rule groups: core rule set, known bad inputs, WordPress, IP reputation; rate limiting on `/wp-login.php`).
-- **Pod Identity associations** (one IAM role per service account, least privilege): WordPress (media bucket, send to queue, SES send, **`rds-db:connect` on the proxy's `wordpress` user**), summarizer (read from queue), LiteLLM (Bedrock invoke on chosen models), External Secrets (russetleaf.com secrets), KEDA (queue attributes), ExternalDNS (the russetleaf.com zone), Load Balancer Controller, llama.cpp init container (model mirror bucket, read only), seed Job (read russetleaf.dev's backup and media buckets **in the russetleaf-home account**, granted by bucket policies there (and KMS key policies if those buckets use customer-managed keys), write russetleaf.com media bucket, `rds-db:connect` through the proxy), `db-setup` Job (read the RDS-managed master secret and the `wordpress` secret), Falcosidekick/OpenCost if they need AWS APIs.
+- **Pod Identity associations** (one IAM role per service account, least privilege): WordPress (media bucket, send to queue, SES send, **`rds-db:connect` on the proxy's `wordpress` user**), summarizer (read from queue), LiteLLM (Bedrock invoke on chosen models), External Secrets (russetleaf.com secrets), KEDA (queue attributes), ExternalDNS (the russetleaf.com zone), Load Balancer Controller, llama.cpp init container (model mirror bucket, read only), seed Job (read russetleaf.dev's backup and media buckets **in the russetleaf-home account**, granted by bucket policies there (and KMS key policies if those buckets use customer-managed keys), write russetleaf.com media bucket, `rds-db:connect` through the proxy), `db-setup` Job (read the RDS-managed master secret and the `wordpress` secret), **fine-tuning training role** (step 4.5: write to the MLflow artifact and DVC buckets in **russetleaf-home**, granted there by the `s3-mlops` module's cross-account bucket policy; read the training data), Falcosidekick/OpenCost if they need AWS APIs.
 - SES SMTP credentials (or an IAM role for an SES API plugin) in Secrets Manager, the **Google OAuth client** secret for russetleaf.com (a separate client from russetleaf.dev's, redirect URL `https://russetleaf.com/...`, created in the Google Cloud console), and the **Slack bot token** entry for russetleaf.com (same bot, separate entry so the sites stay independent).
 - **`alerting` module:** SNS topics; CloudWatch alarms for the ALB (5xx rate, target response time), RDS (CPU, free storage, connections, replica lag) and ElastiCache (memory, evictions), created and destroyed with the demo stack; Amazon Q Developer channel configurations for `#rl-com-alerts`, `#rl-critical` and `#rl-costs` (the Slack workspace is authorised once in the AWS console, then managed in Terraform).
 
@@ -300,6 +300,11 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 
 **Test:** a complete demo runs in under an hour of stack time, and the recording is linked from the hub README.
 
+### Step 6.3: Documentation
+**Do:** add the russetleaf.com architecture diagram and demo recording to the hub README; update `aws-wp.md` wherever the build differed from the design.
+
+**Test:** the hub README explains both sites, with links to the recording, reports and dashboards.
+
 ### Step 6.4: Load, stress, spike and burst tests (capacity data)
 **Do:** during a demo, using the k6 Operator on EKS (the same `wp-gitops/perf/` scripts as home), run a **load** test, a **stress / breakpoint** test (ramp until failure, and check it recovers on its own), a **spike** test (about 10× suddenly, to time HPA and Karpenter scale-up), and an **AI pipeline burst** (200–500 posts queued); for edge tests through CloudFront, apply a temporary AWS WAF allow rule for the test source through Terraform and remove it afterwards. Run the tests at increasing traffic levels; record how the HPA and Karpenter respond (scale-up time, nodes added), where latency or errors start to rise, the bottleneck (PHP workers, RDS Proxy connections, Valkey, CloudFront cache hit rate), and the cost per hour at each level. These numbers feed the capacity and cost plan (home plan step 12.7).
 
@@ -309,11 +314,6 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 **Do:** extend `demo-up` to register the EKS cluster with the home Argo CD (an Argo CD cluster secret using IAM authentication; the EKS API endpoint public but restricted to the home network's address), so the hub's ApplicationSets deploy the AWS overlays; extend `demo-down` to remove the registration first. Keep the per-cluster Argo CD path (step 1.8) as a documented fallback. See `docs/adr/0024-internal-developer-platform.md`.
 
 **Test:** a demo run managed entirely from the home hub: both clusters visible, the AWS overlays synced, and the registration removed cleanly by `demo-down`.
-
-### Step 6.3: Documentation
-**Do:** add the russetleaf.com architecture diagram and demo recording to the hub README; update `aws-wp.md` wherever the build differed from the design.
-
-**Test:** the hub README explains both sites, with links to the recording, reports and dashboards.
 
 ## Ongoing operations (after the build)
 

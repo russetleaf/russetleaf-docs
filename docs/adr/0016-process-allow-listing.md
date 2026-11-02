@@ -17,7 +17,7 @@ Platform constraints:
 
 ## Decision
 - **Keep seccomp `RuntimeDefault`** everywhere (already enforced).
-- **Add Falco process allow-list rules** per workload: WordPress (`apache2`, `php`), the summarizer (`python`), the LiteLLM gateway (`python`), llama.cpp (`llama-server`); any other process alerts `#rl-security`. The lists live in Git and are tested.
+- **Add Falco process allow-list rules** per workload: WordPress (`apache2`, `php`, plus **`bash` only as the container's first process running the image's entrypoint scripts**, `docker-entrypoint.sh` and `apache2-foreground`; any other shell alerts), the summarizer (`python`), the LiteLLM gateway (`python`), llama.cpp (`llama-server`); any other process alerts `#rl-security`. The lists live in Git and are tested.
 - **Keep the images lean:** no download tools or package managers in final images where practical (the official WordPress image's startup script still needs its shell), checked by container-structure-test.
 - **Don't use AppArmor or custom SELinux policies.**
 - **Stretch goals:**

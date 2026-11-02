@@ -41,7 +41,7 @@ The design could already rebuild most things from code (Terraform, GitOps, image
 - Data grows enough that replication or Object Lock costs matter.
 
 ## Open items
-- Home plan step 2.5: create the Organization, the backup account, the locked buckets, replication and repo mirrors; test a restore from the backup account.
+- Home plan steps 2.0 and 2.5: create the Organization and accounts, including the Backup account (2.0); create the locked buckets, replication and repo mirrors (2.5); test a restore from the backup account.
 - Home plan step 0.1: assemble the break-glass kit.
 - Home plan step 10.10: the first full disaster drill; record the time in `docs/disaster-recovery.md`.
 - AWS plan step 6.1: the logical dump at `demo-down`; restore it once from the backup account.

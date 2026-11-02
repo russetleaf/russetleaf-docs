@@ -8,7 +8,7 @@
 The image pipelines already had gitleaks, Checkov, Trivy (critical vulnerabilities), WPScan, Syft SBOMs, cosign keyless signing, signed SBOM attestations and Rekor transparency-log entries, with Kyverno verifying signatures and SBOM attestations at admission. Missing were: language linting and application security analysis (SAST) for the project's own Python and PHP; dependency checks before the build; Dockerfile linting; deeper workflow security analysis; checks on the built image's properties; secrets baked into image layers; **build provenance** (how and where an image was built); in-pipeline verification of signatures; and an audit of the repos' own security practices.
 
 ## Decision
-- **SLSA build provenance** with GitHub's `actions/attest-build-provenance` on every release: a signed record of the repo, commit, workflow and runner that built each image, stored with the image and recorded in Rekor (public repos). **Kyverno requires** the provenance attestation, alongside the signature and the SBOM attestation.
+- **SLSA build provenance** with GitHub's `actions/attest-build-provenance` on every release, with the image build run as a **reusable workflow** (a shared build workflow called by each repo's release workflow), so the provenance meets **SLSA Build Level 3** as GitHub documents it (Level 2 without the reusable workflow); Kyverno verifies the reusable workflow's identity: a signed record of the repo, commit, workflow and runner that built each image, stored with the image and recorded in Rekor (public repos). **Kyverno requires** the provenance attestation, alongside the signature and the SBOM attestation.
 - **Semgrep Community Edition** for SAST across Python and PHP, rather than CodeQL.
 - **Linters:** hadolint (Dockerfiles); ruff and mypy (Python); PHP_CodeSniffer with the WordPress Coding Standards, and PHPStan (PHP).
 - **Dependency checks before build:** `composer audit`, pip-audit, and GitHub's dependency-review action.
@@ -21,7 +21,7 @@ The image pipelines already had gitleaks, Checkov, Trivy (critical vulnerabiliti
 ## Alternatives considered
 - **CodeQL instead of Semgrep:** deeper analysis and free on public repos, but doesn't support PHP; running both would duplicate Python coverage. CodeQL could be added for Python later.
 - **BuildKit's built-in provenance and SBOM attestations** (`docker buildx --provenance --sbom`): stored in the registry, but not signed with the same keyless identity the rest of the pipeline and Kyverno already use; GitHub's attestations integrate with `gh attestation verify` and Sigstore.
-- **SLSA Build Level 3 with the SLSA GitHub generator:** a stronger isolation guarantee, but more workflow complexity; GitHub's attestations reach a comparable level for GitHub-hosted runners with less effort.
+- **SLSA Build Level 3 with the SLSA GitHub generator:** a stronger isolation guarantee, but more workflow complexity. *[Corrected:]* GitHub's artifact attestations on their own provide **SLSA Build Level 2** provenance; GitHub documents reaching **Build Level 3** by running the build in a **reusable workflow**, which isolates the build definition from the calling repository. This project adopts that (see Decision), rather than the separate SLSA generator.
 - **Docker Scout, Snyk Container, Grype:** overlap with Trivy.
 - **Chainguard or Wolfi base images:** smaller attack surface, but the free tier offers only `latest` tags, conflicting with pinned versions.
 

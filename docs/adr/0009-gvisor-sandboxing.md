@@ -15,7 +15,7 @@ Constraints: home nodes have 8 GB of RAM; Talos offers official system extension
 
 ## Decision
 - **Require seccomp `RuntimeDefault`** for every workload on both sites (Kyverno), with narrow exceptions only for third-party components that need a different profile.
-- **gVisor on the home cluster:** add Talos's gVisor system extension to both nodes and a `gvisor` RuntimeClass.
+- **gVisor on the home cluster:** add Talos's gVisor system extension to all nodes (three since ADR 0021) and a `gvisor` RuntimeClass.
   - **ARC runners:** run under gVisor, **enforced** by a Kyverno rule in their namespace.
   - **WordPress:** **trial** under gVisor with a before-and-after load test; keep it only if response times stay acceptable (record the numbers here).
   - Falco's **gVisor event source** turned on, so detection still covers sandboxed pods.

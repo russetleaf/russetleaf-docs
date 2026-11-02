@@ -27,7 +27,7 @@ Constraints: box 1 of the home lab has 8 GB of RAM and is close to its limit; EK
 - **Jaeger:** a well-known tracing backend, but a separate UI from Grafana, and its storage options are heavier for this setup; Tempo integrates directly with Grafana, Loki and Prometheus.
 - **AWS X-Ray:** AWS-native, but doesn't cover the home site, and would split tracing between two tools.
 - **A separate OpenTelemetry Collector:** unnecessary, since Alloy already runs on every node and handles OTLP.
-- **Always-on Tempo at home:** doesn't fit box 1's memory alongside everything else.
+- ~~**Always-on Tempo at home:** doesn't fit box 1's memory alongside everything else.~~ **Superseded by ADR 0021:** with three nodes (box 3 has 16 GB), Tempo now runs always on at home.
 
 ## Consequences
 - One trace shows a post's whole journey, including which model answered and how long each step took: useful for debugging and a strong demo.

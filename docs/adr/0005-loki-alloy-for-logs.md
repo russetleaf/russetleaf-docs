@@ -31,7 +31,7 @@ Constraints: box 1 of the home lab has 8 GB of RAM and already uses about 6–7 
 - Logs may hold personal data (IP addresses, occasionally emails): short retention, masking and restricted Grafana access are required.
 
 ## When to revisit
-- Box 1's memory becomes a blocker: consider VictoriaLogs, or shorter retention.
+- Memory becomes a blocker (originally box 1; since ADR 0021, box 3 hosts Loki): consider VictoriaLogs, or shorter retention.
 - Log volume grows enough that Loki's single-binary mode struggles: move to its scalable deployment mode (on AWS) or reduce what's collected.
 - A requirement for long-term log retention (e.g. an audit): add S3 lifecycle transitions to cheaper storage classes.
 
