@@ -982,6 +982,59 @@ A **monthly scheduled workflow** in `wp-gitops` checks running versions (Talos, 
 - **Quarterly:** Kubernetes minor upgrade at home, after rehearsing locally.
 - **Out of band:** security releases within 48 hours.
 
+## Rollback strategy
+
+Every change can be undone, and the way to undo it is decided **before** it's needed. The reasoning is recorded in `docs/adr/0017-rollback-strategy.md`, and each layer has a step-by-step runbook in `docs/runbooks/rollback-<layer>.md`.
+
+### Decision rules
+- **Roll back first, investigate after.** If a production change causes user-facing errors (e.g. error rate or latency alerts, failed uptime checks) that don't clear within **5 minutes**, roll it back. Debug in staging, not production.
+- **Fix forward only when** rolling back is riskier than the fix (e.g. after a database schema change; see below), or the fix is trivial, already tested and can ship within **15 minutes**.
+- **The default rollback is a Git revert.** Every deployed state lives in Git, so reverting the commit (through a pull request, or directly on `main` in an emergency) returns the cluster to the previous state through Argo CD.
+- **Every rollback is recorded:** a note in the decision log (what, why, how long), and a follow-up issue for the root cause.
+
+### By layer
+
+| Layer | Trigger | Mechanism | Started by | Expected time |
+|---|---|---|---|---|
+| **Application release** (WordPress, summarizer) during the canary | Canary analysis fails (error rate, latency) | **Argo Rollouts aborts** and returns traffic to the previous version | Automatic | Seconds to a minute |
+| **Application release** after promotion | Alerts or uptime check after the canary finished | **Git revert** of the version bump in `overlays/home` (and `overlays/aws`); Argo CD syncs | You | A few minutes |
+| **Platform component** (Cilium, Kyverno, Argo CD, Loki, ...) | Component unhealthy, or workloads failing after an upgrade | **Git revert** of the chart version or values; see the high-risk components below | You | Minutes |
+| **Configuration** (overlays, policies, routing) | Anything broken after a merge | **Git revert** | You | Minutes |
+| **Models** (gateway routing) | Quality or cost problems in the canary or after a switch | **Git revert** of the routing weights in `platform/llm-gateway/`; then **re-summarize** affected posts (below) | You | Minutes, plus re-summarizing |
+| **Infrastructure** (Terraform) | Problems after an apply | **Git revert**, then review the **new saved plan**; **stop if it destroys stateful resources** (below) | You, through the `apply` environment | Minutes to an hour |
+| **Talos** (home) | Node unhealthy after a Talos upgrade | **`talosctl rollback`** on the affected node (Talos keeps the previous version) | You | Minutes per node |
+| **Kubernetes version** (home) | Cluster problems after `talosctl upgrade-k8s` | Minor-version **downgrades aren't supported by Kubernetes**: restore from the **etcd snapshot** taken before the upgrade (which is why upgrades are rehearsed locally first) | You | An hour or more |
+| **EKS demo stack** | Anything wrong during a demo | **`demo-down`** and **`demo-up`** with the previous versions (the stack is rebuilt each time); RDS **point-in-time restore** for data mistakes | You | 20–30 minutes |
+| **Always-on edge** (CloudFront, DNS) | Site or offline page broken after an edge change | **Git revert** in `envs/aws-edge`, apply the reviewed plan | You | Minutes (plus CloudFront propagation) |
+| **Secrets** | A rotation broke a service | Point External Secrets at the **previous version** in Secrets Manager (`AWSPREVIOUS`), then fix the rotation | You | Minutes |
+| **Data** | Data loss or corruption | Restore MariaDB from S3 backups (≤ 6 hours old), RDS from snapshots or point-in-time restore, S3 objects from **previous versions** | You | 15 minutes to a few hours |
+
+### Database schema changes: back up first, then decide
+WordPress core upgrades (and some plugin updates) **change the database structure** the first time new code runs. Rolling the image back afterwards can leave old code running against a newer schema.
+- **Detection:** CI compares WordPress's database version (`$wp_db_version`) between the old and new images, and plugins flag schema changes in their release notes; such releases are labelled **`schema-change`**.
+- **Before promotion:** for a `schema-change` release, the promotion workflow runs an **on-demand MariaDB backup** (and, on AWS, takes a manual RDS snapshot before the demo uses the new version) and waits for it to succeed before the version bump can be merged.
+- **If it goes wrong:** either **restore the pre-release backup and roll back the image** (losing any changes made since the release), or **fix forward**. Decide within the 15-minute window above; for a portfolio site, restoring is usually simpler.
+- Staging runs every schema change on a copy of production data first, so most problems are caught there.
+
+### High-risk platform components
+Some components can make normal rollback impossible if they break, because rollback itself depends on them:
+- **Cilium (networking):** if an upgrade breaks pod networking, Argo CD can't sync a revert. The Cilium Application uses **manual sync** (not auto-sync), and the recovery path is from the workstation: `helm rollback cilium` against the API server (which runs on the host network, so it stays reachable), then a Git revert to match. `talosctl` access is independent of Cilium.
+- **Kyverno (admission):** a broken policy or a down Kyverno can block every deployment, including the fix. Kyverno's webhooks **exclude** `kube-system`, `kyverno` and `argocd`, so Argo CD and Kyverno itself can always be repaired; in an emergency, deleting Kyverno's webhook configurations lets deployments through until Kyverno is healthy again (Kyverno recreates them). New policies always start in audit mode.
+- **Argo CD:** if Argo CD itself is broken, revert with `helm rollback` from the workstation, then re-sync.
+- **External Secrets:** if it stops syncing, existing Kubernetes Secrets keep working; revert the chart, and use `AWSPREVIOUS` for bad secret values.
+
+### Terraform: protect what can't be recreated
+Reverting Terraform code doesn't always undo infrastructure cleanly. Stateful resources carry **`lifecycle { prevent_destroy = true }`**, so no plan (including a revert's) can delete them without a deliberate code change: the Terraform state bucket, the media, backup, log, trace and model mirror buckets, the Route 53 hosted zone, the CloudFront distribution and the Secrets Manager entries. RDS final snapshots aren't managed by Terraform, so they survive any plan.
+
+### Rolling back bad AI summaries
+Rolling back a prompt or model doesn't fix summaries already saved. Each summary is stored with its **prompt version and model** (as post metadata), so a **re-summarize job** in `llm-summarizer` can find every post summarized by a bad version and **re-queue** it through SQS, regenerating the summaries with the restored version.
+
+### Rollback drills
+- **Monthly, in staging:** roll back a release (Git revert), abort a canary, and restore a backup, timing each.
+- **Once per quarter at home:** rehearse a Talos rollback on a local Talos-in-Docker cluster, and the Cilium and Kyverno recovery paths in a kind cluster.
+- **Once on EKS:** an RDS point-in-time restore and a forced canary rollback during a demo.
+- Times are recorded in the decision log and compared with the expected times above.
+
 ## Example Helm values (outline)
 
 These are illustrative russetleaf.com (AWS overlay) values for the project's own WordPress chart; the exact keys are defined when the chart is written. The russetleaf.dev overlay differs only in the site-specific settings: its domain, the in-cluster MariaDB and Valkey hosts, ingress-nginx instead of the ALB, its own bucket, queue and email settings, scoped keys instead of Pod Identity, and the Prometheus-based canary analysis.
@@ -1308,6 +1361,7 @@ Together with the home lab, the total stays within **$30–$50/month**. If the A
 - **A gated Terraform pipeline:** linting (tflint + AWS ruleset), Checkov with custom project policies, module tests, Infracost cost diffs, secret scanning with push protection, and approved applies of the exact reviewed plan through a GitHub Environment.
 - **Terraform for both sides, in one repo (`wp-infra`):** shared modules, plus separate root modules for russetleaf.com's always-on edge, its demo stack (including Karpenter and its NodePools), and the russetleaf.dev home lab (Talos provider `siderolabs/talos` for both nodes' machine configs, Cloudflare provider for the tunnel, DNS and WAF rules, and the AWS pieces used from home).
 - **CI on GitHub in every repo:** Terraform checks and plans in `wp-infra`; manifest validation and Kyverno policy tests in `wp-gitops`; image builds with SBOMs, scans and signing in `wp-image` and `llm-summarizer`; and the prompt evaluation gate in `llm-summarizer`. Employers see all of it without the AWS stack running.
+- **A defined rollback strategy:** decision rules (roll back first), Git revert as the default, automatic canary rollback, backups before database schema changes, recovery paths for Cilium, Kyverno and Argo CD, `prevent_destroy` on stateful infrastructure, re-summarizing bad AI output, and regular rollback drills.
 - **A defined update strategy:** every update is a Renovate pull request, risk-tiered (patches auto-merge; minors and majors rehearsed; applications through staging and canaries), with WPScan for WordPress plugin vulnerabilities, 48-hour security releases, and a monthly end-of-life report.
 - **Environments and promotion:** local, ci (kind + LocalStack + mock LLM per pull request), on-demand scale-to-zero staging with scrubbed production data, and automated promotion to production after staging passes.
 - **Full observability on both sites:** metrics (Prometheus), logs (Loki + Alloy, with log-based alerts), network flows (Hubble), security events (Falco) and traces (Tempo, following each AI summary end to end through the SQS queue and model gateway), correlated in Grafana.
@@ -1355,7 +1409,8 @@ wp-gitops/
     aws-wp.md               # this document
     homelab-plan.md         # build plan for russetleaf.dev
     aws-eks-plan.md         # build plan for russetleaf.com
-    runbooks/               # one page per alert: what it means, how to check, how to fix
+    runbooks/               # one page per alert (what it means, how to check, how to fix), plus
+                            #   rollback-<layer>.md runbooks
     adr/                    # architecture decision records (e.g. 0001-no-service-mesh.md,
                             #   0002-s3-media-not-efs.md, 0003-kubescape-cli-not-operator.md,
                             #   0004-ghcr-not-ecr.md, 0005-loki-alloy-for-logs.md,
@@ -1364,7 +1419,7 @@ wp-gitops/
                             #   0010-local-storage-no-ceph.md, 0011-update-strategy.md,
                             #   0012-kube-bench-eks-only.md, 0013-opencost-and-aws-billing.md,
                             #   0014-image-supply-chain.md, 0015-availability-levels.md,
-                            #   0016-process-allow-listing.md)
+                            #   0016-process-allow-listing.md, 0017-rollback-strategy.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings

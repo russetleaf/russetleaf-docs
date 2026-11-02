@@ -77,6 +77,7 @@ Record each answer in the [decision log](#decision-log).
 - CloudFront distribution: default behavior → `origin.russetleaf.com` (all methods, HTTPS only, the `X-Origin-Verify` secret header, Host not forwarded); `/wp-content/uploads/*` → media bucket; `/offline/*` → offline bucket; custom error responses 502/503/504 → `/offline/index.html` with status 503; 10-second error caching; origin timeout 2 s, 1 attempt.
 - The secret header value in Secrets Manager.
 - SES domain identity for russetleaf.com, with DKIM records in Route 53.
+- **`prevent_destroy`** on the hosted zone, CloudFront distribution, the media, log, trace and model mirror buckets, and Secrets Manager entries, so no plan (including a revert's) can delete them without a deliberate change (see `aws-wp.md`'s [Rollback strategy](aws-wp.md#rollback-strategy)).
 - Outputs for `envs/aws` (zone ID, certificate ARNs, secret ARN, bucket names).
 
 **Test:** `curl -I https://russetleaf.com` returns **503** with the offline page; the page links to russetleaf.dev; the SES identity shows "verified". Add the russetleaf.com **external uptime check** (expects 200 or the 503 offline page) and confirm it's green and posts to `#rl-com-alerts` and `#rl-critical` when it fails (test by pointing it at a wrong URL). Leave this stack running from now on (about $1/month).
@@ -260,6 +261,11 @@ Record each answer in the [decision log](#decision-log).
 
 **Test:** run `demo-up` and `demo-down` end to end twice without manual steps (each `demo-up` producing a kube-bench summary pull request and a `#rl-security` message), and confirm the teardown produces **no** alert noise in Slack (only the "stopped" message); force the safety net by lowering the limit.
 
+### Step 6.1b: Rollback drill on EKS
+**Do:** during one demo, run the AWS rollback paths from the rollback runbooks: deploy a deliberately broken WordPress version and let the **Argo Rollouts canary (CloudWatch analysis) roll it back**; take a manual RDS snapshot, then do a **point-in-time restore** of RDS to a moment before a test change; and for a `schema-change` release, confirm the manual RDS snapshot is taken before the demo uses it. Record the times in the decision log.
+
+**Test:** the broken version is rolled back automatically; the point-in-time restore recovers the earlier data; the timings are recorded.
+
 ### Step 6.2: Full rehearsal and demo script
 **Do:** write `docs/demo-script.md`: what to show and in what order (offline page → `demo-up` → live site → publish a post and watch the summary → its end-to-end trace in Tempo → Grafana LLM dashboard → Argo Rollouts canary → Kyverno rejecting an unsigned image → Falco alert → OpenCost → `demo-down` → offline page). Rehearse, then record a walkthrough.
 
@@ -319,6 +325,7 @@ Record each answer in the [decision log](#decision-log).
 | 5.3 Istio ambient experiment (optional) | ☐ | | | |
 | 5.4 Tetragon enforcement (optional) | ☐ | | | |
 | 6.1 Demo workflows | ☐ | | | |
+| 6.1b Rollback drill on EKS | ☐ | | | |
 | 6.2 Rehearsal + recording | ☐ | | | |
 | 6.3 Documentation | ☐ | | | |
 

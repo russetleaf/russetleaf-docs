@@ -167,7 +167,7 @@ Record each answer in the [decision log](#decision-log).
 **Do:**
 - Rename this repo to **`wp-gitops`**. Create **`wp-infra`**, **`wp-image`** and **`llm-summarizer`**.
 - In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a `LICENSE` if public, branch protection on `main` (pull requests and passing checks required).
-- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) and `0016-process-allow-listing.md` (finish in step 10.1); move them with the other docs.
+- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) `0016-process-allow-listing.md` (finish in step 10.1) and `0017-rollback-strategy.md` (finish in steps 3.1, 5.7, 6.1, 7.4 and 10.8); move them with the other docs.
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo.
 - Add **OpenSSF Scorecard** (weekly scheduled workflow) and **zizmor** (on workflow changes) to every repo, and GitHub's **dependency-review action** to the repos with dependencies (`wp-image`, `llm-summarizer`).
 - Add **Checkov** to every repo's CI from the start, scanning the **GitHub Actions workflows** (unpinned actions, over-broad `permissions`, script injection), with a `.checkov.yaml` per repo. Later steps add each repo's other targets (Terraform, manifests, Dockerfiles, charts). Skips must carry a reason. See [Infrastructure and configuration scanning](aws-wp.md#infrastructure-and-configuration-scanning-checkov).
@@ -205,6 +205,7 @@ The cluster is deliberately **not highly available** (one control-plane node); s
 **Do** (`wp-infra/modules/` + `envs/home/`):
 - Modules: `s3-media`, `s3-backups`, `sqs-queue` (with dead-letter queue), `secrets`, `bedrock-access`.
 - russetleaf.dev resources: media bucket, database-backup bucket (lifecycle: expire after 30 days), **model mirror bucket** (for the self-hosted model's file, used in step 8.1), **Loki log bucket** (lifecycle: expire after 7 days, used in step 4.6, plus a scoped IAM key for Loki), **Tempo trace bucket** (lifecycle: expire after 3 days, used in step 10.4, with its own scoped key), summary queue + dead-letter queue, Secrets Manager entries (empty placeholders; values set by hand or generated), Bedrock budget alert.
+- **`prevent_destroy`** on every stateful resource (the state bucket, media, backup, log, trace and model mirror buckets, and Secrets Manager entries), so no plan, including a revert's, can delete them without a deliberate code change (see `aws-wp.md`'s [Rollback strategy](aws-wp.md#rollback-strategy)).
 - **Staging resources** (a second, smaller set of the same modules, tagged `Env=staging`): staging media bucket, summary queue + dead-letter queue, Secrets Manager entries, and a scoped IAM key that can **read** the production backup bucket but write only to staging resources. Used from step 5.6.
 - **Email:** an SES domain identity for russetleaf.dev, with its DKIM and SPF records created in Cloudflare, and SES SMTP credentials stored in Secrets Manager. (New SES accounts are in the "sandbox" and can only send to verified addresses; verify your own address for testing, or request production access.)
 - Scoped IAM users and keys for the home cluster, one per job: External Secrets (read the russetleaf.dev secrets only), WordPress (media bucket + send to queue), MariaDB backups (backup bucket), summarizer (read from queue), LiteLLM (`bedrock:InvokeModel` on the chosen models only). Store each key in Secrets Manager.
@@ -229,7 +230,7 @@ The cluster is deliberately **not highly available** (one control-plane node); s
 ### Step 3.1: Structure and Argo CD bootstrap
 **Do:**
 - Create the layout from `aws-wp.md`: `bootstrap/home/`, `apps/`, `platform/`, each component with `base/` and `overlays/home/`.
-- Install Argo CD with Helm on the new cluster, then add Argo CD itself to `platform/argocd/` so it manages its own upgrades. Add **`platform/cilium/`** with the **same values** Terraform used, so Argo CD adopts Cilium without changing it.
+- Install Argo CD with Helm on the new cluster, then add Argo CD itself to `platform/argocd/` so it manages its own upgrades. Add **`platform/cilium/`** with the **same values** Terraform used, so Argo CD adopts Cilium without changing it. Set the Cilium Application to **manual sync** (a broken networking upgrade would stop Argo CD from syncing a revert), and write `docs/runbooks/rollback-cilium.md`: recover with `helm rollback cilium` from the workstation (the API server runs on the host network, so it stays reachable), then revert in Git. Test the procedure on a local kind or Talos-in-Docker cluster.
 - `bootstrap/home/`: the root "app of apps" that creates one Argo CD Application per component, with **sync waves** (Cilium and the `prometheus-operator-crds` chart first, then storage and secrets, then ingress, monitoring, operators, then apps).
 - Expose the Argo CD UI only through Cloudflare Access (after step 4.3), or use `kubectl port-forward` until then.
 - **Argo CD Notifications** to `#rl-deploys` (sync succeeded, sync failed, app degraded), using the Slack bot token. Until External Secrets exists (step 4.2), create the token Secret by hand; switch it to an `ExternalSecret` afterwards.
@@ -365,9 +366,10 @@ Check `kubectl top nodes` after each step.
 **Do:**
 - Change the `wp-image` release bot (step 5.3) to bump **`overlays/home-staging`** instead of prod, with **auto-merge** once `wp-gitops` CI passes.
 - Trigger `staging-test` on pushes to `main` that change a staging version.
+- **Schema changes:** CI in `wp-image` compares WordPress's database version (`$wp_db_version`) between the old and new images (and plugin release notes flag schema changes), labelling such releases **`schema-change`**. For those, the promotion workflow runs an **on-demand MariaDB backup** and waits for it to succeed before the prod pull request can be merged; the rollback runbook explains restore-and-roll-back versus fix-forward.
 - On a pass, a **`promote-to-prod`** job opens a pull request bumping the same version in `overlays/home` (and `overlays/aws` once it exists), with the staging results attached. On a failure, post to `#rl-staging` and `#rl-deploys` and promote nothing.
 
-**Test:** release a trivial `wp-image` change → it auto-merges to staging → `staging-test` passes → a promotion pull request appears with results → merging it rolls out to russetleaf.dev. Release a deliberately broken version → staging fails → no promotion pull request, and `#rl-staging` shows why.
+**Test:** a release that changes `$wp_db_version` is labelled `schema-change` and its prod pull request is blocked until the pre-release backup succeeds; release a trivial `wp-image` change → it auto-merges to staging → `staging-test` passes → a promotion pull request appears with results → merging it rolls out to russetleaf.dev. Release a deliberately broken version → staging fails → no promotion pull request, and `#rl-staging` shows why.
 
 ### Step 5.8: Google sign-in for admins
 **Do:** as described in `aws-wp.md` ([Admin sign-in with Google](aws-wp.md#admin-sign-in-with-google)):
@@ -401,6 +403,7 @@ Check `kubectl top nodes` after each step.
 - **Require Pod Probes** (readiness and liveness on long-running workloads)
 - **Disallow NodePort**, plus blocking `LoadBalancer` Services
 - **Unique Ingress Host and Path**
+- **Webhook exclusions and recovery:** Kyverno's webhooks exclude `kube-system`, `kyverno` and `argocd`, so Argo CD and Kyverno itself can always be repaired; write `docs/runbooks/rollback-kyverno.md` (revert in Git; in an emergency, delete Kyverno's webhook configurations so deployments go through, and let Kyverno recreate them once healthy).
 - **`PolicyException`s**, each naming the exact namespace and workload, only where needed: Cilium, Falco, local-path-provisioner (privileged/host access); upstream images that can't run read-only or as non-root (e.g. some operators or llama.cpp's image, if so). The project's own workloads get **no** exceptions.
 - Policy tests with `kyverno test` (a passing and a failing example per policy), run in `wp-gitops` CI.
 
@@ -472,6 +475,7 @@ Review the policy reports, fix violations, then switch to **enforce**.
 - Release workflow: build, SBOM, scan, push by digest, sign, attach the SBOM as a signed attestation, add **SLSA build provenance**, verify all three, write release notes with digests and Rekor links, push the image and the chart (OCI) to GHCR, open a chart-bump pull request on `wp-gitops` for **`overlays/home-staging`** (promoted to prod by the step 5.7 pipeline).
 - `wp-gitops/apps/post-summarizer/overlays/home` and `overlays/home-staging`: queue URL, gateway URL (staging uses its own LiteLLM key and budget), WordPress URL, credentials from External Secrets.
 - Turn on the summarizer check in the staging smoke tests (step 5.6).
+- A **re-summarize job** (a CLI in `llm-summarizer`, run as a Kubernetes Job): find posts whose stored summary metadata matches a given prompt version or model, and re-queue them through SQS so they're summarized again with the current version. Document it in `docs/runbooks/rollback-models.md`.
 
 Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom metrics plugin), routed to `#rl-mlops`.
 
@@ -557,6 +561,16 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 **Test:** both workloads pass the staging smoke tests with their custom profiles; a system call outside the profile (e.g. from a test binary) is blocked; a failed run after an image update is caught in staging, not production.
 
+### Step 10.8: Rollback runbooks and drills
+**Do:** write `docs/runbooks/rollback-<layer>.md` for each layer in `aws-wp.md`'s [Rollback strategy](aws-wp.md#rollback-strategy) (applications, platform, configuration, models, Terraform, Talos, Kubernetes, secrets, data; Cilium and Kyverno already exist), then run the first **drills**:
+- in staging: roll back a release with a Git revert, abort a canary, and restore a MariaDB backup
+- locally: a `talosctl rollback` on a Talos-in-Docker cluster, and the Cilium and Kyverno recovery paths in a kind cluster
+- a secret rollback to `AWSPREVIOUS`, and a re-summarize run for one prompt version
+
+Record each drill's time in the decision log and compare it with the expected times.
+
+**Test:** every runbook has been followed at least once in a drill; each rollback restored a working state within its expected time (or the runbook was corrected).
+
 ## Phase 11: Optional and finishing
 
 ### Step 11.1 (optional): Keyless AWS access for pods
@@ -575,6 +589,7 @@ These keep russetleaf.dev healthy once it's running. Add each as a calendar remi
 
 | Task | How often | How |
 |---|---|---|
+| Rollback drill | Monthly (staging); quarterly (Talos, Cilium, Kyverno locally) | Follow a rollback runbook end to end and time it; fix the runbook if anything differed |
 | Test a database restore | Monthly | Restore the latest backup into a scratch MariaDB instance and check the post count (step 4.5) |
 | Merge Renovate pull requests | Weekly | Review the Dependency Dashboard and pull requests; patches auto-merge; read changelogs for minors and majors and rehearse platform ones on a local Talos-in-Docker cluster; Argo Rollouts and the CI checks catch bad application updates |
 | Security releases | Within 48 hours of a WPScan, Trivy Operator or Renovate security alert | Fast-track through ci and staging; promote as soon as staging passes |
@@ -655,6 +670,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 10.5 AWS account posture (Prowler) | ☐ | | | |
 | 10.6 Version-age report | ☐ | | | |
 | 10.7 Custom seccomp profiles (optional) | ☐ | | | |
+| 10.8 Rollback runbooks and drills | ☐ | | | |
 | 11.1 Keyless AWS access (optional) | ☐ | | | |
 | 11.2 Docs + go public | ☐ | | | |
 
