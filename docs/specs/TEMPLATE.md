@@ -19,7 +19,7 @@ One or two sentences: what exists when this step is done, and why it matters.
 ## Context
 
 - Design: the sections of the phase design this step implements (links).
-- Decisions: the ADRs it implements or depends on (e.g. ADR 1033), and any open items it resolves.
+- Decisions: the ADRs it implements or depends on (e.g. [ADR 1033](../phase-1-russetleaf-dev/adr/1033-identity-and-access.md)), and any open items it resolves.
 - Depends on: earlier steps that must be done, and anything to check first (versions, quotas, access).
 
 ## Scope

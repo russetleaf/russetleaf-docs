@@ -1,11 +1,11 @@
 # ADR 1004: GitHub Container Registry (GHCR) instead of Amazon ECR
 
-- **Status:** Accepted; updated by ADR 1030
+- **Status:** Accepted; updated by [ADR 1030](1030-github-actions-ci.md)
 - **Date:** 2026-11-01
 - **Applies to:** both sites
 - **Phase:** 1. Later: Phase 3 may add an ECR pull-through cache for GHCR.
 
-> **Update (ADR 1030):** The repos are now made **public early** (ADR 1030), so the GHCR packages are made public at first push: no private-package storage limit and no pull secrets are needed. The private-package mitigations below apply only if a repo has to stay private.
+> **Update ([ADR 1030](1030-github-actions-ci.md)):** The repos are now made **public early** ([ADR 1030](1030-github-actions-ci.md)), so the GHCR packages are made public at first push: no private-package storage limit and no pull secrets are needed. The private-package mitigations below apply only if a repo has to stay private.
 
 ## Context
 
@@ -14,7 +14,7 @@ The project builds two images, each with a Helm chart published as an OCI artifa
 - **russetleaf.dev** runs 24/7 on a home Talos cluster, **outside AWS**.
 - **russetleaf.com** runs on EKS only during demos.
 
-Images are built and signed (cosign keyless) in GitHub Actions, and Kyverno only admits images signed by those workflows and pulled from allowed registries. ~~The repos are private while being built and become public later (Phase 1 step 9.2).~~ **Superseded by ADR 1030:** the repos are made public early (step 1.1).
+Images are built and signed (cosign keyless) in GitHub Actions, and Kyverno only admits images signed by those workflows and pulled from allowed registries. ~~The repos are private while being built and become public later (Phase 1 step 9.2).~~ **Superseded by [ADR 1030](1030-github-actions-ci.md):** the repos are made public early (step 1.1).
 
 ## Decision
 

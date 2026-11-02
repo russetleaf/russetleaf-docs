@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites
-- **Phase:** 3. In Phase 1, the home cluster relies on Trivy Operator, Kubescape and the Talos hardening checks (ADR 1031).
+- **Phase:** 3. In Phase 1, the home cluster relies on Trivy Operator, Kubescape and the Talos hardening checks ([ADR 1031](../../phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md)).
 
 ## Context
 
@@ -30,7 +30,7 @@ Both sites run **Trivy Operator**, which produces **CIS compliance reports** con
 
 - **kube-bench on Talos with custom path settings:** possible in principle, but Talos's layout and API-only design mean many checks still can't be evaluated meaningfully; maintaining custom configuration for little real signal isn't worth it.
 - **Trivy Operator only, on both sites:** continuous and consistent, but less detailed on node-level configuration than kube-bench on EKS.
-- **Kubescape's CIS framework:** reads the cluster through the Kubernetes API only, so it can't inspect node files; used instead for NSA-CISA, MITRE ATT&CK and RBAC (ADR 1003).
+- **Kubescape's CIS framework:** reads the cluster through the Kubernetes API only, so it can't inspect node files; used instead for NSA-CISA, MITRE ATT&CK and RBAC ([ADR 1003](../../phase-1-russetleaf-dev/adr/1003-kubescape-cli-not-operator.md)).
 - **kube-bench results pushed to Prometheus (Pushgateway):** a once-per-demo result fits poorly in Prometheus, and the EKS Prometheus is destroyed at every `demo-down`; Loki (whose bucket survives teardown) and the committed summary hold the results instead.
 
 ## Consequences

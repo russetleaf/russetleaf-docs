@@ -11,11 +11,11 @@ The project needs CI for Terraform, manifests, images, charts, evaluation and pr
 
 ## Decision
 
-- **GitHub Actions** is the CI/CD platform, with OIDC to AWS (no stored keys), GitHub Environments for approvals, and reusable workflows (including the SLSA build workflow, ADR 1013).
-- **Make the repositories public early** (Phase 1 step 1.1, right after a `gitleaks` scan of their history). By design nothing secret is in Git, and public repos get **free GitHub-hosted runner minutes**, free code scanning and push protection, and public GHCR packages (no storage limit or pull secrets; ADR 1004).
+- **GitHub Actions** is the CI/CD platform, with OIDC to AWS (no stored keys), GitHub Environments for approvals, and reusable workflows (including the SLSA build workflow, [ADR 1013](1013-image-supply-chain.md)).
+- **Make the repositories public early** (Phase 1 step 1.1, right after a `gitleaks` scan of their history). By design nothing secret is in Git, and public repos get **free GitHub-hosted runner minutes**, free code scanning and push protection, and public GHCR packages (no storage limit or pull secrets; [ADR 1004](1004-ghcr-not-ecr.md)).
 - **Runner strategy:**
     - **GitHub-hosted runners** for most jobs (linting, scans, builds, kind tests).
-    - **Self-hosted, ephemeral ARC runners** on the home cluster (under gVisor, ADR 1009) for jobs that must reach the home cluster: the evaluation gate, `staging-test`, home Terraform applies, and the **AWS demo workflows** (so the EKS API endpoint can be restricted to the home network's address).
+    - **Self-hosted, ephemeral ARC runners** on the home cluster (under gVisor, [ADR 1009](1009-gvisor-sandboxing.md)) for jobs that must reach the home cluster: the evaluation gate, `staging-test`, home Terraform applies, and the **AWS demo workflows** (so the EKS API endpoint can be restricted to the home network's address).
     - Public-repo protections: approval required for workflows from fork pull requests, and the self-hosted label limited to specific trusted workflows.
 
 ## Alternatives considered
@@ -23,7 +23,7 @@ The project needs CI for Terraform, manifests, images, charts, evaluation and pr
 - **Private repos until the end:** hides work in progress, but runs into the minute limit (or costs a paid plan) and private-package limits.
 - **GitLab CI or another platform:** capable, but the code, packages, attestations and code scanning are on GitHub; moving CI elsewhere adds integration work.
 - **Self-hosted runners for everything:** no minute limits, but runs untrusted pull-request code at home for jobs that don't need to, and uses home-cluster capacity.
-- **Jenkins, Tekton or Argo Workflows for CI:** more to run and maintain; Argo Workflows is used for ML pipelines (ADR 2001), not general CI.
+- **Jenkins, Tekton or Argo Workflows for CI:** more to run and maintain; Argo Workflows is used for ML pipelines ([ADR 2001](../../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md)), not general CI.
 
 ## Consequences
 

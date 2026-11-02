@@ -25,7 +25,7 @@ The project has many layers that need regular updates: WordPress core, plugins a
 
 ## Alternatives considered
 
-- **WordPress auto-updates:** keeps plugins current with no effort, but changes code in place, bypasses CI, staging, signing and the read-only filesystem, and makes rollback hard. Incompatible with ADR 1002.
+- **WordPress auto-updates:** keeps plugins current with no effort, but changes code in place, bypasses CI, staging, signing and the read-only filesystem, and makes rollback hard. Incompatible with [ADR 1002](1002-s3-media-not-efs.md).
 - **Auto-merging everything that passes CI:** less review work, but minor and major platform changes (e.g. Cilium, Kyverno) can break the cluster in ways CI on kind doesn't catch.
 - **Manual updates only:** easy to fall behind, and nothing reminds you; Renovate's Dependency Dashboard and the version-age report prevent that.
 - **Dependabot instead of Renovate:** works for common ecosystems, but Renovate handles more (Helm charts in Argo CD manifests, `.mise.toml`, Composer via WPackagist, custom version rules) and has better grouping and auto-merge controls.

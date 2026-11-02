@@ -2,10 +2,10 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-02
-- **Applies to:** both clusters (the EKS-specific parts are tracked in ADR 3004)
-- **Phase:** 1. EKS: ADR 3004 (Phase 3).
+- **Applies to:** both clusters (the EKS-specific parts are tracked in [ADR 3004](../../phase-3-russetleaf-com/adr/3004-eks-component-hardening.md))
+- **Phase:** 1. EKS: [ADR 3004](../../phase-3-russetleaf-com/adr/3004-eks-component-hardening.md) (Phase 3).
 
-> **Update (ADR 3004):** the project is now built in three phases (ADR 1037). This ADR is Phase 1's: the Talos cluster and the controls shared by both clusters. The **EKS-specific controls** (envelope encryption with a customer-managed key, API endpoint access, kube-bench on the nodes, the checks in the AWS security review) are recorded in ADR 3004 (Phase 3). The EKS entries in the table below are kept for comparison.
+> **Update ([ADR 3004](../../phase-3-russetleaf-com/adr/3004-eks-component-hardening.md)):** the project is now built in three phases ([ADR 1037](1037-project-phases.md)). This ADR is Phase 1's: the Talos cluster and the controls shared by both clusters. The **EKS-specific controls** (envelope encryption with a customer-managed key, API endpoint access, kube-bench on the nodes, the checks in the AWS security review) are recorded in [ADR 3004](../../phase-3-russetleaf-com/adr/3004-eks-component-hardening.md) (Phase 3). The EKS entries in the table below are kept for comparison.
 
 ## Context
 
@@ -27,7 +27,7 @@ On the home cluster, Talos manages the control-plane components and their settin
 | **Pod Security Admission** | Per-namespace labels on **both clusters** (EKS doesn't enforce by default): **`restricted`** for application namespaces (WordPress, summarizer, gateway, model server, staging, tenants), **`baseline`** for most platform services, **`privileged`** only for node agents (Cilium, Falco, Alloy, the storage provisioner, the NVIDIA device plugin); `warn` and `audit` set to `restricted` everywhere | A pod violating `restricted` is rejected in an application namespace; namespace labels checked by a Kyverno rule |
 | **Pod Security Standards** | Kyverno's **`restricted`** policy set for application namespaces (non-root, no privilege escalation, all capabilities dropped, seccomp, read-only root filesystem) and `baseline` elsewhere, alongside PSA (two independent enforcement points) | Kyverno CLI tests in CI; Policy Reporter |
 | **Service accounts** | **Token mounting off by default** (`automountServiceAccountToken: false`, Kyverno mutate rule), enabled only for workloads that call the Kubernetes API (operators, Argo CD, KEDA, External Secrets); least-privilege RBAC for those | Kubescape RBAC review; a test pod has no token mounted |
-| **Container network** | Cilium default-deny CiliumNetworkPolicies, DNS-name egress, layer-7 rules, WireGuard, Hubble (ADR 1027) | Connectivity and policy tests; Hubble drop alerts |
+| **Container network** | Cilium default-deny CiliumNetworkPolicies, DNS-name egress, layer-7 rules, WireGuard, Hubble ([ADR 1027](1027-cilium-cni.md)) | Connectivity and policy tests; Hubble drop alerts |
 | **Storage** | **Talos disk encryption** for the system-state and data partitions on every node, **sealed to the TPM** (TPM 2.0 required); host paths only for the storage provisioner; EBS, RDS and S3 encrypted on AWS; S3 TLS-only; Object Lock backups | `talosctl get volumestatus` (or equivalent) shows encrypted partitions; Security Hub checks on AWS |
 
 ## Alternatives considered
@@ -53,4 +53,4 @@ On the home cluster, Talos manages the control-plane components and their settin
 - Phase 1 step 2.2: disk encryption, host firewall, `seccompDefault`, PSA defaults.
 - Phase 1 step 6.1: PSA namespace labels, Kyverno `restricted` set, service-account token default.
 - Phase 1 step 7.2: the verification checks, recorded in `docs/talos-hardening.md`.
-- EKS: see ADR 3004.
+- EKS: see [ADR 3004](../../phase-3-russetleaf-com/adr/3004-eks-component-hardening.md).

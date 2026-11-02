@@ -1,13 +1,13 @@
 # ADR 1017: Intrusion detection and prevention in layers
 
-- **Status:** Accepted; updated by ADR 1019, ADR 1020
+- **Status:** Accepted; updated by [ADR 1019](1019-aws-multi-account-sra.md), [ADR 1020](1020-three-node-ha-home-cluster.md)
 - **Date:** 2026-11-01
 - **Applies to:** both sites and the AWS account
 - **Phase:** 1. Later: Phase 3 adds AWS WAF, GuardDuty's EKS monitoring and the EKS audit alerts.
 
-> **Update (ADR 1019):** CloudTrail is now a single **organization trail** delivering to the **Log Archive** account, and GuardDuty is enabled organization-wide with the **Security Tooling** account as delegated administrator; GuardDuty and Security Hub findings are routed to Slack from there.
+> **Update ([ADR 1019](1019-aws-multi-account-sra.md)):** CloudTrail is now a single **organization trail** delivering to the **Log Archive** account, and GuardDuty is enabled organization-wide with the **Security Tooling** account as delegated administrator; GuardDuty and Security Hub findings are routed to Slack from there.
 
-> **Update (ADR 1020):** With the three-node home cluster's extra memory, **CrowdSec is realistic at home** (recommended, no longer optional).
+> **Update ([ADR 1020](1020-three-node-ha-home-cluster.md)):** With the three-node home cluster's extra memory, **CrowdSec is realistic at home** (recommended, no longer optional).
 
 ## Context
 
@@ -24,7 +24,7 @@ Falco provides runtime detection inside containers, but on its own it isn't an i
     - EKS: audit logs in CloudWatch, plus GuardDuty's EKS audit-log monitoring
 - **AWS account:** a multi-region **CloudTrail** trail (management events, log-file validation, own S3 bucket with `prevent_destroy`) and **GuardDuty**, with findings sent through EventBridge, SNS and Amazon Q Developer to `#rl-security` (high severity also to `#rl-critical`).
 - **Home edge:** Cloudflare's free managed rule set, a rate-limiting rule on `/wp-login.php`, `/xmlrpc.php` blocked at the edge, and XML-RPC disabled inside WordPress (both sites).
-- **Optional:** CrowdSec with a Cloudflare bouncer to ban abusive IPs automatically; Tetragon enforcement (ADR 1015).
+- **Optional:** CrowdSec with a Cloudflare bouncer to ban abusive IPs automatically; Tetragon enforcement ([ADR 1015](1015-process-allow-listing.md)).
 - **Not used:** an in-cluster network IDS (Suricata or Zeek).
 
 ## Alternatives considered
@@ -32,7 +32,7 @@ Falco provides runtime detection inside containers, but on its own it isn't an i
 - **Falco's Kubernetes audit plugin** instead of Loki alert rules: richer rule language, but needs the API server to send audit events to a webhook (more Talos configuration) and more memory; Loki already holds the logs and runs alert rules.
 - **Suricata or Zeek in the cluster:** heavy on CPU and memory, and most traffic is either TLS terminated (and inspected) at the WAFs, or covered by Cilium policies and Hubble.
 - **GuardDuty Runtime Monitoring** (an AWS agent on EKS nodes): overlaps with Falco, adds cost per node, and doesn't cover the home cluster.
-- **AWS Security Hub:** aggregates findings and runs posture checks continuously, but costs per check; Prowler (ADR 1007) and GuardDuty cover the needs here.
+- **AWS Security Hub:** aggregates findings and runs posture checks continuously, but costs per check; Prowler ([ADR 1007](1007-prowler-not-threatmapper.md)) and GuardDuty cover the needs here.
 - **Cloudflare Pro** (paid WAF rule sets): more rules, but the free managed rule set plus rate limiting and XML-RPC blocking covers the WordPress basics at no cost.
 
 ## Consequences

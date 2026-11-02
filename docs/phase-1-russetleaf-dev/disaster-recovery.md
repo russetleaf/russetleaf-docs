@@ -1,6 +1,6 @@
 # Disaster Recovery Plan (russetleaf.dev, and russetleaf.com in Phase 3)
 
-This plan covers recovering from losses bigger than a single bad change or failed component. Rolling back changes is covered by the [rollback strategy](design.md#rollback-strategy) (ADR 1016), and everyday availability by ADR 1014. The decisions behind this plan are recorded in `docs/phase-1-russetleaf-dev/adr/1018-disaster-recovery.md`.
+This plan covers recovering from losses bigger than a single bad change or failed component. Rolling back changes is covered by the [rollback strategy](design.md#rollback-strategy) ([ADR 1016](adr/1016-rollback-strategy.md)), and everyday availability by [ADR 1014](adr/1014-availability-levels.md). The decisions behind this plan are recorded in [ADR 1018](adr/1018-disaster-recovery.md).
 
 **Principle:** everything that can be rebuilt is rebuilt from code (Terraform, GitOps, image builds). Everything that can't (data, secrets that can't be regenerated, account access) has a copy **outside the main AWS account and region**, in storage that can't be deleted or overwritten for 30 days, plus a **break-glass kit** for access.
 
@@ -27,7 +27,7 @@ This plan covers recovering from losses bigger than a single bad change or faile
 
 ## Backup account and immutable copies
 
-- A separate **Backup** account in the **Security OU** of the AWS Organization (whose **dedicated management account** runs nothing; see ADR 1019 and the Phase 1 design's [AWS account structure](design.md#aws-account-structure-and-best-practices-security-reference-architecture)). Nothing runs in it; it only holds copies.
+- A separate **Backup** account in the **Security OU** of the AWS Organization (whose **dedicated management account** runs nothing; see [ADR 1019](adr/1019-aws-multi-account-sra.md) and the Phase 1 design's [AWS account structure](design.md#aws-account-structure-and-best-practices-security-reference-architecture)). Nothing runs in it; it only holds copies.
 - Its buckets are in a **second region (us-west-2)** with **S3 Object Lock** (30-day retention, governance mode at first, compliance mode once proven), versioning and encryption.
 - Buckets in **russetleaf-home**, **russetleaf-infra** and (in Phase 3) **russetleaf-com** **replicate** into them (S3 replication with roles that can only write, not delete); SCPs stop any account from deleting or weakening them.
 - Access to the backup account is through a separate login (IAM Identity Center permission set) that's part of the break-glass kit, so a compromise of a workload account doesn't reach it.

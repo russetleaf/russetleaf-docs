@@ -1,11 +1,11 @@
 # ADR 1006: Distributed tracing with Tempo and OpenTelemetry
 
-- **Status:** Accepted; updated by ADR 1020
+- **Status:** Accepted; updated by [ADR 1020](1020-three-node-ha-home-cluster.md)
 - **Date:** 2026-11-01
 - **Applies to:** both sites (always on for russetleaf.com demos; on demand for russetleaf.dev)
 - **Phase:** 1 (page traces, always on at home). Later: Phase 2 traces the summary pipeline end to end (100% of summary jobs); Phase 3 runs Tempo on every demo.
 
-> **Update (ADR 1020):** The home cluster now has three nodes (box 3: i5-8500T, 16 GB), so **Tempo runs always on at home** (sampled, 3-day retention), not on demand.
+> **Update ([ADR 1020](1020-three-node-ha-home-cluster.md)):** The home cluster now has three nodes (box 3: i5-8500T, 16 GB), so **Tempo runs always on at home** (sampled, 3-day retention), not on demand.
 
 ## Context
 
@@ -31,7 +31,7 @@ Constraints: box 1 of the home lab has 8 GB of RAM and is close to its limit; EK
 - **Jaeger:** a well-known tracing backend, but a separate UI from Grafana, and its storage options are heavier for this setup; Tempo integrates directly with Grafana, Loki and Prometheus.
 - **AWS X-Ray:** AWS-native, but doesn't cover the home site, and would split tracing between two tools.
 - **A separate OpenTelemetry Collector:** unnecessary, since Alloy already runs on every node and handles OTLP.
-- ~~**Always-on Tempo at home:** doesn't fit box 1's memory alongside everything else.~~ **Superseded by ADR 1020:** with three nodes (box 3 has 16 GB), Tempo now runs always on at home.
+- ~~**Always-on Tempo at home:** doesn't fit box 1's memory alongside everything else.~~ **Superseded by [ADR 1020](1020-three-node-ha-home-cluster.md):** with three nodes (box 3 has 16 GB), Tempo now runs always on at home.
 
 ## Consequences
 

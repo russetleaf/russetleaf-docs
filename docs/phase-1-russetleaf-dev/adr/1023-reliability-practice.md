@@ -13,7 +13,7 @@ The design had rollback, node-failure and disaster drills, but no regular, hypot
 
 - **Chaos Mesh** for scheduled experiments, each with a written hypothesis, expected outcome, blast radius and abort condition: kill the MariaDB primary; add latency to model calls; kill a WordPress pod mid-canary; fill a node's disk; partition box 2 from the others. Run in staging first, then in production at quiet times, with results in `docs/chaos/`. **Latency to Bedrock** is injected at the **LLM gateway** (a Toxiproxy sidecar in front of the gateway's upstream calls, or the gateway's own fault-injection setting) rather than with Chaos Mesh's network rules: Chaos Mesh can delay traffic to external hosts, but targeting AWS endpoints by name is unreliable because their IP addresses change.
 - **Blameless postmortems** from a template (summary, impact, timeline, root causes, what went well, action items with owners and dates) for every real incident and notable drill, in `docs/postmortems/`; at least two from the build.
-- **SLO-based paging** (ADR 1021), and every page links a runbook.
+- **SLO-based paging** ([ADR 1021](1021-slos-and-error-budgets.md)), and every page links a runbook.
 
 ## Alternatives considered
 

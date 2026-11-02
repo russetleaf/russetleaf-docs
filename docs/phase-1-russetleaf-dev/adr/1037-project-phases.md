@@ -44,4 +44,4 @@ Build in **three phases**, each complete and demonstrable on its own, with its o
 
 ## Open items
 
-- ~~Phase 1 step 1.1: move the `docs/` tree into `russetleaf-gitops`~~: the docs stay in their own repo (ADR 1038).
+- ~~Phase 1 step 1.1: move the `docs/` tree into `russetleaf-gitops`~~: the docs stay in their own repo ([ADR 1038](1038-documentation-repo-and-site.md)).

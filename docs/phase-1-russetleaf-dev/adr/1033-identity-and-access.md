@@ -2,10 +2,10 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-02
-- **Applies to:** both clusters and their admin tools (the EKS-specific parts are tracked in ADR 3005)
-- **Phase:** 1. EKS: ADR 3005 (Phase 3).
+- **Applies to:** both clusters and their admin tools (the EKS-specific parts are tracked in [ADR 3005](../../phase-3-russetleaf-com/adr/3005-eks-access-and-audit-logs.md))
+- **Phase:** 1. EKS: [ADR 3005](../../phase-3-russetleaf-com/adr/3005-eks-access-and-audit-logs.md) (Phase 3).
 
-> **Update (ADR 3005):** the project is now built in three phases (ADR 1037). This ADR is Phase 1's. **EKS access** (Identity Center permission sets mapped to access entries) and the **EKS audit-log archive** are recorded in ADR 3005 (Phase 3).
+> **Update ([ADR 3005](../../phase-3-russetleaf-com/adr/3005-eks-access-and-audit-logs.md)):** the project is now built in three phases ([ADR 1037](1037-project-phases.md)). This ADR is Phase 1's. **EKS access** (Identity Center permission sets mapped to access entries) and the **EKS audit-log archive** are recorded in [ADR 3005](../../phase-3-russetleaf-com/adr/3005-eks-access-and-audit-logs.md) (Phase 3).
 
 ## Context
 
@@ -21,13 +21,13 @@ Workload identity was well covered (projected service-account tokens off by defa
 
 ## Decision
 
-- **OIDC sign-in for people on the home cluster:** **Dex** (in `russetleaf-gitops/platform/dex/`) as the OIDC provider, with a **Google** connector; the API server trusts Dex through Kubernetes' **structured authentication configuration** (issuer, audience, claim mappings and the internal CA from ADR 1028); people use **kubelogin** to get short-lived tokens. Check the Talos version's support for structured authentication configuration (or use the older `--oidc-*` API server flags).
+- **OIDC sign-in for people on the home cluster:** **Dex** (in `russetleaf-gitops/platform/dex/`) as the OIDC provider, with a **Google** connector; the API server trusts Dex through Kubernetes' **structured authentication configuration** (issuer, audience, claim mappings and the internal CA from [ADR 1028](1028-internal-pki.md)); people use **kubelogin** to get short-lived tokens. Check the Talos version's support for structured authentication configuration (or use the older `--oidc-*` API server flags).
 - **Break-glass:** the Talos-generated admin kubeconfig is kept **only in the break-glass kit**, never used day to day, and an **audit alert** (`KubeBreakGlassAdminUsed`) fires whenever its identity makes a request. If Dex is down, the break-glass kubeconfig is the documented way in.
 - **Talos API roles:** day-to-day talosconfig uses the **`os:reader`** role; `os:admin` is break-glass and change-time only.
 - **Human RBAC roles** (`russetleaf-gitops/platform/rbac/`): **`platform-admin`**, **`operator`** (deploy, restart, view logs; no RBAC or Secret changes) and **`read-only`** ClusterRoles, bound to Dex groups (or, for a single person, specific users); **no day-to-day cluster-admin**. Argo CD's service account remains the identity that changes production.
-- **EKS:** see ADR 3005.
+- **EKS:** see [ADR 3005](../../phase-3-russetleaf-com/adr/3005-eks-access-and-audit-logs.md).
 - **SSO inside the admin tools:** Argo CD (OIDC through Dex, with its RBAC mapping groups to roles), Grafana (OIDC with Viewer, Editor and Admin roles) and Backstage, all behind Cloudflare Access as well.
-- **Audit-log retention:** Kubernetes audit logs are also shipped to an **S3 bucket with Object Lock in the Log Archive account**, kept **1 year** (Alloy writes a copy; EKS: ADR 3005); Argo CD's audit events (who synced or changed what) are collected into Loki and the same archive.
+- **Audit-log retention:** Kubernetes audit logs are also shipped to an **S3 bucket with Object Lock in the Log Archive account**, kept **1 year** (Alloy writes a copy; EKS: [ADR 3005](../../phase-3-russetleaf-com/adr/3005-eks-access-and-audit-logs.md)); Argo CD's audit events (who synced or changed what) are collected into Loki and the same archive.
 - **Default-deny network policies for platform namespaces** too (Argo CD, monitoring, logging, External Secrets, Kyverno, cert-manager, Dex, KEDA, Argo Rollouts and others), with least-privilege egress per component (e.g. Argo CD → GitHub and GHCR and the API server; External Secrets → Secrets Manager; cert-manager → the API server), tested in CI.
 - **Pod Security Admission version pinned** on every namespace (`enforce-version`), so Kubernetes upgrades don't silently change enforcement.
 - **Keyless AWS access for the home cluster** (Phase 1 step 9.1) moves into the **Extended** tier (it was optional), removing the last static AWS keys.
@@ -57,4 +57,4 @@ Workload identity was well covered (projected service-account tokens off by defa
 - Phase 1 step 4.7: Dex, OIDC sign-in, roles, tool SSO, the break-glass alert, Talos `os:reader`.
 - Phase 1 step 4.6: audit-log archive and Argo CD audit events.
 - Phase 1 step 6.3: platform default-deny policies; step 6.1: PSA version pins.
-- EKS: see ADR 3005.
+- EKS: see [ADR 3005](../../phase-3-russetleaf-com/adr/3005-eks-access-and-audit-logs.md).

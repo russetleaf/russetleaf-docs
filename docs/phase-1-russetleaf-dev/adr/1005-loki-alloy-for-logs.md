@@ -37,7 +37,7 @@ Constraints: box 1 of the home lab has 8 GB of RAM and already uses about 6–7 
 
 ## When to revisit
 
-- Memory becomes a blocker (originally box 1; since ADR 1020, box 3 hosts Loki): consider VictoriaLogs, or shorter retention.
+- Memory becomes a blocker (originally box 1; since [ADR 1020](1020-three-node-ha-home-cluster.md), box 3 hosts Loki): consider VictoriaLogs, or shorter retention.
 - Log volume grows enough that Loki's single-binary mode struggles: move to its scalable deployment mode (on AWS) or reduce what's collected.
 - A requirement for long-term log retention (e.g. an audit): add S3 lifecycle transitions to cheaper storage classes.
 

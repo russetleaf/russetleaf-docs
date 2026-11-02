@@ -62,7 +62,7 @@ flowchart TB
 - **RDS for MariaDB** with **Multi-AZ** turned on. (Aurora doesn't offer MariaDB; if the site outgrew RDS, Aurora MySQL would be the next step, at the cost of switching engines.) **RDS Proxy** in front of it keeps failovers to seconds.
 - At least **2–3 WordPress replicas** spread across availability zones, plus a **HorizontalPodAutoscaler** and **PodDisruptionBudgets**.
 - EKS worker nodes in **multiple AZs**, provisioned by **Karpenter** (see Delivery and operations).
-- **What this project actually runs:** this design is highly available within one region **while the demo runs**, with two deliberate demo cuts (one NAT Gateway instead of three; one spot GPU node, with the gateway falling back to Bedrock). The home lab, with three control-plane nodes, replicated MariaDB and spread workloads, **survives any single node failure**, but its home power supply and internet connection remain single points of failure (ADR 1020). Both are explained, with recovery targets and the changes (and costs) that would add HA, in `docs/phase-1-russetleaf-dev/adr/1014-availability-levels.md`.
+- **What this project actually runs:** this design is highly available within one region **while the demo runs**, with two deliberate demo cuts (one NAT Gateway instead of three; one spot GPU node, with the gateway falling back to Bedrock). The home lab, with three control-plane nodes, replicated MariaDB and spread workloads, **survives any single node failure**, but its home power supply and internet connection remain single points of failure ([ADR 1020](../phase-1-russetleaf-dev/adr/1020-three-node-ha-home-cluster.md)). Both are explained, with recovery targets and the changes (and costs) that would add HA, in [ADR 1014](../phase-1-russetleaf-dev/adr/1014-availability-levels.md).
 
 ### Traffic and edge
 
@@ -125,7 +125,7 @@ The WordPress Rollout, Service, HPA and the rest of the base are the same for bo
 
 ## Fine-tuning on the GPU pool (if Phase 2 is built)
 
-This extends Phase 2's MLOps lifecycle with the one part that needs a GPU (ADR 3002).
+This extends Phase 2's MLOps lifecycle with the one part that needs a GPU ([ADR 3002](adr/3002-fine-tuning-on-eks-gpu.md)).
 
 ### Fine-tuning pipeline (distillation)
 
@@ -362,7 +362,7 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 
 ### Runtime security and compliance scanning
 
-- **kube-bench** (EKS only; see `docs/phase-3-russetleaf-com/adr/3001-kube-bench-eks-only.md`) audits the worker nodes against the **CIS Kubernetes Benchmark** with the **EKS profile**. It runs on **every demo**, as a step in the `demo-up` workflow (not a CronJob, since the cluster only lives a few hours):
+- **kube-bench** (EKS only; see [ADR 3001](adr/3001-kube-bench-eks-only.md)) audits the worker nodes against the **CIS Kubernetes Benchmark** with the **EKS profile**. It runs on **every demo**, as a step in the `demo-up` workflow (not a CronJob, since the cluster only lives a few hours):
     - **one Job per node pool** (managed node group, Karpenter general pool, GPU pool), each cleaning itself up afterwards
     - **JSON and text output**: the JSON reaches **Loki** automatically through Alloy (a Grafana panel shows pass/fail/warn counts per demo and node pool); both are kept as workflow artifacts
     - a summary committed to `docs/security/kube-bench-eks-<date>.md`, compared with `docs/security/kube-bench-accepted.yaml` (accepted findings, each with a reason) so only **new** failures stand out

@@ -1,16 +1,16 @@
 # ADR 1020: Three-node home cluster with a highly available control plane
 
-- **Status:** Accepted; updated by ADR 1026
+- **Status:** Accepted; updated by [ADR 1026](1026-cpu-limits.md)
 - **Date:** 2026-11-01
 - **Applies to:** russetleaf.dev (home lab)
-- **Phase:** 1. Later: box 2 becomes the dedicated LLM node in Phase 2 (ADR 2003).
-- **Updates:** ADR 1006 (Tempo always on at home), ADR 1010 (database HA from replication), ADR 1014 (home availability), ADR 1015 (Tetragon feasible at home), ADR 1017 (CrowdSec feasible at home)
+- **Phase:** 1. Later: box 2 becomes the dedicated LLM node in Phase 2 ([ADR 2003](../../phase-2-ai-mlops/adr/2003-self-hosted-model-on-box-2.md)).
+- **Updates:** [ADR 1006](1006-tempo-tracing.md) (Tempo always on at home), [ADR 1010](1010-local-storage-no-ceph.md) (database HA from replication), [ADR 1014](1014-availability-levels.md) (home availability), [ADR 1015](1015-process-allow-listing.md) (Tetragon feasible at home), [ADR 1017](1017-intrusion-detection-and-prevention.md) (CrowdSec feasible at home)
 
-> **Update (ADR 1026):** The CI runners on box 2 also get **CPU limits**, so llama.cpp and the runners together always leave at least one core for etcd, and **etcd health alerts** (disk sync latency, leader changes, proposal failures) watch whether that's enough; if they fire, the runners move to box 1. See ADR 1026.
+> **Update ([ADR 1026](1026-cpu-limits.md)):** The CI runners on box 2 also get **CPU limits**, so llama.cpp and the runners together always leave at least one core for etcd, and **etcd health alerts** (disk sync latency, leader changes, proposal failures) watch whether that's enough; if they fire, the runners move to box 1. See [ADR 1026](1026-cpu-limits.md).
 
 ## Context
 
-The home lab had two nodes with 8 GB of RAM each: box 1 (single control plane, all workloads, about 6–7 GB in use) and box 2 (worker dedicated to the LLM). Memory ruled out several useful tools (always-on tracing, Tetragon, CrowdSec), and the cluster had single points of failure everywhere (ADR 1014). A third machine was bought: an **Intel i5-8500T (6 cores, 35 W) with 16 GB of RAM and an NVMe SSD**.
+The home lab had two nodes with 8 GB of RAM each: box 1 (single control plane, all workloads, about 6–7 GB in use) and box 2 (worker dedicated to the LLM). Memory ruled out several useful tools (always-on tracing, Tetragon, CrowdSec), and the cluster had single points of failure everywhere ([ADR 1014](1014-availability-levels.md)). A third machine was bought: an **Intel i5-8500T (6 cores, 35 W) with 16 GB of RAM and an NVMe SSD**.
 
 ## Decision
 
@@ -51,11 +51,11 @@ The home lab had two nodes with 8 GB of RAM each: box 1 (single control plane, a
 ## When to revisit
 
 - Summary quality matters more: move the model to box 3, or add a fourth node for workloads.
-- A UPS and backup internet are added: update ADR 1014's home targets again.
+- A UPS and backup internet are added: update [ADR 1014](1014-availability-levels.md)'s home targets again.
 - More nodes with spare disks: reconsider replicated storage (Longhorn) for volumes other than the database.
 
 ## Open items
 
 - Phase 1 step 2.2: the three-node Talos configuration with the virtual IP and reservations; record etcd health under LLM load.
 - Phase 1 step 4.5: MariaDB replication and a failover test.
-- Phase 1 step 7.11: the first node-failure drills; record timings in ADR 1014.
+- Phase 1 step 7.11: the first node-failure drills; record timings in [ADR 1014](1014-availability-levels.md).

@@ -1,13 +1,13 @@
 # ADR 3002: Fine-tuning on the EKS GPU node pool, with the challenger served at home
 
-- **Status:** Accepted (split from ADR 2001)
+- **Status:** Accepted (split from [ADR 2001](../../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md))
 - **Date:** 2026-11-02
 - **Applies to:** `russetleaf-llm-summarizer/training/`, the EKS GPU NodePool, the home MLflow registry and llama.cpp
 - **Phase:** 3 (needs Phase 2)
 
 ## Context
 
-ADR 2001 defines the MLOps lifecycle. Its training half, fine-tuning the small self-hosted model, needs a GPU, which only exists on EKS's spot GPU node pool. With the project in three phases (ADR 1037), fine-tuning can only happen once both Phase 2 (the lifecycle, registry and datasets) and Phase 3 (the GPU) exist.
+[ADR 2001](../../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) defines the MLOps lifecycle. Its training half, fine-tuning the small self-hosted model, needs a GPU, which only exists on EKS's spot GPU node pool. With the project in three phases ([ADR 1037](../../phase-1-russetleaf-dev/adr/1037-project-phases.md)), fine-tuning can only happen once both Phase 2 (the lifecycle, registry and datasets) and Phase 3 (the GPU) exist.
 
 ## Decision
 
@@ -22,7 +22,7 @@ ADR 2001 defines the MLOps lifecycle. Its training half, fine-tuning the small s
 - **Fine-tuning on CPU at home:** possible for tiny models, but impractically slow for a 3B model on an i3.
 - **A one-off rented GPU (a single EC2 spot instance, or a hosted notebook) without EKS:** cheaper to set up and possible without Phase 3, but outside the cluster's scheduling, policies and monitoring; kept as the fallback if Phase 3 isn't built.
 - **Amazon SageMaker training jobs:** managed and capable, but a separate platform from the cluster and the home registry.
-- **No fine-tuning:** leaves out the training half of the lifecycle (ADR 2001).
+- **No fine-tuning:** leaves out the training half of the lifecycle ([ADR 2001](../../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md)).
 
 ## Consequences
 

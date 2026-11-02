@@ -209,7 +209,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 5.3: Documentation
 
-**Do:** finish ADRs 2001, 2002 and 2003 (resolve their open items); update the Phase 2 design wherever the build differed; add the LLM dashboard, an evaluation report and an MLflow run to the hub README's screenshots; add the AI pipeline to the hub README's architecture diagram; optionally an article on evaluation gates for LLMs.
+**Do:** finish ADRs [2001](adr/2001-mlops-lifecycle.md), [2002](adr/2002-summary-pipeline-architecture.md) and [2003](adr/2003-self-hosted-model-on-box-2.md) (resolve their open items); update the Phase 2 design wherever the build differed; add the LLM dashboard, an evaluation report and an MLflow run to the hub README's screenshots; add the AI pipeline to the hub README's architecture diagram; optionally an article on evaluation gates for LLMs.
 
 **Test:** every Phase 2 ADR's open items are resolved or moved to a later phase; the README shows the pipeline.
 

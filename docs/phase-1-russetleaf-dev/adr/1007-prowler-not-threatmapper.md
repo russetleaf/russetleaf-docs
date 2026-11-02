@@ -1,11 +1,11 @@
 # ADR 1007: Prowler for AWS account posture; Deepfence ThreatMapper not used
 
-- **Status:** Accepted; updated by ADR 1019
+- **Status:** Accepted; updated by [ADR 1019](1019-aws-multi-account-sra.md)
 - **Date:** 2026-11-01
 - **Applies to:** both sites (the AWS account is shared by the home lab's AWS resources and russetleaf.com)
 - **Phase:** 1. Later: Phase 3 adds a Prowler run per demo with the stack up.
 
-> **Update (ADR 1019):** The project now follows the AWS Security Reference Architecture, with **Security Hub** (AWS Foundational Security Best Practices and CIS standards) as the **continuous** posture check across all accounts. Prowler remains as a free monthly **second opinion**, now run against every account. The "AWS Security Hub" alternative below was rejected on cost at the time; ADR 1019 accepts that cost (about $5–15/month with Config and KMS).
+> **Update ([ADR 1019](1019-aws-multi-account-sra.md)):** The project now follows the AWS Security Reference Architecture, with **Security Hub** (AWS Foundational Security Best Practices and CIS standards) as the **continuous** posture check across all accounts. Prowler remains as a free monthly **second opinion**, now run against every account. The "AWS Security Hub" alternative below was rejected on cost at the time; [ADR 1019](1019-aws-multi-account-sra.md) accepts that cost (about $5–15/month with Config and KMS).
 
 ## Context
 
@@ -41,7 +41,7 @@ ThreatMapper's management console bundles several databases and services; its do
 ## Alternatives considered
 
 - **ThreatMapper:** broadest single tool, but its console needs more memory than box 1 has, and it duplicates tools already built into CI and the clusters.
-- ~~**AWS Security Hub** (with the Foundational Security Best Practices standard): continuous and AWS-native, but billed per check, and covers only AWS; a reasonable upgrade if the account ever holds production data.~~ **Superseded by ADR 1019:** Security Hub is now used as the continuous check, with Prowler as a second opinion.
+- ~~**AWS Security Hub** (with the Foundational Security Best Practices standard): continuous and AWS-native, but billed per check, and covers only AWS; a reasonable upgrade if the account ever holds production data.~~ **Superseded by [ADR 1019](1019-aws-multi-account-sra.md):** Security Hub is now used as the continuous check, with Prowler as a second opinion.
 - **Kubescape or Trivy for cloud posture:** focused on Kubernetes and images rather than full AWS account configuration.
 - **No account scanning:** leaves configuration done outside Terraform unchecked.
 
@@ -54,7 +54,7 @@ ThreatMapper's management console bundles several databases and services; its do
 ## When to revisit
 
 - Much more memory available (e.g. a dedicated security node), making ThreatMapper's console affordable.
-- ~~The AWS account holding production or personal data: consider AWS Security Hub for continuous checks.~~ Done (ADR 1019).
+- ~~The AWS account holding production or personal data: consider AWS Security Hub for continuous checks.~~ Done ([ADR 1019](1019-aws-multi-account-sra.md)).
 - Many more services, where attack-path ranking would help prioritize findings.
 
 ## Open items
