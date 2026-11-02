@@ -6,7 +6,7 @@ Each step is sized for one or a few Claude sessions, and ends with a **test** th
 
 ## How to use this plan with Claude
 
-- **Start each session** with something like: *"Read `docs/overview.md`, the Phase 1 design and the Phase 1 plan. We're working on step 4.3. Here's where I left off: ..."*. Claude has no memory of earlier sessions, so these files are the shared context.
+- **Start each session** with something like: *"Read the overview, the Phase 1 design and the Phase 1 plan. We're working on step 4.3. Here's where I left off: ..."* (the [overview](../overview.md), [design](design.md) and this plan). Claude has no memory of earlier sessions, so these files are the shared context.
 - **Track the work on GitHub.** Each step is a GitHub issue in a milestone from the [roadmap](roadmap.md) (created in step 1.1 by `tools/plan_to_issues.py`); move it across the Projects board as you work, and update the roadmap's **Actual** columns when a milestone closes.
 - **Start each step with a spec.** Ask Claude to write the step's spec from [`docs/specs/TEMPLATE.md`](../specs/TEMPLATE.md) (goal, context, scope, approach, tasks of 1–3 hours, acceptance criteria from the step's test, risks), save it as `docs/specs/phase-1/<step>-<name>.md`, review it, then build against it. The pull request links the issue and the spec, and the spec's **Outcome** records actual hours and what changed.
 - **One step at a time.** Build it, run the step's test, fix, commit. Don't start the next step until the test passes.

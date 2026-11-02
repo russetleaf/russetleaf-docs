@@ -6,7 +6,7 @@ Each step ends with a **test** that must pass before moving on. Unlike the home 
 
 ## How to use this plan with Claude
 
-- **Start each session** with something like: *"Read `docs/overview.md`, the Phase 3 design and plan, and the Phase 1 design. We're working on Phase 3 step 2.3. Here's where I left off: ..."*.
+- **Start each session** with something like: *"Read the overview, the Phase 3 design and plan, and the Phase 1 design. We're working on Phase 3 step 2.3. Here's where I left off: ..."* (the [overview](../overview.md), [Phase 3 design](design.md) and [Phase 1 design](../phase-1-russetleaf-dev/design.md)).
 - **Same workflow as Phase 1:** a roadmap with milestones (write `roadmap.md` in this folder before starting, in the format of Phase 1's [roadmap](../phase-1-russetleaf-dev/roadmap.md)), GitHub issues created with `tools/plan_to_issues.py`, and a spec per step from [`docs/specs/TEMPLATE.md`](../specs/TEMPLATE.md).
 - **One step at a time.** Build it, run the step's test, fix, commit, and **tear down** anything expensive before ending the session.
 - **Check for leftovers after every session.** Every resource is tagged (see step 0.2); search by tag (AWS Resource Explorer or the Tag Editor) to confirm nothing from `envs/aws` is still running. Check the AWS Budget the next day.
