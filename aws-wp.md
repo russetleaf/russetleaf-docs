@@ -774,6 +774,56 @@ The summarizer reports **OpenTelemetry metrics** to Prometheus, labelled by mode
 
 Prometheus also collects the gateway's metrics (requests, spend and fallbacks per model) and **llama.cpp's built-in metrics** (tokens per second, requests waiting). A **Grafana dashboard** shows these alongside the WordPress metrics, the LLM node's CPU and memory, and the LLM node's cost from OpenCost. **Alertmanager** alerts on error spikes, messages in the dead-letter queue, the self-hosted model being down, and daily Bedrock spend over a set limit, posting them to `#rl-mlops` (and `#rl-critical` for criticals). The Argo Rollouts canary analysis uses the same metrics.
 
+## MLOps lifecycle
+
+The summary pipeline covers the **whole machine-learning lifecycle**, not just inference: **data → training → evaluation → registry → deployment → monitoring → retraining**. The reasoning is recorded in `docs/adr/0022-mlops-lifecycle.md`.
+
+```
+ feedback & production samples ─┐
+                                ▼
+ DVC-versioned datasets ──► fine-tuning pipeline (Argo Workflows, spot GPU on EKS) ──► evaluation vs baseline
+        ▲                                                                                     │
+        │                                                                                     ▼
+ online evaluation & drift ◄── production (gateway canary → champion) ◄── MLflow model registry (aliases)
+```
+
+### Experiment tracking and model registry (MLflow)
+- **MLflow** runs on the home cluster (on box 3), with its metadata in MariaDB and its artifacts in an S3 bucket.
+- **Every evaluation run is an MLflow run:** the CI evaluation gate, the online evaluation and every fine-tuning run log their **parameters** (Git commit, prompt version, model and its registry version, dataset version), **metrics** (rule-check pass rate, judge scores, latency, cost per summary) and **artifacts** (reports, sample outputs).
+- **Registered models**, with lineage back to the runs that produced them:
+  - `summarizer-config`: the prompt, model choice and generation settings as one versioned unit
+  - `local-summarizer`: the self-hosted model's file (base or fine-tuned, in llama.cpp's GGUF format)
+- **Aliases** mark the roles: `champion` (production) and `challenger` (in the gateway canary). Promotion is a reviewed change: the pipeline proposes it, a pull request on `wp-gitops` changes the gateway's routing to the registered version, and the MLflow alias is updated when it merges.
+- The model mirror bucket keeps serving files to llama.cpp; it's fed **from the registry**, so every file in use has a registry entry.
+
+### Guardrails
+Post content is untrusted input, so the summarizer treats it as data:
+- **Prompt-injection defences:** post text is clearly delimited and labelled as content to summarise, never instructions; the system prompt says so and is never echoed back.
+- **Output validation** before anything is saved: length limits, plain text only, no URLs, no instructions or role-play, no text from the system prompt; a failing summary is retried once and then left unsaved with an alert.
+- **Personal-data redaction:** email addresses, phone numbers and similar patterns are removed from post text before it leaves the cluster for Bedrock.
+- **Adversarial evaluation cases:** the evaluation set includes posts containing injection attempts and personal data; the CI gate fails if any guardrail is bypassed.
+- Guardrail outcomes (blocked, retried, redacted) are metrics in Prometheus, with an alert on unusual spikes.
+
+### Online evaluation and drift monitoring
+- A **daily job** (Argo Workflows at home) samples a few percent of the day's new summaries, scores them with the same rule checks and judge as the CI gate, and logs the results to **MLflow** and to **Prometheus**.
+- It also tracks **input drift**: post length, language and topic distribution compared with the evaluation set.
+- **Grafana** shows quality and drift trends per model and prompt version; **Alertmanager** sends `SummaryQualityDegraded` and `InputDriftDetected` to `#rl-mlops`.
+- A sustained drop starts the response: compare the champion and challenger in the evaluation set, roll back routing (ADR 0017), or trigger retraining.
+
+### Fine-tuning pipeline (distillation)
+- **Goal:** improve the small self-hosted model by **fine-tuning** it (LoRA) on high-quality example summaries, then compare it with the base model.
+- **Training data:** curated summaries from the feedback loop and the evaluation set, plus summaries from a stronger **teacher** model. **Check the teacher's terms first:** some model providers' terms restrict using their outputs to train other models. An **open-weights teacher** (e.g. a larger open model run on the GPU) avoids the question.
+- **The pipeline**, defined as an **Argo Workflows** template in `llm-summarizer/training/` and run on **EKS's GPU NodePool** during an AWS session (spot GPU; a few dollars per run): fetch the versioned dataset (DVC) → fine-tune (LoRA) → **evaluate against the base model** on the evaluation set (including the adversarial cases) → convert to GGUF → **register** in MLflow as a `local-summarizer` version with its scores → if it beats the champion, propose it as the **challenger**.
+- **Deployment:** the challenger enters the gateway **canary** at home; online evaluation compares it with the champion; promotion to champion is a reviewed pull request.
+- **Retraining triggers:** online quality dropping, enough new feedback accumulating, or a new base model.
+
+### Data versioning and feedback
+- **DVC** versions the evaluation set, the adversarial cases and the training sets, with an S3 remote; MLflow runs record the dataset version they used, so every result can be traced back to its exact data.
+- **Feedback loop:** a small must-use plugin adds an **editor-only rating** (helpful / not helpful, with an optional note) to each summary in the WordPress admin, stored as post metadata. A nightly job exports ratings (with the summary's model and prompt version) to the DVC-tracked dataset; poor-rated summaries become new evaluation cases, and good ones become training candidates.
+
+### Cost
+MLflow, Argo Workflows and the online-evaluation job run on the home cluster (box 3 has the memory); the extra Bedrock calls for daily judging cost cents a month; each fine-tuning run costs **a few dollars** of spot GPU time on EKS.
+
 ## WordPress monitoring
 
 Prometheus **scrapes** (pulls) metrics from HTTP endpoints; nothing pushes to it. As in most production setups, WordPress is monitored mainly through **exporters around it** (ingress, web server, database, cache, synthetic probes), plus one small **custom metrics plugin** for the few things only WordPress knows. No third-party "WordPress Prometheus" plugin is used: the ones available tend to be small, sparsely maintained, and export generic counts that aren't useful for alerting.
@@ -1242,6 +1292,7 @@ These are approximate prices for **us-east-1**, on demand unless noted, for a sm
 | ACM certificates | public certificates | $0 |
 | SES | low email volume ($0.10 per 1,000) | <$1 |
 | Amazon SQS + EventBridge | summary queue + dead-letter queue, KEDA polling, Karpenter interruption queue (within free tiers) | <$1 |
+| Fine-tuning runs (spot GPU) | A few hours per run during AWS sessions | a few $ per run |
 | Amazon Bedrock | ~10–20 new or edited posts/month plus CI evaluation runs, on Haiku and Nova (~$1 per 1M input tokens, ~$5 per 1M output for Haiku; Nova less) | ~$1–$2 |
 | LiteLLM, ARC runners, KEDA, Argo Rollouts, Kyverno, Falco, Trivy Operator, OpenCost, Karpenter, Prometheus/Grafana | run on the existing worker nodes | $0 |
 | kube-bench | One Job per node pool, every demo (in `demo-up`) | $0 |
@@ -1418,6 +1469,7 @@ The cost column is what russetleaf.dev costs to run 24/7, plus russetleaf.com's 
 | LLM gateway | LiteLLM in-cluster, routing to **real Amazon Bedrock** and the self-hosted model | Same | ~$1–$2 (Bedrock tokens) |
 | Self-hosted model | llama.cpp (CPU build) on box 2, CPU-limited to protect etcd | llama.cpp (CUDA build) on the Karpenter GPU NodePool | ~$2–$4 (electricity for box 2) |
 | Prompt evaluation | GitHub Actions on ARC runners in the cluster | Same | (included above) |
+| MLOps lifecycle | MLflow, Argo Workflows, online evaluation, feedback, DVC (home cluster) | Fine-tuning runs on the spot GPU NodePool | ~$0 always on; a few $ per fine-tuning run |
 | Progressive delivery | Argo Rollouts | Same | $0 |
 | Supply chain and policy | cosign, Syft, Trivy, Kyverno CLI in CI; Kyverno in the cluster | Same | $0 |
 | Networking and policies | Cilium (full CNI, no kube-proxy), CiliumNetworkPolicies, Hubble | Cilium (chaining with the VPC CNI), CiliumNetworkPolicies, Hubble | $0 |
@@ -1454,6 +1506,7 @@ Together with the home lab, the total stays within **$30–$50/month**. If the A
 - **Real AWS integration from home:** S3 media offload, SQS, Secrets Manager, S3 backups, Bedrock and IAM are all managed by Terraform.
 - **Generative AI run like production software:** Bedrock integration with least-privilege IAM, event-driven scaling to zero, a dead-letter queue, and cost controls, with the same code running on both clusters.
 - **Model serving on Kubernetes:** a self-hosted model on dedicated nodes (labels, taints, tolerations, node selectors), behind an LLM gateway with routing, fallback, canary splits, rate limits and budgets, so no single model provider is a dependency.
+- **The full MLOps lifecycle:** MLflow experiment tracking and model registry with lineage, guardrails against prompt injection and personal-data leaks, online evaluation and drift alerts, a LoRA fine-tuning (distillation) pipeline on a spot GPU with evaluation against the base model, DVC-versioned data, and an editor feedback loop.
 - **A standalone MLOps repo (`llm-summarizer`):** versioned prompts, an evaluation set, a CI gate that compares every model and blocks changes that lower summary quality, releases gated on evaluation, a model card, a published Helm chart, and a local demo anyone can run. It's the repo to link on a CV for AI and MLOps roles.
 - **A four-repo GitOps structure:** infrastructure, deployment config, the WordPress image and the summarizer are separated by purpose and permissions, with automated, reviewed promotion of signed images and charts into the GitOps repo.
 - **LLM monitoring:** token, latency, error, fallback and cost metrics per model and prompt version, plus model-server throughput, in Prometheus and Grafana, with alerts.
@@ -1489,13 +1542,13 @@ The two build plans tier every step as **Core**, **Differentiator** or **Stretch
 
 | Plan | Core | Differentiator | Stretch | Total |
 |---|---|---|---|---|
-| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~120–208 | ~85–152 | ~9–18 | ~214–378 |
-| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~67–115 | ~14–27 | ~6–10 | ~87–152 |
-| **Whole project** | ~187–323 | ~99–179 | ~15–28 | **~300–530** |
+| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~120–208 | ~103–182 | ~19–35 | ~242–425 |
+| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~67–115 | ~14–27 | ~22–38 | ~103–180 |
+| **Whole project** | ~187–323 | ~117–209 | ~41–73 | **~345–605** |
 
-At about **20 hours a week**, the home lab's Core tier takes roughly **6–10 weeks**, and the whole project roughly **3.5–6 months** (about **7–12 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
+At about **20 hours a week**, the home lab's Core tier takes roughly **6–10 weeks**, and the whole project roughly **4–7 months** (about **8–14 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
 
-**Portfolio level:** the home lab's **Core tier on its own reads as strong intermediate work**; adding the **Differentiators**, especially the AI pipeline with its evaluation gate and **evidence of operating the system** (rollback, node-failure and disaster drills, a restore from the Backup account, a recorded AWS demo), is what makes it **senior-level**. A finished subset is worth more than an unfinished whole: finish Core first.
+**Portfolio level:** the home lab's **Core tier on its own reads as strong intermediate work**; adding the **Differentiators**, especially the AI pipeline with its evaluation gate and **evidence of operating the system** (rollback, node-failure and disaster drills, a restore from the Backup account, a recorded AWS demo), is what makes it **senior-level**. For **MLOps** roles specifically, the inference-side work (evaluation gate, gateway, self-hosted model, monitoring) reads as strong intermediate (senior for LLMOps); **MLflow, guardrails and online evaluation** (Differentiators) make it senior for LLM-focused MLOps; the **fine-tuning pipeline, DVC and the feedback loop** (Stretch) complete the full lifecycle expected of senior MLOps generally. A finished subset is worth more than an unfinished whole: finish Core first.
 
 ## Repository structure (four repos)
 
@@ -1550,7 +1603,8 @@ wp-gitops/
                             #   0014-image-supply-chain.md, 0015-availability-levels.md,
                             #   0016-process-allow-listing.md, 0017-rollback-strategy.md,
                             #   0018-intrusion-detection-and-prevention.md, 0019-disaster-recovery.md,
-                            #   0020-aws-multi-account-sra.md, 0021-three-node-ha-home-cluster.md)
+                            #   0020-aws-multi-account-sra.md, 0021-three-node-ha-home-cluster.md,
+                            #   0022-mlops-lifecycle.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
@@ -1608,6 +1662,8 @@ wp-gitops/
     karpenter/              # Karpenter general and GPU NodePools, EC2NodeClass (aws only)
     kube-bench/             # CIS benchmark Job templates per node pool, EKS profile (aws only; applied by the
                             #   demo-up workflow, not synced by Argo CD)
+    mlflow/                 # MLflow tracking server and model registry (MariaDB metadata, S3 artifacts)
+    argo-workflows/         # Argo Workflows (online evaluation, data export, the fine-tuning pipeline on EKS)
     llm-gateway/            # LiteLLM + routing config: model list, fallbacks, canary weights, budgets
     llm-serving/            # llama.cpp model server, tolerations/node selector;
                             #   home: CPU build on box 2, aws: CUDA build on the GPU NodePool
@@ -1641,6 +1697,8 @@ wp-infra/
                             #   EventBridge, SNS and Amazon Q Developer
   modules/                  # reusable modules shared by both environments
     s3-media/               # media bucket, versioning, IAM policy
+    s3-mlops/               # MLflow artifact and DVC data buckets (versioning, encryption, cross-account write
+                            #   grant for the EKS training role)
     s3-logs/                # Loki log and Tempo trace buckets: encryption, lifecycle matching retention, IAM policy
     s3-backups/             # database backup bucket: versioning, encryption, lifecycle rules, IAM policy
     sqs-queue/              # queue + dead-letter queue + alarms
@@ -1698,6 +1756,7 @@ wp-image/
                             #   + apache_exporter sidecar, ServiceMonitor and PrometheusRule alerts
   mu-plugins/
     summary-queue/          # sends post IDs to SQS when a post is published or updated
+    summary-feedback/       # editor-only rating of each summary (stored as post metadata)
     metrics/                # custom Prometheus metrics on an internal port (posts without summary, cron
                             #   backlog, cache hit ratio, versions)
   tests/                    # smoke test: the container starts, plugins are active, health check passes
@@ -1724,6 +1783,11 @@ llm-summarizer/
                             #   OpenTelemetry metrics
     adapters/wordpress/     # WordPress REST API adapter (the first of possibly several)
   prompts/                  # versioned prompts + model settings (the version is recorded with each summary)
+  guardrails/               # input delimiting, personal-data redaction, output validation
+  data/                     # DVC-tracked datasets (evaluation, adversarial cases, training, feedback exports)
+  training/                 # Argo Workflows fine-tuning (LoRA distillation) pipeline: data → train → evaluate
+                            #   vs base → GGUF → register in MLflow
+  online-eval/              # daily sampled scoring of production summaries + input-drift checks
   evals/
     dataset/                # 20–30 sample posts + reference notes
     scorers/                # rule-based checks + LLM-as-judge prompt
@@ -1733,7 +1797,9 @@ llm-summarizer/
   docker/                   # Dockerfile
   demo/                     # docker compose: sample posts + local model or Bedrock, no Kubernetes needed
   ci/                       # kind config, ci chart values (LocalStack SQS, mock LLM), end-to-end tests
-  MODEL_CARD.md             # models evaluated, scores, cost per summary, known limitations
+  MODEL_CARD.md             # models evaluated (including fine-tuned versions), scores, cost per summary, known
+                            #   limitations, guardrails, links to MLflow runs and registry versions
+  dvc.yaml, .dvc/           # data pipeline stages and the S3 remote
   .github/workflows/        # ruff, mypy, Semgrep, pip-audit, dependency review, hadolint, Checkov, zizmor, helm/ct
                             #   lint, unit tests, container-structure-test, Trivy, kind end-to-end tests (mock LLM),
                             #   evaluation gate (on ARC runners); weekly OpenSSF Scorecard;
@@ -1754,7 +1820,9 @@ Design choices that make it stand on its own:
 
 | AI component | Repo |
 |---|---|
-| Summarizer code, prompts, evaluation set and gate, model card, Helm chart, dashboard and alerts | `llm-summarizer` |
+| Summarizer code, prompts, guardrails, evaluation set and gate, online evaluation, fine-tuning pipeline, DVC datasets, model card, Helm chart, dashboard and alerts | `llm-summarizer` |
+| MLflow, Argo Workflows | `wp-gitops` (platform) |
+| Summary feedback plugin | `wp-image` |
 | Summarizer deployment settings per environment (queue URL, gateway URL, scaling, chart version) | `wp-gitops` |
 | LiteLLM gateway and its routing config (models, fallbacks, canary weights, budgets) | `wp-gitops` |
 | Self-hosted model server (llama.cpp Deployment, tolerations, home CPU / AWS CUDA overlays) | `wp-gitops` |

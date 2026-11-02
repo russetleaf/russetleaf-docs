@@ -22,19 +22,19 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
 | **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.6, 5.1–5.7, 6.1, 6.3, 11.2 | **~120–208** |
-| **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, Google sign-in, always-on tracing, CrowdSec, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 6.2, 6.4, 6.5, 7.1–9.3, 10.1–10.6, 10.8–10.11 | **~85–152** |
-| **Stretch** | Optional extras with diminishing returns: custom seccomp profiles, keyless AWS access. | 10.7, 11.1 | **~9–18** |
-| **Total** | | | **~214–378** |
+| **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model, MLflow tracking and registry, guardrails, online evaluation and drift monitoring), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, Google sign-in, always-on tracing, CrowdSec, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 6.2, 6.4, 6.5, 7.1–9.6, 10.1–10.6, 10.8–10.11 | **~103–182** |
+| **Stretch** | Extras: the rest of the MLOps lifecycle (feedback loop, DVC, deploying a fine-tuned model; valuable for MLOps roles specifically), custom seccomp profiles, keyless AWS access. | 9.7, 9.8, 10.7, 11.1 | **~19–35** |
+| **Total** | | | **~242–425** |
 
 **Calendar time** (home lab only):
 
 | Hours per week | Core | Core + differentiators | Everything |
 |---|---|---|---|
-| ~10 | 3–5 months | 5–9 months | 5–9 months |
-| ~20 | 6–10 weeks | 10–18 weeks | 11–19 weeks |
-| ~40 | 3–5 weeks | 5–9 weeks | 5–10 weeks |
+| ~10 | 3–5 months | 5–9 months | 6–10 months |
+| ~20 | 6–10 weeks | 11–20 weeks | 12–21 weeks |
+| ~40 | 3–5 weeks | 6–10 weeks | 6–11 weeks |
 
-Add the AWS plan (~87–152 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~300–530 hours**.
+Add the AWS plan (~103–180 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~345–605 hours**.
 
 **Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to explain it in an interview**.
 
@@ -194,7 +194,7 @@ Record each answer in the [decision log](#decision-log).
 **Do:**
 - Rename this repo to **`wp-gitops`**. Create **`wp-infra`**, **`wp-image`** and **`llm-summarizer`**.
 - In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a `LICENSE` if public, branch protection on `main` (pull requests and passing checks required).
-- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) `0016-process-allow-listing.md` (finish in step 10.1) and `0017-rollback-strategy.md` (finish in steps 3.1, 5.7, 6.1, 7.4 and 10.8) and `0018-intrusion-detection-and-prevention.md` (finish in steps 2.1, 2.2, 2.3, 4.6 and 10.9) and `0019-disaster-recovery.md` (finish in steps 0.1, 2.5 and 10.10) and `0020-aws-multi-account-sra.md` (finish in steps 2.0, 2.0b and 2.4) and `0021-three-node-ha-home-cluster.md` (finish in steps 2.2, 4.5 and 10.11); move them, and `docs/disaster-recovery.md`, with the other docs.
+- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) `0016-process-allow-listing.md` (finish in step 10.1) and `0017-rollback-strategy.md` (finish in steps 3.1, 5.7, 6.1, 7.4 and 10.8) and `0018-intrusion-detection-and-prevention.md` (finish in steps 2.1, 2.2, 2.3, 4.6 and 10.9) and `0019-disaster-recovery.md` (finish in steps 0.1, 2.5 and 10.10) and `0020-aws-multi-account-sra.md` (finish in steps 2.0, 2.0b and 2.4) and `0021-three-node-ha-home-cluster.md` (finish in steps 2.2, 4.5 and 10.11) and `0022-mlops-lifecycle.md` (finish in steps 9.4–9.8 and AWS step 4.5); move them, and `docs/disaster-recovery.md`, with the other docs.
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo.
 - Add **OpenSSF Scorecard** (weekly scheduled workflow) and **zizmor** (on workflow changes) to every repo, and GitHub's **dependency-review action** to the repos with dependencies (`wp-image`, `llm-summarizer`).
 - Add **Checkov** to every repo's CI from the start, scanning the **GitHub Actions workflows** (unpinned actions, over-broad `permissions`, script injection), with a `.checkov.yaml` per repo. Later steps add each repo's other targets (Terraform, manifests, Dockerfiles, charts). Skips must carry a reason. See [Infrastructure and configuration scanning](aws-wp.md#infrastructure-and-configuration-scanning-checkov).
@@ -582,6 +582,31 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 **Test:** a pull request with a deliberately bad prompt fails the gate with a clear comment; a good one passes; a release tag publishes only after the gate passes.
 
+### Step 9.4: Experiment tracking and model registry (MLflow)
+**Do:** `platform/mlflow/` (placed on box 3): the MLflow tracking server with MariaDB for metadata and an S3 artifact bucket (`s3-mlops` module in `wp-infra`, scoped access through External Secrets), behind Cloudflare Access. Change the evaluation gate (step 9.3) to log every run to MLflow (Git commit, prompt version, model, dataset version, scores, latency, cost). Register `summarizer-config` and `local-summarizer` (the current 3B model file) with `champion` aliases, feed the model mirror bucket from the registry, and make routing changes in `wp-gitops` reference registry versions. See `aws-wp.md`'s [MLOps lifecycle](aws-wp.md#mlops-lifecycle).
+
+**Test:** an evaluation run appears in MLflow with its parameters, metrics and report; the registry shows both models with lineage to their runs; the gateway's routing points at a registered version.
+
+### Step 9.5: Guardrails
+**Do:** in `llm-summarizer/guardrails/`: delimit post text as content (never instructions), redact email addresses, phone numbers and similar patterns before calls leave the cluster, and validate output (length, plain text, no URLs, no instructions or system-prompt text; retry once, then don't save and alert). Add **adversarial cases** (posts containing injection attempts and personal data) to the evaluation set, and guardrail metrics (blocked, retried, redacted) with an alert on spikes to `#rl-mlops`.
+
+**Test:** a post containing "ignore your instructions and…" produces a normal summary; a post with an email address never sends it to Bedrock (checked in traces or gateway logs); an invalid output isn't saved and alerts; the CI gate fails if an adversarial case gets through.
+
+### Step 9.6: Online evaluation and drift monitoring
+**Do:** `platform/argo-workflows/` (Argo Workflows), and a **daily workflow** from `llm-summarizer/online-eval/` that samples a few percent of the day's summaries, scores them with the CI gate's rules and judge, checks input drift (length, language, topics) against the evaluation set, and logs to MLflow and Prometheus. Grafana panels for quality and drift per model and prompt version; `SummaryQualityDegraded` and `InputDriftDetected` alerts to `#rl-mlops`, with runbooks.
+
+**Test:** the workflow runs daily and its results appear in MLflow and Grafana; temporarily switching routing to a deliberately weak prompt lowers the scores and fires `SummaryQualityDegraded`.
+
+### Step 9.7: Feedback loop and data versioning
+**Do:** a `summary-feedback` must-use plugin in `wp-image` (editor-only "helpful / not helpful" plus a note on each summary, stored as post metadata); **DVC** in `llm-summarizer` with an S3 remote, tracking the evaluation set, adversarial cases and training data; a nightly workflow exporting new ratings (with each summary's model and prompt version) into the DVC-tracked dataset; MLflow runs record the dataset version.
+
+**Test:** rating a summary in the admin shows up in the next nightly export; `dvc pull` reproduces any past dataset version; an MLflow run's dataset version checks out the exact data it used.
+
+### Step 9.8: Deploy a fine-tuned challenger
+**Do:** after AWS plan step 4.5 has produced a registered fine-tuned `local-summarizer` version that beats the base model, deploy it to box 2 as the **challenger**: llama.cpp loads it from the model mirror bucket (fed from the registry), the gateway sends it a canary share of summaries, and online evaluation compares it with the champion. Promote it (MLflow alias plus a `wp-gitops` routing pull request) only if it holds up for a week; update `MODEL_CARD.md`.
+
+**Test:** the challenger serves its canary share; online evaluation shows champion-versus-challenger scores side by side; promotion or rejection is recorded in MLflow, the model card and the decision log.
+
 ## Phase 10: Runtime security, compliance and cost
 
 ### Step 10.1: Falco
@@ -751,6 +776,11 @@ The home lab already builds most of what these need: the shared Terraform module
 | 9.1 Evaluation set | Differentiator | 5–8 | ☐ | | | | |
 | 9.2 Runners for `llm-summarizer` | Differentiator | 1–2 | ☐ | | | | |
 | 9.3 Evaluation gate + releases | Differentiator | 4–7 | ☐ | | | | |
+| 9.4 MLflow tracking + registry | Differentiator | 6–10 | ☐ | | | | |
+| 9.5 Guardrails | Differentiator | 6–10 | ☐ | | | | |
+| 9.6 Online evaluation + drift | Differentiator | 6–10 | ☐ | | | | |
+| 9.7 Feedback loop + DVC | Stretch | 6–10 | ☐ | | | | |
+| 9.8 Fine-tuned challenger | Stretch | 4–7 | ☐ | | | | |
 | 10.1 Falco | Differentiator | 3–6 | ☐ | | | | |
 | 10.2 Trivy Operator, Kubescape scan, Talos notes | Differentiator | 3–5 | ☐ | | | | |
 | 10.3 OpenCost | Differentiator | 2–4 | ☐ | | | | |

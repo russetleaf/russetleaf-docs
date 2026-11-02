@@ -26,10 +26,10 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 |---|---|---|---|
 | **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the summarizer, the demo workflows, one rehearsed and **recorded demo**, and the docs. | 0.1–2.4, 3.1, 3.2, 4.1, 6.1, 6.2, 6.3 | **~67–115** |
 | **Differentiator** | kube-bench and Kubescape on EKS, the GPU model server, evaluation and tracing on AWS, the security and cost reviews, and the EKS rollback drill. | 2.5, 4.2, 4.3, 4.4, 5.1, 5.2, 6.1b | **~14–27** |
-| **Stretch** | Istio ambient and Tetragon experiments. | 5.3, 5.4 | **~6–10** |
-| **Total** | | | **~87–152** |
+| **Stretch** | The fine-tuning (distillation) pipeline on the GPU (valuable for MLOps roles specifically), and the Istio ambient and Tetragon experiments. | 4.5, 5.3, 5.4 | **~22–38** |
+| **Total** | | | **~103–180** |
 
-**Calendar time:** about **5–8 weeks at ~20 hours a week** for the whole AWS plan, after the home lab's Core tier is done (this plan depends on it). Allow for waiting: the **GPU quota** request (days; submit it in step 0.1 well ahead), **SES production access**, and **Bedrock model access** in the new account.
+**Calendar time:** about **5–9 weeks at ~20 hours a week** for the whole AWS plan, after the home lab's Core tier is done (this plan depends on it). Allow for waiting: the **GPU quota** request (days; submit it in step 0.1 well ahead), **SES production access**, and **Bedrock model access** in the new account.
 
 **Money:** the stack costs about **$1/hour** while running, so batch work into focused sessions and run `demo-down` at the end of each; record each session's cost in the checklist.
 
@@ -250,6 +250,11 @@ Record each answer in the [decision log](#decision-log).
 **Do:** with Tempo running (step 2.4), publish a post on russetleaf.com and follow its trace in Grafana from WordPress through SQS, the summarizer and the gateway to the model call (Bedrock or the GPU model) and back. Save a screenshot for the docs and demo script, and fill in the AWS open item in `docs/adr/0006-tempo-tracing.md`.
 
 **Test:** one trace covers the whole pipeline and shows which model answered and each step's duration; traces from a demo are still viewable after `demo-down` (they're in the always-on trace bucket); no span contains post text, prompts or summaries.
+### Step 4.5: Fine-tuning pipeline (distillation) on the GPU NodePool
+**Do:** install Argo Workflows on EKS (`platform/argo-workflows/overlays/aws`) and run the `llm-summarizer/training/` workflow on the **spot GPU NodePool** during an AWS session: pull the DVC-versioned training set; **LoRA fine-tune** the 3B base model; **evaluate against the base** on the evaluation set (including the adversarial cases); convert to GGUF; **register** the result in the home MLflow as a `local-summarizer` version with its scores and lineage (the training role gets a narrow cross-account write grant to the MLflow artifact and DVC buckets in russetleaf-home); propose it as **challenger** if it beats the base. Before generating training data with a teacher model, **check the provider's terms**; use an open-weights teacher if in doubt. See `aws-wp.md`'s [MLOps lifecycle](aws-wp.md#mlops-lifecycle).
+
+**Test:** a complete run finishes on a spot GPU node, registers a model version with its metrics, dataset version and Git commit in MLflow, and produces an evaluation report against the base; the run's cost is recorded in the checklist and ADR 0022.
+
 ## Phase 5: Security and cost review
 
 ### Step 5.1: Security review
@@ -343,6 +348,7 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 | 4.2 GPU model server | Differentiator | 4–7 | ☐ | | | | |
 | 4.3 Evaluation on AWS | Differentiator | 1–3 | ☐ | | | | |
 | 4.4 End-to-end tracing | Differentiator | 1–3 | ☐ | | | | |
+| 4.5 Fine-tuning pipeline | Stretch | 16–28 | ☐ | | | | |
 | 5.1 Security review | Differentiator | 2–4 | ☐ | | | | |
 | 5.2 Cost review | Differentiator | 2–3 | ☐ | | | | |
 | 5.3 Istio ambient experiment (optional) | Stretch | 3–5 | ☐ | | | | |
