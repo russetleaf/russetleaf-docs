@@ -10,7 +10,7 @@ Each step is sized for one or a few Claude sessions, and ends with a **test** th
 - **One step at a time.** Build it, run the step's test, fix, commit. Don't start the next step until the test passes.
 - **Core first.** Each step has a tier (Core, Differentiator, Stretch) and an hour estimate; see [Priorities and time estimates](#priorities-and-time-estimates). Record actual hours in the checklist.
 - **Keep the plan current.** Tick the [progress checklist](#progress-checklist) and add to the [decision log](#decision-log) whenever something is decided or differs from `aws-wp.md`. Ask Claude to update this file at the end of each session.
-- **Watch box 1's memory.** After every step that adds something to the cluster, run `kubectl top nodes` and note the result in the checklist. Box 1 has 8 GB and the full design uses about 6–7 GB of it.
+- **Watch node memory.** After every step that adds something to the cluster, run `kubectl top nodes` and note the result in the checklist. The three nodes have about 32 GB in total (box 3: 16 GB; boxes 1 and 2: 8 GB each); keep the main workloads on box 3 and box 2 for the LLM.
 - **Build the home overlays only, but keep the base clean.** Put anything environment-specific (domain, hostnames, endpoints, credentials) in `overlays/home` (prod), `overlays/home-staging` or `overlays/ci`, never in `base`, so `overlays/aws` can be added later without rework.
 - **Use the environments.** Try changes **locally** first (Docker Compose or a local kind/Talos cluster); once step 5.4 exists, every pull request is tested in a **ci** kind cluster; once step 5.6 exists, new versions go through **staging** before production. See [Environments and promotion](aws-wp.md#environments-and-promotion).
 - **Never commit secrets.** Secrets go in AWS Secrets Manager and reach the cluster through External Secrets. Terraform state (which can contain secrets) lives in an encrypted S3 bucket. kubeconfig and talosconfig files stay outside Git.
@@ -21,24 +21,24 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), Talos with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.6, 5.1–5.7, 6.1, 6.3, 11.2 | **~116–204** |
-| **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, Google sign-in, and **evidence of operating it** (rollback and disaster drills). | 2.5, 5.8, 6.2, 6.4, 6.5, 7.1–9.3, 10.1–10.3, 10.5, 10.6, 10.8, 10.10 | **~76–135** |
-| **Stretch** | Optional extras with diminishing returns: tracing, custom seccomp profiles, CrowdSec, keyless AWS access. | 10.4, 10.7, 10.9, 11.1 | **~15–29** |
-| **Total** | | | **~207–368** |
+| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.6, 5.1–5.7, 6.1, 6.3, 11.2 | **~120–208** |
+| **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, Google sign-in, always-on tracing, CrowdSec, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 6.2, 6.4, 6.5, 7.1–9.3, 10.1–10.6, 10.8–10.11 | **~85–152** |
+| **Stretch** | Optional extras with diminishing returns: custom seccomp profiles, keyless AWS access. | 10.7, 11.1 | **~9–18** |
+| **Total** | | | **~214–378** |
 
 **Calendar time** (home lab only):
 
 | Hours per week | Core | Core + differentiators | Everything |
 |---|---|---|---|
-| ~10 | 3–5 months | 5–8 months | 5–9 months |
-| ~20 | 6–10 weeks | 10–17 weeks | 10–18 weeks |
-| ~40 | 3–5 weeks | 5–9 weeks | 5–9 weeks |
+| ~10 | 3–5 months | 5–9 months | 5–9 months |
+| ~20 | 6–10 weeks | 10–18 weeks | 11–19 weeks |
+| ~40 | 3–5 weeks | 5–9 weeks | 5–10 weeks |
 
-Add the AWS plan (~87–152 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~290–520 hours**.
+Add the AWS plan (~87–152 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~300–530 hours**.
 
 **Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to explain it in an interview**.
 
-**Recommended order:** finish **all Core steps first** (in plan order), and publish them; then add Differentiators, starting with the AI pipeline (phases 7–9) and the drills (10.8, 10.10), which give the most interview material; leave Stretch steps until everything else is done. A finished subset is worth more than an unfinished whole.
+**Recommended order:** finish **all Core steps first** (in plan order), and publish them; then add Differentiators, starting with the AI pipeline (phases 7–9) and the drills (10.8, 10.10, 10.11), which give the most interview material; leave Stretch steps until everything else is done. A finished subset is worth more than an unfinished whole.
 
 ## Starting point (as of 2026-10-31)
 
@@ -46,7 +46,7 @@ Add the AWS plan (~87–152 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#prior
 - Argo CD installed in the `argocd` namespace.
 - This repo (`private-test-wordpress`) holds an Argo CD Application that deploys the Bitnami WordPress chart into `wordpress-test`. Its pods are stuck in `Pending` because the cluster has no storage provisioner. This test deployment will be replaced.
 - russetleaf.dev is a Cloudflare zone.
-- Box 2 (Intel i3, 8 GB) is available to become the LLM worker node.
+- Box 2 (Intel i3, 8 GB) is available, and **box 3 (Intel i5-8500T, 6 cores, 16 GB, NVMe SSD)** is being added, giving a **three-node, highly available cluster** (see `docs/adr/0021-three-node-ha-home-cluster.md`). Before installing Talos on box 3: update its BIOS, turn on **power on after AC loss** and virtualization, and set Secure Boot to match the Talos image. Do the same on boxes 1 and 2.
 
 ## Local workstation setup (Ubuntu 24.04)
 
@@ -194,7 +194,7 @@ Record each answer in the [decision log](#decision-log).
 **Do:**
 - Rename this repo to **`wp-gitops`**. Create **`wp-infra`**, **`wp-image`** and **`llm-summarizer`**.
 - In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a `LICENSE` if public, branch protection on `main` (pull requests and passing checks required).
-- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) `0016-process-allow-listing.md` (finish in step 10.1) and `0017-rollback-strategy.md` (finish in steps 3.1, 5.7, 6.1, 7.4 and 10.8) and `0018-intrusion-detection-and-prevention.md` (finish in steps 2.1, 2.2, 2.3, 4.6 and 10.9) and `0019-disaster-recovery.md` (finish in steps 0.1, 2.5 and 10.10) and `0020-aws-multi-account-sra.md` (finish in steps 2.0, 2.0b and 2.4); move them, and `docs/disaster-recovery.md`, with the other docs.
+- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) `0016-process-allow-listing.md` (finish in step 10.1) and `0017-rollback-strategy.md` (finish in steps 3.1, 5.7, 6.1, 7.4 and 10.8) and `0018-intrusion-detection-and-prevention.md` (finish in steps 2.1, 2.2, 2.3, 4.6 and 10.9) and `0019-disaster-recovery.md` (finish in steps 0.1, 2.5 and 10.10) and `0020-aws-multi-account-sra.md` (finish in steps 2.0, 2.0b and 2.4) and `0021-three-node-ha-home-cluster.md` (finish in steps 2.2, 4.5 and 10.11); move them, and `docs/disaster-recovery.md`, with the other docs.
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo.
 - Add **OpenSSF Scorecard** (weekly scheduled workflow) and **zizmor** (on workflow changes) to every repo, and GitHub's **dependency-review action** to the repos with dependencies (`wp-image`, `llm-summarizer`).
 - Add **Checkov** to every repo's CI from the start, scanning the **GitHub Actions workflows** (unpinned actions, over-broad `permissions`, script injection), with a `.checkov.yaml` per repo. Later steps add each repo's other targets (Terraform, manifests, Dockerfiles, charts). Skips must carry a reason. See [Infrastructure and configuration scanning](aws-wp.md#infrastructure-and-configuration-scanning-checkov).
@@ -233,20 +233,23 @@ Record each answer in the [decision log](#decision-log).
 
 **Test:** a scratch root module with the S3 backend runs `terraform init` and `plan`; a GitHub Actions job in `wp-infra` assumes the plan role in russetleaf-home and runs `aws sts get-caller-identity`; the same job can't read another account's state key.
 
-### Step 2.2: Talos cluster (box 1 + box 2)
+### Step 2.2: Talos cluster (three control-plane nodes)
 **Do** (`wp-infra/envs/home/`, applied locally; uses the `siderolabs/talos` provider):
-- Generate machine secrets; machine configs for **box 1 (control plane, schedulable)** and **box 2 (worker)**.
+- Generate machine secrets; machine configs for **three control-plane nodes**, all schedulable: **box 3** (main workloads), **box 1** (secondary workloads) and **box 2** (LLM). Give each a fixed IP (DHCP reservations or static addresses).
+- **Shared virtual IP** for the Kubernetes API (Talos's `vip` setting on the nodes' network interface), on a free address in your LAN; kubeconfig and Talos endpoints point at it.
+- **Reservations on every node** (kubelet `systemReserved` and `kubeReserved` for CPU and memory), so workloads can't starve etcd, the API server or the kubelet.
 - Box 2: node label `workload=llm`, taint `dedicated=llm:NoSchedule`.
-- Both nodes: the Talos image includes the **gVisor system extension** (built through Talos's Image Factory and referenced in the machine config), used in step 6.5.
-- Both nodes: kubelet extra mount for `/var/local-path-provisioner` (needed in step 4.1).
-- **API server audit logging:** a focused Talos audit policy (metadata for most requests; request details for Secrets, RBAC, `exec` and `attach`), writing to the audit log on box 1 (collected in step 4.6).
+- Box 3 and box 1: labels for the workload roles (e.g. `role=main`, `role=secondary`), used for placement (e.g. the MariaDB primary on box 3).
+- All nodes: the Talos image includes the **gVisor system extension** (built through Talos's Image Factory and referenced in the machine config), used in step 6.5.
+- All nodes: kubelet extra mount for `/var/local-path-provisioner` (needed in step 4.1).
+- **API server audit logging:** a focused Talos audit policy (metadata for most requests; request details for Secrets, RBAC, `exec` and `attach`), writing to the audit log on each control-plane node (collected in step 4.6).
 - **Cilium:** in the machine config, set `cluster.network.cni.name: none` and `cluster.proxy.disabled: true` (Cilium replaces kube-proxy). Install Cilium with Terraform's Helm provider right after bootstrap (nothing else can run without a CNI), using Talos's documented Cilium values: `kubeProxyReplacement: true`, `k8sServiceHost: localhost`, `k8sServicePort: 7445` (KubePrism), and the cgroup and capability settings Talos requires. Turn on Hubble and Hubble Relay, and **WireGuard transparent encryption** (`encryption.enabled: true`, `encryption.type: wireguard`). Keep Cilium's ServiceMonitors **off** here (the Prometheus Operator doesn't exist yet; step 4.4 turns them on). Use `lifecycle { ignore_changes }` so Terraform installs Cilium once and Argo CD manages it afterwards (step 3.1).
 - Apply configs, bootstrap etcd, output kubeconfig and talosconfig (save them outside Git).
 - Install **metrics-server** here or in step 4.1, so `kubectl top` works.
 
-The cluster is deliberately **not highly available** (one control-plane node); see `docs/adr/0015-availability-levels.md`.
+The cluster is **highly available for a single node failure** (three etcd members, the virtual IP); see `docs/adr/0021-three-node-ha-home-cluster.md` and `docs/adr/0015-availability-levels.md`.
 
-**Test:** `kubectl get nodes` shows both nodes `Ready`; `kubectl describe node <box2>` shows the label and taint; `talosctl health` passes; `cilium status` is all green and `cilium connectivity test` passes; `cilium encrypt status` shows WireGuard on with box 1 and box 2 as peers; there's no kube-proxy DaemonSet. Rebuild once from scratch to prove it's reproducible, and **record how long the rebuild took** as the recovery time in `docs/adr/0015-availability-levels.md`.
+**Test:** `kubectl get nodes` shows all three nodes `Ready`; `kubectl describe node <box2>` shows the label and taint; `talosctl health` passes; `cilium status` is all green and `cilium connectivity test` passes; `etcd` has **three healthy members** (`talosctl etcd members`); the API answers on the virtual IP, and still answers after shutting down whichever node holds it; `cilium encrypt status` shows WireGuard on with the other two nodes as peers on each node; there's no kube-proxy DaemonSet. Rebuild once from scratch to prove it's reproducible, and **record how long the rebuild took** as the recovery time in `docs/adr/0015-availability-levels.md`.
 
 ### Step 2.3: AWS and Cloudflare resources for the home lab
 **Do** (`wp-infra/modules/` + `envs/home/`; all AWS resources in the **russetleaf-home** account):
@@ -299,7 +302,7 @@ The cluster is deliberately **not highly available** (one control-plane node); s
 Check `kubectl top nodes` after each step.
 
 ### Step 4.1: Storage
-**Do:** `platform/storage/`: local-path-provisioner as the default (and only) StorageClass, using `/var/local-path-provisioner`, its namespace labelled for privileged pod security (Talos enforces "baseline" by default). No Ceph (Rook) or Longhorn: two 8 GB nodes can't support distributed storage, and the design keeps important state in S3 instead; see `docs/adr/0010-local-storage-no-ceph.md`.
+**Do:** `platform/storage/`: local-path-provisioner as the default (and only) StorageClass, using `/var/local-path-provisioner`, its namespace labelled for privileged pod security (Talos enforces "baseline" by default). No Ceph (Rook) or Longhorn: the design keeps important state in S3, and the database is replicated by MariaDB itself (step 4.5); see `docs/adr/0010-local-storage-no-ceph.md`.
 
 **Test:** a test PersistentVolumeClaim binds and a pod writes to it; the data survives the pod being deleted.
 
@@ -311,14 +314,14 @@ Check `kubectl top nodes` after each step.
 
 ### Step 4.3: Ingress and the Cloudflare Tunnel
 **Do:**
-- `platform/ingress/`: ingress-nginx (one replica, modest resources), with its **Prometheus metrics enabled** (the Argo Rollouts analysis in step 6.2 uses them).
-- `platform/cloudflared/`: cloudflared Deployment (2 replicas) using the tunnel token from External Secrets, routing `russetleaf.dev` and the admin hostnames to ingress-nginx.
+- `platform/ingress/`: ingress-nginx (**2 replicas** spread across box 3 and box 1, with a PodDisruptionBudget), with its **Prometheus metrics enabled** (the Argo Rollouts analysis in step 6.2 uses them).
+- `platform/cloudflared/`: cloudflared Deployment (2 replicas, **spread across nodes**) using the tunnel token from External Secrets, routing `russetleaf.dev` and the admin hostnames to ingress-nginx.
 - Put the Argo CD, Grafana and **Hubble UI** hostnames behind Cloudflare Access.
 
 **Test:** a hello-world app at `https://russetleaf.dev` loads from outside your network (e.g. on mobile data); your router has no open ports; the Argo CD hostname asks for a Cloudflare Access login.
 
 ### Step 4.4: Monitoring
-**Do:** `platform/monitoring/`: kube-prometheus-stack, trimmed for 8 GB: 7-day retention, 30–60 s scrape interval, resource limits on every part. Grafana behind Cloudflare Access. Then the alerting setup from `aws-wp.md`:
+**Do:** `platform/monitoring/`: kube-prometheus-stack (placed on box 3): 15-day retention, 30 s scrape interval, resource limits on every part. Grafana behind Cloudflare Access. Then the alerting setup from `aws-wp.md`:
 - Prometheus external labels `site=dev`, `cluster=talos-home`; `serviceMonitorSelectorNilUsesHelmValues: false` (and the PodMonitor and rule equivalents) so Prometheus finds ServiceMonitors in every namespace.
 - **Cilium and Hubble metrics:** in `platform/cilium/` values, turn on the agent, operator and Hubble metrics and their **ServiceMonitors**, the Hubble metric set (`dns`, `drop`, `tcp`, `flow`, `port-distribution`, `httpV2` with a small label set), and the Cilium and Hubble **Grafana dashboards** (written to the `monitoring` namespace for Grafana's sidecar). Add the Cilium alert rules (`CiliumAgentNotReady`, `HubblePolicyDropsSpike`, `CiliumEndpointRegenerationFailing`, `HubbleDNSErrors`) with runbooks. Exact values are in `aws-wp.md` ([Hubble and Cilium metrics in Prometheus](aws-wp.md#hubble-and-cilium-metrics-in-prometheus)).
 - **Alertmanager → Slack** with the bot token from External Secrets: criticals to `#rl-critical` and `#rl-dev-alerts`; warnings to `#rl-dev-alerts`; `team=security|mlops|cost` alerts to their channels; `env=staging` alerts to `#rl-staging` only; grouping and repeat intervals; **inhibition rules** (site down suppresses its downstream alerts).
@@ -327,17 +330,18 @@ Check `kubectl top nodes` after each step.
 - **External uptime check** for `https://russetleaf.dev` (and, once the AWS edge exists, russetleaf.com expecting 200 or the 503 offline page).
 - **Alerts as code:** a starter set of `PrometheusRule`s (site down, pod crash-looping, node memory high, disk filling, certificate/tunnel down), each with `severity`, `summary`, `description` and `runbook_url`; a runbook for each in `docs/runbooks/`; `promtool test rules` in `wp-gitops` CI.
 
-**Test:** Grafana shows node and pod dashboards for both nodes, plus the Cilium and Hubble dashboards with live data; Prometheus' targets page lists the Cilium agent, operator and Hubble endpoints as up; a test critical alert appears in both `#rl-critical` and `#rl-dev-alerts` with a working runbook link; stopping Alertmanager for longer than the heartbeat period makes the heartbeat service post to `#rl-critical`; a broken alert rule fails `promtool` in CI.
+**Test:** Grafana shows node and pod dashboards for all three nodes, plus the Cilium and Hubble dashboards with live data; Prometheus' targets page lists the Cilium agent, operator and Hubble endpoints as up; a test critical alert appears in both `#rl-critical` and `#rl-dev-alerts` with a working runbook link; stopping Alertmanager for longer than the heartbeat period makes the heartbeat service post to `#rl-critical`; a broken alert rule fails `promtool` in CI.
 
 ### Step 4.5: Database and cache
 **Do:**
 - `platform/mariadb/`: MariaDB Operator; a `MariaDB` instance pinned to the **same major version RDS offers** (e.g. 11.4 LTS), a `Database`, `User` and `Grant` for WordPress, with the password **generated by the operator** into a Kubernetes Secret (no External Secrets for the database). Same for the backup user and root.
+- **Replication:** two MariaDB members with **primary–replica replication** and **automatic failover** (MariaDB Operator's replication mode), the primary preferring box 3 and the replica on box 1 (anti-affinity), a PodDisruptionBudget, and a Service that always points at the current primary. Backups run from the replica where the operator supports it.
 - **TLS** turned on in MariaDB (operator- or cert-manager-issued certificates) and **required** for the `wordpress` user.
-- The **`Backup`** to the backup bucket **every 6 hours** (logical, gzip, 14-day retention), and an alert (`severity=critical`, with a runbook) if the last successful backup is more than **7 hours** old. With no replicated storage at home, these backups are the database's protection against losing box 1's disk (recovery point: at most 6 hours).
+- The **`Backup`** to the backup bucket **every 6 hours** (logical, gzip, 14-day retention), and an alert (`severity=critical`, with a runbook) if the last successful backup is more than **7 hours** old. Replication covers a node failure; these backups cover disasters (data deleted or corrupted, or the home lab lost), with a recovery point of at most 6 hours.
 - `platform/valkey/`: Valkey (single instance, no persistence needed for an object cache), with a **redis_exporter** sidecar and ServiceMonitor.
 - **Database and cache metrics:** turn on MariaDB Operator's built-in metrics (mysqld-exporter sidecar and ServiceMonitor), and add alerts with runbooks (database down, connections near the limit, slow queries rising, Valkey memory near its limit).
 
-**Test:** connect with a MariaDB client from a test pod using the generated Secret, and confirm a connection **without TLS is refused**; no database password appears in Git or Secrets Manager; trigger a backup by hand and see the file in S3; **restore it into a scratch MariaDB instance** and compare; `valkey-cli ping` returns `PONG`; MariaDB and Valkey metrics appear in Prometheus and on Grafana dashboards.
+**Test:** shut down the node running the MariaDB primary: the replica is promoted within about a minute and WordPress (once deployed) keeps working; when the node returns, it rejoins as a replica. Connect with a MariaDB client from a test pod using the generated Secret, and confirm a connection **without TLS is refused**; no database password appears in Git or Secrets Manager; trigger a backup by hand and see the file in S3; **restore it into a scratch MariaDB instance** and compare; `valkey-cli ping` returns `PONG`; MariaDB and Valkey metrics appear in Prometheus and on Grafana dashboards.
 
 ### Step 4.6: Logging (Loki + Alloy)
 **Do:** `platform/logging/`, as described in `aws-wp.md` ([Logging](aws-wp.md#logging-loki--alloy)):
@@ -382,6 +386,7 @@ Check `kubectl top nodes` after each step.
 ### Step 5.2: WordPress chart and deployment (`wp-gitops/apps/wordpress/`)
 **Do:**
 - The `wp-image` chart, which sets the pod security context (non-root user, read-only root filesystem, no privilege escalation, dropped capabilities, **seccomp `RuntimeDefault`**, and an optional `runtimeClassName` used in step 6.5), the `emptyDir` volumes above, **readiness and liveness probes**, the required labels (`app.kubernetes.io/name`, `app.kubernetes.io/part-of`, `env`) and **CPU/memory requests with a memory limit (no CPU limit)**, deployed from `wp-gitops` with the home overlay (values only): russetleaf.dev hostname, MariaDB and Valkey hosts, `database.auth: password` pointing at the **MariaDB Operator-generated Secret**, media bucket and queue settings, other credentials from External Secrets, resources, `persistence` off, WP-Cron as a Kubernetes CronJob.
+- **Replicas and spreading:** WordPress runs **2–3 replicas** spread across box 3 and box 1 (topology spread or anti-affinity) with a PodDisruptionBudget, so a node failure or a rolling upgrade never takes the site down.
 - Remove the old test Application and the `wordpress-test` namespace.
 - First-run setup (admin user, plugin settings) done by a one-off `wp-cli` Job or wp-config constants, so a rebuild needs no clicking.
 
@@ -405,7 +410,7 @@ Check `kubectl top nodes` after each step.
 **Test:** a pull request in `wp-image` runs the kind tests and passes; a deliberately broken change (e.g. a wrong S3 setting) fails them; `docker compose up` gives a working local site.
 
 ### Step 5.5: Self-hosted runners (ARC)
-**Do:** `platform/actions-runner-controller/`: ARC with **ephemeral** runners, tolerating box 2's taint so they run off box 1. Start with a runner scale set for **`wp-gitops`** (used by the staging workflow); `llm-summarizer` gets its own in step 9.2. Before any repo goes public: require approval for workflows from fork pull requests, and limit which workflows can use the self-hosted label.
+**Do:** `platform/actions-runner-controller/`: ARC with **ephemeral** runners, tolerating box 2's taint so they run next to the model, off the main nodes. Start with a runner scale set for **`wp-gitops`** (used by the staging workflow); `llm-summarizer` gets its own in step 9.2. Before any repo goes public: require approval for workflows from fork pull requests, and limit which workflows can use the self-hosted label.
 
 **Test:** a test workflow in `wp-gitops` runs on a self-hosted runner pod, which is deleted afterwards; a fork pull request waits for approval.
 
@@ -418,7 +423,7 @@ Check `kubectl top nodes` after each step.
 - An Argo CD account with RBAC limited to the staging project (sync and delete only); its token in Secrets Manager.
 - The **`staging-test`** workflow (on the ARC runners): sync staging → wait for healthy → run `staging-data` → run `smoke-tests` → soak ~30 minutes checking Prometheus for errors and restarts → record results → **delete** the staging Applications with cascade (volumes included) → post results to `#rl-staging`.
 
-**Test:** run `staging-test` by hand: staging comes up at `staging.russetleaf.dev` (behind Cloudflare Access), shows production posts with **no real email addresses** in the database, passes the smoke tests, and is fully removed afterwards (`kubectl get all,pvc -n <staging namespaces>` is empty). Record box 1's peak memory during the run in the checklist.
+**Test:** run `staging-test` by hand: staging comes up at `staging.russetleaf.dev` (behind Cloudflare Access), shows production posts with **no real email addresses** in the database, passes the smoke tests, and is fully removed afterwards (`kubectl get all,pvc -n <staging namespaces>` is empty). Record the nodes' peak memory during the run in the checklist.
 
 ### Step 5.7: Promotion pipeline (staging → prod)
 **Do:**
@@ -488,14 +493,14 @@ Review the policy reports, fix violations, then switch to **enforce**.
 
 ### Step 6.4: Service mesh decision (ADR) and optional Istio experiment
 **Do:**
-- Finish `docs/adr/0001-no-service-mesh.md` (already drafted; review it and resolve its open items as they're done): what a mesh like Istio would add, how Cilium (WireGuard, layer-7 policies, Hubble), Argo Rollouts and LiteLLM already cover it, the memory and complexity cost on 8 GB nodes, and **when you'd revisit** (many more services, a requirement to verify service identity on every connection, multi-cluster traffic). See [Service mesh (Istio): not used, by decision](aws-wp.md#service-mesh-istio-not-used-by-decision).
+- Finish `docs/adr/0001-no-service-mesh.md` (already drafted; review it and resolve its open items as they're done): what a mesh like Istio would add, how Cilium (WireGuard, layer-7 policies, Hubble), Argo Rollouts and LiteLLM already cover it, the memory and complexity cost on a small cluster, and **when you'd revisit** (many more services, a requirement to verify service identity on every connection, multi-cluster traffic). See [Service mesh (Istio): not used, by decision](aws-wp.md#service-mesh-istio-not-used-by-decision).
 - **Optional experiment (local only):** in a kind cluster on your workstation running Cilium, install **Istio ambient mode** (following Istio's instructions for running alongside Cilium), deploy the WordPress chart with test values, and enable mTLS and one layer-7 authorization policy. Record memory use, setup issues and what it added in the ADR. Delete the cluster afterwards; nothing in either site depends on it.
 
 **Test:** the ADR is reviewed and linked from the hub README and the decision log; if the experiment was run, its findings are in the ADR.
 
 ### Step 6.5: Sandboxed runtime (gVisor)
 **Do:** as described in `aws-wp.md` ([Sandboxed runtimes](aws-wp.md#sandboxed-runtimes-gvisor)):
-- Confirm the gVisor extension is active on both nodes (step 2.2), and add `platform/runtime-classes/` with a **`gvisor` RuntimeClass**.
+- Confirm the gVisor extension is active on all three nodes (step 2.2), and add `platform/runtime-classes/` with a **`gvisor` RuntimeClass**.
 - **ARC runners:** set `runtimeClassName: gvisor` on the runner pods, and add a Kyverno rule requiring it in the runners' namespace. Run every workflow that uses the runners (evaluation gate, staging test) and fix anything that doesn't work under gVisor.
 - **WordPress trial:** load-test russetleaf.dev's WordPress in **staging** with `k6` (home page, a post, the REST API) with and without `runtimeClassName: gvisor`. Keep gVisor for WordPress only if response times and error rates stay within an agreed margin (e.g. 95th-percentile latency no more than 20% worse); record the numbers and decision in `docs/adr/0009-gvisor-sandboxing.md`.
 - Note for step 10.1: Falco needs its **gVisor event source** turned on for sandboxed pods.
@@ -547,7 +552,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 ## Phase 8: Self-hosted model (box 2)
 
 ### Step 8.1: llama.cpp model server
-**Do:** `platform/llm-serving/`: llama.cpp server (CPU build) with a toleration and node selector for box 2; an init container that downloads a 4-bit **3B model** (e.g. Qwen2.5-3B or Llama 3.2 3B) into a local-path volume (mirror the file in S3 so rebuilds don't depend on Hugging Face); metrics enabled; resource limits leaving ~1 GB free on the node.
+**Do:** `platform/llm-serving/`: llama.cpp server (CPU build) with a toleration and node selector for box 2; an init container that downloads a 4-bit **3B model** (e.g. Qwen2.5-3B or Llama 3.2 3B) into a local-path volume (mirror the file in S3 so rebuilds don't depend on Hugging Face); metrics enabled; memory limits leaving ~1 GB free on the node, and a **CPU limit leaving about one core free**, because box 2 is also an etcd member (watch etcd's latency metrics while summaries run).
 
 **Test:** the pod runs **only** on box 2; an OpenAI-style request returns a summary; record the time per summary and memory use in the decision log.
 
@@ -586,9 +591,9 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Test:** starting an unlisted process in each workload (e.g. `kubectl exec <pod> -- curl --version`, or `sleep` where a shell exists) raises a process allow-list alert in `#rl-security`, while normal traffic raises none; `kubectl exec` into a WordPress pod triggers an alert in Grafana and `#rl-security` (and the same in a gVisor runner pod, through the gVisor event source); creating a file under `/var/www/html` triggers another; deleting the Falco pod on one node (or temporarily preventing it from scheduling there) fires `FalcoNotRunning` in `#rl-security` and `#rl-critical`; pointing Falcosidekick at a wrong Slack destination fires `FalcosidekickOutputErrors`.
 
 ### Step 10.2: Trivy Operator, Kubescape scan and Talos hardening notes
-**Do:** `platform/trivy-operator/` with modest scan concurrency (it's memory hungry on 8 GB), with its **CIS compliance results published as Prometheus metrics** (turn on the operator's cluster-compliance metrics; check the exact setting for your version) and a ServiceMonitor; a **Grafana "Compliance" dashboard** (built to show both clusters once EKS exists) and a `ComplianceFailuresIncreased` alert to `#rl-security`; write `docs/talos-hardening.md` explaining how Talos meets the CIS benchmark (no shell or SSH, read-only system, API-only management, default pod security), including **API server authorization**: only the **Node** and **RBAC** authorizers (no ABAC, no `AlwaysAllow`), checked with `talosctl -n <control-plane-ip> read /system/config/kubernetes/kube-apiserver/authorization-config.yaml`, and the kubelet's anonymous access off with webhook authorization, checked on **each node** with `talosctl -n <node-ip> read /etc/kubernetes/kubelet.yaml` (must show `authentication.anonymous.enabled: false` and `authorization.mode: Webhook`) and an anonymous request, `curl -sk -o /dev/null -w '%{http_code}' https://<node-ip>:10250/pods` (must return `401`). Add a note in `wp-infra/envs/home` that the machine config must never override the authorization config. Run the first **Kubescape CLI** scan of the home cluster from the workstation (NSA-CISA and MITRE ATT&CK frameworks, plus RBAC analysis; nothing installed in the cluster), save the report and a short summary of accepted findings in `docs/security/`, and fill in the baseline in `docs/adr/0003-kubescape-cli-not-operator.md`.
+**Do:** `platform/trivy-operator/` with modest scan concurrency (scans are memory hungry; keep them off box 2), with its **CIS compliance results published as Prometheus metrics** (turn on the operator's cluster-compliance metrics; check the exact setting for your version) and a ServiceMonitor; a **Grafana "Compliance" dashboard** (built to show both clusters once EKS exists) and a `ComplianceFailuresIncreased` alert to `#rl-security`; write `docs/talos-hardening.md` explaining how Talos meets the CIS benchmark (no shell or SSH, read-only system, API-only management, default pod security), including **API server authorization**: only the **Node** and **RBAC** authorizers (no ABAC, no `AlwaysAllow`), checked with `talosctl -n <control-plane-ip> read /system/config/kubernetes/kube-apiserver/authorization-config.yaml`, and the kubelet's anonymous access off with webhook authorization, checked on **each node** with `talosctl -n <node-ip> read /etc/kubernetes/kubelet.yaml` (must show `authentication.anonymous.enabled: false` and `authorization.mode: Webhook`) and an anonymous request, `curl -sk -o /dev/null -w '%{http_code}' https://<node-ip>:10250/pods` (must return `401`). Add a note in `wp-infra/envs/home` that the machine config must never override the authorization config. Run the first **Kubescape CLI** scan of the home cluster from the workstation (NSA-CISA and MITRE ATT&CK frameworks, plus RBAC analysis; nothing installed in the cluster), save the report and a short summary of accepted findings in `docs/security/`, and fill in the baseline in `docs/adr/0003-kubescape-cli-not-operator.md`.
 
-**Test:** vulnerability and compliance reports exist for the running workloads; compliance metrics appear in Prometheus and on the Compliance dashboard, and temporarily adding a non-compliant workload raises the failing-controls count and fires the alert; the hardening doc is reviewed, and the `talosctl read` check shows only `Node` and `RBAC`; on **both box 1 and box 2**, the kubelet config shows anonymous access off and webhook authorization, and the anonymous `curl` to port 10250 returns `401`; the Kubescape report is committed, and any high-risk RBAC findings (e.g. a service account that can read all Secrets cluster-wide) are fixed or explained.
+**Test:** vulnerability and compliance reports exist for the running workloads; compliance metrics appear in Prometheus and on the Compliance dashboard, and temporarily adding a non-compliant workload raises the failing-controls count and fires the alert; the hardening doc is reviewed, and the `talosctl read` check shows only `Node` and `RBAC`; on **all three nodes**, the kubelet config shows anonymous access off and webhook authorization, and the anonymous `curl` to port 10250 returns `401`; the Kubescape report is committed, and any high-risk RBAC findings (e.g. a service account that can read all Secrets cluster-wide) are fixed or explained.
 
 ### Step 10.3: OpenCost
 **Do:** `platform/opencost/` using the existing Prometheus, with custom prices for the home hardware (electricity per node) and the Bedrock spend shown alongside. Then, as in `aws-wp.md` ([Cost monitoring and alerts](aws-wp.md#cost-monitoring-and-alerts)):
@@ -599,8 +604,8 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Test:** OpenCost shows cost per namespace, with box 2 attributed to the LLM namespace; the weekly summary appears in `#rl-costs` (run it by hand once); temporarily lowering the spike threshold fires `NamespaceDailyCostSpike` in `#rl-costs`; Cost Explorer can filter by the activated `Site` tag.
 
 
-### Step 10.4 (optional, on demand): Tracing with Tempo
-**Do:** `platform/tracing/`: **Grafana Tempo** in single-binary mode, storing traces in the Tempo bucket (scoped key from External Secrets), **3-day retention**; Tempo as a Grafana data source with links to Loki (trace ID in log lines) and exemplars on latency graphs. Point Alloy's OTLP receiver at Tempo, and turn tracing on in the WordPress, summarizer and gateway values: parent-based sampling of ~10% for page requests, 100% for summary jobs. When finished investigating, turn it off and remove Tempo if box 1's memory is tight (the Argo CD Application can be suspended). See `aws-wp.md` ([Tracing](aws-wp.md#tracing-tempo--opentelemetry)). Record memory use and the sampling rates in `docs/adr/0006-tempo-tracing.md`.
+### Step 10.4: Tracing with Tempo (always on)
+**Do:** `platform/tracing/`: **Grafana Tempo** in single-binary mode, storing traces in the Tempo bucket (scoped key from External Secrets), **3-day retention**; Tempo as a Grafana data source with links to Loki (trace ID in log lines) and exemplars on latency graphs. Point Alloy's OTLP receiver at Tempo, and turn tracing on in the WordPress, summarizer and gateway values: parent-based sampling of ~10% for page requests, 100% for summary jobs. Tempo runs **always on**, placed on box 3. See `aws-wp.md` ([Tracing](aws-wp.md#tracing-tempo--opentelemetry)). Record memory use and the sampling rates in `docs/adr/0006-tempo-tracing.md`.
 
 **Test:** publishing a post produces **one trace** in Grafana covering WordPress → the queue message → the summarizer → the gateway → the model call → saving the summary, showing which model answered; a slow page's trace shows its database queries; clicking a trace opens its logs in Loki; no span contains post text, prompts or summaries; with tracing off, nothing is sent and there's no measurable overhead.
 
@@ -629,8 +634,8 @@ Record each drill's time in the decision log and compare it with the expected ti
 
 **Test:** every runbook has been followed at least once in a drill; each rollback restored a working state within its expected time (or the runbook was corrected).
 
-### Step 10.9 (optional): CrowdSec
-**Do:** install **CrowdSec** reading ingress-nginx's logs, with its **Cloudflare bouncer** so abusive IP addresses (repeated login failures, scanners) are blocked at Cloudflare's edge; alerts and decisions to `#rl-security`. Record memory use; remove it if box 1 can't afford it.
+### Step 10.9: CrowdSec
+**Do:** install **CrowdSec** reading ingress-nginx's logs, with its **Cloudflare bouncer** so abusive IP addresses (repeated login failures, scanners) are blocked at Cloudflare's edge; alerts and decisions to `#rl-security`. Record memory use.
 
 **Test:** a simulated brute-force from a test address (in staging) gets that address banned at Cloudflare, and the ban expires as configured; normal visitors aren't affected.
 
@@ -640,6 +645,11 @@ Record each drill's time in the decision log and compare it with the expected ti
 **Test:** russetleaf.dev's content (posts, summaries, media) is fully restored from the off-account copies; the total time is recorded in `docs/disaster-recovery.md` and ADR 0019.
 
 ## Phase 11: Optional and finishing
+
+### Step 10.11: Node-failure drills
+**Do:** with the site under light load (e.g. a `k6` script), take each node offline in turn: first a clean shutdown, then **pulling its power cable**. Watch the API (virtual IP), the site (uptime check and Grafana), the database (MariaDB failover), the summarizer, and the alerts in Slack; bring the node back and confirm it rejoins cleanly. Record the impact and timings in `docs/adr/0015-availability-levels.md` and the decision log.
+
+**Test:** with any one node down, the site keeps serving (brief errors at most during failover), the API stays reachable, the database fails over and rebuilds its replica afterwards, and the expected alerts fire and clear.
 
 ### Step 11.1 (optional): Keyless AWS access for pods
 **Do:** publish the Talos cluster's service-account OIDC discovery files (public S3 bucket), register it as an IAM OIDC provider in `wp-infra`, switch pods from scoped keys to IAM roles one at a time, then delete the keys.
@@ -657,6 +667,7 @@ These keep russetleaf.dev healthy once it's running. Add each as a calendar remi
 
 | Task | How often | How |
 |---|---|---|
+| Node-failure drill | Quarterly | Take one node offline (alternating nodes); confirm failover and record the timings |
 | Rollback drill | Monthly (staging); quarterly (Talos, Cilium, Kyverno locally) | Follow a rollback runbook end to end and time it; fix the runbook if anything differed |
 | Restore from the backup account | Quarterly | Restore a MariaDB backup from the backup account's locked copy into a scratch instance |
 | Full disaster drill | Yearly | Rebuild russetleaf.dev using only the break-glass kit and off-account backups; record the time |
@@ -665,7 +676,7 @@ These keep russetleaf.dev healthy once it's running. Add each as a calendar remi
 | Merge Renovate pull requests | Weekly | Review the Dependency Dashboard and pull requests; patches auto-merge; read changelogs for minors and majors and rehearse platform ones on a local Talos-in-Docker cluster; Argo Rollouts and the CI checks catch bad application updates |
 | Security releases | Within 48 hours of a WPScan, Trivy Operator or Renovate security alert | Fast-track through ci and staging; promote as soon as staging passes |
 | Version-age report | Monthly (automatic) | Plan upgrades for anything within 90 days of end of support |
-| Talos and Kubernetes upgrades | Talos patches monthly; Kubernetes minor versions quarterly | Take an etcd snapshot and an on-demand MariaDB backup; rehearse on a local Talos-in-Docker cluster; check Cilium and platform components support the new Kubernetes version; bump versions in `wp-infra/envs/home` and apply, box 2 first, then box 1, then `talosctl upgrade-k8s`; roll back with `talosctl rollback` if needed; note timings in the decision log |
+| Talos and Kubernetes upgrades | Talos patches monthly; Kubernetes minor versions quarterly | Take an etcd snapshot and an on-demand MariaDB backup; rehearse on a local Talos-in-Docker cluster; check Cilium and platform components support the new Kubernetes version; bump versions in `wp-infra/envs/home` and apply **one node at a time** (box 2, box 1, then box 3), checking etcd health and the site between nodes (**no downtime expected**), then `talosctl upgrade-k8s`; roll back with `talosctl rollback` if needed; note timings in the decision log |
 | Back up cluster state (etcd) | Weekly | `talosctl etcd snapshot` to the backup bucket (a scheduled job on your machine or a CronJob using a Talos API key). GitOps can rebuild everything else, but this speeds up recovery. |
 | Check for Terraform drift | Weekly | A scheduled `terraform plan` in `wp-infra` CI for the AWS and Cloudflare resources (alerts if anything changed outside Terraform) |
 | Check staging still works | Monthly, if nothing has been promoted | Run `staging-test` by hand, so a broken staging setup is found before it blocks a real release |
@@ -680,7 +691,7 @@ These keep russetleaf.dev healthy once it's running. Add each as a calendar remi
 | Rotate MariaDB passwords | Quarterly | Regenerate the operator-managed Secret (or use the operator's rotation feature), then restart WordPress through its Rollout; check the backup user still works |
 | Rotate scoped IAM keys | Every 90 days, until step 11.1 removes them | Create a new key in Terraform, update Secrets Manager, let External Secrets sync it, delete the old key |
 | Review alerts, costs and Bedrock spend | Monthly | Grafana, OpenCost, the AWS Budget and Cost Explorer (filter by `Site=dev`) |
-| Review log volume | Monthly | Check Loki's daily ingestion and box 1's memory; drop or shorten noisy sources at Alloy |
+| Review log volume | Monthly | Check Loki's daily ingestion and box 3's memory; drop or shorten noisy sources at Alloy |
 | Review alert noise | Monthly | Look at what fired in the Slack channels: remove or tune alerts nobody acted on, and update runbooks that didn't help |
 | Test the outside monitoring | Quarterly | Pause the heartbeat or block the uptime check and confirm `#rl-critical` is notified |
 
@@ -698,7 +709,7 @@ The home lab already builds most of what these need: the shared Terraform module
 
 ## Progress checklist
 
-| Step | Tier | Est. hours | Done | Date | Actual hours | Box 1 memory after | Notes |
+| Step | Tier | Est. hours | Done | Date | Actual hours | Node memory after | Notes |
 |---|---|---|---|---|---|---|---|
 | 0.1 Accounts, tools, budget | Core | 4–8 | ☐ | | | | |
 | 0.2 Decisions | Core | 1–2 | ☐ | | | | |
@@ -706,7 +717,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 2.0 AWS Organization and accounts (SRA) | Core | 6–10 | ☐ | | | | |
 | 2.0b Organisation security services | Core | 4–8 | ☐ | | | | |
 | 2.1 Terraform bootstrap | Core | 3–5 | ☐ | | | | |
-| 2.2 Talos cluster | Core | 6–12 | ☐ | | | | |
+| 2.2 Talos cluster | Core | 8–14 | ☐ | | | | |
 | 2.3 AWS + Cloudflare resources | Core | 5–8 | ☐ | | | | |
 | 2.4 `wp-infra` CI | Core | 4–6 | ☐ | | | | |
 | 2.5 Disaster recovery copies | Differentiator | 3–6 | ☐ | | | | |
@@ -715,7 +726,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 4.2 Secrets | Core | 2–4 | ☐ | | | | |
 | 4.3 Ingress + tunnel | Core | 3–6 | ☐ | | | | |
 | 4.4 Monitoring + Slack alerting | Core | 6–10 | ☐ | | | | |
-| 4.5 MariaDB + backups + Valkey | Core | 4–8 | ☐ | | | | |
+| 4.5 MariaDB + backups + Valkey | Core | 6–10 | ☐ | | | | |
 | 4.6 Logging (Loki + Alloy) | Core | 4–7 | ☐ | | | | |
 | 5.1 WordPress image | Core | 12–20 | ☐ | | | | |
 | 5.2 WordPress deployment | Core | 8–14 | ☐ | | | | |
@@ -743,13 +754,14 @@ The home lab already builds most of what these need: the shared Terraform module
 | 10.1 Falco | Differentiator | 3–6 | ☐ | | | | |
 | 10.2 Trivy Operator, Kubescape scan, Talos notes | Differentiator | 3–5 | ☐ | | | | |
 | 10.3 OpenCost | Differentiator | 2–4 | ☐ | | | | |
-| 10.4 Tracing with Tempo (optional, on demand) | Stretch | 3–6 | ☐ | | | | |
+| 10.4 Tracing with Tempo (always on) | Differentiator | 3–6 | ☐ | | | | |
 | 10.5 AWS account posture (Prowler) | Differentiator | 2–4 | ☐ | | | | |
 | 10.6 Version-age report | Differentiator | 2–3 | ☐ | | | | |
 | 10.7 Custom seccomp profiles (optional) | Stretch | 4–8 | ☐ | | | | |
 | 10.8 Rollback runbooks and drills | Differentiator | 5–8 | ☐ | | | | |
-| 10.9 CrowdSec (optional) | Stretch | 3–5 | ☐ | | | | |
+| 10.9 CrowdSec | Differentiator | 3–5 | ☐ | | | | |
 | 10.10 First full disaster drill | Differentiator | 6–10 | ☐ | | | | |
+| 10.11 Node-failure drills | Differentiator | 3–6 | ☐ | | | | |
 | 11.1 Keyless AWS access (optional) | Stretch | 5–10 | ☐ | | | | |
 | 11.2 Docs + go public | Core | 6–10 | ☐ | | | | |
 

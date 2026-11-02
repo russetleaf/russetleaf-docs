@@ -1,9 +1,11 @@
 # ADR 0006: Distributed tracing with Tempo and OpenTelemetry
 
-- **Status:** Accepted
+- **Status:** Accepted; updated by ADR 0021
 - **Date:** 2026-11-01
 - **Applies to:** both sites (always on for russetleaf.com demos; on demand for russetleaf.dev)
 
+
+> **Update (ADR 0021):** The home cluster now has three nodes (box 3: i5-8500T, 16 GB), so **Tempo runs always on at home** (sampled, 3-day retention), not on demand.
 ## Context
 The design already has metrics (Prometheus), logs (Loki + Alloy), network flows (Hubble) and security events (Falco). Tracing was listed only as an optional WordPress-only extra, and the AWS plan had no step for it. The AI summary pipeline (WordPress → SQS → summarizer → LiteLLM gateway → Bedrock or llama.cpp) is asynchronous and crosses several services: when a summary is slow or fails, metrics and logs show *that* something went wrong, but not easily *where*.
 

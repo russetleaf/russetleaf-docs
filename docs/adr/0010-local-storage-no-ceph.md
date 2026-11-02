@@ -1,9 +1,11 @@
 # ADR 0010: Local storage with S3 backups; no Ceph (Rook) or Longhorn
 
-- **Status:** Accepted
+- **Status:** Accepted; updated by ADR 0021
 - **Date:** 2026-11-01
 - **Applies to:** russetleaf.dev (home lab). russetleaf.com uses AWS's managed EBS and S3.
 
+
+> **Update (ADR 0021):** The home cluster now has three nodes. Still no Ceph (memory per storage daemon) and no Longhorn (unnecessary): **database availability now comes from MariaDB primary–replica replication with automatic failover** (primary on box 3, replica on box 1), so a node or disk loss costs seconds of data, not hours. The 6-hourly S3 backups remain for disasters.
 ## Context
 **Ceph** is a distributed storage system that pools several servers' disks into replicated block, file and S3-compatible object storage, healing itself when a disk or server fails. **Rook** is the Kubernetes operator that runs Ceph inside a cluster, and Rook-Ceph is a standard choice for on-premises Kubernetes needing resilient storage. **Longhorn** is a lighter distributed block storage system for Kubernetes. Earlier versions of the design listed "local-path-provisioner or Longhorn" for home storage.
 

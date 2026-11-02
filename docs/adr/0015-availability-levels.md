@@ -1,9 +1,11 @@
 # ADR 0015: Availability levels: home lab without HA; AWS designed for HA but run as a demo
 
-- **Status:** Accepted
+- **Status:** Accepted; updated by ADR 0021
 - **Date:** 2026-11-01
 - **Applies to:** both sites
 
+
+> **Update (ADR 0021):** The home lab now has **three control-plane nodes** with a virtual IP, replicated MariaDB with automatic failover, and spread workloads, so it **survives any single node failure** (recovery point: seconds; recovery time: about a minute). Power and internet remain single points of failure; a UPS is recommended. The "Future changes" items 1, 3 and 4 for the home lab are now done; the table below describes the original two-node state.
 ## Context
 High availability (HA) means a site keeps working when a single component (a node, a disk, a zone, a database instance) fails. It usually means running more than one of everything, which costs money and hardware. The two sites differ:
 

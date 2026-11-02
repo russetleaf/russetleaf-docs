@@ -1,9 +1,11 @@
 # ADR 0016: Process allow-listing with Falco; AppArmor and SELinux not used; Tetragon and custom seccomp as stretch goals
 
-- **Status:** Accepted
+- **Status:** Accepted; updated by ADR 0021
 - **Date:** 2026-11-01
 - **Applies to:** both sites
 
+
+> **Update (ADR 0021):** With the three-node home cluster's extra memory, **Tetragon enforcement is realistic at home** after its EKS trial.
 ## Context
 Process allow-listing means only expected programs may run in a container, so an attacker who gets code execution can't run shells, download tools or miners. On Linux it's usually built from mandatory access control profiles (**AppArmor** or **SELinux**), **seccomp** system-call filters, or runtime tools that watch or block process execution.
 
