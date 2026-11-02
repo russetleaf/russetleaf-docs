@@ -6,9 +6,11 @@
 - **Phase:** all (recorded in Phase 1)
 
 ## Context
+
 The project had grown to two sites and one design document: russetleaf.dev at home and russetleaf.com on EKS, with AI post summaries and an MLOps lifecycle running through both. Effort was estimated at roughly 525–875 focused hours. Built in one go, that's a year or more of evenings with nothing finished in between, and much of it (the EKS demo stack, GPU fine-tuning) may never be needed for interviews. The home lab alone already shows most of the platform work: infrastructure as code, GitOps, security, observability, delivery and operations.
 
 ## Decision
+
 Build in **three phases**, each complete and demonstrable on its own, with its own design, build plan and decisions:
 
 | Phase | Builds | Needs |

@@ -8,6 +8,7 @@
 > **Update (ADR 3005):** the project is now built in three phases (ADR 1037). This ADR is Phase 1's. **EKS access** (Identity Center permission sets mapped to access entries) and the **EKS audit-log archive** are recorded in ADR 3005 (Phase 3).
 
 ## Context
+
 Workload identity was well covered (projected service-account tokens off by default, Pod Identity on EKS, scoped keys at home), and the admin UIs sat behind Cloudflare Access with Google. But for **people**:
 
 - the home cluster was used through Talos's generated **admin kubeconfig**: a long-lived **cluster-admin client certificate** that **can't be revoked**

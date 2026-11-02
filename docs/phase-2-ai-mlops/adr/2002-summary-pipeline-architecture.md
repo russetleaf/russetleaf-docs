@@ -6,6 +6,7 @@
 - **Phase:** 2 (Phase 3 runs the same pipeline on EKS)
 
 ## Context
+
 Each post gets a short AI-generated summary. Summaries must not slow down publishing, must survive model outages and throttling, must cost almost nothing when idle, and must be observable and testable like any other production service. The design described this pipeline, but the choice of its shape had no ADR.
 
 ## Decision

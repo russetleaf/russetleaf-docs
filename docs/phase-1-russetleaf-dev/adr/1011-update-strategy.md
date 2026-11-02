@@ -6,6 +6,7 @@
 - **Phase:** 1. Later: Phase 2 adds model and summarizer updates; Phase 3 adds EKS versions and add-ons.
 
 ## Context
+
 The project has many layers that need regular updates: WordPress core, plugins and themes; base images; the summarizer's Python dependencies; platform components (Cilium, Argo CD, Kyverno, Falco, Loki and others); Talos and Kubernetes at home; EKS, AMIs, RDS and ElastiCache on AWS; Terraform providers; CLI tools and GitHub Actions; and the models. The design already pins versions (images by digest, charts, Terraform), disables WordPress's in-place updates (`DISALLOW_FILE_MODS`), and has ci kind tests, on-demand staging, promotion pull requests and Argo Rollouts canaries. What was missing was one consistent strategy, plus coverage of WordPress plugin vulnerabilities (which Trivy doesn't detect) and of end-of-life versions.
 
 ## Decision

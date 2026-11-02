@@ -6,6 +6,7 @@
 - **Phase:** 1. Later: Phase 2 adds latency injected into model calls.
 
 ## Context
+
 The design had rollback, node-failure and disaster drills, but no regular, hypothesis-driven testing of failure modes inside the running system, and no standard way of learning from incidents.
 
 ## Decision

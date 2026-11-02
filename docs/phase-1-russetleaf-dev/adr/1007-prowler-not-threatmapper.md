@@ -5,9 +5,10 @@
 - **Applies to:** both sites (the AWS account is shared by the home lab's AWS resources and russetleaf.com)
 - **Phase:** 1. Later: Phase 3 adds a Prowler run per demo with the stack up.
 
-
 > **Update (ADR 1019):** The project now follows the AWS Security Reference Architecture, with **Security Hub** (AWS Foundational Security Best Practices and CIS standards) as the **continuous** posture check across all accounts. Prowler remains as a free monthly **second opinion**, now run against every account. The "AWS Security Hub" alternative below was rejected on cost at the time; ADR 1019 accepts that cost (about $5–15/month with Config and KMS).
+
 ## Context
+
 Deepfence ThreatMapper is an open-source security platform combining vulnerability, secret and malware scanning, Kubernetes and cloud-account posture checks, and **ThreatGraph**, which ranks findings by attack path using observed network topology. (Live runtime detection is in Deepfence's commercial ThreatStryker, not ThreatMapper.)
 
 Most of its features are already covered in this design:

@@ -123,6 +123,7 @@ Separate workload accounts limit how far a compromise can spread, and give each 
 - **AWS Well-Architected review:** a review of the design with the free **Well-Architected Tool** (Security pillar first), with the report kept in `docs/` and revisited yearly.
 
 ### Cost
+
 Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-access findings are free. **Security Hub, Config and KMS** add roughly **$5–15/month**, depending mostly on how many resources Config records (focused recording keeps the demo stack's churn in check). That brought the always-on total to about $15–35/month; with box 3's electricity (ADR 1020) it's now about **$18–40/month**. That figure is the **whole** always-on cost (the security services are already included in it, not added on top). With about 20 demo hours a month (~$20), the total is **$30–60/month**; keeping demos to about 10 hours keeps it **under $50**.
 
 ## Security foundations
@@ -130,6 +131,7 @@ Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-acc
 How every control maps to the 4 C's (Cloud, Cluster, Container, Code) is in the overview's [Security by layer](../overview.md#security-by-layer-the-4-cs), alongside the threat model, platform security and compliance views. These are the Phase 1 foundations beyond the AWS accounts.
 
 ### SaaS account hardening
+
 The project depends on more than AWS: **GitHub** (code, CI, packages, attestations), **Cloudflare** (DNS, tunnel, WAF, Access), **Google Cloud** (sign-in), **Slack** (alerts) and the **domain registrars**. Each gets:
 
 - **Phishing-resistant sign-in:** passkeys or hardware security keys, with recovery codes in the break-glass kit.
@@ -211,6 +213,7 @@ The project depends on more than AWS: **GitHub** (code, CI, packages, attestatio
 - **Checkov** scans infrastructure and configuration code in **all four repos'** CI (see below), so insecure settings fail the pull request before anything is applied, built or deployed.
 
 ### Sandboxed runtimes (gVisor)
+
 Normally every container shares the node's Linux kernel, so a kernel exploit from inside one container could compromise the whole node. Two layers reduce that risk:
 
 1. **seccomp `RuntimeDefault` for every workload** (both sites): the container runtime's default seccomp profile blocks dozens of rarely needed, risky system calls. It costs nothing in performance or memory and is required by Kyverno (see the policy table above).
@@ -229,12 +232,12 @@ Normally every container shares the node's Linux kernel, so a kernel exploit fro
 - **Falco** must have its **gVisor event source** turned on, or it sees much less inside gVisor pods.
 - **Cilium** network policies and Hubble keep working: gVisor pods still use the normal pod network interface.
 
-
 **Kata Containers** (a lightweight VM per pod) was considered and not used: each pod's VM needs its own memory, which 8 GB nodes can't spare, and on AWS it needs hardware virtualization inside the instance (historically bare-metal instances only).
 
 The reasoning is recorded in `docs/phase-1-russetleaf-dev/adr/1009-gvisor-sandboxing.md`.
 
 ### Kubernetes component hardening
+
 Each Kubernetes component has explicit controls and a repeatable check, recorded in `docs/phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md` (which has the full table). The additions beyond the sections above:
 
 - **Pod Security Admission labels on every namespace, on both clusters** (EKS doesn't enforce Pod Security by default): `restricted` for application namespaces (WordPress, staging, tenants; the AI namespaces from Phase 2), `baseline` for most platform services, `privileged` only for node agents (Cilium, Falco, Alloy, the storage provisioner, the NVIDIA device plugin), with the **PSA version pinned** (`enforce-version`) so Kubernetes upgrades don't silently change enforcement. Kyverno's **`restricted`** policy set enforces the same for application namespaces, so two independent controls apply.
@@ -245,6 +248,7 @@ Each Kubernetes component has explicit controls and a repeatable check, recorded
 - **Talos host firewall:** the Kubernetes API (6443) and Talos API (50000) reachable only from the LAN and the workstation.
 
 ### Identity and access to the clusters
+
 How **people** sign in and what they may do, recorded in `docs/phase-1-russetleaf-dev/adr/1033-identity-and-access.md`:
 
 - **OIDC sign-in on the home cluster:** **Dex** (OIDC provider, with a Google connector) issues short-lived tokens; the API server trusts Dex through Kubernetes' structured authentication configuration; people use **kubelogin**. On EKS, people sign in through **IAM Identity Center**, mapped to **access entries** with the EKS view, edit and cluster-admin access policies.
@@ -253,6 +257,7 @@ How **people** sign in and what they may do, recorded in `docs/phase-1-russetlea
 - **SSO inside the admin tools:** Argo CD, Grafana and Backstage sign in through Dex with roles mapped from groups, behind Cloudflare Access as well.
 
 ### Intrusion detection and prevention
+
 Falco is one layer among several. The design combines **prevention** (stopping attacks) and **detection** (noticing them) at every layer, so no single tool has to catch everything. The reasoning is recorded in `docs/phase-1-russetleaf-dev/adr/1017-intrusion-detection-and-prevention.md`.
 
 | Layer | Prevention | Detection |
@@ -280,7 +285,6 @@ Falco is one layer among several. The design combines **prevention** (stopping a
 | `KubeTokenSecretCreated` | A long-lived service-account token Secret is created (Kyverno should already block it) |
 | `KubeAuditLogMissing` | No audit events have arrived for 15 minutes (the monitoring itself is broken) |
 
-
 **AWS account threat detection (always on, shared by both sites):**
 
 - **CloudTrail:** a single **organization trail** (management events, all accounts and regions) delivered to the **Log Archive** account's Object Lock bucket, with log-file validation (proves logs weren't altered). The first trail's management events are free; storage costs pennies. See [AWS account structure](#aws-account-structure-and-best-practices-security-reference-architecture).
@@ -292,6 +296,7 @@ Falco is one layer among several. The design combines **prevention** (stopping a
 **Deliberately not used: a network IDS** (Suricata or Zeek) inside the cluster. It needs a lot of CPU and memory, and the traffic it would inspect is already covered: TLS ends at Cloudflare and the ALB, where the WAFs inspect it, and Cilium and Hubble cover traffic inside the cluster. A home-network IDS on the router (e.g. OPNsense with Suricata) is worthwhile but outside this project.
 
 ### Process allow-listing
+
 The goal of process allow-listing is "**only these programs may run in this container**". It's done with Falco (detection, both sites) rather than AppArmor or SELinux profiles. The reasoning is recorded in `docs/phase-1-russetleaf-dev/adr/1015-process-allow-listing.md`.
 
 | Mechanism | Used? | Why |
@@ -313,6 +318,7 @@ The goal of process allow-listing is "**only these programs may run in this cont
 The lists are kept in Git next to the rules, and **tested**: starting any unlisted process in each workload must raise an alert. When an image legitimately starts a new program (e.g. after an update), the release pull request updates the list.
 
 ### Infrastructure and configuration scanning (Checkov)
+
 **Checkov** (free, open source, no account needed) is the project's scanner for infrastructure-as-code and configuration. Snyk isn't used: it's a commercial platform whose free tier limits monthly scans, and it would overlap with Checkov (configuration) and Trivy (images and dependencies) without adding coverage.
 
 | Repo | What Checkov scans |
@@ -329,8 +335,8 @@ How it's run:
 - **Results on GitHub:** findings are uploaded as **SARIF** to GitHub's **code scanning**, so they appear inline on pull requests and in each repo's Security tab. Code scanning is free for **public** repos, and the repos are public from the start (ADR 1030), so SARIF upload is on from the first pipeline.
 - **Overlap with Kyverno is intended:** Checkov checks manifests *before* they're merged, using its own rule set; Kyverno enforces the project's policies *at admission* in the cluster (and its CLI tests the same policies in CI).
 
-
 ### Terraform pipeline (`russetleaf-infra`)
+
 All Terraform runs through **GitHub Actions** (apart from the first local applies of `bootstrap/` and `envs/home`), with every check passing before anything reaches AWS, Cloudflare or Talos.
 
 | Stage | Tool | What it does |
@@ -356,6 +362,7 @@ All Terraform runs through **GitHub Actions** (apart from the first local applie
 **Deliberately not used:** tfsec or Trivy's Terraform scanning (they overlap heavily with Checkov); Atlantis, Terraform Cloud or Spacelift (GitHub Actions with OIDC, Environments and saved plans covers a single maintainer); OPA/Conftest (Checkov custom policies cover the project's rules).
 
 ### Image build pipeline (`russetleaf-wordpress`, `russetleaf-llm-summarizer`)
+
 Both images are built in **GitHub Actions** and only reach GHCR after passing code, dependency, build and image checks; every release is signed, attested and recorded in the **Rekor** transparency log. The reasoning for the less obvious choices is in `docs/phase-1-russetleaf-dev/adr/1013-image-supply-chain.md`.
 
 | Stage | Tool | What it does |
@@ -417,6 +424,7 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
 - **Outgoing email through Amazon SES** with an SMTP plugin; each site has its own SES domain identity with DKIM.
 
 ### Media storage: S3, not EFS (by decision)
+
 Many WordPress-on-AWS guides, including AWS's own reference architecture, put `wp-content` on **EFS**, a shared network filesystem mounted by every server. This project deliberately doesn't. Media goes to **S3**, and WordPress's code (core, plugins, themes) is **built into the container image**. The reasoning is recorded as an ADR, `docs/phase-1-russetleaf-dev/adr/1002-s3-media-not-efs.md` in `russetleaf-gitops`.
 
 **Two production patterns, for two kinds of site:**
@@ -464,6 +472,7 @@ Whichever is chosen must also work with a **custom S3 endpoint**, so the ci test
 - **Tagging**: every AWS resource gets `Project`, `Site`, `Env` and `ManagedBy` tags (plus `Stack=edge|demo` on russetleaf.com in Phase 3) through the AWS provider's `default_tags`, so leftovers can be found and costs split per site.
 
 ### WordPress image and Helm chart
+
 The site uses a **custom image built on the official `wordpress` image** and a **small Helm chart of its own** (Deployment/Rollout, Service, Ingress, HPA, PDB, WP-Cron CronJob), both maintained in the `russetleaf-wordpress` repo and released together. The Bitnami WordPress chart isn't used: it only works with Bitnami-format images, and Bitnami cut back its free images in 2025. Owning the chart removes that dependency and keeps every setting visible.
 
 **Repos and packages are public early** (ADR 1030): the repos are made public in Phase 1 step 1.1, after a secret scan, which gives free GitHub-hosted CI minutes, and the GHCR packages are made public at first push.
@@ -536,6 +545,7 @@ spec:
 - Falco's "unexpected outbound connection" rule **detects**; the FQDN egress policies **prevent**. Each covers the other's gaps.
 
 ### Encryption in transit: Cilium WireGuard
+
 Sensitive connections already use TLS at the application level (WordPress → database, everything → AWS APIs, CloudFront → ALB). On top of that, Cilium's **transparent encryption** encrypts **all pod-to-pod traffic between nodes** with **WireGuard**, with no changes to the applications:
 
 ```yaml
@@ -550,6 +560,7 @@ encryption:
 - **Check:** `cilium encrypt status` (or `cilium status`) shows WireGuard enabled with a peer for each other node.
 
 ### Service mesh (Istio): not used, by decision
+
 The project deliberately has **no service mesh**. The reasoning is recorded as an **architecture decision record (ADR)**, `docs/phase-1-russetleaf-dev/adr/1001-no-service-mesh.md` in `russetleaf-gitops`:
 
 | What a mesh like Istio would add | How this design already covers it |
@@ -572,6 +583,7 @@ The project deliberately has **no service mesh**. The reasoning is recorded as a
 - The `hubble` CLI shows live flows, e.g. `hubble observe --verdict DROPPED --namespace wordpress`, which is the first thing to run when a new policy blocks something it shouldn't.
 
 ### Hubble and Cilium metrics in Prometheus
+
 Cilium Helm values (both clusters; the label set is kept small to limit memory and storage use):
 
 ```yaml
@@ -674,6 +686,7 @@ An admin signs in once with Google at the edge, then once more (one click, no pa
 - **ci tests:** a **mock OIDC provider** (e.g. Dex or a mock OAuth2 server) in the kind cluster, so sign-in is tested without real Google accounts.
 
 ### Cost
+
 **$0.** Google's OAuth for basic sign-in is free, the plugin is open source, Cloudflare Access is free for up to 50 users, and the ALB's OIDC rule adds no charge. **No AWS components are required**; Secrets Manager (already in use) holds the client secrets. Amazon Cognito isn't needed.
 
 ## Site design and branding
@@ -681,6 +694,7 @@ An admin signs in once with Google at the edge, then once more (one click, no pa
 russetleaf.dev is the portfolio's front door, so it gets a **custom design and a logo**, built the same way as everything else: in Git, reviewed, and shipped in the image. The reasoning is recorded in `docs/phase-1-russetleaf-dev/adr/1025-site-design-in-git.md`.
 
 ### A block theme kept in Git
+
 Modern WordPress **block themes** are styled through `theme.json` (colors, typography, spacing), templates and patterns. The **Site Editor** can change them, but it saves those changes **in the database**, which would let the live site drift from Git. So:
 
 1. **Design locally** in the Docker Compose WordPress, using the Site Editor and AI help.
@@ -701,6 +715,7 @@ Modern WordPress **block themes** are styled through `theme.json` (colors, typog
 - Brand assets live in `russetleaf-wordpress/brand/` (source SVG, exported icons, the palette).
 
 ### Front-end quality gates
+
 In `russetleaf-wordpress` CI and the staging gate:
 
 - **Visual regression tests:** **Playwright** screenshots of key pages (home, a post, an archive, light and dark mode, mobile and desktop widths) compared with approved baselines; any unexpected change fails the check until a new baseline is approved in the pull request.
@@ -726,6 +741,7 @@ Prometheus **scrapes** (pulls) metrics from HTTP endpoints; nothing pushes to it
 (If the image is ever switched from Apache to PHP-FPM + nginx, use **php-fpm_exporter** instead of apache_exporter.)
 
 ### The custom metrics plugin
+
 A must-use plugin in `russetleaf-wordpress` (`mu-plugins/metrics/`) exposes a handful of metrics specific to this project:
 
 | Metric | Meaning | Used for |
@@ -743,9 +759,11 @@ How it's built safely:
 - **Tested:** a unit test for the output format, and a ci test that scrapes the endpoint in the kind cluster.
 
 ### Request tracing
+
 Traces of page requests are covered in [Tracing (Tempo + OpenTelemetry)](#tracing-tempo--opentelemetry): always on at home (sampled). Phase 2 extends them through the AI summary pipeline.
 
 ### Cost and memory
+
 $0. The exporters are small (roughly 20–50 MB each); the custom plugin adds nothing measurable. Only Tempo (see the tracing section) uses noticeable memory.
 
 ## Logging (Loki + Alloy)
@@ -774,6 +792,7 @@ Alloy needs to read log files on each node and listen on a host port for Talos's
 Each has a runbook in `docs/runbooks/` and a test of its log query.
 
 ### Privacy
+
 Logs can contain visitors' IP addresses and occasionally email addresses. Short retention (7 and 14 days), masking in Alloy, and access to Grafana only through Cloudflare Access (home) or port-forward (AWS) keep that in check. **Security logs are separate:** the API audit log, Argo CD audit events and runtime-security events go to a separate Loki tenant (`security`), visible only in a Grafana **Security** organization whose members are platform admins (ADR 1035). Staging logs come from scrubbed data. The full record of personal data, its retention and how requests are handled is in [Compliance and privacy](../overview.md#compliance-and-privacy).
 
 ### Cost and memory
@@ -801,7 +820,6 @@ The instrumentation is **always built into the images**; it only sends traces wh
 |---|---|---|
 | **WordPress** | OpenTelemetry's **PHP extension** plus **Composer packages** (the SDK, the OTLP exporter, and auto-instrumentation packages for WordPress, database access and HTTP calls from the OpenTelemetry PHP contrib project; check current package names), installed at image build. **No WordPress plugin** is involved: it's enabled by environment variables (`OTEL_PHP_AUTOLOAD_ENABLED`, `OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`, sampler settings) | The page request, WordPress hooks, database queries, outgoing calls (S3, SQS) |
 
-
 ### Collection and storage
 
 - **Grafana Alloy** (already running on every node for logs) also receives traces over **OTLP** and forwards them to Tempo. No separate collector is needed.
@@ -809,6 +827,7 @@ The instrumentation is **always built into the images**; it only sends traces wh
 - **Grafana correlation:** trace IDs are included in the services' log lines, so Grafana links **traces ↔ logs** (Loki) and **metrics → traces** (exemplars on latency graphs).
 
 ### Privacy
+
 Spans record **metadata only** (routes, durations, status, query timings), never post content or personal data. Phase 2 keeps the same rule for model calls.
 
 ### Cost and memory
@@ -821,6 +840,7 @@ Spans record **metadata only** (routes, durations, status, query timings), never
 Every alert and operational event from both sites goes to **Slack**, routed by **site** and **topic**, so problems reach a person instead of sitting in a dashboard.
 
 ### Slack workspace and channels
+
 One Slack workspace for the project. The free plan is enough: it keeps 90 days of message history and allows up to 10 apps, and this design uses about five (the custom bot below, GitHub, Amazon Q Developer, the uptime checker and the heartbeat service).
 
 | Channel | What goes there | Sources |
@@ -847,6 +867,7 @@ Every message carries a **`site=dev` or `site=com` label** (or a `[dev]` / `[com
 - **One Slack app for the clusters:** a custom Slack app (e.g. "russetleaf-bot") with a bot token, used by Alertmanager, Argo CD Notifications, Argo Rollouts, Falcosidekick and Policy Reporter. The token lives in **Secrets Manager** and reaches each cluster through External Secrets; it's never in Git.
 
 ### Watching from outside the clusters
+
 A cluster can't report that it's completely down, so two outside checks back up Alertmanager:
 
 - **Dead man's switch:** Alertmanager's always-firing `Watchdog` alert pings a free heartbeat service (e.g. healthchecks.io) every few minutes. If the pings stop (cluster down, Alertmanager broken, home internet out), the heartbeat service posts to `#rl-critical`.
@@ -866,6 +887,7 @@ A cluster can't report that it's completely down, so two outside checks back up 
 - Alertmanager's routing config lives in `platform/monitoring/` (with `overlays/home` and `overlays/aws` setting the site-specific receivers).
 
 ### Cost
+
 **$0.** Slack's free plan, the heartbeat service and the uptime checker's free plans, Amazon Q Developer in chat applications, and SNS at this volume are all free.
 
 ## Environments and promotion
@@ -883,7 +905,6 @@ Changes never go straight to a live site. Every change to the WordPress image or
 | **staging** | The home cluster, in its own namespaces, at `staging.russetleaf.dev` behind Cloudflare Access | Run each new version against **real** AWS services and real models, with real (scrubbed) content, before production | **On demand only (scale-to-zero):** created for each promotion, deleted when tests finish | ~$0–1/month; ~0.7–1 GB of memory (on box 1), only while running |
 | **prod (home)** | russetleaf.dev | The live site | 24/7 | see the home lab costs |
 
-
 ### ci: test clusters in GitHub Actions
 
 - **Charts and images** (`russetleaf-wordpress`, `russetleaf-llm-summarizer`): each pull request creates a kind cluster, installs the chart with the `ci` values (LocalStack endpoints, mock LLM, test credentials), and runs integration tests:
@@ -892,6 +913,7 @@ Changes never go straight to a live site. Every change to the WordPress image or
 - **LocalStack note:** LocalStack's free-tier terms have changed over time. If its current terms don't suit, use **MinIO** (S3) and **ElasticMQ** (SQS) instead, with a plain Kubernetes Secret in place of Secrets Manager.
 
 ### staging: on-demand, scale-to-zero
+
 Staging exists **only while it's being tested** (scale-to-zero): it keeps the cluster lean and shows an on-demand environment pattern, even though the three-node cluster could now afford an always-on copy (see `docs/phase-1-russetleaf-dev/adr/1029-on-demand-staging.md`):
 
 - **Staging Argo CD Applications** (WordPress and a small MariaDB; the summarizer from Phase 2) are in Git under `overlays/home-staging`, but with **auto-sync off**. When idle, nothing is deployed and staging uses no memory.
@@ -939,6 +961,7 @@ Performance is tested on purpose, at several levels, not just checked for correc
 - **Results** go to **Prometheus** (k6's remote-write output), shown in Grafana beside the system metrics (CPU, memory, database, queue depth, Bedrock calls) for the same time window, and are summarized in `docs/performance/`.
 
 ### Performance regression gate
+
 The `staging-test` workflow also load-tests the **current production version and the candidate back to back in staging**: same hardware and conditions, minutes apart, a few minutes at expected traffic, **three runs each**, comparing the **medians** of 95th-percentile latency and error rate. A candidate more than about **20% slower**, or above the error threshold, **fails promotion**, in the same way an exhausted error budget does. The gate **waits** while box 2 is busy with a summarization burst or a stress test is running, so shared-cluster load doesn't cause false failures. The comparison is attached to the promotion pull request; production baselines (measured after each promotion) are kept for trends and the capacity plan.
 
 ### How results are used
@@ -978,6 +1001,7 @@ The OpenCost alerts are `PrometheusRule`s in `platform/opencost/`, labeled `team
 | **Monthly review** | AWS Budgets, Cost Explorer (by `Site`), OpenCost dashboards, Bedrock spend | Ongoing-operations task in both plans |
 
 ### Cost allocation tags must be activated
+
 AWS only lets Budgets and Cost Explorer filter by your own tags (`Project`, `Site`, `Env`, `Stack`, `ManagedBy`) after they're **activated as cost allocation tags** in the Billing console, or with Terraform (`aws_ce_cost_allocation_tag`, in `russetleaf-infra/bootstrap/`). A tag can only be activated after it has appeared on at least one resource, activation can take up to a day to show, and costs are only tagged from activation onwards, so activate them early.
 
 ## Update strategy
@@ -1011,6 +1035,7 @@ Every update, from a WordPress plugin to a Kubernetes version, arrives as a **pu
 - **AWS and cluster posture:** Prowler and Kubescape reports surface outdated or insecure settings.
 
 ### Version-age report
+
 A **monthly scheduled workflow** in `russetleaf-gitops` checks running versions (Talos, Kubernetes, EKS, MariaDB, Valkey, and major platform charts) against their **end-of-life dates** (e.g. from the endoflife.date API) and posts anything within 90 days of end of support to `#rl-deploys`. Renovate's Dependency Dashboard covers everything else.
 
 ### Safety nets for every update
@@ -1063,6 +1088,7 @@ Every change can be undone, and the way to undo it is decided **before** it's ne
 | **Data** | Data loss or corruption | Restore MariaDB from S3 backups (≤ 6 hours old), RDS from snapshots or point-in-time restore, S3 objects from **previous versions** | You | 15 minutes to a few hours |
 
 ### Database schema changes: back up first, then decide
+
 WordPress core upgrades (and some plugin updates) **change the database structure** the first time new code runs. Rolling the image back afterwards can leave old code running against a newer schema.
 
 - **Detection:** CI compares WordPress's database version (`$wp_db_version`) between the old and new images, and plugins flag schema changes in their release notes; such releases are labeled **`schema-change`**.
@@ -1071,6 +1097,7 @@ WordPress core upgrades (and some plugin updates) **change the database structur
 - Staging runs every schema change on a copy of production data first, so most problems are caught there.
 
 ### High-risk platform components
+
 Some components can make normal rollback impossible if they break, because rollback itself depends on them:
 
 - **Cilium (networking):** if an upgrade breaks pod networking, Argo CD can't sync a revert. The Cilium Application uses **manual sync** (not auto-sync), and the recovery path is from the workstation: `helm rollback cilium` against the API server (which runs on the host network, so it stays reachable), then a Git revert to match. `talosctl` access is independent of Cilium.
@@ -1079,6 +1106,7 @@ Some components can make normal rollback impossible if they break, because rollb
 - **External Secrets:** if it stops syncing, existing Kubernetes Secrets keep working; revert the chart, and use `AWSPREVIOUS` for bad secret values.
 
 ### Terraform: protect what can't be recreated
+
 Reverting Terraform code doesn't always undo infrastructure cleanly. Stateful resources carry **`lifecycle { prevent_destroy = true }`**, so no plan (including a revert's) can delete them without a deliberate code change: the Terraform state bucket, the media, backup, log, trace and model mirror buckets, the Route 53 hosted zone, the CloudFront distribution and the Secrets Manager entries. RDS final snapshots aren't managed by Terraform, so they survive any plan.
 
 ### Rollback drills
@@ -1106,8 +1134,6 @@ The full AWS stack costs too much to run 24/7 as a portfolio project. Instead:
 
 All three nodes are **control-plane nodes** that also run workloads, so etcd keeps quorum and the Kubernetes API stays up when any one node fails; **Talos's shared virtual IP** gives the API a single address that moves to a healthy node. The layout is recorded in `docs/phase-1-russetleaf-dev/adr/1020-three-node-ha-home-cluster.md`.
 
-
-
 **Disk encryption:** Talos encrypts each node's system-state and data partitions, **sealed to the node's TPM 2.0** (ADR 1031).
 
 **Disks:** all three nodes must use **SSD or NVMe** storage, because etcd runs on every node and is sensitive to disk latency. Check boxes 1 and 2; a spinning disk should be replaced with an inexpensive SATA SSD before installing Talos.
@@ -1134,6 +1160,7 @@ Two parts of the AWS design deliberately don't run at home:
 - **kube-bench** looks for config files and processes where most Linux distributions keep them, and Talos doesn't, so many checks fail or come back "not applicable". Talos is hardened by default (no shell or SSH, read-only system, API-only management, only Node and RBAC authorization on the API server, no anonymous kubelet access), so the home lab documents how Talos meets the CIS benchmark instead, and relies on Trivy Operator's compliance reports and metrics for continuous checks (see `docs/phase-3-russetleaf-com/adr/3001-kube-bench-eks-only.md`).
 
 ### russetleaf.dev database backups
+
 The database is protected in two ways. Against a **node failure**, MariaDB Operator runs **primary–replica replication** (primary on box 3, replica on box 1) with **automatic failover**, so at most a few seconds of changes are lost. Against **disasters** (data deleted or corrupted, or the whole home lab lost), these **backups** run **every 6 hours**, so at most 6 hours of posts and settings can be lost. Volumes are on local disks with no replicated storage (no Ceph or Longhorn; see `docs/phase-1-russetleaf-dev/adr/1010-local-storage-no-ceph.md`).
 
 **MariaDB Operator** (not Talos) backs up the russetleaf.dev database. Talos has its own snapshot feature, but it only covers the cluster's internal state (etcd), not application data. The operator's `Backup` resource, deployed by Argo CD from `russetleaf-gitops/platform/mariadb/`, runs a scheduled dump and uploads it to S3.
@@ -1179,7 +1206,6 @@ spec:
       tls:
         enabled: true
 ```
-
 
 **Media is backed up separately:** uploads live in russetleaf.dev's S3 media bucket, which has versioning on, so deleted or overwritten files can be recovered from older versions.
 
@@ -1238,6 +1264,7 @@ These practices move the project from "a well-built system" toward **staff-level
 - **Grafana SLO dashboards** show each objective, the remaining budget and the burn rate.
 
 ### Delivery measurement (DORA metrics)
+
 A scheduled workflow computes the four **DORA metrics** from GitHub (pull requests, releases), Argo CD (syncs) and the incident and rollback records: **deployment frequency**, **lead time for changes**, **change failure rate** and **time to restore**. It publishes them to Prometheus for a Grafana dashboard with monthly trends, reviewed in the monthly operations review.
 
 ### Internal developer platform: golden paths and multi-tenancy
@@ -1248,6 +1275,7 @@ A scheduled workflow computes the four **DORA metrics** from GitHub (pull reques
 - **Multi-tenancy:** each team (or service) gets a **namespace**, an **Argo CD project**, **resource quotas and limit ranges**, scoped **RBAC**, per-tenant Kyverno policies, and **cost showback** per tenant (OpenCost). See `docs/phase-1-russetleaf-dev/adr/1022-internal-developer-platform.md`.
 
 ### Fleet management: one Argo CD for several clusters
+
 The home Argo CD becomes the **hub** for other clusters. In Phase 1 the spoke is a **local Talos-in-Docker cluster** on the workstation (`talosctl cluster create`), registered with the hub through an Argo CD cluster secret with a scoped service account; **ApplicationSets with cluster generators** deploy a small overlay to it automatically, and removing the registration cleans it up. In Phase 3, `demo-up` registers EKS the same way (IAM authentication) as a second spoke. Recorded in ADR 1022.
 
 ### Reliability practice: chaos experiments and postmortems
@@ -1262,6 +1290,7 @@ The home Argo CD becomes the **hub** for other clusters. In Phase 1 the spoke is
 - **Control matrix** (`docs/security/controls-matrix.md`): the implemented controls organized by **NIST Cybersecurity Framework 2.0** functions and mapped to the **CIS Controls** (and SOC 2-style criteria), with **NIST SP 800-190** and **SSDF** checklists, the CIS benchmark results and the **MITRE ATT&CK** detection map as evidence (policy, configuration, report or test). See [Compliance and privacy](../overview.md#compliance-and-privacy).
 
 ### Strategy documents
+
 ADRs record decisions; these set direction:
 
 - **Technical roadmap** (`docs/strategy/roadmap.md`): what comes next, in what order, and why.
@@ -1270,7 +1299,9 @@ ADRs record decisions; these set direction:
 - **Build-vs-buy analysis** (`docs/strategy/build-vs-buy.md`): the self-hosted stack compared with managed alternatives (e.g. Grafana Cloud, managed Argo CD, Kubecost, Security Hub-only), with costs and trade-offs.
 
 ### Public writing
+
 A series of **articles on russetleaf.dev** explaining the design decisions (the ADRs are the raw material): S3 rather than EFS, no service mesh, the SRA account structure, evaluation gates for LLMs, error-budget-gated promotion. The site is then both the system and the evidence of communicating it.
 
 ### Cost and memory
+
 Backstage (~1–1.5 GB with its database), Chaos Mesh and Sloth's rules fit on the three-node cluster (mostly box 3). About **$0**.

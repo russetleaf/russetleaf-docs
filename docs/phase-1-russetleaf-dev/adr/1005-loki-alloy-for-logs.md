@@ -6,6 +6,7 @@
 - **Phase:** 1. Later: Phase 2 adds the summarizer and Bedrock log alerts; Phase 3 adds Loki on EKS (14-day retention).
 
 ## Context
+
 The design covered metrics (Prometheus), alerts (Alertmanager to Slack), network flows (Hubble), security events (Falco) and optional traces (Tempo), but had **no central log storage**. Logs could only be read live with `kubectl logs` or `stern`; once a pod restarted, was evicted, or a staging run was deleted, its logs were lost. That makes debugging and incident review much harder.
 
 Constraints: box 1 of the home lab has 8 GB of RAM and already uses about 6–7 GB; both sites should work the same way; the home site runs outside AWS; cost must stay near zero.

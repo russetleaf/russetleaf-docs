@@ -6,6 +6,7 @@
 - **Phase:** 3 (the GPU pool only if Phase 2 is built)
 
 ## Context
+
 EKS nodes cost money by the hour, demos are short, traffic during a load test varies widely, and the self-hosted model (if Phase 2 is built) needs a GPU only while it runs. Fixed managed node groups would sit partly idle and can't pick cheaper instance types or spot capacity flexibly.
 
 ## Decision

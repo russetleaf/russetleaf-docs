@@ -6,6 +6,7 @@
 - **Phase:** 1. Later: Phase 2's guardrails redact personal data; Phase 3 adds GuardDuty's EKS findings to the ATT&CK map and the privacy notice on russetleaf.com.
 
 ## Context
+
 The design was checked against common compliance frameworks: MITRE ATT&CK, GDPR, HIPAA, PCI DSS, NIST and the CIS Benchmarks.
 
 - **CIS** was well covered: the CIS Kubernetes Benchmark (kube-bench on EKS, Trivy Operator compliance reports, Talos hardening notes), CIS AWS Foundations through Security Hub, and the CIS Controls in the control matrix (Phase 1 step 8.5). But the image build had no CIS Docker Benchmark check, and the benchmark results weren't linked to the control matrix.

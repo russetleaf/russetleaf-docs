@@ -6,6 +6,7 @@
 - **Phase:** 3. In Phase 1, the home cluster relies on Trivy Operator, Kubescape and the Talos hardening checks (ADR 1031).
 
 ## Context
+
 **kube-bench** checks a cluster against the **CIS Kubernetes Benchmark** by running on a node and inspecting configuration files, file permissions and process arguments (kubelet, API server, etcd) in the locations used by standard Linux distributions and kubeadm-style installs.
 
 - **EKS (russetleaf.com):** AWS manages the control plane, and kube-bench has an **EKS profile** that checks the worker nodes (kubelet settings, file permissions) and some policy items; the control plane is AWS's responsibility under the shared-responsibility model.

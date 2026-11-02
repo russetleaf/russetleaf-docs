@@ -6,6 +6,7 @@
 - **Phase:** 1. Later: Phase 3 scans EKS once per demo.
 
 ## Context
+
 Kubescape (a CNCF project) assesses a Kubernetes cluster's security posture. It can scan manifests and Helm charts in CI, run inside the cluster as an operator (with vulnerability scanning, a per-node agent and its own storage), score clusters against recognized frameworks (NSA-CISA Kubernetes hardening guidance, MITRE ATT&CK for Kubernetes, CIS), and analyze RBAC for risky permissions.
 
 Most of this is already covered by tools in the design:

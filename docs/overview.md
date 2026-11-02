@@ -106,6 +106,7 @@ Cloud-native security is commonly described in four layers, the **4 C's**: **Clo
 These security views cover the whole project. Each row or control notes the phase that builds it; Phase 1 builds most of them.
 
 ### Kubernetes threat model coverage
+
 The design is checked against the common **Kubernetes threat model**, which groups threats into eight areas. Each area has named controls, a detection and a test; the gaps found in this check, and the controls added for them, are recorded in `docs/phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md`. The full STRIDE threat model (Phase 1 step 8.5) builds on this.
 
 **Trust boundaries and data flows** (both sites; the AWS names in brackets):
@@ -156,6 +157,7 @@ flowchart LR
 | **Privilege escalation** | Pod Security, no privileged pods or host access, NodeRestriction, least-privilege human roles; a Kyverno policy **rejecting risky RBAC** (`escalate`, `bind`, `impersonate`, `nodes/proxy`, wildcards, `cluster-admin` bindings) outside an allow-list | `KubeRBACChangedOutsideArgoCD`; Kubescape RBAC checks in CI and monthly | A Role with `impersonate` is rejected; the RBAC review lists who can create pods or read Secrets |
 
 ### Platform security
+
 The platform's own security (supply chain, registry, observability, mesh, PKI, mTLS and admission), checked against the common platform-security topics and recorded in `docs/phase-1-russetleaf-dev/adr/1035-platform-security.md`:
 
 | Topic | How it's covered |
@@ -169,6 +171,7 @@ The platform's own security (supply chain, registry, observability, mesh, PKI, m
 | **Admission controllers** | Kyverno with **three admission replicas** across nodes, **fail-closed** security policies with short timeouts, recovery exclusions and runbook; **ValidatingAdmissionPolicy backstops** (allowed registries, no `cluster-admin` bindings, no token Secrets) that hold even if Kyverno is down; Pod Security Admission; enabled admission plugins checked on both clusters. |
 
 ### Compliance and privacy
+
 Which compliance frameworks the project follows, and how, recorded in `docs/phase-1-russetleaf-dev/adr/1036-compliance-frameworks-and-privacy.md` and summarized in `docs/security/compliance.md`:
 
 | Framework | Applies? | How it's covered |
@@ -291,6 +294,7 @@ The project's code is split across four Git repositories, by **what each one con
 - **`russetleaf-llm-summarizer` stands on its own** as a CV piece for AI and MLOps roles: it can be understood, tested and deployed without the rest of the project.
 
 ### Why Terraform isn't split by environment
+
 The home lab's Terraform creates AWS resources too (S3, SQS, Secrets Manager, Bedrock IAM), and the AWS stack needs the same ones. Two Terraform repos would mean duplicating those modules or making one repo depend on the other. One `russetleaf-infra` repo with **shared modules** and a **separate root module and state per environment** avoids both. Destroying the AWS demo never touches the home lab's state.
 
 ### How the repos connect
@@ -539,6 +543,7 @@ russetleaf-wordpress/
 | Kyverno | Admits only images signed by the `russetleaf-wordpress` and `russetleaf-llm-summarizer` release workflows (cosign keyless: GitHub OIDC issuer `https://token.actions.githubusercontent.com`, subject matching each repo's release workflow on `main` or a tag) and carrying their signed SBOM and SLSA provenance attestations; verifies upstream publishers' signatures where they sign |
 
 ### Making a change that spans repos
+
 Work **infrastructure first, then code, then config**, so nothing is deployed before what it depends on exists. Example: the summarizer needs a new SQS queue.
 
 1. `russetleaf-infra`: add the queue and its IAM permission; merge and apply.
@@ -546,6 +551,7 @@ Work **infrastructure first, then code, then config**, so nothing is deployed be
 3. `russetleaf-gitops`: merge the bot's chart-bump pull request and add the new queue URL to the values for each environment.
 
 ### Building it from scratch
+
 **russetleaf.dev home lab (once):**
 
 1. `russetleaf-infra/bootstrap`: apply locally to create the Terraform state bucket and the GitHub OIDC roles.
@@ -572,7 +578,8 @@ russetleaf-docs/
   README.md                 # project hub: what it is, the phases, links to the docs site and every repo
   mkdocs.yml                # docs site: navigation, theme, Mermaid diagrams, strict link checking
   requirements-docs.txt     # pinned MkDocs and Material versions
-  .github/workflows/docs.yml  # build (strict) on pull requests; build and publish to GitHub Pages on main
+  .github/workflows/docs.yml  # markdownlint and a strict build on pull requests; publish to GitHub Pages on main
+  .markdownlint-cli2.yaml   # the Markdown rules that matter for how the site renders
   tools/plan_to_issues.py   # creates milestones, labels and one issue per step from a phase's plan and roadmap
   docs/
     index.md                # docs site home page

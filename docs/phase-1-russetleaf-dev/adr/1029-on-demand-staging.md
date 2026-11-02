@@ -6,6 +6,7 @@
 - **Phase:** 1. Later: Phase 2 adds the summarizer to staging.
 
 ## Context
+
 Every release needs testing against real AWS services, real models and realistic data before production. Options range from no staging, to an always-on copy, to a separate cluster. The home cluster's memory was tight when staging was designed (two 8 GB nodes); with ADR 1020's third node it could now afford an always-on copy.
 
 ## Decision

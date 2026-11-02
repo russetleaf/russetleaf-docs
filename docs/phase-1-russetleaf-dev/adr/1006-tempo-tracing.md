@@ -5,9 +5,10 @@
 - **Applies to:** both sites (always on for russetleaf.com demos; on demand for russetleaf.dev)
 - **Phase:** 1 (page traces, always on at home). Later: Phase 2 traces the summary pipeline end to end (100% of summary jobs); Phase 3 runs Tempo on every demo.
 
-
 > **Update (ADR 1020):** The home cluster now has three nodes (box 3: i5-8500T, 16 GB), so **Tempo runs always on at home** (sampled, 3-day retention), not on demand.
+
 ## Context
+
 The design already has metrics (Prometheus), logs (Loki + Alloy), network flows (Hubble) and security events (Falco). Tracing was listed only as an optional WordPress-only extra, and the AWS plan had no step for it. The AI summary pipeline (WordPress → SQS → summarizer → LiteLLM gateway → Bedrock or llama.cpp) is asynchronous and crosses several services: when a summary is slow or fails, metrics and logs show *that* something went wrong, but not easily *where*.
 
 Constraints: box 1 of the home lab has 8 GB of RAM and is close to its limit; EKS (demos only) has memory to spare; cost must stay near zero.

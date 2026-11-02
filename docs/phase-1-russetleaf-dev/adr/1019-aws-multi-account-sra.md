@@ -7,6 +7,7 @@
 - **Updates:** ADR 1007 (Security Hub now used; Prowler kept as a second opinion), ADR 1017 (organization CloudTrail and GuardDuty, delegated administration), ADR 1018 (a dedicated management account; CloudTrail logs in Log Archive)
 
 ## Context
+
 The design used **one AWS account** for everything (the home lab's AWS resources, russetleaf.com, Terraform state, CloudTrail, GuardDuty), plus a backup account under an Organization whose **management account was the workload account**. The **AWS Security Reference Architecture (SRA)** recommends instead: a management account that runs nothing; a Security OU with a **Security Tooling** account (delegated administrator for security services) and a **Log Archive** account; separate accounts per workload; organization-wide guardrails (SCPs); and centralized security services (Security Hub, GuardDuty, Config, Access Analyzer, an organization CloudTrail trail).
 
 ## Decision

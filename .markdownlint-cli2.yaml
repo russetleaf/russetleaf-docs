@@ -1,0 +1,19 @@
+# markdownlint rules for the docs. MkDocs' Markdown parser is stricter than GitHub's,
+# so these focus on what changes how the site renders.
+config:
+  default: false
+  MD007:            # nested list items indented by 4 spaces (MkDocs needs 4, not 2)
+    indent: 4
+  MD009: true       # no trailing spaces
+  MD010: true       # no hard tabs
+  MD012: true       # no repeated blank lines
+  MD022: true       # blank lines around headings
+  MD031: true       # blank lines around fenced code blocks
+  MD032: true       # blank lines around lists (otherwise MkDocs renders them as one paragraph)
+  MD047: true       # files end with a single newline
+  MD058: true       # blank lines around tables
+globs:
+  - "**/*.md"
+ignores:
+  - "site/**"
+  - ".venv/**"

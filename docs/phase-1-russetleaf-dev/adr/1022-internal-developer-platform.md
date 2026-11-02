@@ -6,6 +6,7 @@
 - **Phase:** 1 (Backstage, the golden path, multi-tenancy, the Argo CD hub with a local spoke cluster). Later: Phase 3 adds EKS as a second spoke.
 
 ## Context
+
 The project had become a capable platform (GitOps, signed supply chain, policies, observability, SLOs), but only for the services it was built around. Staff-level platform work is judged by whether **other engineers** can use the platform easily and safely. Separately, each cluster ran its own Argo CD, so there was no single place to manage both.
 
 ## Decision

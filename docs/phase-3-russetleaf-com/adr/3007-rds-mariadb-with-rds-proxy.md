@@ -6,6 +6,7 @@
 - **Phase:** 3
 
 ## Context
+
 At home, MariaDB runs in the cluster with operator-generated passwords (Phase 1). The AWS design should show the managed equivalent and the cloud's stronger option: an application with **no database password at all**. WordPress opens a new connection on almost every request, and the site's backups must move between the two sites without conversion.
 
 ## Decision

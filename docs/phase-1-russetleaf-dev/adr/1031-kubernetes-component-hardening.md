@@ -8,6 +8,7 @@
 > **Update (ADR 3004):** the project is now built in three phases (ADR 1037). This ADR is Phase 1's: the Talos cluster and the controls shared by both clusters. The **EKS-specific controls** (envelope encryption with a customer-managed key, API endpoint access, kube-bench on the nodes, the checks in the AWS security review) are recorded in ADR 3004 (Phase 3). The EKS entries in the table below are kept for comparison.
 
 ## Context
+
 A review of the design against the Kubernetes components (API server, controller-manager, scheduler, kubelet, container runtime, kube-proxy, etcd, Pod Security Admission and Standards, network and storage) found strong coverage for the network, runtime, admission and kubelet layers, but gaps in: per-namespace **Pod Security Admission**; the full **`restricted`** Pod Security Standard for application namespaces; **encryption at rest** (Secrets in etcd, the home disks, etcd snapshots); **verification** of the control-plane components' settings; **service-account tokens** mounted in every pod; and access to the Talos and Kubernetes API ports on the home network.
 
 On the home cluster, Talos manages the control-plane components and their settings; on EKS, AWS manages the control plane (shared responsibility), and the project controls the nodes, add-ons and workloads.

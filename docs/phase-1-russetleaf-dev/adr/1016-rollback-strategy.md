@@ -6,6 +6,7 @@
 - **Phase:** 1. Later: Phase 2 adds model-routing rollback and re-summarizing; Phase 3 adds the demo-stack and edge rollbacks.
 
 ## Context
+
 Rollback mechanisms existed in pieces (Argo Rollouts canaries, Git reverts, `talosctl rollback`, database backups and snapshots, staging gates), but there was no single strategy. Several cases weren't covered:
 
 - **Database schema changes:** WordPress core upgrades change the database structure on first run, so rolling back the image afterwards can break the site.

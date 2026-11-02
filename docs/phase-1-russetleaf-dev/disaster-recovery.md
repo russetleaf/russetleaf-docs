@@ -34,9 +34,11 @@ This plan covers recovering from losses bigger than a single bad change or faile
 - **Cost:** a few cents a month at this data size, plus replication requests.
 
 ## Repo mirrors
+
 A scheduled GitHub Actions workflow (daily) creates a `git bundle` of each of the four repos and uploads it to a bucket in the backup account, using an OIDC role that can only **write** new objects. Images and charts aren't copied: they're rebuilt from the mirrored source.
 
 ## Break-glass kit
+
 Kept in your password manager, with a **printed copy** of the starred items stored somewhere safe at home and ideally a second location (e.g. with a family member).
 
 - ★ AWS: the **management account's** root email, password and **MFA recovery** (member accounts have no root credentials: centralized root access management); the IAM Identity Center admin and break-glass logins

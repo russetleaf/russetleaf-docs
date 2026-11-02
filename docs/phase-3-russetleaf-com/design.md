@@ -90,6 +90,7 @@ flowchart LR
 - **The seed Job** (seeding russetleaf.com from russetleaf.dev) connects the same way as WordPress: IAM token through the proxy, with `rds-db:connect` on its own Pod Identity role.
 
 ### Risk: confirm IAM tokens work from PHP first (with a fallback)
+
 The one uncertain part of this design is whether **PHP's MariaDB client (mysqlnd)** can send an IAM auth token to RDS Proxy. The token is sent as a clear-text password over TLS, which some clients only allow with extra settings. This is checked by a **short, early test** (Phase 3 step 1.6) before any IAM-specific code is relied on: a small test pod with the WordPress image logs in to the proxy with a token. Until that test passes, the home lab builds only the `password` mode of the `db.php` drop-in.
 
 **If the test fails, the fallback is password login to RDS Proxy with an automatically rotated secret.** It keeps almost every benefit:
@@ -265,9 +266,11 @@ Summarizing an existing back catalog is a one-time cost: about **$0.40 for 100 p
 ## russetleaf.com between demos
 
 ### Requirement
+
 When the EKS demo stack isn't running, **russetleaf.com must still answer** with a simple static page, served by CloudFront, that says the AWS demo is offline and links visitors to **russetleaf.dev**. It must switch to the offline page **automatically** when the stack is destroyed, and back to the live site automatically when the stack comes up, with no manual DNS changes.
 
 ### Mechanism: an always-on CloudFront edge with error fallback (recommended)
+
 Split the AWS Terraform into two root modules in `russetleaf-infra`:
 
 - **`envs/aws-edge` (always on, ~$1/month):** the Route 53 hosted zone for russetleaf.com, ACM certificates, the CloudFront distribution, the S3 bucket holding the offline page, the russetleaf.com **media bucket**, the **model mirror bucket**, and the secret header value CloudFront sends to the ALB.
@@ -298,6 +301,7 @@ This also works for any HTTP method (logins and form posts get the offline page 
 **Alternative: Route 53 failover routing.** A primary record pointing at the demo stack with a Route 53 health check, and a secondary record pointing at the offline page. It works, but it's a worse fit here: the primary record would point at resources that are deleted after every demo, health checks add cost (about $0.50–$2/month each), and DNS caching slows the switch. The CloudFront approach needs neither.
 
 ### Keeping russetleaf.com content between demos
+
 Each demo creates a new RDS instance, so content needs a plan:
 
 - **Final snapshot on destroy (recommended):** set `skip_final_snapshot = false` on the RDS instance, and have the next `terraform apply` restore from the most recent snapshot. Posts, summaries and settings carry over. Snapshot storage costs a few cents a month for a site this size.
@@ -322,6 +326,7 @@ Each demo creates a new RDS instance, so content needs a plan:
 | **Total** | **~$1 / month** |
 
 ### Short AWS demos
+
 The full AWS design costs roughly **$1.00/hour** while running, including about $0.25–$0.35/hour for the spot GPU node. Run `terraform apply` in `envs/aws`, record a walkthrough of russetleaf.com or take screenshots, then tear it down. The `demo-up` and `demo-down` GitHub Actions workflows in `russetleaf-infra` do this in the right order, and a scheduled safety-net workflow alerts (or tears down) if the stack is left running too long; see [Building it from scratch](../overview.md#building-it-from-scratch). The always-on edge (`envs/aws-edge`) is never destroyed, so russetleaf.com switches to its offline page automatically.
 
 | Demo time per month | Est. cost |
@@ -333,10 +338,10 @@ The full AWS design costs roughly **$1.00/hour** while running, including about 
 Together with the home lab (~$18–40/month always on), the total is about **$30–60/month** at 20 demo hours; keep demos to about **10 hours a month** to stay **under $50**. If the AWS accounts are new, their free-tier credits can cover some of this.
 
 **Tip:** set an AWS Budget with an email alert (e.g. at $25) so a forgotten `terraform destroy` doesn't run up a bill. The GPU node is the most expensive item to leave running.
+
 ## How russetleaf.com differs in the shared platform
 
 These parts of Phase 1's shared platform sections apply only to the EKS site.
-
 
 ### Sandboxed runtimes (gVisor)
 

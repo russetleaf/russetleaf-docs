@@ -6,6 +6,7 @@
 - **Phase:** 1. Later: Phase 2 adds the AI summary box.
 
 ## Context
+
 russetleaf.dev is the project's public face, so it needs a custom design and a logo rather than a default theme. Modern WordPress **block themes** can be customized in the admin **Site Editor**, but those changes are stored **in the database**, not in files. That would let the live design drift from Git and bypass review, signing, staging and promotion, contradicting ADR 1002 (code in the image, nothing changed in production).
 
 ## Decision

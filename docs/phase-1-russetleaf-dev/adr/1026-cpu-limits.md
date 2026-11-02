@@ -6,6 +6,7 @@
 - **Phase:** 1. Later: Phase 2 adds llama.cpp's CPU limit on box 2.
 
 ## Context
+
 Kubernetes containers can have CPU **requests** (guaranteed share, used for scheduling) and CPU **limits** (a hard cap, enforced by throttling). Memory limits protect a node from running out of memory; CPU limits work differently: CPU is compressible, so a container that exceeds its limit is **throttled**, even when the node has idle CPU. Throttling commonly causes latency spikes (e.g. slow page loads in WordPress, slower model responses). On the other hand, without limits a busy container can use spare CPU that something critical needs.
 
 On the home cluster, etcd runs on all three nodes (ADR 1020), and box 2 also runs llama.cpp (which uses every core it can) and the CI runners.

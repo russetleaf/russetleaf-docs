@@ -6,11 +6,13 @@
 - **Phase:** 1. Later: Phase 3 tries Istio ambient mode on EKS during a demo.
 
 ## Context
+
 Service meshes such as Istio are common in larger production Kubernetes environments. They add mutual TLS (mTLS) between services, layer-7 authorization, traffic shifting, retries and timeouts, and per-service request metrics.
 
 This project has about four services that talk to each other: WordPress, the post-summarizer, the LiteLLM gateway and the llama.cpp model server. *[Original two-node state; see ADR 1020.]* The home lab runs on two nodes with 8 GB of RAM each, and box 1 already uses about 6–7 GB. (With ADR 1020's third node, memory is less tight, but a mesh's benefits are still small for about four services, so the decision stands.) Both clusters run Cilium, which provides network policies, Hubble flow visibility and optional transparent encryption.
 
 ## Decision
+
 Don't run a service mesh. Cover a mesh's benefits with tools already in the design:
 
 | What a mesh would add | How this design covers it |

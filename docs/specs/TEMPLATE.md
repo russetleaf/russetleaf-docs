@@ -13,6 +13,7 @@ the same pull request if the work turns out differently. Delete these comments.
 - **Dates:** started YYYY-MM-DD; finished YYYY-MM-DD
 
 ## Goal
+
 One or two sentences: what exists when this step is done, and why it matters.
 
 ## Context
@@ -27,17 +28,20 @@ One or two sentences: what exists when this step is done, and why it matters.
 - **Out:** what it deliberately leaves for later steps or phases.
 
 ## Approach
+
 How it will be built: the components, files and repos touched, key settings, and anything decided now
 that isn't already in an ADR. If a decision is significant or hard to reverse, write or update an ADR
 instead of deciding it here.
 
 ## Tasks
+
 Small enough to finish and check in a sitting each (roughly 1–3 hours).
 
 - [ ] ...
 - [ ] ...
 
 ## Acceptance criteria
+
 Copied from the step's **Test** in the plan, made specific (commands, expected output).
 
 - [ ] ...
@@ -48,6 +52,7 @@ Copied from the step's **Test** in the plan, made specific (commands, expected o
 - How to undo it (see the rollback strategy and its runbooks).
 
 ## Outcome
+
 Filled in when the step is done.
 
 - **Actual hours:** <hours> (estimate <low–high>); why it differed, if it did.

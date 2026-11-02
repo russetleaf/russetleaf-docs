@@ -6,6 +6,7 @@
 - **Phase:** 2 (Phase 3 adds a GPU node pool on EKS)
 
 ## Context
+
 The gateway (ADR 2002) needs a fallback that doesn't depend on Bedrock, and the project should show model serving on Kubernetes, not only API calls. The home lab has no GPU. Box 2 (an i3 with 8 GB) is an etcd member and control-plane node, so anything heavy on it risks the cluster's stability.
 
 ## Decision

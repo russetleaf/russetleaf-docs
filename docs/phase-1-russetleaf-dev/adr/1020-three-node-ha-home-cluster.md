@@ -6,9 +6,10 @@
 - **Phase:** 1. Later: box 2 becomes the dedicated LLM node in Phase 2 (ADR 2003).
 - **Updates:** ADR 1006 (Tempo always on at home), ADR 1010 (database HA from replication), ADR 1014 (home availability), ADR 1015 (Tetragon feasible at home), ADR 1017 (CrowdSec feasible at home)
 
-
 > **Update (ADR 1026):** The CI runners on box 2 also get **CPU limits**, so llama.cpp and the runners together always leave at least one core for etcd, and **etcd health alerts** (disk sync latency, leader changes, proposal failures) watch whether that's enough; if they fire, the runners move to box 1. See ADR 1026.
+
 ## Context
+
 The home lab had two nodes with 8 GB of RAM each: box 1 (single control plane, all workloads, about 6–7 GB in use) and box 2 (worker dedicated to the LLM). Memory ruled out several useful tools (always-on tracing, Tetragon, CrowdSec), and the cluster had single points of failure everywhere (ADR 1014). A third machine was bought: an **Intel i5-8500T (6 cores, 35 W) with 16 GB of RAM and an NVMe SSD**.
 
 ## Decision

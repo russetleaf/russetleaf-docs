@@ -5,9 +5,10 @@
 - **Applies to:** russetleaf.dev (and russetleaf.com during demos)
 - **Phase:** 1 (site and API SLOs). Later: Phase 2 adds summary freshness and quality.
 
-
 > **Update (senior review):** Availability and latency SLIs are measured at the **ingress inside the cluster**, so home internet outages don't burn the error budget (the external uptime check still alerts on them). The error-budget policy has an **exclusion process** for documented external incidents (e.g. ISP or Bedrock outages): an annotation linking the incident record removes that window from the budget calculation.
+
 ## Context
+
 Alerting was threshold-based (error spikes, latency, freshness of backups), and promotions to production depended only on CI and staging results. There were no explicit reliability targets, no way to balance shipping changes against reliability, and no measurement of how well delivery works.
 
 ## Decision

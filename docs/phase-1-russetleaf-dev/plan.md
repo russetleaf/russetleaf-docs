@@ -162,6 +162,7 @@ gh auth status
 ## Stage 0: Prerequisites and decisions
 
 ### Step 0.1: Accounts, tools and budget alert
+
 **Do:**
 
 - Accounts: AWS: your **existing account** (which becomes `russetleaf-home`) plus a **new, dedicated management account** (its own email address, root MFA on) for the AWS Organization in step 2.0; GitHub; Cloudflare (russetleaf.dev zone).
@@ -177,6 +178,7 @@ gh auth status
 **Test:** the workstation checks pass; a test message from the bot token (`curl` to Slack's `chat.postMessage`) appears in `#rl-dev-alerts`.
 
 ### Step 0.2: Decisions to make before writing code
+
 Record each answer in the [decision log](#decision-log).
 
 | Decision | Recommendation | Why it matters |
@@ -193,6 +195,7 @@ Record each answer in the [decision log](#decision-log).
 | **Resource tagging** | Every AWS resource gets `Project=russetleaf`, `Site=dev`, `Env=prod|staging`, `ManagedBy=terraform`, set as the AWS provider's `default_tags`. | Lets you find leftovers and see costs per site in Cost Explorer. Phase 3 uses the same scheme with `Site=com`. |
 
 ### Step 0.3: Home network segmentation
+
 **Do:** put the three nodes on a **lab VLAN** (or a separate subnet on a second router) with firewall rules: the lab can reach the internet and your workstation can reach the lab (Kubernetes API, Talos API, SSH-free management), but the lab **can't reach household devices**, and nothing is allowed in from the internet (the Cloudflare Tunnel is outbound-only). Give the nodes fixed addresses there. Set **BIOS passwords** on all three nodes. See the overview's [Security by layer](../overview.md#security-by-layer-the-4-cs).
 
 **Test:** from a test pod, a household device's address is unreachable while the internet is reachable; from the workstation, the Talos and Kubernetes APIs are reachable; from another household device, they aren't.
@@ -200,6 +203,7 @@ Record each answer in the [decision log](#decision-log).
 ## Stage 1: Repositories
 
 ### Step 1.1: Create the repos
+
 **Do:**
 
 - Create **`russetleaf-gitops`**, **`russetleaf-infra`** and **`russetleaf-wordpress`** (`russetleaf-llm-summarizer` is created in Phase 2). The project documentation stays in this repo, **`russetleaf-docs`** (ADR 1038).
@@ -272,6 +276,7 @@ Record each answer in the [decision log](#decision-log).
 ## Stage 2: Infrastructure (`russetleaf-infra`)
 
 ### Step 2.0: AWS Organization and accounts (Security Reference Architecture)
+
 **Do** (`russetleaf-infra/envs/org/`, applied locally with the new management account), following the Phase 1 design's [AWS account structure](design.md#aws-account-structure-and-best-practices-security-reference-architecture) and ADR 1019:
 
 - Create the **Organization** from the dedicated management account; **OUs**: Security, Infrastructure, Workloads.
@@ -285,6 +290,7 @@ Record each answer in the [decision log](#decision-log).
 **Test:** you can sign in to every account through Identity Center with MFA; a test action blocked by an SCP fails (e.g. creating a resource in eu-west-1, or disabling GuardDuty in russetleaf-home); member accounts show no root credentials; an untagged resource is flagged by the tag policy.
 
 ### Step 2.0b: Organization security services
+
 **Do** (`russetleaf-infra/envs/security/`, applied with Security Tooling and Log Archive access):
 
 - **Log Archive:** S3 Object Lock buckets with **KMS customer-managed keys** for the **organization CloudTrail trail** (management events, all accounts and regions, log-file validation), Config history and (later) VPC flow logs.
@@ -295,6 +301,7 @@ Record each answer in the [decision log](#decision-log).
 **Test:** GuardDuty sample findings (`aws guardduty create-sample-findings`) appear in `#rl-security`; CloudTrail log-file validation passes (`aws cloudtrail validate-logs`) for an event from each account; Security Hub shows every account with both standards enabled, and the first scores are recorded in the decision log; a deliberately public test bucket is blocked by Block Public Access and flagged by Access Analyzer.
 
 ### Step 2.1: Bootstrap (state bucket and CI roles)
+
 **Do** (`russetleaf-infra/bootstrap/`, applied locally):
 
 - In **russetleaf-infra**: the S3 bucket for Terraform state (versioning, KMS encryption, public access blocked, TLS required, `prevent_destroy`). Backends use `use_lockfile = true`. Bucket policy granting each account's CI roles access to their own state keys only.
@@ -303,6 +310,7 @@ Record each answer in the [decision log](#decision-log).
 **Test:** a scratch root module with the S3 backend runs `terraform init` and `plan`; a GitHub Actions job in `russetleaf-infra` assumes the plan role in russetleaf-home and runs `aws sts get-caller-identity`; the same job can't read another account's state key.
 
 ### Step 2.2: Talos cluster (three control-plane nodes)
+
 **Do** (`russetleaf-infra/envs/home/`, applied locally; uses the `siderolabs/talos` provider):
 
 - Generate machine secrets; machine configs for **three control-plane nodes**, all schedulable: **box 3** (main workloads), **box 1** (secondary workloads) and **box 2** (general workloads and CI runners; it becomes the LLM node in Phase 2). Give each a fixed IP (DHCP reservations or static addresses).
@@ -325,6 +333,7 @@ The cluster is **highly available for a single node failure** (three etcd member
 **Test:** `kubectl get nodes` shows all three nodes `Ready`; `talosctl health` passes; each kubelet's serving certificate is issued by the cluster CA (`openssl s_client -connect <node-ip>:10250`) and `kubectl top nodes` works with metrics-server verifying TLS; a fork bomb in a throwaway pod stops at the PID limit while the node stays `Ready`; the partitions show as encrypted; ports 6443 and 50000 are refused from a device outside the allowed range; `cilium status` is all green and `cilium connectivity test` passes; `etcd` has **three healthy members** (`talosctl etcd members`); the API answers on the virtual IP, and still answers after shutting down whichever node holds it; `cilium encrypt status` shows WireGuard on with the other two nodes as peers on each node; there's no kube-proxy DaemonSet. Rebuild once from scratch to prove it's reproducible, and **record how long the rebuild took** as the recovery time in `docs/phase-1-russetleaf-dev/adr/1014-availability-levels.md`.
 
 ### Step 2.3: AWS and Cloudflare resources for the home lab
+
 **Do** (`russetleaf-infra/modules/` + `envs/home/`; all AWS resources in the **russetleaf-home** account):
 
 - Modules: `s3-media`, `s3-backups`, `secrets` (Phase 2 adds `sqs-queue` and `bedrock-access`).
@@ -340,6 +349,7 @@ The cluster is **highly available for a single node failure** (three etcd member
 **Test:** with each scoped key, the allowed action works and a disallowed one fails (e.g. the WordPress key can't read the backup bucket); the tunnel shows as created in Cloudflare; requests to `/xmlrpc.php` are blocked at Cloudflare, and rapid repeated requests to `/wp-login.php` are rate-limited. `terraform plan` shows the imported docs-site records with no changes, and https://docs.russetleaf.dev still loads.
 
 ### Step 2.4: `russetleaf-infra` CI
+
 **Do:** the pipeline described in the Phase 1 design ([Terraform pipeline](design.md#terraform-pipeline-russetleaf-infra)):
 
 - **Pull requests:** `terraform fmt -check` → `validate` → **tflint** with **`tflint-ruleset-aws`** → **Checkov** on the source with **custom policies** in `.checkov/` (required `Project`/`Site`/`Env` tags, `us-east-1` only, approved instance families, S3 Block Public Access) → **`terraform test`** for the modules → `terraform plan -out` (saved as a private workflow artifact with short retention) → **Checkov on the plan** → **IAM Access Analyzer** policy checks (`validate-policy`, and its custom checks for new public or cross-account access) → **Infracost** cost-difference comment → plan comment → gitleaks.
@@ -351,6 +361,7 @@ The cluster is **highly available for a single node failure** (three etcd member
 **Test:** a pull request with a harmless change shows passing checks, a plan comment and an Infracost comment; a deliberately insecure change (e.g. a public bucket) fails Checkov; an untagged resource fails the custom tag policy; an invalid instance type fails tflint; after merge, the apply waits for approval in the `apply` environment and applies the saved plan.
 
 ### Step 2.5: Disaster recovery copies
+
 **Do:** as described in `docs/phase-1-russetleaf-dev/disaster-recovery.md` and ADR 1018:
 
 - The **Backup** account already exists (step 2.0).
@@ -363,6 +374,7 @@ The cluster is **highly available for a single node failure** (three etcd member
 ## Stage 3: GitOps foundation (`russetleaf-gitops`)
 
 ### Step 3.1: Structure and Argo CD bootstrap
+
 **Do:**
 
 - Create the layout from the Phase 1 design: `bootstrap/home/`, `apps/`, `platform/`, each component with `base/` and `overlays/home/`.
@@ -380,11 +392,13 @@ The cluster is **highly available for a single node failure** (three etcd member
 Check `kubectl top nodes` after each step.
 
 ### Step 4.1: Storage
+
 **Do:** `platform/storage/`: local-path-provisioner as the default (and only) StorageClass, using `/var/local-path-provisioner`, its namespace labeled for privileged pod security (Talos enforces "baseline" by default). No Ceph (Rook) or Longhorn: the design keeps important state in S3, and the database is replicated by MariaDB itself (step 4.5); see `docs/phase-1-russetleaf-dev/adr/1010-local-storage-no-ceph.md`.
 
 **Test:** a test PersistentVolumeClaim binds and a pod writes to it; the data survives the pod being deleted.
 
 ### Step 4.2: Secrets and internal certificates
+
 **Do:** `platform/external-secrets/`: External Secrets Operator plus a `ClusterSecretStore` for AWS Secrets Manager.
 
 - `platform/cert-manager/`: **cert-manager** and **trust-manager**, with an **internal CA** (a self-signed root issuing an intermediate, used by a ClusterIssuer); copy the root to the break-glass kit; trust-manager distributes the CA bundle to namespaces that need it. See `docs/phase-1-russetleaf-dev/adr/1028-internal-pki.md`.
@@ -393,6 +407,7 @@ Check `kubectl top nodes` after each step.
 **Test:** an `ExternalSecret` for a test value creates a Kubernetes Secret; changing the value in Secrets Manager updates it within the refresh interval; a test `Certificate` is issued by the internal CA and verifies against the distributed bundle.
 
 ### Step 4.3: Ingress and the Cloudflare Tunnel
+
 **Do:**
 
 - `platform/ingress/`: ingress-nginx (**2 replicas** spread across box 3 and box 1, with a PodDisruptionBudget), with its **Prometheus metrics enabled** (the Argo Rollouts analysis in step 6.2 uses them).
@@ -402,6 +417,7 @@ Check `kubectl top nodes` after each step.
 **Test:** a hello-world app at `https://russetleaf.dev` loads from outside your network (e.g. on mobile data); your router has no open ports; the Argo CD hostname asks for a Cloudflare Access login.
 
 ### Step 4.4: Monitoring
+
 **Do:** `platform/monitoring/`: kube-prometheus-stack (placed on box 3): 15-day retention, 30 s scrape interval, resource limits on every part. Grafana behind Cloudflare Access. Then the alerting setup from the Phase 1 design:
 
 - **Platform health alerts:** **etcd** (disk sync latency, leader changes, proposal failures; important on small nodes, and more so once box 2 runs the model in Phase 2; ADR 1026), **`ArgoCDAppOutOfSync`** (an app out of sync or degraded for 15 minutes, from Argo CD's metrics), and **certificate expiry** (cert-manager), each with a runbook.
@@ -417,6 +433,7 @@ Check `kubectl top nodes` after each step.
 **Test:** Grafana shows node and pod dashboards for all three nodes, plus the Cilium and Hubble dashboards with live data; Prometheus' targets page lists the Cilium agent, operator and Hubble endpoints as up; a test critical alert appears in both `#rl-critical` and `#rl-dev-alerts` with a working runbook link; stopping Alertmanager for longer than the heartbeat period makes the heartbeat service post to `#rl-critical`; a broken alert rule fails `promtool` in CI.
 
 ### Step 4.5: Database and cache
+
 **Do:**
 
 - `platform/mariadb/`: MariaDB Operator; a `MariaDB` instance pinned to the **same major version RDS offers** (e.g. 9.4 LTS), a `Database`, `User` and `Grant` for WordPress, with the password **generated by the operator** into a Kubernetes Secret (no External Secrets for the database). Same for the backup user and root.
@@ -429,6 +446,7 @@ Check `kubectl top nodes` after each step.
 **Test:** shut down the node running the MariaDB primary: the replica is promoted within about a minute and WordPress (once deployed) keeps working; when the node returns, it rejoins as a replica. Connect with a MariaDB client from a test pod using the generated Secret, and confirm a connection **without TLS is refused**; no database password appears in Git or Secrets Manager; trigger a backup by hand and see the file in S3; **restore it into a scratch MariaDB instance** and compare; `valkey-cli ping` returns `PONG`; MariaDB and Valkey metrics appear in Prometheus and on Grafana dashboards.
 
 ### Step 4.6: Logging (Loki + Alloy)
+
 **Do:** `platform/logging/`, as described in the Phase 1 design ([Logging](design.md#logging-loki--alloy)):
 
 - **Loki** in single-binary mode, storing data in the Loki S3 bucket (scoped key from External Secrets), a small local cache volume, **7-day retention**, the **ruler** sending alerts to Alertmanager.
@@ -445,6 +463,7 @@ Check `kubectl top nodes` after each step.
 **Test:** in Grafana, logs from every namespace and from the Talos nodes (kubelet, etcd) are searchable by `namespace` and `app`; `kubectl exec` into a production pod fires `KubeExecIntoProdPod`, editing a RoleBinding by hand fires `KubeRBACChangedOutsideArgoCD`, and a CronJob created by hand in a production namespace fires `KubeWorkloadCreatedOutsideArgoCD`; a deleted pod's logs are still there; signed in as operator, Grafana shows application logs but not the audit log; a secret in a test log line is masked; the day's audit log appears in the Log Archive bucket and can't be deleted; a manual sync in Argo CD shows up with the user's name; stopping Loki fires `LokiIngestionErrors` in `#rl-dev-alerts`; objects older than the retention period are removed from the bucket.
 
 ### Step 4.7: Cluster access: OIDC sign-in, roles and SSO
+
 **Do:** as described in the Phase 1 design's [Identity and access to the clusters](design.md#identity-and-access-to-the-clusters) (ADR 1033):
 
 - **Dex** in `platform/dex/` with the **Google connector** (a separate Google OAuth client from the WordPress one), its client secret from External Secrets, behind the tunnel with Cloudflare Access in front.
@@ -459,6 +478,7 @@ Check `kubectl top nodes` after each step.
 ## Stage 5: WordPress
 
 ### Step 5.1: The WordPress image (`russetleaf-wordpress`)
+
 **Do:**
 
 - `Dockerfile` based on the official `wordpress` image (pinned version), with plugins and themes pinned in **`composer.json` through WPackagist** (so Renovate can update them) and installed with Composer at build time: an S3 media offload plugin (see the comparison below), Redis Object Cache, an SMTP plugin (configured for Amazon SES). WordPress code is copied into `/var/www/html` **at build time**, so the image's startup script has nothing to copy at runtime.
@@ -489,6 +509,7 @@ Check `kubectl top nodes` after each step.
 **Test:** the smoke test passes locally and in CI; `cosign verify` succeeds for the pushed image, and `cosign verify-attestation --type spdxjson` returns its SBOM; `gh attestation verify` confirms its provenance; a CVE listed as `not_affected` in `.vex/` no longer fails Trivy, and `cosign verify-attestation --type openvex` returns the VEX document; the cleanup workflow's dry run lists only unreferenced versions; the release notes link to the Rekor entries (check one with `rekor-cli`); a deliberately vulnerable PHP snippet (e.g. unescaped output) fails PHPCS or Semgrep; a secret written into an image layer fails Trivy; the cluster can pull the image and Argo CD can pull the chart (with credentials if the packages are private); the package's storage use is well under the free limit, or old untagged versions are being deleted; publishing a post in the local Compose setup sends a message to the real SQS queue.
 
 ### Step 5.2: WordPress chart and deployment (`russetleaf-gitops/apps/wordpress/`)
+
 **Do:**
 
 - The `russetleaf-wordpress` chart, which sets the pod security context (non-root user, read-only root filesystem, no privilege escalation, dropped capabilities, **seccomp `RuntimeDefault`**, and an optional `runtimeClassName` used in step 6.5), the `emptyDir` volumes above, **readiness and liveness probes**, the required labels (`app.kubernetes.io/name`, `app.kubernetes.io/part-of`, `env`) and **CPU/memory requests with a memory limit (no CPU limit)**, deployed from `russetleaf-gitops` with the home overlay (values only): russetleaf.dev hostname, MariaDB and Valkey hosts, `database.auth: password` pointing at the **MariaDB Operator-generated Secret**, media bucket and queue settings, other credentials from External Secrets, resources, `persistence` off, WP-Cron as a Kubernetes CronJob.
@@ -502,11 +523,13 @@ Check `kubectl top nodes` after each step.
 **Test:** `https://russetleaf.dev` serves WordPress; an uploaded image lands in the S3 bucket and displays; the Redis Object Cache plugin shows "connected"; killing the WordPress pod loses nothing; WP-Cron jobs run from the CronJob; a password-reset email arrives through SES; Prometheus scrapes the apache_exporter and the custom metrics; the metrics port is **not** reachable through `https://russetleaf.dev` or from a non-Prometheus pod; the blackbox probes are green.
 
 ### Step 5.3: Image promotion
+
 **Do:** create the GitHub App; the `russetleaf-wordpress` release workflow opens a pull request on `russetleaf-gitops` that changes only the chart and image version in `apps/wordpress/overlays/home`, linking the release notes. (Step 5.7 later points this at staging first.)
 
 **Test:** merge a trivial change in `russetleaf-wordpress` → a signed image is pushed → a bump pull request appears in `russetleaf-gitops` → merging it rolls out the new image, and the rollout appears in `#rl-deploys`. Subscribe `#rl-deploys` to the four repos' releases and merged pull requests with the GitHub Slack app.
 
 ### Step 5.4: ci test clusters (kind + AWS stand-ins)
+
 **Do:**
 
 - `russetleaf-wordpress/ci/`: a kind cluster config and `ci` chart values (LocalStack, or MinIO + ElasticMQ, per step 0.2; a MariaDB and Valkey installed into the kind cluster; test credentials).
@@ -518,11 +541,13 @@ Check `kubectl top nodes` after each step.
 **Test:** a pull request in `russetleaf-wordpress` runs the kind tests and passes; a deliberately broken change (e.g. a wrong S3 setting) fails them; `docker compose up` gives a working local site.
 
 ### Step 5.5: Self-hosted runners (ARC)
+
 **Do:** `platform/actions-runner-controller/`: ARC with **ephemeral** runners, placed on box 2, off the main nodes (in Phase 2 they tolerate box 2's LLM taint and run next to the model). Start with runner scale sets for **`russetleaf-gitops`** (the staging workflow) and **`russetleaf-infra`** (home Terraform applies, and later the AWS demo workflows, so the EKS API can be restricted to the home address; ADR 1030); `russetleaf-llm-summarizer` gets its own in Phase 2. Give the runners **CPU limits** so they always leave at least one core free for etcd on box 2 (ADR 1026). Because the repos are public: require approval for workflows from fork pull requests, and limit which workflows can use the self-hosted label.
 
 **Test:** a test workflow in `russetleaf-gitops` runs on a self-hosted runner pod, which is deleted afterwards; a fork pull request waits for approval.
 
 ### Step 5.6: On-demand staging
+
 **Do:**
 
 - `overlays/home-staging` for WordPress (1 replica, `staging.russetleaf.dev`, no Valkey), a small staging **MariaDB** (MariaDB Operator, with its own generated passwords), and the staging AWS resources and secrets from step 2.3. Label everything `env=staging`.
@@ -536,6 +561,7 @@ Check `kubectl top nodes` after each step.
 **Test:** run `staging-test` by hand: staging comes up at `staging.russetleaf.dev` (behind Cloudflare Access), shows production posts with **no real email addresses** in the database, passes the smoke tests, and is fully removed afterwards (`kubectl get all,pvc -n <staging namespaces>` is empty). Record the nodes' peak memory during the run in the checklist.
 
 ### Step 5.7: Promotion pipeline (staging → prod)
+
 **Do:**
 
 - Change the `russetleaf-wordpress` release bot (step 5.3) to bump **`overlays/home-staging`** instead of prod, with **auto-merge** once `russetleaf-gitops` CI passes.
@@ -547,6 +573,7 @@ Check `kubectl top nodes` after each step.
 **Test:** a release that changes `$wp_db_version` is labeled `schema-change` and its prod pull request is blocked until the pre-release backup succeeds; release a trivial `russetleaf-wordpress` change → it auto-merges to staging → `staging-test` passes → a promotion pull request appears with results → merging it rolls out to russetleaf.dev. Release a deliberately broken version → staging fails → no promotion pull request, and `#rl-staging` shows why.
 
 ### Step 5.8: Google sign-in for admins
+
 **Do:** as described in the Phase 1 design ([Admin sign-in with Google](design.md#admin-sign-in-with-google)):
 
 - **Google Cloud:** a project with an OAuth consent screen (basic scopes only: `openid`, `email`, `profile`), and OAuth clients for **russetleaf.dev** (with staging.russetleaf.dev as a second redirect URL) and **local testing**. Document them in `russetleaf-infra`'s README; store the client secrets in Secrets Manager.
@@ -561,11 +588,13 @@ Check `kubectl top nodes` after each step.
 **Test:** visiting `/wp-admin` from outside first requires a Cloudflare Access Google login; an allowed Google account then signs in to WordPress with no password; a Google account not on the allow-list is refused; a username/password login attempt is rejected; a REST API request with an application password still works; the ci sign-in test passes; the break-glass procedure works in staging.
 
 ### Step 5.9: Performance testing and regression gate
+
 **Do:** as described in the Phase 1 design's [Performance and stress testing](design.md#performance-and-stress-testing): k6 scripts in `russetleaf-gitops/perf/` (home page, posts, search, REST API, admin sign-in through the test identity provider) with thresholds in code; `platform/k6-operator/` for distributed in-cluster tests against the ingress (CiliumNetworkPolicy limiting targets to the ingress; images on the Kyverno allow-list); k6 results to Prometheus and a Grafana dashboard beside system metrics. Run a **load test** against production at a quiet time and record the **baseline** in `docs/performance/` (for trends and the capacity plan). Add the **regression gate** to `staging-test`: load-test the **current production version and the candidate back to back in staging**, three runs each, comparing **medians**; fail promotion if the candidate is more than about 20% slower or over the error threshold; **wait** while box 2 is busy with a summarization burst or a stress test is running, to avoid false failures. See `docs/phase-1-russetleaf-dev/adr/1024-performance-and-stress-testing.md`.
 
 **Test:** the baseline exists; a deliberately slowed release (e.g. an artificial delay in a must-use plugin) fails the staging gate with the comparison in the promotion pull request; a normal release passes.
 
 ### Step 5.10: Site design and brand
+
 **Do:** as described in the Phase 1 design's [Site design and branding](design.md#site-design-and-branding) and `docs/phase-1-russetleaf-dev/adr/1025-site-design-in-git.md`:
 
 - Write a short **design brief** (audience, tone, colors, the russet-leaf idea, a few sites you like).
@@ -577,11 +606,13 @@ Check `kubectl top nodes` after each step.
 **Test:** russetleaf.dev and staging show the custom theme, logo, icons and share image (check a link preview); in production, the Site Editor can't change templates or styles; the theme comes entirely from the image (no design data in the database).
 
 ### Step 5.11: Front-end quality gates
+
 **Do:** in `russetleaf-wordpress` CI and the staging gate: **Playwright** visual regression tests of key pages (home, a post, an archive, light and dark mode, mobile and desktop) against approved baselines; **axe-core** accessibility checks on the same pages (fail on serious issues); **Lighthouse CI** budgets (page weight, Largest Contentful Paint, total blocking time).
 
 **Test:** a deliberate layout change fails visual regression until its new baseline is approved; removing an image's alt text fails accessibility; adding a large unoptimized image fails the Lighthouse budget.
 
 ### Step 5.12: Compliance scope and privacy (GDPR basics)
+
 **Do:** as described in the overview's [Compliance and privacy](../overview.md#compliance-and-privacy) (ADR 1036):
 
 - `docs/security/compliance.md`: which frameworks apply (GDPR lightly, CIS, NIST guidance, MITRE ATT&CK) and which don't, with reasons (HIPAA: no health data; PCI DSS: no card data, and a hosted payment page if a shop is ever added).
@@ -595,6 +626,7 @@ Check `kubectl top nodes` after each step.
 ## Stage 6: Policy and progressive delivery
 
 ### Step 6.1: Kyverno
+
 **Do:** `platform/kyverno/`: Kyverno plus the policy set from the Phase 1 design ([Supply chain and policy](design.md#supply-chain-and-policy)), all in **audit mode** first:
 
 - **Signed images** (`verifyImages`): images signed by the `russetleaf-wordpress` release workflow (cosign keyless, GitHub OIDC issuer, subject matching the repo's workflow; Phase 2 adds `russetleaf-llm-summarizer`'s identity), with **`mutateDigest`** so tags are pinned to digests at admission
@@ -632,11 +664,13 @@ Review the policy reports, fix violations, then switch to **enforce**.
 **Test:** a pod requesting extra capabilities or privilege escalation is rejected in an application namespace (by both PSA and Kyverno); a WordPress pod has no service-account token mounted; a new application namespace automatically gets its LimitRange and ResourceQuota, and a Deployment scaled beyond the quota stops at the limit; in enforce mode, each of these is rejected: an unsigned image, a project image that's signed but has **no SBOM attestation** or **no provenance attestation**, an image from a verified upstream registry that **isn't signed by that publisher** (e.g. a different project's image under the same registry), an image from an unlisted registry, a `:latest` image, a pod without the required labels (where the mutate rule can't fill them), a container without a memory limit, a privileged pod, a root container, a writable root filesystem, a Deployment without probes, a NodePort Service, an Ingress reusing an existing host and path, a Role granting `impersonate`, and a `kubernetes.io/service-account-token` Secret. Running pods show image digests rather than tags. With Kyverno scaled to zero, a pod from an unlisted registry is still rejected by the ValidatingAdmissionPolicy; draining one node leaves Kyverno answering. The existing workloads keep running; Policy Reporter shows no unexplained violations; a pull request that violates a policy fails CI.
 
 ### Step 6.2: Argo Rollouts
+
 **Do:** `platform/argo-rollouts/`; convert WordPress to a `Rollout` with canary steps (e.g. 20% → 50% → 100%) and an `AnalysisTemplate` that queries Prometheus (ingress-nginx error rate and latency for the WordPress service). Argo Rollouts notifications post canary steps, aborts and rollbacks to `#rl-deploys`.
 
 **Test:** a good image rolls out step by step; a deliberately broken image (e.g. one that returns 500s) is **rolled back automatically**, and the rollback is announced in `#rl-deploys`.
 
 ### Step 6.3: CiliumNetworkPolicies
+
 **Do:** use **CiliumNetworkPolicies**, not plain NetworkPolicies (see [Policies](design.md#policies-ciliumnetworkpolicies-not-plain-networkpolicies) in the Phase 1 design):
 
 - A **`CiliumClusterwideNetworkPolicy`** baseline: default-deny for application namespaces, DNS to CoreDNS allowed with Cilium's **DNS proxy** on (needed for DNS-name rules), Prometheus scraping allowed.
@@ -649,6 +683,7 @@ Review the policy reports, fix violations, then switch to **enforce**.
 **Test:** from a test pod in another namespace, MariaDB is unreachable; from a WordPress pod, `curl https://example.com` is **blocked** while uploads to S3 still work; an **exfiltration test** (posting a file from each application pod to an unlisted destination) is blocked and shows in `hubble observe --verdict DROPPED`; from a pod in `argocd`, a request to an unlisted site is blocked while syncs still work; a burst of blocked requests triggers `HubblePolicyDropsSpike` in `#rl-security`; the site, backups and monitoring all still work.
 
 ### Step 6.4: Service mesh decision (ADR) and optional Istio experiment
+
 **Do:**
 
 - Finish `docs/phase-1-russetleaf-dev/adr/1001-no-service-mesh.md` (already drafted; review it and resolve its open items as they're done): what a mesh like Istio would add, how Cilium (WireGuard, layer-7 policies, Hubble), Argo Rollouts and LiteLLM already cover it, the memory and complexity cost on a small cluster, and **when you'd revisit** (many more services, a requirement to verify service identity on every connection, multi-cluster traffic). See [Service mesh (Istio): not used, by decision](design.md#service-mesh-istio-not-used-by-decision).
@@ -657,6 +692,7 @@ Review the policy reports, fix violations, then switch to **enforce**.
 **Test:** the ADR is reviewed and linked from the hub README and the decision log; if the experiment was run, its findings are in the ADR.
 
 ### Step 6.5: Sandboxed runtime (gVisor)
+
 **Do:** as described in the Phase 1 design ([Sandboxed runtimes](design.md#sandboxed-runtimes-gvisor)):
 
 - Confirm the gVisor extension is active on all three nodes (step 2.2), and add `platform/runtime-classes/` with a **`gvisor` RuntimeClass**.
@@ -669,6 +705,7 @@ Review the policy reports, fix violations, then switch to **enforce**.
 ## Stage 7: Runtime security, compliance and cost
 
 ### Step 7.1: Falco
+
 **Do:** `platform/falco/`: Falco with the **modern eBPF** driver (Talos doesn't allow kernel modules) and its **gVisor event source** for pods running under gVisor (step 6.5), Falcosidekick to Alertmanager, Grafana and Slack (`#rl-security`, warning priority and above), and custom rules: shell in WordPress pods; writes under `/var/www/html`; and **process allow-lists** per workload (WordPress: `apache2`, `php`, and `bash` **only as the container's first process running the entrypoint scripts** `docker-entrypoint.sh` and `apache2-foreground`; Phase 2 adds the summarizer, gateway and llama.cpp lists and a box 2 egress rule), alerting on any other process (see the Phase 1 design's [Process allow-listing](design.md#process-allow-listing) and `docs/phase-1-russetleaf-dev/adr/1015-process-allow-listing.md`).
 
 - **MITRE ATT&CK detection map (ADR 1036):** `docs/security/attack-coverage.md` mapping each detection (Falco rules with their MITRE tags, the Kubernetes audit alerts, GuardDuty finding types, Hubble drops, CrowdSec) to the **ATT&CK for Containers** techniques it covers, listing the uncovered techniques as accepted or planned; a Grafana panel of Falco alerts by technique.
@@ -677,11 +714,13 @@ Review the policy reports, fix violations, then switch to **enforce**.
 **Test:** a WordPress pod restart raises **no** allow-list alert (the entrypoint shell is allowed), while starting an unlisted process in each workload (e.g. `kubectl exec <pod> -- curl --version`, or `sleep` where a shell exists) raises a process allow-list alert in `#rl-security`, while normal traffic raises none; `kubectl exec` into a WordPress pod triggers an alert in Grafana and `#rl-security` (and the same in a gVisor runner pod, through the gVisor event source); creating a file under `/var/www/html` triggers another; deleting the Falco pod on one node (or temporarily preventing it from scheduling there) fires `FalcoNotRunning` in `#rl-security` and `#rl-critical`; pointing Falcosidekick at a wrong Slack destination fires `FalcosidekickOutputErrors`.
 
 ### Step 7.2: Trivy Operator, Kubescape scan and Talos hardening notes
+
 **Do:** add the **component hardening checks** from `docs/phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md` to `docs/talos-hardening.md`: `talosctl` reads of the API server, controller-manager and scheduler arguments (profiling off, local-only binding, NodeRestriction and PodSecurity admission, per-controller service-account credentials, kubelet certificate rotation); confirmation that **Secrets are encrypted at rest** in etcd; the kubelet's **read-only port (10255) refused** on every node; disk encryption status; the firewall test. Then `platform/trivy-operator/` with modest scan concurrency (scans are memory hungry; keep them off box 2), with its **CIS compliance results published as Prometheus metrics** (turn on the operator's cluster-compliance metrics; check the exact setting for your version) and a ServiceMonitor; a **Grafana "Compliance" dashboard** (built to show both clusters once EKS exists) and a `ComplianceFailuresIncreased` alert to `#rl-security`; write `docs/talos-hardening.md` explaining how Talos meets the CIS benchmark (no shell or SSH, read-only system, API-only management, default pod security), including **API server authorization**: only the **Node** and **RBAC** authorizers (no ABAC, no `AlwaysAllow`), checked with `talosctl -n <control-plane-ip> read /system/config/kubernetes/kube-apiserver/authorization-config.yaml`, and the kubelet's anonymous access off with webhook authorization, checked on **each node** with `talosctl -n <node-ip> read /etc/kubernetes/kubelet.yaml` (must show `authentication.anonymous.enabled: false` and `authorization.mode: Webhook`) and an anonymous request, `curl -sk -o /dev/null -w '%{http_code}' https://<node-ip>:10250/pods` (must return `401`). Add a note in `russetleaf-infra/envs/home` that the machine config must never override the authorization config. Record the **enabled admission plugins** from the API server's arguments (NodeRestriction, PodSecurity and the webhook plugins on; `AlwaysAdmit` off). Write `docs/runbooks/rotate-cluster-ca.md` (Talos and Kubernetes CAs with `talosctl rotate-ca`; the service-account signing key, by Talos's procedure if supported, otherwise manual steps; the internal CA's intermediate and root with overlapping bundles through trust-manager) and **rehearse it** on a local Talos-in-Docker cluster, then once on the real cluster (ADR 1035). Run the first **Kubescape CLI** scan of the home cluster from the workstation (NSA-CISA and MITRE ATT&CK frameworks, plus RBAC analysis; nothing installed in the cluster), save the report and a short summary of accepted findings in `docs/security/`, and fill in the baseline in `docs/phase-1-russetleaf-dev/adr/1003-kubescape-cli-not-operator.md`.
 
 **Test:** vulnerability and compliance reports exist for the running workloads; compliance metrics appear in Prometheus and on the Compliance dashboard, and temporarily adding a non-compliant workload raises the failing-controls count and fires the alert; the hardening doc is reviewed, and the `talosctl read` check shows only `Node` and `RBAC`; on **all three nodes**, the kubelet config shows anonymous access off and webhook authorization, and the anonymous `curl` to port 10250 returns `401`; the admission plugin list is recorded; the CA rotation rehearsal succeeds on both the local and real clusters with the site staying up (time it); the Kubescape report is committed, and any high-risk RBAC findings (e.g. a service account that can read all Secrets cluster-wide) are fixed or explained; an **RBAC review** listing, per namespace, who can create pods, read Secrets or reach nodes is committed, with accepted findings in `docs/security/rbac-accepted.yaml` (repeated with each monthly scan; ADR 1034).
 
 ### Step 7.3: OpenCost
+
 **Do:** `platform/opencost/` using the existing Prometheus, with custom prices for the home hardware (electricity per node). Then, as in the Phase 1 design ([Cost monitoring and alerts](design.md#cost-monitoring-and-alerts)):
 
 - `PrometheusRule` cost alerts from OpenCost's metrics, labeled `team=cost` (to `#rl-costs`), with runbooks: `NamespaceDailyCostSpike` now, and `GPUNodeRunningLong` in the AWS overlay later.
@@ -690,28 +729,32 @@ Review the policy reports, fix violations, then switch to **enforce**.
 
 **Test:** OpenCost shows cost per namespace; the weekly summary appears in `#rl-costs` (run it by hand once); temporarily lowering the spike threshold fires `NamespaceDailyCostSpike` in `#rl-costs`; Cost Explorer can filter by the activated `Site` tag.
 
-
 ### Step 7.4: Tracing with Tempo (always on)
+
 **Do:** `platform/tracing/`: **Grafana Tempo** in single-binary mode, storing traces in the Tempo bucket (scoped key from External Secrets), **3-day retention**; Tempo as a Grafana data source with links to Loki (trace ID in log lines) and exemplars on latency graphs. Point Alloy's OTLP receiver at Tempo, and turn tracing on in the WordPress values: parent-based sampling of ~10% for page requests (Phase 2 adds the summarizer and gateway, sampling 100% of summary jobs). Tempo runs **always on**, placed on box 3. See the Phase 1 design ([Tracing](design.md#tracing-tempo--opentelemetry)). Record memory use and the sampling rates in `docs/phase-1-russetleaf-dev/adr/1006-tempo-tracing.md`.
 
 **Test:** a page request produces **one trace** in Grafana covering WordPress and its database and cache calls; a slow page's trace shows its database queries; clicking a trace opens its logs in Loki; no span contains post text or personal data; with tracing off, nothing is sent and there's no measurable overhead.
 
 ### Step 7.5: AWS account posture (Prowler)
+
 **Do:** a GitHub Actions workflow in `russetleaf-infra`, **scheduled monthly** and runnable by hand, that assumes the read-only **audit role** (step 2.1) through GitHub OIDC and runs **Prowler** against **every account** in turn (assuming the audit role in each), with CIS AWS Foundations and AWS Foundational Security Best Practices, as a free **second opinion** to Security Hub's continuous checks (step 2.0b). Keep the full report as a workflow artifact, commit a summary to `russetleaf-gitops/docs/security/` (failed checks by severity, plus accepted findings with reasons), and post the counts of failed high and critical checks to `#rl-security`. Fix what's worth fixing in Terraform (not by hand). Record the first run's baseline in `docs/phase-1-russetleaf-dev/adr/1007-prowler-not-threatmapper.md`. See the Phase 1 design ([Runtime security and compliance](design.md#runtime-security-and-compliance)).
 
 **Test:** the workflow runs without stored AWS keys; a deliberately weakened setting (e.g. turning off S3 Block Public Access on a test bucket) shows up as a failed check, then passes once reverted; the summary and Slack message appear.
 
 ### Step 7.6: Version-age report
+
 **Do:** a monthly scheduled GitHub Actions workflow in `russetleaf-gitops` that reads the versions actually running (Talos and Kubernetes from the cluster, MariaDB, Valkey and the major platform charts from `russetleaf-gitops`; Phase 3 adds EKS, RDS and EKS add-on versions), compares them with their **end-of-life dates** (e.g. the endoflife.date API), and posts anything within **90 days of end of support** to `#rl-deploys`. Link it from ADR 1011.
 
 **Test:** the workflow runs on schedule and by hand; temporarily lowering the threshold makes it report something; the message lists each component, its version and its end-of-support date.
 
 ### Step 7.7 (optional): Custom seccomp profiles
+
 **Do:** install the **Security Profiles Operator** temporarily, record the system calls WordPress actually makes during a full test run (page loads, uploads, the REST API), and turn the recordings into a **custom seccomp profile** referenced by the chart's values (Phase 2 repeats this for the summarizer) (`seccompProfile: Localhost`). Keep the profiles in Git, apply them in staging first, and update Kyverno's seccomp rule to allow these named profiles. Record the outcome in `docs/phase-1-russetleaf-dev/adr/1015-process-allow-listing.md`.
 
 **Test:** both workloads pass the staging smoke tests with their custom profiles; a system call outside the profile (e.g. from a test binary) is blocked; a failed run after an image update is caught in staging, not production.
 
 ### Step 7.8: Rollback runbooks and drills
+
 **Do:** write `docs/runbooks/rollback-<layer>.md` for each layer in the Phase 1 design's [Rollback strategy](design.md#rollback-strategy) (applications, platform, configuration, Terraform, Talos, Kubernetes, secrets, data; Cilium and Kyverno already exist), then run the first **drills**:
 
 - in staging: roll back a release with a Git revert, abort a canary, and restore a MariaDB backup
@@ -723,21 +766,25 @@ Record each drill's time in the decision log and compare it with the expected ti
 **Test:** every runbook has been followed at least once in a drill; each rollback restored a working state within its expected time (or the runbook was corrected).
 
 ### Step 7.9: CrowdSec
+
 **Do:** install **CrowdSec** reading ingress-nginx's logs, with its **Cloudflare bouncer** so abusive IP addresses (repeated login failures, scanners) are blocked at Cloudflare's edge; alerts and decisions to `#rl-security`. Record memory use.
 
 **Test:** a simulated brute-force from a test address (in staging) gets that address banned at Cloudflare, and the ban expires as configured; normal visitors aren't affected.
 
 ### Step 7.10: First full disaster drill
+
 **Do:** simulate "the home lab is destroyed": using **only** the break-glass kit, the GitHub repos (or their mirrors) and the backups in the backup account, rebuild russetleaf.dev on a local Talos-in-Docker cluster (or on the real boxes during a maintenance window), following the bootstrap order in `docs/phase-1-russetleaf-dev/disaster-recovery.md`. Time each step, and fix the plan wherever it was wrong or incomplete.
 
 **Test:** russetleaf.dev's content (posts and media) is fully restored from the off-account copies; the total time is recorded in `docs/phase-1-russetleaf-dev/disaster-recovery.md` and ADR 1018.
 
 ### Step 7.11: Node-failure drills
+
 **Do:** with the site under light load (e.g. a `k6` script), take each node offline in turn: first a clean shutdown, then **pulling its power cable**. Watch the API (virtual IP), the site (uptime check and Grafana), the database (MariaDB failover) and the alerts in Slack; bring the node back and confirm it rejoins cleanly. Record the impact and timings in `docs/phase-1-russetleaf-dev/adr/1014-availability-levels.md` and the decision log.
 
 **Test:** with any one node down, the site keeps serving (brief errors at most during failover), the API stays reachable, the database fails over and rebuilds its replica afterwards, and the expected alerts fire and clear.
 
 ### Step 7.12: Stress, spike and soak tests (home)
+
 **Do:** with the k6 Operator, in staging first and then production at quiet times: a **stress / breakpoint** test ramping until the latency or error thresholds are passed (record the breaking point, the first bottleneck, how it fails, and whether it recovers on its own); a **spike** test (about 10× normal traffic suddenly); and an overnight **soak** test (moderate load for 4–8 hours, watching memory, connection pools and queues). Record results and action items in `docs/performance/`, and use them to set or adjust the SLO targets (step 8.1).
 
 **Test:** each test's results are recorded with graphs; the first bottleneck has an action item or an explanation; the soak shows no steadily growing memory or connections (or a fix is planned).
@@ -747,46 +794,55 @@ Record each drill's time in the decision log and compare it with the expected ti
 These steps are the **Staff** tier; see the Phase 1 design's [Staff-level practices](design.md#staff-level-practices). Do them after Core and most Differentiators.
 
 ### Step 8.1: SLOs and error budgets
+
 **Do:** SLO definitions in `russetleaf-gitops/docs/slos/` and `platform/sloth/`, with availability and latency **measured at the ingress inside the cluster** (so home internet outages don't burn the budget; the external uptime check still alerts on them), and an **exclusion process** in the policy for documented external incidents (ISP outages) (site availability and latency, home Kubernetes API; Phase 2 adds summary freshness and quality); **Sloth** generating recording rules and multi-window, multi-burn-rate alerts (fast burn to `#rl-critical`, slow burn to the site channel); Grafana SLO dashboards; retire the threshold alerts they replace. Write the **error-budget policy** and enforce it: `promote-to-prod` (step 5.7) checks the remaining budgets and blocks promotions, except changes labeled `fix` or `reliability`, when a budget is exhausted. See `docs/phase-1-russetleaf-dev/adr/1021-slos-and-error-budgets.md`.
 
 **Test:** the SLO dashboards show real budgets; injecting errors in staging (or lowering a target temporarily) burns the budget, fires the burn-rate alert, and blocks a normal promotion while a `fix` promotion still goes through.
 
 ### Step 8.2: DORA metrics
+
 **Do:** a scheduled workflow that computes **deployment frequency**, **lead time for changes**, **change failure rate** and **time to restore** from GitHub (pull requests, releases), Argo CD (syncs) and the rollback and incident records, publishes them to Prometheus, and feeds a Grafana dashboard with monthly trends.
 
 **Test:** the dashboard shows the four metrics over the last 30 days, and each can be traced back to its source records.
 
 ### Step 8.3: Developer portal and golden path (Backstage)
+
 **Do:** `platform/backstage/` (on box 3, PostgreSQL by the CloudNativePG operator, behind Cloudflare Access with Google sign-in): a **catalog** of every component with owners, links to dashboards, runbooks and SLOs; **TechDocs** from the repos' documentation; and a **software template** that creates a complete new service: repo with the full CI and supply-chain pipeline, a Kyverno-compliant chart, CiliumNetworkPolicies, SLO definitions, a dashboard and alerts, a runbook stub, and Argo CD registration through an **ApplicationSet**. See `docs/phase-1-russetleaf-dev/adr/1022-internal-developer-platform.md`.
 
 **Test:** box 3's memory stays under about 85% (otherwise move Backstage and its database to box 1, or upgrade box 3 to 32 GB); the catalog lists every component with its owner and links; the template produces a repo whose CI passes on the first run and whose manifests pass the Kyverno CLI tests.
 
 ### Step 8.4: Second service and multi-tenancy
+
 **Do:** create a **second, different service** from the template (e.g. a small Go API serving post statistics from WordPress's REST API, or a broken-link checker), and take it through ci, staging and promotion to production. Add **multi-tenancy** in `platform/tenants/`: a namespace and **Argo CD project** per tenant, **resource quotas and limit ranges**, scoped **RBAC**, per-tenant Kyverno policies, and **cost showback** per tenant in OpenCost. Measure and publish the **time from template to first production deploy**.
 
 **Test:** the second service runs in production with its own SLOs, dashboard and alerts; it can't exceed its quota or deploy outside its namespace; OpenCost shows its cost separately; the onboarding time is recorded.
 
 ### Step 8.5: Threat model and control matrix
+
 **Do:** `docs/security/threat-model.md`: a **STRIDE** analysis of the whole system (trust boundaries, data flows, threats, mitigations), **organized by the 4 C's** (Cloud, Cluster, Container, Code), linked to the ADRs, building on the trust boundaries in the overview's [Kubernetes threat model coverage](../overview.md#kubernetes-threat-model-coverage) and **cross-checked against the Kubernetes threat model's eight areas** (ADR 1034). The control matrix is **organized by NIST Cybersecurity Framework 2.0** functions (Govern, Identify, Protect, Detect, Respond, Recover), with **NIST SP 800-190** (container security) and **SP 800-218 (SSDF)** checklists as appendices, and links to the **CIS** results (kube-bench, Trivy Operator, Security Hub's CIS AWS Foundations, the CIS Docker check) and the ATT&CK map as evidence (ADR 1036). `docs/security/controls-matrix.md`: every implemented control mapped to the **CIS Controls** (and SOC 2-style criteria), plus an **OWASP ASVS** mapping for the web application, each with its evidence (policy, configuration, report or test).
 
 **Test:** every trust boundary has its threats and mitigations listed, and each of the eight threat areas maps to controls with evidence; every CSF 2.0 function, SP 800-190 item and SSDF practice is marked met, partly met (with a reason) or not applicable; every control in the matrix links to evidence that exists.
 
 ### Step 8.6: Chaos experiments and postmortems
+
 **Do:** `platform/chaos-mesh/` with scheduled experiments, each with a written hypothesis, expected outcome, blast radius and abort condition (kill the MariaDB primary; kill a WordPress pod mid-canary; fill a node's disk; partition box 2; Phase 2 adds latency injected into model calls), run in staging first, then in production at quiet times; results in `docs/chaos/`. A **blameless postmortem template** in `docs/postmortems/`, and postmortems for at least two real incidents or notable drills from the build. See `docs/phase-1-russetleaf-dev/adr/1023-reliability-practice.md`.
 
 **Test:** box 3's memory stays under about 85% with Chaos Mesh installed; each experiment's outcome is recorded against its hypothesis; any surprise produced an action item; two postmortems exist with completed or scheduled action items.
 
 ### Step 8.7: Strategy documents
+
 **Do:** in `docs/strategy/`: a **technical roadmap**; a **capacity and cost plan** (using the home load-test results from step 7.12: how the HPA responds on fixed nodes, the limits found, and an estimated **cost per 1,000 visitors** on AWS at several traffic levels; Phase 3 replaces the estimate with EKS measurements); a **migration plan** (e.g. moving russetleaf.dev fully into AWS, or going multi-region: phases, risks, rollback points); and a **build-vs-buy analysis** (the self-hosted stack against managed alternatives, with costs and trade-offs).
 
 **Test:** each document states its recommendations and the evidence behind them, and is linked from the hub README.
 
 ### Step 8.8: Fleet management (hub-and-spoke Argo CD)
+
 **Do:** make the home Argo CD the **hub** for other clusters, with a **local Talos-in-Docker cluster** on the workstation (`talosctl cluster create`) as the first **spoke**: register it with an Argo CD cluster secret using a scoped service account, add an **ApplicationSet with a cluster generator** that deploys a small overlay (e.g. a test namespace with a policy and a demo app) to every registered spoke, and document registering and removing a spoke. Keep the per-cluster Argo CD as a documented fallback. In Phase 3, `demo-up` registers EKS the same way as a second spoke (Phase 3 step 6.5).
 
 **Test:** with the local spoke running, the hub shows both clusters and the ApplicationSet syncs the overlay to the spoke; deleting the spoke's registration removes its Applications with no errors left behind; the spoke's credentials can't change anything outside the namespaces the hub manages.
 
 ### Step 8.9: Public writing
+
 **Do:** a series of **articles on russetleaf.dev** explaining the main design decisions (from the ADRs): e.g. S3 rather than EFS, no service mesh, the SRA account structure, error-budget-gated promotion (and, after Phase 2, evaluation gates for LLMs). Link them from the hub README and your CV.
 
 **Test:** at least four articles published, each linking to the relevant ADRs and code.
@@ -794,11 +850,13 @@ These steps are the **Staff** tier; see the Phase 1 design's [Staff-level practi
 ## Stage 9: Finishing
 
 ### Step 9.1: Keyless AWS access for pods
+
 **Do:** publish the Talos cluster's service-account OIDC discovery files (public S3 bucket), register it as an IAM OIDC provider in `russetleaf-infra`, switch pods from scoped keys to IAM roles one at a time, then delete the keys.
 
 **Test:** each pod works with no AWS key in its Secrets; the old keys are deleted from IAM.
 
 ### Step 9.2: Documentation and polish
+
 **Do:** run an **AWS Well-Architected review** of the design in the free Well-Architected Tool (Security pillar first, then the others), save the report in `docs/`, and fix or record the high-risk items; hub README with the russetleaf.dev architecture diagram and links to all repos; screenshots of Grafana (site, cost) and Argo CD; update the Phase 1 design wherever the build differed from it; re-run `gitleaks` on every repo and confirm the repos and GHCR packages are still public (they were made public in steps 1.1 and 5.1); add each repo's **OpenSSF Scorecard** badge to its README (record the scores in the decision log), and confirm **SARIF upload** of Checkov's results to GitHub code scanning is on in each repo (it can be turned on from step 1.1, since the repos are public).
 
 **Test:** someone unfamiliar with the project can follow the README to understand it in five minutes.

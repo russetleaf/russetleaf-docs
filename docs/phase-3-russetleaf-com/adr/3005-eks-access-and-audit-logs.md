@@ -6,6 +6,7 @@
 - **Phase:** 3
 
 ## Context
+
 ADR 1033 gives people short-lived, personal, revocable access to the home cluster (Dex OIDC, group-based roles, an alerted break-glass path) and keeps a year of audit logs in the Log Archive account. EKS authenticates people through IAM, and its audit logs go to CloudWatch, so the same goals need AWS-specific mechanisms.
 
 ## Decision

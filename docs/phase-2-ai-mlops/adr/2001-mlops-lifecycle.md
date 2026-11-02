@@ -8,6 +8,7 @@
 > **Update (ADR 3002):** the project is now built in three phases (ADR 1037). This ADR is Phase 2's. **Fine-tuning** (the distillation pipeline and deploying a fine-tuned challenger) needs a GPU, so it moved to Phase 3 and is recorded in ADR 3002; the rest of the lifecycle below runs at home in Phase 2.
 
 ## Context
+
 The summary pipeline already had strong **inference-side** practices (often called LLMOps): versioned prompts, a CI evaluation gate with an LLM-as-judge, a model gateway with fallback and canaries, a self-hosted model, cost and latency monitoring, tracing, a model card and a re-summarize job. Senior MLOps work is judged on the **whole lifecycle** (data → training → evaluation → registry → deployment → monitoring → retraining), and the design was missing:
 
 - experiment tracking and a model registry (results lived in CI comments; no lineage)

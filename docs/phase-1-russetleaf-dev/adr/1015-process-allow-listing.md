@@ -5,9 +5,10 @@
 - **Applies to:** both sites
 - **Phase:** 1 (WordPress's allow-list). Later: Phase 2 adds the summarizer, gateway and llama.cpp lists; Phase 3 tries Tetragon enforcement on EKS.
 
-
 > **Update (ADR 1020):** With the three-node home cluster's extra memory, **Tetragon enforcement is realistic at home** after its EKS trial.
+
 ## Context
+
 Process allow-listing means only expected programs may run in a container, so an attacker who gets code execution can't run shells, download tools or miners. On Linux it's usually built from mandatory access control profiles (**AppArmor** or **SELinux**), **seccomp** system-call filters, or runtime tools that watch or block process execution.
 
 The project already has: seccomp `RuntimeDefault` required by Kyverno (ADR 1009), a read-only root filesystem and non-root user for its own workloads, gVisor for CI runners, Falco runtime detection (including shells in pods and writes to WordPress code), and Cilium on both clusters.

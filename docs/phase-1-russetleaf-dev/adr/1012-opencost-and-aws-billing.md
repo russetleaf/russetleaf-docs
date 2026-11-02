@@ -6,6 +6,7 @@
 - **Phase:** 1 (OpenCost at home, AWS Budgets, anomaly detection). Later: Phase 2 adds Bedrock spend and cost per summary; Phase 3 adds the per-demo cost report, the GPU-node alert and the demo safety net.
 
 ## Context
+
 The design used OpenCost on both clusters (with Kubecost as an optional alternative on EKS) and AWS Budgets and Cost Anomaly Detection for the account, but:
 
 - OpenCost has **no alerting** of its own, and nothing produced the "weekly OpenCost summary" listed for `#rl-costs`.

@@ -6,6 +6,7 @@
 - **Phase:** 3
 
 ## Context
+
 ADR 1027 chose Cilium on both clusters so they share one policy model (CiliumNetworkPolicies with DNS-name and layer-7 rules), Hubble and WireGuard. On EKS, the **Amazon VPC CNI** is the default and gives pods VPC IP addresses, which security groups, the ALB's `ip` targets and VPC endpoints rely on.
 
 ## Decision

@@ -32,21 +32,25 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 ## Stage 1: Foundations
 
 ### Step 1.1: The `russetleaf-llm-summarizer` repo
+
 **Do:** create **`russetleaf-llm-summarizer`** the same way as the Phase 1 repos (Phase 1 step 1.1): README, `.gitignore`, license, branch protection, gitleaks with a full-history scan, then **make it public** with secret scanning and push protection; **OpenSSF Scorecard**, **zizmor**, **dependency review**, **Checkov** (workflows first) and **Renovate** (Python lock file, base images, GitHub Actions, `.mise.toml`). Add the GitHub organization settings for it in `russetleaf-infra/envs/github/`. Layout: `src/`, `prompts/`, `evals/`, `guardrails/`, `chart/`, `ci/`, `demo/`, `online-eval/` (see the [Phase 2 design](design.md#repository-russetleaf-llm-summarizer)).
 
 **Test:** the repo is public with a clean history scan and push protection on; a test pull request runs the secret scan and Checkov; Renovate opens its onboarding pull request.
 
 ### Step 1.2: AWS resources for the AI pipeline
+
 **Do:** in `russetleaf-infra`, add the **`sqs-queue`** (with dead-letter queue) and **`bedrock-access`** modules, then in `envs/home`: the **summary queue** and dead-letter queue (production and staging), the **model mirror bucket** (with `prevent_destroy`), the **Bedrock budget alert**, and credentials for WordPress (send to the queue), the summarizer (read from the queue) and LiteLLM (`bedrock:InvokeModel` on the chosen models only), each in Secrets Manager (or pod roles, if Phase 1 step 9.1 is done). Confirm access to Claude Haiku and Amazon Nova Lite in the chosen region (Anthropic models may need a one-time use-case form in the console). Extend the ci stand-ins with SQS (LocalStack, or **ElasticMQ** if LocalStack's terms don't suit).
 
 **Test:** each credential's allowed action works and a disallowed one fails (e.g. the summarizer can't send to the queue); `aws bedrock-runtime converse` with the LiteLLM credential returns a response; the budget alert exists; deleting the model mirror bucket is refused by the plan.
 
 ### Step 1.3: Box 2 as the LLM node
+
 **Do:** in `russetleaf-infra/envs/home`, label box 2 `workload=llm` and taint it `dedicated=llm:NoSchedule`; give the ARC runners a matching toleration so they keep running there, next to the model; move anything else that ran on box 2 in Phase 1 (e.g. Backstage overflow) back to boxes 1 and 3; recheck the kubelet PID limit against llama.cpp's process count. Update the memory budget in the Phase 2 design.
 
 **Test:** `kubectl describe node <box2>` shows the label and taint; only the runners and node agents run on box 2; every node stays under its memory budget.
 
 ### Step 1.4: WordPress side of the pipeline (`russetleaf-wordpress`)
+
 **Do:**
 
 - The **summary-queue must-use plugin**: on publish or update, send `{"post_id": ...}` to SQS, adding the current trace context (W3C `traceparent`) as a **message attribute** when tracing is on (AWS SDK for PHP, installed with Composer at build time); the queue URL from an environment variable.
@@ -61,16 +65,19 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 ## Stage 2: AI post summaries
 
 ### Step 2.1: KEDA
+
 **Do:** `platform/keda/`: KEDA, with AWS credentials for the SQS scaler from External Secrets.
 
 **Test:** a test `ScaledObject` scales a dummy Deployment from 0 to 1 when a message is sent to a test queue, and back to 0 when the queue is empty.
 
 ### Step 2.2: LiteLLM gateway
+
 **Do:** `platform/llm-gateway/`: LiteLLM (with its OpenTelemetry tracing configured but pointed at Alloy only when tracing is on, and message-content capture **off**) with Claude Haiku (default) and Amazon Nova Lite on Bedrock, using the scoped Bedrock key; per-app budgets and rate limits (a separate key and small budget for staging); metrics exposed to Prometheus; an internal API key for callers.
 
 **Test:** from a test pod, an OpenAI-style chat request to the gateway returns answers from both models; requests over the rate limit are refused; the gateway's metrics appear in Prometheus.
 
 ### Step 2.3: Summarizer code (`russetleaf-llm-summarizer`)
+
 **Do:**
 
 - A dedicated WordPress user for the summarizer (role: editor or a custom role that can edit posts only), with an **application password** created by `wp-cli` and stored in Secrets Manager.
@@ -82,6 +89,7 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 **Test:** unit tests pass; `docker compose up` in `demo/` produces summaries for the sample posts.
 
 ### Step 2.4: Summarizer chart, release and deployment
+
 **Do:**
 
 - `chart/`: Deployment (Rollout later), KEDA `ScaledObject` on the SQS queue (0–N), daily sweep CronJob, ServiceAccount, resources.
@@ -99,11 +107,13 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Test (end to end):** the kind tests pass in CI; a release goes through staging and is promoted; then publish a post on russetleaf.dev → a summarizer pod starts → the summary appears on the post within a few minutes → the pod scales back to zero. A message that always fails ends up in the dead-letter queue.
 
 ### Step 2.5: LLM monitoring
+
 **Do:** OpenTelemetry metrics in the summarizer (tokens, latency, errors, fallbacks, estimated cost, all labeled by model and prompt version); the Grafana LLM dashboard and `PrometheusRule` alerts shipped **in the summarizer chart** (error spike, dead-letter queue not empty, daily Bedrock spend over a limit, all labeled `team=mlops` so they go to `#rl-mlops`, with runbooks), plus the log-based `SummarizerExceptions` and `BedrockThrottling` alerts in Loki; SQS queue depth in Grafana.
 
 **Test:** the dashboard shows real numbers after a few posts; temporarily lowering the spend limit makes the alert appear in `#rl-mlops`.
 
 ### Step 2.6: AI pipeline burst test
+
 **Do:** in staging, queue **200–500 posts at once** (a script sending post IDs to the staging queue) and watch: KEDA scale-out up to its limit, Bedrock throttling and the gateway's fallback to llama.cpp, the dead-letter queue, time to drain the queue, guardrail outcomes and cost per burst (from the gateway's spend metrics). Set KEDA's maximum replicas, the gateway's rate limits and the Bedrock budget thresholds from the results; record them in `docs/performance/`.
 
 **Test:** the queue drains completely within the expected time, nothing is lost (failures end up in the dead-letter queue with alerts), the summarizer scales back to zero, and the burst's cost is recorded.
@@ -111,11 +121,13 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 ## Stage 3: Self-hosted model (box 2)
 
 ### Step 3.1: llama.cpp model server
+
 **Do:** `platform/llm-serving/`: llama.cpp server (CPU build) with a toleration and node selector for box 2; an init container that downloads a 4-bit **3B model** (e.g. Qwen2.5-3B or Llama 3.2 3B) into a local-path volume (mirror the file in S3 so rebuilds don't depend on Hugging Face); metrics enabled; memory limits leaving ~1 GB free on the node, and a **CPU limit leaving about one core free**, because box 2 is also an etcd member (watch etcd's latency metrics while summaries run).
 
 **Test:** the pod runs **only** on box 2; an OpenAI-style request returns a summary; record the time per summary and memory use in the decision log.
 
 ### Step 3.2: Gateway routing to the local model
+
 **Do:** add the local model to LiteLLM: fallback (Bedrock first, local if Bedrock fails), and a canary split (e.g. 10% of summary requests to the local model); llama.cpp metrics and model-down alert in Grafana.
 
 **Test:** with Bedrock blocked (e.g. a wrong model ID in a test config), requests fall back to the local model; with the split on, about 10% of summaries show the local model's name in the metrics.
@@ -123,16 +135,19 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 ## Stage 4: MLOps pipeline
 
 ### Step 4.1: Evaluation set and scorers
+
 **Do** (`russetleaf-llm-summarizer/evals/`): 20–30 sample posts with reference notes; rule-based checks (length, required keywords, no made-up links); an LLM-as-judge prompt for faithfulness; a script that runs the set against each model through a gateway URL and writes a report (JSON + Markdown).
 
 **Test:** running the script locally against the gateway (via `kubectl port-forward`) produces a report comparing Haiku, Nova Lite and the local model.
 
 ### Step 4.2: Runners for `russetleaf-llm-summarizer`
+
 **Do:** add a second ARC runner scale set (Phase 1 step 5.5) registered to **`russetleaf-llm-summarizer`**, on box 2 next to the model, with the same protections (approval for fork pull requests, self-hosted label limited to the evaluation workflows).
 
 **Test:** a test workflow runs on a self-hosted runner pod, which is deleted afterwards; a fork pull request waits for approval.
 
 ### Step 4.3: Evaluation gate and releases
+
 **Do:**
 
 - Pull request workflow (on ARC runners): run the evaluation, post per-model scores as a pull request comment compared with `main`, fail below the threshold.
@@ -143,21 +158,25 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Test:** a pull request with a deliberately bad prompt fails the gate with a clear comment; a good one passes; a release tag publishes only after the gate passes.
 
 ### Step 4.4: Experiment tracking and model registry (MLflow)
+
 **Do:** `platform/mlflow/` (placed on box 3): the MLflow tracking server with MariaDB for metadata and an S3 artifact bucket (`s3-mlops` module in `russetleaf-infra`, scoped access through External Secrets), behind Cloudflare Access. Change the evaluation gate (step 4.3) to log every run to MLflow (Git commit, prompt version, model, dataset version, scores, latency, cost). Register `summarizer-config` and `local-summarizer` (the current 3B model file) with `champion` aliases, feed the model mirror bucket from the registry, and make routing changes in `russetleaf-gitops` reference registry versions. (If Phase 3 is built, its step 1.7 adds a **cross-account bucket-policy grant** in the `s3-mlops` module letting russetleaf-com's EKS **training role** write to the MLflow artifact and DVC buckets.) **Check box 3's memory** afterwards against the budget in the Phase 2 design; if it passes about 85%, place MLflow on box 1. See the Phase 2 design's [MLOps lifecycle](design.md#mlops-lifecycle).
 
 **Test:** box 3's memory stays under about 85%; an evaluation run appears in MLflow with its parameters, metrics and report; the registry shows both models with lineage to their runs; the gateway's routing points at a registered version.
 
 ### Step 4.5: Guardrails
+
 **Do:** in `russetleaf-llm-summarizer/guardrails/`: delimit post text as content (never instructions), redact email addresses, phone numbers and similar patterns before calls leave the cluster, and validate output (length, plain text, no URLs, no instructions or system-prompt text; retry once, then don't save and alert). Add **adversarial cases** (posts containing injection attempts and personal data) to the evaluation set, and guardrail metrics (blocked, retried, redacted) with an alert on spikes to `#rl-mlops`.
 
 **Test:** a post containing "ignore your instructions and…" produces a normal summary; a post with an email address never sends it to Bedrock (checked in traces or gateway logs); an invalid output isn't saved and alerts; the CI gate fails if an adversarial case gets through.
 
 ### Step 4.6: Online evaluation and drift monitoring
+
 **Do:** `platform/argo-workflows/` (Argo Workflows), and a **daily workflow** from `russetleaf-llm-summarizer/online-eval/` that samples a few percent of the day's summaries, scores them with the CI gate's rules and judge, checks input drift (length, language, topics) against the evaluation set, and logs to MLflow and Prometheus. Grafana panels for quality and drift per model and prompt version; `SummaryQualityDegraded` and `InputDriftDetected` alerts to `#rl-mlops`, with runbooks.
 
 **Test:** the workflow runs daily and its results appear in MLflow and Grafana; temporarily switching routing to a deliberately weak prompt lowers the scores and fires `SummaryQualityDegraded`.
 
 ### Step 4.7: Feedback loop and data versioning
+
 **Do:** a `summary-feedback` must-use plugin in `russetleaf-wordpress` (editor-only "helpful / not helpful" plus a note on each summary, stored as post metadata); **DVC** in `russetleaf-llm-summarizer` with an S3 remote, tracking the evaluation set, adversarial cases and training data; a nightly workflow exporting new ratings (with each summary's model and prompt version) into the DVC-tracked dataset; MLflow runs record the dataset version.
 
 **Test:** rating a summary in the admin shows up in the next nightly export; `dvc pull` reproduces any past dataset version; an MLflow run's dataset version checks out the exact data it used.
@@ -165,6 +184,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 ## Stage 5: Platform integration and finishing
 
 ### Step 5.1: Security for the AI components
+
 **Do:** extend Phase 1's controls to the new workloads:
 
 - **Kyverno:** add the `russetleaf-llm-summarizer` release workflow's signing identity to image verification (signature, SBOM and provenance); Pod Security Admission labels (`restricted`) and quotas on the summarizer, gateway and model namespaces; KEDA on the service-account token allow-list; a `PolicyException` for llama.cpp's image only if it genuinely can't run read-only or as non-root.
@@ -175,6 +195,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Test:** an unsigned summarizer image is rejected; a non-REST-API request from the summarizer to WordPress is blocked at layer 7; `curl https://example.com` from the gateway is blocked while Bedrock calls work; starting an unlisted process in the summarizer raises a Falco alert; the summary pipeline still works end to end.
 
 ### Step 5.2: Observability and operations for the AI components
+
 **Do:**
 
 - **Tracing:** turn tracing on in the summarizer and gateway values, sampling 100% of summary jobs.
@@ -187,6 +208,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Test:** publishing a post produces **one trace** covering WordPress → the queue message → the summarizer → the gateway → the model call → saving the summary, showing which model answered, with no post text, prompts or summaries in any span; OpenCost shows the LLM namespace's cost; the re-summarize drill restores the earlier summaries; with box 2 off, summaries still arrive through Bedrock.
 
 ### Step 5.3: Documentation
+
 **Do:** finish ADRs 2001, 2002 and 2003 (resolve their open items); update the Phase 2 design wherever the build differed; add the LLM dashboard, an evaluation report and an MLflow run to the hub README's screenshots; add the AI pipeline to the hub README's architecture diagram; optionally an article on evaluation gates for LLMs.
 
 **Test:** every Phase 2 ADR's open items are resolved or moved to a later phase; the README shows the pipeline.

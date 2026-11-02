@@ -6,6 +6,7 @@
 - **Phase:** 3
 
 ## Context
+
 The full AWS design (EKS, RDS Multi-AZ with RDS Proxy, ElastiCache, NAT Gateways, ALB, WAF, a GPU node) costs roughly $725–840 a month if left running: far too much for a portfolio site. But russetleaf.com should still answer when the stack is down, and bringing it up should be one command, not an afternoon.
 
 ## Decision

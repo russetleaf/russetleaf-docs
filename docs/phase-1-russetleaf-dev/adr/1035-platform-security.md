@@ -6,6 +6,7 @@
 - **Phase:** 1. Later: Phase 2 adds the summarizer's signing identity; Phase 3 adds the EKS checks.
 
 ## Context
+
 The design was checked against the common platform security topics: supply chain security, the image repository, observability, service mesh, Kubernetes PKI, mutual TLS and admission controllers.
 
 Supply chain security was strong (signed images with SBOM and SLSA provenance verified at admission, signed charts pinned by digest, mirrored upstream images). Service mesh and mTLS were covered by ADR 1001 (no mesh; WireGuard plus TLS on every sensitive connection, with the lack of per-service identity stated). The rest had gaps:

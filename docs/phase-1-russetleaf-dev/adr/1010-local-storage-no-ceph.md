@@ -5,9 +5,10 @@
 - **Applies to:** russetleaf.dev (home lab). russetleaf.com uses AWS's managed EBS and S3.
 - **Phase:** 1.
 
-
 > **Update (ADR 1020):** The home cluster now has three nodes. Still no Ceph (memory per storage daemon) and no Longhorn (unnecessary): **database availability now comes from MariaDB primary–replica replication with automatic failover** (primary on box 3, replica on box 1), so a node or disk loss costs seconds of data, not hours. The 6-hourly S3 backups remain for disasters.
+
 ## Context
+
 **Ceph** is a distributed storage system that pools several servers' disks into replicated block, file and S3-compatible object storage, healing itself when a disk or server fails. **Rook** is the Kubernetes operator that runs Ceph inside a cluster, and Rook-Ceph is a standard choice for on-premises Kubernetes needing resilient storage. **Longhorn** is a lighter distributed block storage system for Kubernetes. Earlier versions of the design listed "local-path-provisioner or Longhorn" for home storage.
 
 *[Original two-node state; see ADR 1020 for the current three-node cluster.]* The home cluster has two nodes with 8 GB of RAM each (box 1 already uses about 6–7 GB; box 2 is dedicated to the LLM), and probably one disk per node, used by Talos. The design keeps state **out of the cluster** on purpose: media, logs, traces and database backups are in S3, and code is in the image. Only MariaDB, Valkey and a few caches use local disk.

@@ -8,6 +8,7 @@
 > **Update (ADR 3003):** the project is now built in three phases (ADR 1037). This ADR covers the decision to use Cilium and its use on Talos (Phase 1). **Cilium on EKS, in chaining mode with the VPC CNI,** is recorded in ADR 3003 (Phase 3).
 
 ## Context
+
 The network plugin (CNI) is one of the most consequential and hardest-to-change cluster decisions: it determines whether network policies are enforced, how traffic is observed and encrypted, and how services are load-balanced. Talos defaults to **Flannel**, which doesn't enforce network policies; EKS defaults to the **Amazon VPC CNI**, which gives pods VPC IP addresses and can enforce standard network policies.
 
 The design needs: enforced default-deny policies, **outbound rules by DNS name** (AWS service IPs change constantly), some **layer-7** rules, flow visibility, encryption between nodes, and the same policy model on both clusters.

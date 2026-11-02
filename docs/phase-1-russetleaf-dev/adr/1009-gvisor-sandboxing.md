@@ -6,6 +6,7 @@
 - **Phase:** 1. Later: Phase 2 runs the evaluation jobs on the sandboxed runners; Phase 3 doesn't use gVisor on EKS.
 
 ## Context
+
 Containers on a node share its Linux kernel, so a kernel exploit from inside one container could compromise the whole node. The design already limits what containers can do (Pod Security `baseline`, non-root, read-only root filesystem, dropped capabilities, CiliumNetworkPolicies, Falco), but didn't require a **seccomp** profile and had no **sandboxed runtime**.
 
 Two workloads run code that isn't fully trusted:

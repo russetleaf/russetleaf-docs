@@ -6,6 +6,7 @@
 - **Phase:** 1 (most controls). Later: Phase 2 adds prompt-injection guardrails; Phase 3 adds the AWS edge and VPC controls.
 
 ## Context
+
 Cloud-native security is commonly described in four layers, the **4 C's**: **Cloud** (the provider and infrastructure), **Cluster** (Kubernetes), **Container** (images and runtime) and **Code** (the application and its dependencies); each layer depends on the one outside it. A review against that model, and against cloud provider, infrastructure, isolation, artifact, image, workload and application-code security, found the design strong in depth but with gaps:
 
 - the project's **other providers** (GitHub, Cloudflare, Google Cloud, Slack, the domain registrars) weren't hardened like AWS

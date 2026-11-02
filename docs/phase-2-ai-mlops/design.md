@@ -34,7 +34,6 @@ flowchart LR
   gw --> prom
 ```
 
-
 ## AI post summaries
 
 ### How it works (event-driven)
@@ -66,6 +65,7 @@ The summarizer authenticates to WordPress with an **application password** store
 - On AWS, the LLM nodes come from Karpenter's **GPU NodePool** (e.g. g6.xlarge on spot), using a CUDA build of llama.cpp. At home, it's a **dedicated CPU worker node** (see the home lab section). The same manifests deploy both, with per-environment overlays. On EKS, the **NVIDIA device plugin** (a DaemonSet) lets the model server request the GPU (`nvidia.com/gpu: 1`); the Amazon Linux 2023 NVIDIA AMI already includes the drivers.
 
 ### Prompt versioning and evaluation in CI
+
 The summarizer is its own repo, `russetleaf-llm-summarizer`, built to stand alone as an MLOps project (see [Repository structure](../overview.md#repository-structure-four-repos)).
 
 - The summarizer prompts and model settings live in `russetleaf-llm-summarizer/prompts/`, with a **version number** that the summarizer records alongside each summary.
@@ -81,6 +81,7 @@ The summarizer is its own repo, `russetleaf-llm-summarizer`, built to stand alon
 - New code rolls out through the Argo Rollouts canary; new models roll out through the gateway's canary split.
 
 ### LLM monitoring
+
 The summarizer reports **OpenTelemetry metrics** to Prometheus, labeled by model and prompt version:
 
 - input and output **tokens**
@@ -117,6 +118,7 @@ flowchart LR
 - The model mirror bucket keeps serving files to llama.cpp; it's fed **from the registry**, so every file in use has a registry entry.
 
 ### Guardrails
+
 Post content is untrusted input, so the summarizer treats it as data:
 
 - **Prompt-injection defences:** post text is clearly delimited and labeled as content to summarize, never instructions; the system prompt says so and is never echoed back.
@@ -133,6 +135,7 @@ Post content is untrusted input, so the summarizer treats it as data:
 - A sustained drop starts the response: compare the champion and challenger in the evaluation set, roll back routing (ADR 1016), or trigger retraining.
 
 ### Fine-tuning (in Phase 3)
+
 Fine-tuning the self-hosted model needs a GPU, which the home lab doesn't have, so the **fine-tuning pipeline and deploying a fine-tuned challenger** belong to Phase 3 (the EKS GPU node pool); see the [Phase 3 design](../phase-3-russetleaf-com/design.md#fine-tuning-on-the-gpu-pool-if-phase-2-is-built) and ADR 3002. Without Phase 3, the MLOps lifecycle here still covers evaluation, the registry, guardrails, online evaluation, drift and the feedback loop.
 
 ### Data versioning and feedback
@@ -141,9 +144,11 @@ Fine-tuning the self-hosted model needs a GPU, which the home lab doesn't have, 
 - **Feedback loop:** a small must-use plugin adds an **editor-only rating** (helpful / not helpful, with an optional note) to each summary in the WordPress admin, stored as post metadata. A nightly job exports ratings (with the summary's model and prompt version) to the DVC-tracked dataset; poor-rated summaries become new evaluation cases, and good ones become training candidates.
 
 ### Cost
+
 MLflow, Argo Workflows and the online-evaluation job run on the home cluster (box 3 has the memory); the extra Bedrock calls for daily judging cost cents a month; each fine-tuning run costs **a few dollars** of spot GPU time on EKS.
 
 ### Rolling back bad AI summaries
+
 Rolling back a prompt or model doesn't fix summaries already saved. Each summary is stored with its **prompt version and model** (as post metadata), so a **re-summarize job** in `russetleaf-llm-summarizer` can find every post summarized by a bad version and **re-queue** it through SQS, regenerating the summaries with the restored version.
 
 ## Repository: `russetleaf-llm-summarizer`
@@ -205,10 +210,10 @@ Design choices that make it stand on its own:
 | SQS must-use plugin that queues posts | `russetleaf-wordpress` |
 
 The self-hosted model isn't a special case: its deployment is ordinary platform config in `russetleaf-gitops`, on a dedicated node defined in `russetleaf-infra`, and its quality is judged in `russetleaf-llm-summarizer` alongside the Bedrock models.
+
 ## AI components in the shared platform
 
 These parts of Phase 1's shared platform sections exist only once the AI pipeline is added.
-
 
 ### Sandboxed runtimes (gVisor)
 

@@ -5,9 +5,10 @@
 - **Applies to:** both sites
 - **Phase:** 1 (the home cluster). Later: Phase 3 adds russetleaf.com's availability while running.
 
-
 > **Update (ADR 1020):** The home lab now has **three control-plane nodes** with a virtual IP, replicated MariaDB with automatic failover, and spread workloads, so it **survives any single node failure** (recovery point: seconds; recovery time: about a minute). Power and internet remain single points of failure; a UPS is recommended. The "Future changes" items 1, 3 and 4 for the home lab are now done; the table below describes the original two-node state.
+
 ## Context
+
 High availability (HA) means a site keeps working when a single component (a node, a disk, a zone, a database instance) fails. It usually means running more than one of everything, which costs money and hardware. The two sites differ:
 
 *[The table below describes the **original two-node** home lab. Current state (ADR 1020): three control-plane nodes with a virtual IP, MariaDB primary–replica replication with automatic failover, and WordPress, ingress-nginx and cloudflared spread across nodes; the home lab now survives any single node failure, with power and internet still single points of failure.]*

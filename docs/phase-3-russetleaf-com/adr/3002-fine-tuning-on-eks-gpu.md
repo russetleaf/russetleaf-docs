@@ -6,6 +6,7 @@
 - **Phase:** 3 (needs Phase 2)
 
 ## Context
+
 ADR 2001 defines the MLOps lifecycle. Its training half, fine-tuning the small self-hosted model, needs a GPU, which only exists on EKS's spot GPU node pool. With the project in three phases (ADR 1037), fine-tuning can only happen once both Phase 2 (the lifecycle, registry and datasets) and Phase 3 (the GPU) exist.
 
 ## Decision
