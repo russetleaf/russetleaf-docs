@@ -527,7 +527,7 @@ An admin signs in once with Google at the edge, then once more (one click, no pa
 
 **Google Cloud setup (free):** one Google Cloud project with an OAuth consent screen using only the basic scopes (`openid`, `email`, `profile`), and an OAuth client per site (and one for local testing). With only basic scopes, Google's app review isn't usually required; until the app is published, only listed test users can sign in (check Google's current rules). OAuth clients for web apps are created in the Google Cloud console and documented in `wp-infra`'s README, since they can't be fully managed with Terraform; their secrets are stored in Secrets Manager.
 
-**The plugin:** a generic OIDC client plugin (e.g. "OpenID Connect Generic Client"; check current maintenance before choosing), pinned in `plugins.json` and configured entirely from **environment variables and constants** (client ID, client secret, endpoints, allowed emails), never from the admin screen.
+**The plugin:** a generic OIDC client plugin (e.g. "OpenID Connect Generic Client"; check current maintenance before choosing), pinned in `composer.json` (through WPackagist) and configured entirely from **environment variables and constants** (client ID, client secret, endpoints, allowed emails), never from the admin screen.
 
 ### Rules
 - **Allow-list:** only listed email addresses (or one Google Workspace domain) get a WordPress account; anyone else is refused, even with a valid Google login.
@@ -812,6 +812,52 @@ Box 1 doesn't have memory to spare for an always-on staging copy, so staging exi
 Infrastructure changes follow the same idea with different tools: Terraform modules are tested with **`terraform test`** in CI, Talos version upgrades are rehearsed on a **local Talos-in-Docker cluster** first, and `envs/home` changes are planned in CI before being applied.
 
 **Kargo (optional, later):** Kargo, a GitOps promotion tool from the makers of Argo CD, can replace the promotion workflows with a visual pipeline (stages, verification, approvals). It's a good portfolio addition, but its controllers are always on, so add it only if box 1 has memory to spare. The workflows above are the lightweight default.
+
+## Update strategy
+
+Every update, from a WordPress plugin to a Kubernetes version, arrives as a **pull request**, is **tested by CI**, and is **promoted with the same safety nets** as any other change. Nothing updates itself in place: WordPress's own auto-updates are off (`DISALLOW_FILE_MODS`, `AUTOMATIC_UPDATER_DISABLED`), images are pinned by digest, and charts and Terraform versions are pinned. The reasoning is recorded in `docs/adr/0011-update-strategy.md`.
+
+### By layer
+
+| Layer | How updates arrive | How they're tested and rolled out | Cadence |
+|---|---|---|---|
+| **WordPress core, plugins, themes** (`wp-image`) | **Renovate** pull requests. Plugins and themes are managed with **Composer through WPackagist** (a Composer mirror of the WordPress.org plugin and theme directories), so Renovate can track them | Build → kind ci tests → **staging** → promotion PR to prod → Argo Rollouts canary | Weekly; **security releases within 48 hours** |
+| **Base images** (official `wordpress`, Python) | Renovate updates the **pinned digests**; a **weekly scheduled rebuild** picks up OS patches even without code changes | Same pipeline as above | Weekly |
+| **Summarizer dependencies** (Python) | Renovate (lock file) | Unit and kind tests, the **evaluation gate**, staging, promotion | Weekly |
+| **Platform components** (Cilium, Argo CD, Kyverno, Falco, Loki, Tempo, etc.) | Renovate in `wp-gitops`, **grouped** into one pull request per component | **Patch versions:** auto-merge once CI passes. **Minor and major versions:** read the changelog, try on a **local Talos-in-Docker cluster** first, merge by hand. (Staging doesn't help here: platform components are shared by staging and prod.) | Weekly review; minors monthly |
+| **Talos and Kubernetes** (home) | Versions bumped in `wp-infra/envs/home` (Renovate tracks them with a custom version rule) | Take an **etcd snapshot** and an on-demand MariaDB backup; rehearse on a local Talos cluster; check Cilium and other components support the new Kubernetes version; upgrade **Talos on box 2, then box 1**, then Kubernetes (`talosctl upgrade-k8s`). Roll back with `talosctl rollback` | Talos patches monthly; Kubernetes minor versions within a few months of release, staying **within the supported window** |
+| **EKS** | Versions bumped in `wp-infra/envs/aws`: cluster version, add-ons, **pinned AMI version** in Karpenter's node class (Renovate-tracked), RDS and ElastiCache engine versions | The stack is rebuilt every demo, so there are no in-place upgrades; `demo-up` uses the new versions. RDS's MariaDB version is kept **matched to the home MariaDB**, so backups restore cleanly | Before each demo; always in EKS **standard support** |
+| **Terraform providers and modules** | Renovate (with the lock file) | CI plan, Checkov, `terraform test` | Monthly |
+| **CLI tools and GitHub Actions** | Renovate (`.mise.toml`; actions pinned to commit hashes) | CI | Monthly; patches auto-merge |
+| **Models** (Bedrock models, llama.cpp, the local model file) | AWS's **Bedrock model deprecation notices**; llama.cpp image via Renovate | **Evaluation gate** first, then a gateway **canary split**, then a routing change citing the evaluation report | When a new version appears or a deprecation date nears |
+| **Workstation** (Ubuntu) | Unattended security upgrades | — | Automatic |
+
+### Renovate settings (all four repos)
+- **Schedule:** pull requests opened on a weekly window (e.g. early Monday), except **security** updates, which open immediately.
+- **Grouping:** one pull request per platform component or related set (e.g. all Cilium charts and images together), to keep reviews small and rollbacks clean.
+- **Auto-merge:** **patch** updates for platform charts, CLI tools and GitHub Actions merge automatically once CI passes; everything else waits for review.
+- **Dependency Dashboard:** Renovate's dashboard issue in each repo lists every pending update, so nothing is silently ignored.
+- **Custom version rules** for versions Renovate can't find by itself (Talos and Kubernetes versions in Terraform, the EKS AMI version).
+
+### Vulnerability-driven updates
+- **WordPress plugin vulnerabilities:** Trivy scans operating-system and language packages but doesn't know about WordPress plugin vulnerabilities, which are WordPress's main risk. **WPScan** (free API token, limited daily requests) runs in `wp-image` CI and on a **weekly schedule** against the current plugin and theme list, failing the build or alerting `#rl-security` on a known vulnerability. That alert starts the 48-hour security release.
+- **Running images:** Trivy Operator alerts on new critical vulnerabilities in what's already deployed.
+- **AWS and cluster posture:** Prowler and Kubescape reports surface outdated or insecure settings.
+
+### Version-age report
+A **monthly scheduled workflow** in `wp-gitops` checks running versions (Talos, Kubernetes, EKS, MariaDB, Valkey, and major platform charts) against their **end-of-life dates** (e.g. from the endoflife.date API) and posts anything within 90 days of end of support to `#rl-deploys`. Renovate's Dependency Dashboard covers everything else.
+
+### Safety nets for every update
+- **Before:** backups (etcd snapshot, on-demand MariaDB backup) and changelogs read for anything minor or major.
+- **During:** ci kind tests, staging (for applications), the Argo Rollouts canary with automatic rollback, Kyverno and Checkov checks.
+- **After:** alerts, the `wordpress_info` version metric (which also catches version drift between the two sites), and a quick Grafana review.
+- **Rollback:** a Git revert (applications and platform), `talosctl rollback` (Talos), or restoring from a snapshot or backup (data).
+
+### Cadence
+- **Weekly:** review and merge Renovate pull requests (patches mostly automatic); scheduled image rebuild; WPScan run.
+- **Monthly:** Talos patches; platform minor versions; version-age report; a short maintenance note in the decision log.
+- **Quarterly:** Kubernetes minor upgrade at home, after rehearsing locally.
+- **Out of band:** security releases within 48 hours.
 
 ## Example Helm values (outline)
 
@@ -1138,6 +1184,7 @@ Together with the home lab, the total stays within **$30–$50/month**. If the A
 - **Pod permissions without stored keys at home (stretch goal):** publish the Talos cluster's service-account OIDC discovery files (e.g. in a public S3 bucket) and register them as an IAM OIDC provider. Pods such as WordPress (S3, SQS), the summarizer (SQS) and the gateway (Bedrock) then assume IAM roles without stored keys, just like IRSA on EKS. Until then, the home cluster uses narrowly scoped IAM user keys kept in Secrets Manager.
 - **Terraform for both sides, in one repo (`wp-infra`):** shared modules, plus separate root modules for russetleaf.com's always-on edge, its demo stack (including Karpenter and its NodePools), and the russetleaf.dev home lab (Talos provider `siderolabs/talos` for both nodes' machine configs, Cloudflare provider for the tunnel, DNS and WAF rules, and the AWS pieces used from home).
 - **CI on GitHub in every repo:** Terraform checks and plans in `wp-infra`; manifest validation and Kyverno policy tests in `wp-gitops`; image builds with SBOMs, scans and signing in `wp-image` and `llm-summarizer`; and the prompt evaluation gate in `llm-summarizer`. Employers see all of it without the AWS stack running.
+- **A defined update strategy:** every update is a Renovate pull request, risk-tiered (patches auto-merge; minors and majors rehearsed; applications through staging and canaries), with WPScan for WordPress plugin vulnerabilities, 48-hour security releases, and a monthly end-of-life report.
 - **Environments and promotion:** local, ci (kind + LocalStack + mock LLM per pull request), on-demand scale-to-zero staging with scrubbed production data, and automated promotion to production after staging passes.
 - **Full observability on both sites:** metrics (Prometheus), logs (Loki + Alloy, with log-based alerts), network flows (Hubble), security events (Falco) and traces (Tempo, following each AI summary end to end through the SQS queue and model gateway), correlated in Grafana.
 - **Application-level monitoring:** exporters around WordPress (Apache, database, cache, synthetic probes) plus a custom metrics plugin with a business-level signal (`posts_without_summary`) tied to an alert and a runbook.
@@ -1190,7 +1237,7 @@ wp-gitops/
                             #   0004-ghcr-not-ecr.md, 0005-loki-alloy-for-logs.md,
                             #   0006-tempo-tracing.md, 0007-prowler-not-threatmapper.md,
                             #   0008-google-sign-in-for-admins.md, 0009-gvisor-sandboxing.md,
-                            #   0010-local-storage-no-ceph.md)
+                            #   0010-local-storage-no-ceph.md, 0011-update-strategy.md)
                             # + diagrams, cost breakdown, Grafana screenshots, CIS/kube-bench reports,
                             #   Talos hardening notes, demo recordings
   bootstrap/
@@ -1309,8 +1356,8 @@ wp-image/
   Dockerfile                # based on the official wordpress image, plugins and themes added, OPcache on,
                             #   RDS CA bundle
   db.php                    # database drop-in: IAM auth token mode (database.auth: iam) or plain password
-  plugins.json              # pinned plugin and theme versions (offload media, Redis object cache, SMTP,
-                            #   OIDC login, ...)
+  composer.json             # pinned plugin and theme versions through WPackagist (offload media, Redis
+                            #   object cache, SMTP, OIDC login, ...), so Renovate can update them
   chart/                    # the WordPress Helm chart: Rollout, Service, Ingress, HPA, PDB, WP-Cron CronJob,
                             #   CiliumNetworkPolicy (per-site destinations set in values), probes, non-root +
                             #   read-only root filesystem with emptyDir volumes for writable paths, seccomp
@@ -1323,7 +1370,8 @@ wp-image/
   tests/                    # smoke test: the container starts, plugins are active, health check passes
   ci/                       # kind config, ci chart values (LocalStack, test credentials), integration tests
   compose.yaml              # local environment: WordPress + MariaDB + Valkey + LocalStack
-  .github/workflows/        # build, SBOM (Syft), scan (Trivy), sign + SBOM attestation (cosign), kind integration tests, push image
+  .github/workflows/        # build, SBOM (Syft), scan (Trivy, WPScan), sign + SBOM attestation (cosign), kind integration tests,
+                            #   weekly scheduled rebuild + WPScan run, push image
                             #   + chart to GHCR, open a version-bump pull request on wp-gitops (staging overlay)
 ```
 

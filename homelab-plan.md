@@ -162,10 +162,10 @@ Record each answer in the [decision log](#decision-log).
 **Do:**
 - Rename this repo to **`wp-gitops`**. Create **`wp-infra`**, **`wp-image`** and **`llm-summarizer`**.
 - In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a `LICENSE` if public, branch protection on `main` (pull requests and passing checks required).
-- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5); move them with the other docs.
+- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) and `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6); move them with the other docs.
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo.
 - Add **Checkov** to every repo's CI from the start, scanning the **GitHub Actions workflows** (unpinned actions, over-broad `permissions`, script injection), with a `.checkov.yaml` per repo. Later steps add each repo's other targets (Terraform, manifests, Dockerfiles, charts). Skips must carry a reason. See [Infrastructure and configuration scanning](aws-wp.md#infrastructure-and-configuration-scanning-checkov).
-- Add **Renovate** to every repo (Helm charts, Terraform providers, base images, GitHub Actions).
+- Add **Renovate** to every repo (Helm charts, Terraform providers, base images, GitHub Actions, `.mise.toml`, and later Composer and Python lock files), with a shared configuration following `aws-wp.md`'s [Update strategy](aws-wp.md#update-strategy): a weekly schedule (security updates immediately), grouping per platform component, **auto-merge for patch updates** of platform charts, CLI tools and GitHub Actions once CI passes, the **Dependency Dashboard**, and custom version rules for Talos and Kubernetes versions in Terraform.
 - In `wp-gitops`: move `aws-wp.md` and this file to `docs/`, and write the hub README (what the project is, links to all four repos).
 
 **Test:** each repo has protected `main`, the secret scan and Checkov run on a test pull request (a workflow with `permissions: write-all` fails Checkov), and Renovate opens its onboarding pull request.
@@ -283,7 +283,8 @@ Check `kubectl top nodes` after each step.
 
 ### Step 5.1: The WordPress image (`wp-image`)
 **Do:**
-- `Dockerfile` based on the official `wordpress` image (pinned version), with plugins and themes pinned in `plugins.json` and installed at build time: an S3 media offload plugin (see the comparison below), Redis Object Cache, an SMTP plugin (configured for Amazon SES). WordPress code is copied into `/var/www/html` **at build time**, so the image's startup script has nothing to copy at runtime.
+- `Dockerfile` based on the official `wordpress` image (pinned version), with plugins and themes pinned in **`composer.json` through WPackagist** (so Renovate can update them) and installed with Composer at build time: an S3 media offload plugin (see the comparison below), Redis Object Cache, an SMTP plugin (configured for Amazon SES). WordPress code is copied into `/var/www/html` **at build time**, so the image's startup script has nothing to copy at runtime.
+- **WPScan:** run it in CI (free API token stored as a GitHub secret) against the plugins and themes in `composer.json`, failing the build on a known vulnerability, plus a **weekly scheduled run** that alerts `#rl-security`. Also schedule a **weekly rebuild** of the image so base-image OS patches are picked up even without code changes.
 - **Choose the S3 offload plugin** (see [Media storage: S3, not EFS](aws-wp.md#media-storage-s3-not-efs-by-decision)). Try both in the Compose setup against LocalStack (or MinIO) and record the choice in the decision log:
   - **S3-Uploads** (Human Made, open source): uploads go **directly to S3**, so no writable uploads directory is needed. Preferred if it works with a custom S3 endpoint (for the ci stand-ins) and with CloudFront as the media URL.
   - **WP Offload Media Lite**: writes locally first, then copies to S3; needs a writable uploads `emptyDir`.
@@ -356,7 +357,7 @@ Check `kubectl top nodes` after each step.
 ### Step 5.8: Google sign-in for admins
 **Do:** as described in `aws-wp.md` ([Admin sign-in with Google](aws-wp.md#admin-sign-in-with-google)):
 - **Google Cloud:** a project with an OAuth consent screen (basic scopes only: `openid`, `email`, `profile`), and OAuth clients for **russetleaf.dev** (with staging.russetleaf.dev as a second redirect URL) and **local testing**. Document them in `wp-infra`'s README; store the client secrets in Secrets Manager.
-- **`wp-image`:** add an OIDC client plugin (e.g. "OpenID Connect Generic Client"; check it's maintained and can be configured entirely from constants or environment variables) to `plugins.json`. Configure it from chart values: Google's endpoints, client ID and secret (External Secrets), the **allow-list** of email addresses, and automatic account linking for allowed emails only.
+- **`wp-image`:** add an OIDC client plugin (e.g. "OpenID Connect Generic Client"; check it's maintained and can be configured entirely from constants or environment variables) to `composer.json` (WPackagist). Configure it from chart values: Google's endpoints, client ID and secret (External Secrets), the **allow-list** of email addresses, and automatic account linking for allowed emails only.
 - **Turn off password logins for people**, while keeping **application passwords** for the REST API (the summarizer and the staging smoke tests depend on them).
 - **Edge layer:** a Cloudflare Access application covering `/wp-admin/*` and `/wp-login.php` on russetleaf.dev and staging, using Google.
 - **CiliumNetworkPolicy:** allow WordPress → Google's login endpoints by DNS name.
@@ -526,6 +527,11 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 **Test:** the workflow runs without stored AWS keys; a deliberately weakened setting (e.g. turning off S3 Block Public Access on a test bucket) shows up as a failed check, then passes once reverted; the summary and Slack message appear.
 
+### Step 10.6: Version-age report
+**Do:** a monthly scheduled GitHub Actions workflow in `wp-gitops` that reads the versions actually running (Talos and Kubernetes from the cluster, MariaDB, Valkey and the major platform charts from `wp-gitops`, and EKS and RDS versions from `wp-infra`), compares them with their **end-of-life dates** (e.g. the endoflife.date API), and posts anything within **90 days of end of support** to `#rl-deploys`. Link it from ADR 0011.
+
+**Test:** the workflow runs on schedule and by hand; temporarily lowering the threshold makes it report something; the message lists each component, its version and its end-of-support date.
+
 ## Phase 11: Optional and finishing
 
 ### Step 11.1 (optional): Keyless AWS access for pods
@@ -545,8 +551,10 @@ These keep russetleaf.dev healthy once it's running. Add each as a calendar remi
 | Task | How often | How |
 |---|---|---|
 | Test a database restore | Monthly | Restore the latest backup into a scratch MariaDB instance and check the post count (step 4.5) |
-| Merge Renovate pull requests | Weekly | Review and merge; Argo Rollouts and the CI checks catch bad updates |
-| Talos and Kubernetes upgrades | When new versions are out (Talos releases roughly every few months) | Bump versions in `wp-infra/envs/home` and apply; upgrade box 2 first, then box 1 |
+| Merge Renovate pull requests | Weekly | Review the Dependency Dashboard and pull requests; patches auto-merge; read changelogs for minors and majors and rehearse platform ones on a local Talos-in-Docker cluster; Argo Rollouts and the CI checks catch bad application updates |
+| Security releases | Within 48 hours of a WPScan, Trivy Operator or Renovate security alert | Fast-track through ci and staging; promote as soon as staging passes |
+| Version-age report | Monthly (automatic) | Plan upgrades for anything within 90 days of end of support |
+| Talos and Kubernetes upgrades | Talos patches monthly; Kubernetes minor versions quarterly | Take an etcd snapshot and an on-demand MariaDB backup; rehearse on a local Talos-in-Docker cluster; check Cilium and platform components support the new Kubernetes version; bump versions in `wp-infra/envs/home` and apply, box 2 first, then box 1, then `talosctl upgrade-k8s`; roll back with `talosctl rollback` if needed; note timings in the decision log |
 | Back up cluster state (etcd) | Weekly | `talosctl etcd snapshot` to the backup bucket (a scheduled job on your machine or a CronJob using a Talos API key). GitOps can rebuild everything else, but this speeds up recovery. |
 | Check for Terraform drift | Weekly | A scheduled `terraform plan` in `wp-infra` CI for the AWS and Cloudflare resources (alerts if anything changed outside Terraform) |
 | Check staging still works | Monthly, if nothing has been promoted | Run `staging-test` by hand, so a broken staging setup is found before it blocks a real release |
@@ -620,6 +628,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 10.3 OpenCost | ☐ | | | |
 | 10.4 Tracing with Tempo (optional, on demand) | ☐ | | | |
 | 10.5 AWS account posture (Prowler) | ☐ | | | |
+| 10.6 Version-age report | ☐ | | | |
 | 11.1 Keyless AWS access (optional) | ☐ | | | |
 | 11.2 Docs + go public | ☐ | | | |
 

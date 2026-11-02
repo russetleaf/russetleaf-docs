@@ -151,7 +151,7 @@ Record each answer in the [decision log](#decision-log).
 **Test:** a test Ingress creates an ALB and an `origin` DNS record; deleting it removes both.
 
 ### Step 2.3: Karpenter NodePools
-**Do:** `platform/karpenter/`: `EC2NodeClass` (AL2023, subnets and security groups by tag, encrypted gp3 root volume); **general NodePool** (spot + on-demand, several instance families, consolidation on, disruption budget); **GPU NodePool** (g6 family, spot preferred, label `workload=llm`, taint `dedicated=llm:NoSchedule`, consolidation off or limited so the model isn't moved needlessly). Both NodePools add the **startup taint** `node.cilium.io/agent-not-ready=true:NoExecute`, so no pod is scheduled on a new node until Cilium is running there.
+**Do:** `platform/karpenter/`: `EC2NodeClass` (AL2023 with a **pinned AMI version**, tracked by Renovate rather than "latest", so node images only change through a reviewed pull request; subnets and security groups by tag, encrypted gp3 root volume); **general NodePool** (spot + on-demand, several instance families, consolidation on, disruption budget); **GPU NodePool** (g6 family, spot preferred, label `workload=llm`, taint `dedicated=llm:NoSchedule`, consolidation off or limited so the model isn't moved needlessly). Both NodePools add the **startup taint** `node.cilium.io/agent-not-ready=true:NoExecute`, so no pod is scheduled on a new node until Cilium is running there.
 - **NVIDIA device plugin** (DaemonSet) so pods can request `nvidia.com/gpu`. (The AL2023 NVIDIA AMI includes the drivers.)
 
 **Test:** scaling a test Deployment up adds nodes, scaling down removes them; a pod requesting a GPU gets a g6 node from the GPU pool; new nodes only accept pods once Cilium is ready (the startup taint is removed); simulate a spot interruption (e.g. AWS FIS or by hand) and watch Karpenter replace the node.
@@ -267,6 +267,7 @@ Record each answer in the [decision log](#decision-log).
 | Task | How often | How |
 |---|---|---|
 | Run a demo (or at least `demo-up` / `demo-down`) | Monthly | Catches broken versions, expired assumptions and drift before an interview does |
+| Check versions before the demo | Before each demo | Review the latest version-age report and Renovate's pending updates for `envs/aws` (EKS, add-ons, AMI, RDS and ElastiCache engine versions); keep RDS's MariaDB version matched to the home MariaDB |
 | Keep the EKS version in standard support | Before each demo, if a new version is out | Bump the version in `envs/aws`; the stack is rebuilt each demo, so there's no in-place upgrade |
 | Clean up old final snapshots | Automatic (step 1.6) | Check that only the last 3 remain |
 | Check the always-on edge for drift | Weekly | Scheduled `terraform plan` for `envs/aws-edge` in `wp-infra` CI |
