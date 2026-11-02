@@ -1,9 +1,11 @@
 # ADR 0019: Disaster recovery with off-account immutable copies and a break-glass kit
 
-- **Status:** Accepted
+- **Status:** Accepted; updated by ADR 0020
 - **Date:** 2026-11-01
 - **Applies to:** both sites, the AWS accounts, and the supporting services (GitHub, Cloudflare, Google, domain registrars)
 
+
+> **Update (ADR 0020):** The Organization now has a **dedicated management account** that runs nothing (rather than the workload account acting as management), and the Backup account sits in the **Security OU** alongside **Security Tooling** and **Log Archive**. CloudTrail logs are in the Log Archive account's locked buckets rather than replicated from a workload account. Member accounts have no root credentials (centralised root access management), so the break-glass kit holds only the management account's root access plus the Identity Center logins.
 ## Context
 The design could already rebuild most things from code (Terraform, GitOps, image builds), back up the databases (MariaDB to S3 every 6 hours; RDS snapshots), version media, and roll back changes (ADR 0017). But:
 - **All recovery material was in one AWS account and one region**: backups, Terraform state, Secrets Manager, CloudTrail. An account compromise, a closed account, or a long regional outage could take the backups with it.

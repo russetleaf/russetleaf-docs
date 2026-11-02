@@ -1,9 +1,11 @@
 # ADR 0018: Intrusion detection and prevention in layers
 
-- **Status:** Accepted
+- **Status:** Accepted; updated by ADR 0020
 - **Date:** 2026-11-01
 - **Applies to:** both sites and the AWS account
 
+
+> **Update (ADR 0020):** CloudTrail is now a single **organisation trail** delivering to the **Log Archive** account, and GuardDuty is enabled organisation-wide with the **Security Tooling** account as delegated administrator; GuardDuty and Security Hub findings are routed to Slack from there.
 ## Context
 Falco provides runtime detection inside containers, but on its own it isn't an intrusion detection and prevention strategy. The design already had several prevention layers (the Cloudflare and AWS WAFs, edge login for the admin area, default-deny CiliumNetworkPolicies, Kyverno admission rules, seccomp, gVisor, read-only filesystems) and detection layers (Falco, Hubble, posture scanners). Three gaps remained:
 - **Nothing watched the Kubernetes API** for suspicious activity (e.g. `exec` into pods, Secret reads, RBAC changes, anonymous requests).

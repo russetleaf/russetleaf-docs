@@ -46,7 +46,8 @@ The two sites are **fully independent**: each has its own URL, database, cache, 
 | Environments | prod only (demo); versions arrive after passing home staging and russetleaf.dev | local → ci → staging (on demand) → prod |
 | Availability | **Highly available design within one region while running** (EKS control plane, nodes across zones, RDS Multi-AZ, ElastiCache replica, multi-zone ALB, CloudFront), with two demo cuts (one NAT Gateway, one spot GPU node); runs **only during demos** | **Not highly available**: single control plane, single database and cache, local disks, one home power supply and internet connection |
 | Recovery targets | While running: seconds to minutes for a node, zone or database failure; between demos: content kept in the final snapshot | Recovery point ≤ 6 hours (backup interval); recovery time a few hours (rebuild from Git, restore backup) |
-| Monthly cost | ~$1 always on, plus ~$1/hour during demos | ~$9–$20 (including account-wide GuardDuty) |
+| AWS account | **russetleaf-com** (Workloads OU) | **russetleaf-home** (Workloads OU), used for S3, SQS, Bedrock, Secrets Manager and SES |
+| Monthly cost | ~$1 always on, plus ~$1/hour during demos | ~$15–35 (including the organisation-wide security services: GuardDuty, Security Hub, Config) |
 
 Running MariaDB and Valkey inside the home cluster, instead of RDS and ElastiCache, is the biggest saving in the home lab: those two managed services alone would cost about $130/month at the AWS design's sizes. Both sites use the **MariaDB** engine (in-cluster at home, RDS for MariaDB on AWS), so database backups move between them without conversion.
 
@@ -116,6 +117,58 @@ MariaDB         Valkey          Amazon SQS ──► Post-summarizer pods (KEDA:
 
             Prometheus + Grafana: same dashboards and alerts as on EKS
 ```
+
+## AWS account structure and best practices (Security Reference Architecture)
+
+The AWS side follows the **AWS Security Reference Architecture (SRA)**: separate accounts for management, security tooling, logs, backups, shared infrastructure and each workload, organisation-wide guardrails, and centralised security services. The reasoning is recorded in `docs/adr/0020-aws-multi-account-sra.md`.
+
+### Accounts and organisational units (OUs)
+
+| Account | OU | Purpose |
+|---|---|---|
+| **Management** (dedicated, new) | Root | Only AWS Organizations, IAM Identity Center, consolidated billing (budgets, cost allocation tags), SCPs and tag policies. **No workloads, no Terraform state.** |
+| **Security Tooling** | Security | **Delegated administrator** for GuardDuty, Security Hub, IAM Access Analyzer and AWS Config aggregation (and Inspector, if used); findings routed to Slack from here |
+| **Log Archive** | Security | The **organisation CloudTrail trail**, Config history and VPC flow logs, in **S3 Object Lock** buckets with KMS encryption |
+| **Backup** | Security | The cross-region, immutable data copies (database backups, media, Terraform state, repo mirrors) from ADR 0019 |
+| **russetleaf-infra** | Infrastructure | **Terraform state** and the CI deployment entry points (the GitHub OIDC provider and roles); nothing else runs here |
+| **russetleaf-home** | Workloads | The AWS resources russetleaf.dev uses (S3, SQS, Bedrock, Secrets Manager, SES); this is the **existing account**, which joins the Organization |
+| **russetleaf-com** | Workloads | russetleaf.com: the always-on edge (`envs/aws-edge`) and the demo stack (`envs/aws`) |
+
+Separate workload accounts limit how far a compromise can spread, and give each site its own costs, quotas (e.g. the GPU quota) and limits. Accounts are free. All of it is managed by Terraform in `wp-infra/envs/org/` (Organization, OUs, accounts, SCPs, Identity Center, tag policies) and `wp-infra/envs/security/` (the security services), applied from your workstation with management-account and Security Tooling access.
+
+**Cross-account access the design needs** (each a narrow, explicit grant): the russetleaf.com seed Job reads russetleaf.dev's backup and media buckets (bucket policies in `russetleaf-home`); every account's backup-bound buckets replicate into the Backup account; CI roles in each account read and write Terraform state in `russetleaf-infra`.
+
+### Organisation-wide guardrails
+- **Service control policies (SCPs)** on the OUs:
+  - deny leaving the Organization
+  - deny disabling or modifying CloudTrail, GuardDuty, Config, Security Hub and Access Analyzer
+  - allow only **us-east-1** and **us-west-2** (global services such as IAM, CloudFront, Route 53 excepted)
+  - deny actions by member accounts' root users
+  - deny creating IAM users and access keys, with a narrow, named exception in `russetleaf-home` for the home cluster's scoped keys until the keyless OIDC stretch goal removes them
+  - deny deleting or weakening the Log Archive and Backup buckets (and their Object Lock settings)
+- **Centralised root access management:** root credentials are **removed from member accounts**, so only the management account's root login needs to be in the break-glass kit.
+- **IAM Identity Center** for all human access: permission sets for **admin**, **read-only** and **break-glass**, with MFA required; no IAM users for people.
+- **Tag policies** enforcing `Project`, `Site`, `Env` and `ManagedBy` values.
+- **Alternate security contacts** set on every account (security, billing, operations).
+- **Budgets** on each account plus a consolidated budget in the management account; **cost allocation tags** activated in the management account (they apply organisation-wide).
+
+### Centralised security services (delegated to Security Tooling)
+- **Security Hub** with the **AWS Foundational Security Best Practices** and **CIS AWS Foundations** standards enabled in every account, aggregating findings from GuardDuty, Access Analyzer, Config and Inspector. **Critical and high** findings go through EventBridge, SNS and Amazon Q Developer to `#rl-security` (critical also to `#rl-critical`). It's the **continuous** posture check; **Prowler** stays as a free monthly **second opinion** (ADR 0007, updated).
+- **AWS Config** with **focused recording** (key resource types such as IAM, S3, security groups, KMS, EKS, RDS, rather than everything, to keep costs down, since the demo stack creates many short-lived resources) and a **conformance pack** (e.g. Operational Best Practices for CIS), aggregated in Security Tooling.
+- **IAM Access Analyzer:** organisation-wide **external-access** findings (free), plus **policy checks in the Terraform pipeline** (`validate-policy` and its custom checks that flag new public or cross-account access) before anything is applied.
+- **GuardDuty** at organisation level, with EKS audit-log monitoring (auto-enabled for new accounts).
+- **CloudTrail** as a single **organisation trail** delivering to Log Archive, with log-file validation.
+- **Optional:** **Inspector** for the EKS nodes during demos (images are on GHCR, so its registry scanning matters less). **Macie** and **Detective** aren't used (little sensitive data; extra cost).
+
+### Account- and resource-level best practices
+- **S3:** account-level Block Public Access; bucket policies **requiring TLS** (`aws:SecureTransport`); Object Ownership set to bucket-owner-enforced (no ACLs).
+- **Encryption:** EBS encryption by default; **KMS customer-managed keys** for the Log Archive and Backup buckets (about $1/key/month); block public access for EBS snapshots and AMIs.
+- **EKS nodes:** **IMDSv2 required** with a **hop limit of 1** in Karpenter's node class, so pods can't reach the node's instance credentials (they use Pod Identity instead).
+- **VPC (russetleaf-com):** **VPC endpoints** for S3, STS, SQS, Secrets Manager and Bedrock (private traffic, lower NAT costs); **VPC flow logs** to Log Archive during demos; default security groups with no rules; default VPCs removed.
+- **AWS Well-Architected review:** a review of the design with the free **Well-Architected Tool** (Security pillar first), with the report kept in `docs/` and revisited yearly.
+
+### Cost
+Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-access findings are free. **Security Hub, Config and KMS** add roughly **$5–15/month**, depending mostly on how many resources Config records (focused recording keeps the demo stack's churn in check). That brings the always-on total to about **$15–35/month**: still within the $30–50 budget with demos, nearer its top.
 
 ## What production-ready adds
 
@@ -231,9 +284,9 @@ Falco is one layer among several. The design combines **prevention** (stopping a
 - **EKS:** audit logs go to **CloudWatch** (already planned), and **GuardDuty's EKS audit-log monitoring** flags known attack patterns automatically.
 
 **AWS account threat detection (always on, shared by both sites):**
-- **CloudTrail:** one multi-region trail of management events to its own S3 bucket, with log-file validation (proves logs weren't altered) and `prevent_destroy`. The first trail's management events are free; storage costs pennies.
-- **GuardDuty:** detects compromised credentials, unusual API calls, crypto-mining, and contact with known-malicious addresses, plus EKS audit-log monitoring whenever the demo cluster exists. About **$1–5/month** for an account this size after the 30-day free trial (check current pricing).
-- **Findings to Slack:** GuardDuty findings (medium severity and above) go through **EventBridge → SNS → Amazon Q Developer** to `#rl-security` (high severity also to `#rl-critical`).
+- **CloudTrail:** a single **organisation trail** (management events, all accounts and regions) delivered to the **Log Archive** account's Object Lock bucket, with log-file validation (proves logs weren't altered). The first trail's management events are free; storage costs pennies. See [AWS account structure](#aws-account-structure-and-best-practices-security-reference-architecture).
+- **GuardDuty** (organisation-wide, administered from the **Security Tooling** account): detects compromised credentials, unusual API calls, crypto-mining, and contact with known-malicious addresses, plus EKS audit-log monitoring whenever the demo cluster exists. About **$1–5/month** for an account this size after the 30-day free trial (check current pricing).
+- **Findings to Slack:** GuardDuty findings (medium severity and above) and **Security Hub** critical and high findings go through **EventBridge → SNS → Amazon Q Developer** (in Security Tooling) to `#rl-security` (high or critical severity also to `#rl-critical`).
 
 **Optional: CrowdSec.** CrowdSec analyses the ingress logs and **bans abusive IP addresses** through a Cloudflare "bouncer" (a modern, shared-intelligence fail2ban). It's a stretch goal at home (about 100–200 MB of memory).
 
@@ -295,6 +348,7 @@ All Terraform runs through **GitHub Actions** (apart from the first local applie
 | Secret scanning | **gitleaks**, plus **GitHub secret scanning with push protection** (free on public repos) | Push protection blocks a commit containing a recognised secret before it's pushed |
 | Plan | `terraform plan -out` | The plan is **saved** as a short-lived, private workflow artifact (plan files can contain secret values) and posted as a pull-request comment |
 | Plan analysis | **Checkov on the plan**; **Infracost** | Checks the resolved plan; Infracost comments the **monthly cost difference** of the change on the pull request (open-source CLI; check current terms for CI use) |
+| IAM policy checks | **IAM Access Analyzer** (`validate-policy` and its custom policy checks) | Flags invalid policies and **new public or cross-account access** in the plan before it's applied |
 | Approval | **GitHub Environment** `apply`, with required reviewers, limited to `main` | The OIDC *apply* role trusts only this environment, so nothing else can apply |
 | Apply | `terraform apply <saved plan>` | Applies **exactly the plan that was reviewed**, never a fresh one |
 | Drift | Scheduled `terraform plan` (weekly) | Alerts if anything changed outside Terraform |
@@ -359,7 +413,8 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
   - **Both:** the Kubescape CLI scans flag risky RBAC, such as bindings that grant permissions to `system:anonymous` or `system:authenticated`.
 - **Trivy Operator** runs continuously in the cluster, producing CIS compliance reports, vulnerability reports for running images, and configuration audits. Its **compliance results are published as Prometheus metrics** on both clusters, feeding a **Grafana "Compliance" dashboard** that shows both sites side by side, and a `ComplianceFailuresIncreased` alert to `#rl-security` when the number of failing CIS controls rises. This is the continuous compliance signal; kube-bench adds deeper node-level checks on EKS.
 - **Kubescape CLI**, run on demand (monthly at home, once per AWS demo on EKS) from the workstation or the in-cluster CI runners, with **nothing installed in the cluster**: scores each cluster against the **NSA-CISA** and **MITRE ATT&CK** frameworks and analyses **RBAC** for risky permissions, the one area no other tool here covers. Reports are saved in `docs/` in `wp-gitops`. It complements kube-bench rather than replacing it: kube-bench checks node and control-plane configuration directly on the nodes; Kubescape checks workloads and permissions through the Kubernetes API. The in-cluster Kubescape operator is deliberately not used (0.5–1 GB of memory, mostly duplicating Trivy Operator and Falco); see `docs/adr/0003-kubescape-cli-not-operator.md`.
-- **Prowler**, for the **AWS account itself** (shared by the home lab's AWS resources and russetleaf.com): a scheduled GitHub Actions workflow in `wp-infra` runs it **monthly**, plus once per AWS demo with the stack up, using a **read-only audit role** through GitHub OIDC. It checks the account's actual settings (IAM users and keys, root MFA, CloudTrail, S3 public access, security groups, encryption defaults) against **CIS AWS Foundations** and **AWS Foundational Security Best Practices**, catching anything configured outside Terraform. Reports are kept as workflow artifacts with a summary in `docs/security/` and a short message to `#rl-security`. Deepfence ThreatMapper was considered and not used (its console needs more memory than box 1 has, and it duplicates the tools above); see `docs/adr/0007-prowler-not-threatmapper.md`.
+- **Security Hub** (with the AWS Foundational Security Best Practices and CIS standards) is the **continuous** check of every account's configuration; see [AWS account structure](#aws-account-structure-and-best-practices-security-reference-architecture).
+- **Prowler**, as a free **second opinion** across **all the accounts**: a scheduled GitHub Actions workflow in `wp-infra` runs it **monthly**, plus once per AWS demo with the stack up, using a **read-only audit role** in each account through GitHub OIDC. It checks the account's actual settings (IAM users and keys, root MFA, CloudTrail, S3 public access, security groups, encryption defaults) against **CIS AWS Foundations** and **AWS Foundational Security Best Practices**, catching anything configured outside Terraform. Reports are kept as workflow artifacts with a summary in `docs/security/` and a short message to `#rl-security`. Deepfence ThreatMapper was considered and not used (its console needs more memory than box 1 has, and it duplicates the tools above); see `docs/adr/0007-prowler-not-threatmapper.md`.
 
 ### Stateless operation
 - **Custom WordPress image** with plugins and themes built in, built by the `wp-image` repo's CI, pushed to the registry, and deployed by Argo CD.
@@ -845,7 +900,7 @@ One Slack workspace for the project. The free plan is enough: it keeps 90 days o
 | `#rl-dev-alerts` | All russetleaf.dev warnings and criticals | Alertmanager (home), Cloudflare notifications, uptime checks |
 | `#rl-com-alerts` | All russetleaf.com warnings and criticals, plus demo started/stopped messages | Alertmanager (EKS), CloudWatch alarms (ALB, RDS, ElastiCache), uptime checks, demo workflows |
 | `#rl-deploys` | Syncs, failed syncs, unhealthy apps, canary progress and automatic rollbacks, merged version-bump pull requests | Argo CD Notifications, Argo Rollouts notifications, GitHub |
-| `#rl-security` | Falco alerts, Kyverno policy violations, critical vulnerabilities in running images, Kubernetes API audit alerts, GuardDuty findings | Falcosidekick, Policy Reporter (Kyverno's reporting add-on), Trivy Operator metrics → Alertmanager, Loki ruler, EventBridge → SNS → Amazon Q Developer |
+| `#rl-security` | Falco alerts, Kyverno policy violations, critical vulnerabilities in running images, Kubernetes API audit alerts, GuardDuty and Security Hub findings | Falcosidekick, Policy Reporter (Kyverno's reporting add-on), Trivy Operator metrics → Alertmanager, Loki ruler, EventBridge → SNS → Amazon Q Developer |
 | `#rl-mlops` | Evaluation gate results, summarizer releases, Bedrock spend, dead-letter queue, model server down | GitHub, Alertmanager |
 | `#rl-costs` | AWS Budgets, Cost Anomaly Detection, Bedrock budget, OpenCost-based alerts (`GPUNodeRunningLong`, `NamespaceDailyCostSpike`), the weekly OpenCost summary, the per-demo actual-cost report, the demo safety net | Amazon Q Developer in chat applications (formerly AWS Chatbot), Alertmanager, scheduled workflows |
 | `#rl-staging` | Staging test runs: started, passed, failed (with results); staging alerts | `staging-test` workflow, Alertmanager (`env=staging`) |
@@ -1022,7 +1077,7 @@ A **monthly scheduled workflow** in `wp-gitops` checks running versions (Talos, 
 
 Recovering from losses bigger than a bad change (a destroyed home lab, a compromised or lost AWS account, a regional outage, a lost GitHub or Cloudflare account) is covered by **`docs/disaster-recovery.md`**: an inventory of every asset and where its copy is, scenarios with data-loss and recovery-time targets and procedures, the bootstrap order from zero, and drills. The decisions are recorded in `docs/adr/0019-disaster-recovery.md`. In short:
 - **Rebuild from code** wherever possible (Terraform, GitOps, image builds).
-- **Copy what can't be rebuilt outside the main account and region:** a separate **backup AWS account** with **S3 Object Lock** buckets in **us-west-2** (30-day retention) receives **replicated** copies of the database backups, Terraform state, media and CloudTrail logs; russetleaf.com's database is dumped at every `demo-down` and replicated the same way; the four repos are **mirrored daily** as `git bundle`s.
+- **Copy what can't be rebuilt outside the workload accounts and region:** the **Backup** account (Security OU) holds **S3 Object Lock** buckets in **us-west-2** (30-day retention) receiving **replicated** copies of the database backups, Terraform state and media (CloudTrail logs already live in the **Log Archive** account's locked buckets); russetleaf.com's database is dumped at every `demo-down` and replicated the same way; the four repos are **mirrored daily** as `git bundle`s.
 - **Regenerate secrets** rather than copy them, except account access and the Talos secrets bundle, which live in a **break-glass kit** (password manager plus a printed copy of the essentials).
 - **Drills:** monthly restores, quarterly restores from the backup account, and a **yearly full "home lab destroyed" rebuild** using only the break-glass kit and the backups.
 - **Cost:** a few cents a month.
@@ -1191,9 +1246,10 @@ These are approximate prices for **us-east-1**, on demand unless noted, for a sm
 | kube-bench | One Job per node pool, every demo (in `demo-up`) | $0 |
 | Loki log storage (S3) | 14-day retention, demo-hours volume | <$1 |
 | Tempo trace storage (S3) | 7-day retention, demo-hours volume | <$1 |
-| CloudTrail + GuardDuty | One trail (management events); GuardDuty incl. EKS audit-log monitoring | ~$1–5 |
+| CloudTrail + GuardDuty | Organisation trail (management events); GuardDuty incl. EKS audit-log monitoring | ~$1–5 |
+| Security Hub + Config + KMS | Organisation-wide standards; focused Config recording; KMS keys for logs and backups | ~$5–15 |
 | Alerting (SNS, Amazon Q Developer in chat applications, Slack free plan) | CloudWatch alarms and budget alerts to Slack | $0 |
-| **Total** | | **~$720–$825 / month** |
+| **Total** | | **~$725–$840 / month** |
 
 Without the self-hosted model (Bedrock only behind the gateway), the total is **~$510–$560 / month**. GuardDuty EKS Runtime Monitoring, if used instead of Falco, is billed per vCPU monitored and would add roughly $10–$20/month at this size. New AWS accounts usually have a **GPU instance quota of 0**, so request a quota increase for G-family instances (both on-demand and spot) before the first deploy.
 
@@ -1368,10 +1424,11 @@ The cost column is what russetleaf.dev costs to run 24/7, plus russetleaf.com's 
 | ci test clusters | kind in GitHub Actions with LocalStack and a mock LLM | Same | $0 |
 | Logs | Loki (single binary, S3 storage) + Alloy, 7-day retention | Same, 14-day retention | <$1 |
 | Alerting | Alertmanager → Slack, dead man's switch, uptime checks, Cloudflare notifications | Same, plus CloudWatch alarms via SNS and Amazon Q Developer | $0 |
-| Account threat detection | CloudTrail + GuardDuty (account-wide, always on) | Same account | ~$1–5 |
+| Account threat detection | Organisation CloudTrail + GuardDuty (always on) | Same organisation | ~$1–5 |
+| AWS security services (SRA) | Security Hub, Config, KMS keys (organisation-wide; GuardDuty and CloudTrail above) | Same organisation | ~$5–15 |
 | Disaster recovery copies | Backup account: Object Lock buckets in us-west-2, replication, daily repo mirrors | Same (shared) | <$1 |
 | russetleaf.com always-on edge | n/a | Route 53 zone, CloudFront, offline page, media bucket, RDS snapshot (`envs/aws-edge`) | ~$1 |
-| **Total (24/7)** | | | **~$9–$20 / month** |
+| **Total (24/7)** | | | **~$15–$35 / month** |
 
 ### Short AWS demos
 The full AWS design costs roughly **$1.00/hour** while running, including about $0.25–$0.35/hour for the spot GPU node. Run `terraform apply` in `envs/aws`, record a walkthrough of russetleaf.com or take screenshots, then tear it down. The `demo-up` and `demo-down` GitHub Actions workflows in `wp-infra` do this in the right order, and a scheduled safety-net workflow alerts (or tears down) if the stack is left running too long; see [Building it from scratch](#building-it-from-scratch). The always-on edge (`envs/aws-edge`) is never destroyed, so russetleaf.com switches to its offline page automatically.
@@ -1382,7 +1439,7 @@ The full AWS design costs roughly **$1.00/hour** while running, including about 
 | 10 hours | ~$10 |
 | 20 hours | ~$20 |
 
-Together with the home lab, the total stays within **$30–$50/month**. If the AWS account is new, its free-tier credits can cover some of this.
+Together with the home lab, the total stays within **$30–$50/month**. If the AWS accounts are new, their free-tier credits can cover some of this.
 
 **Tip:** set an AWS Budget with an email alert (e.g. at $25) so a forgotten `terraform destroy` doesn't run up a bill. The GPU node is the most expensive item to leave running.
 
@@ -1410,6 +1467,7 @@ Together with the home lab, the total stays within **$30–$50/month**. If the A
 - **A gated Terraform pipeline:** linting (tflint + AWS ruleset), Checkov with custom project policies, module tests, Infracost cost diffs, secret scanning with push protection, and approved applies of the exact reviewed plan through a GitHub Environment.
 - **Terraform for both sides, in one repo (`wp-infra`):** shared modules, plus separate root modules for russetleaf.com's always-on edge, its demo stack (including Karpenter and its NodePools), and the russetleaf.dev home lab (Talos provider `siderolabs/talos` for both nodes' machine configs, Cloudflare provider for the tunnel, DNS and WAF rules, and the AWS pieces used from home).
 - **CI on GitHub in every repo:** Terraform checks and plans in `wp-infra`; manifest validation and Kyverno policy tests in `wp-gitops`; image builds with SBOMs, scans and signing in `wp-image` and `llm-summarizer`; and the prompt evaluation gate in `llm-summarizer`. Employers see all of it without the AWS stack running.
+- **An AWS Security Reference Architecture foundation:** separate management, security tooling, log archive, backup, infrastructure and workload accounts; SCP guardrails; centralised root access management; Identity Center with MFA; organisation-wide Security Hub, GuardDuty, Config, Access Analyzer and CloudTrail, all in Terraform; and a Well-Architected review.
 - **Disaster recovery beyond a single account:** immutable, cross-account and cross-region copies (S3 Object Lock), daily repo mirrors, a break-glass kit, a written plan with scenarios and a bootstrap order, and a yearly full-rebuild drill.
 - **A defined rollback strategy:** decision rules (roll back first), Git revert as the default, automatic canary rollback, backups before database schema changes, recovery paths for Cilium, Kyverno and Argo CD, `prevent_destroy` on stateful infrastructure, re-summarizing bad AI output, and regular rollback drills.
 - **A defined update strategy:** every update is a Renovate pull request, risk-tiered (patches auto-merge; minors and majors rehearsed; applications through staging and canaries), with WPScan for WordPress plugin vulnerabilities, 48-hour security releases, and a monthly end-of-life report.
@@ -1471,7 +1529,8 @@ wp-gitops/
                             #   0012-kube-bench-eks-only.md, 0013-opencost-and-aws-billing.md,
                             #   0014-image-supply-chain.md, 0015-availability-levels.md,
                             #   0016-process-allow-listing.md, 0017-rollback-strategy.md,
-                            #   0018-intrusion-detection-and-prevention.md, 0019-disaster-recovery.md)
+                            #   0018-intrusion-detection-and-prevention.md, 0019-disaster-recovery.md,
+                            #   0020-aws-multi-account-sra.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
@@ -1550,10 +1609,16 @@ wp-gitops/
 
 ```
 wp-infra/
-  bootstrap/                # applied once, locally: S3 bucket for Terraform state, GitHub OIDC provider,
-                            #   IAM roles for each repo's CI (plan, apply, image push), read-only audit role
-                            #   for Prowler, cost allocation tag activation, CloudTrail trail and bucket, GuardDuty
-                            #   (with EKS audit-log monitoring), findings routed to Slack via EventBridge and SNS
+  bootstrap/                # applied once, locally (russetleaf-infra): S3 bucket for Terraform state; in each
+                            #   account, the GitHub OIDC provider and CI roles (plan, apply, image push) and a
+                            #   read-only audit role for Prowler
+  envs/org/                 # management account: Organization, OUs, accounts, SCPs, IAM Identity Center permission
+                            #   sets, tag policies, centralised root access management, alternate contacts,
+                            #   delegated administrators, budgets, cost allocation tag activation
+  envs/security/            # Security Tooling + Log Archive: organisation CloudTrail trail, GuardDuty (with EKS
+                            #   audit-log monitoring), Security Hub (FSBP + CIS), Config (focused recording,
+                            #   conformance pack, aggregator), Access Analyzer, KMS keys; findings to Slack via
+                            #   EventBridge, SNS and Amazon Q Developer
   modules/                  # reusable modules shared by both environments
     s3-media/               # media bucket, versioning, IAM policy
     s3-logs/                # Loki log and Tempo trace buckets: encryption, lifecycle matching retention, IAM policy
@@ -1564,8 +1629,9 @@ wp-infra/
     alerting/               # SNS topics, CloudWatch alarms, Amazon Q Developer Slack channel configs
     ...                     # vpc, eks, karpenter, rds, elasticache, cloudfront, waf
   envs/
-    dr/                     # backup account (ALWAYS ON, shared): Object Lock buckets in us-west-2, replication
+    dr/                     # Backup account (ALWAYS ON, shared): Object Lock buckets in us-west-2, replication
                             #   roles, write-only repo-mirror role; plus replication rules on the source buckets
+                            #   in russetleaf-home, russetleaf-com and russetleaf-infra
     aws-edge/               # russetleaf.com, ALWAYS ON (~$1/month): Route 53 hosted zone, ACM certificates
                             #   (us-east-1 for CloudFront; the ALB's region for origin.russetleaf.com), CloudFront
                             #   distribution with the offline-page fallback, offline-page bucket, media bucket,
@@ -1590,8 +1656,8 @@ wp-infra/
   .checkov/                 # Checkov custom policies (required tags, allowed region and instance families, S3)
 ```
 
-- **State:** all three environments store state in the S3 bucket from `bootstrap/`, under separate keys, using Terraform's built-in S3 state locking (`use_lockfile = true`, Terraform 1.10+; no DynamoDB table needed).
-- **CI permissions without stored keys:** GitHub Actions authenticates to AWS through **GitHub's OIDC provider**. Pull requests get a read-only *plan* role; the *apply* role trusts only the **`apply` GitHub Environment** (required reviewers, `main` only), which applies the **saved, reviewed plan**; see [Terraform pipeline](#terraform-pipeline-wp-infra). The Cloudflare API token is a GitHub secret.
+- **State:** every environment stores state in the S3 bucket in the **russetleaf-infra** account, under separate keys (CI roles in each account are granted access to their own keys only), using Terraform's built-in S3 state locking (`use_lockfile = true`, Terraform 1.10+; no DynamoDB table needed).
+- **CI permissions without stored keys:** GitHub Actions authenticates to AWS through **GitHub's OIDC provider**, in each target account (russetleaf-home, russetleaf-com, russetleaf-infra, and the security accounts for `envs/security`). Pull requests get a read-only *plan* role; the *apply* role trusts only the **`apply` GitHub Environment** (required reviewers, `main` only), which applies the **saved, reviewed plan**; see [Terraform pipeline](#terraform-pipeline-wp-infra). The Cloudflare API token is a GitHub secret.
 - **The home environment needs local network access:** the Talos provider talks to the boxes directly, which GitHub's hosted runners can't reach. Run the first `envs/home` apply from your own machine. After the cluster and ARC are up, later home applies can run on the in-cluster ARC runners.
 - **Why the AWS side has two environments:** `envs/aws-edge` holds what russetleaf.com needs even when the demo is down (DNS, CloudFront, the offline page, media), and is never destroyed. `envs/aws` holds the expensive demo stack and is created and destroyed for each demo. Destroying one can never touch the other's state.
 - **Tearing down the AWS demo:** delete the Argo CD Applications first (or scale the root app to nothing) so the AWS Load Balancer Controller removes the ALB, ExternalDNS removes `origin.russetleaf.com`, and Karpenter removes its nodes. Otherwise `terraform destroy` can hang on resources Terraform didn't create. `terraform destroy` then takes the final RDS snapshot that the next demo restores from.

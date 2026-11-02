@@ -109,7 +109,7 @@ PHP and Composer aren't needed locally: the WordPress image installs plugins ins
 ### 4. Configuration
 
 - **Git:** set your name and email; authenticate with `gh auth login` (SSH); turn on **commit signing** with your SSH key (`git config --global gpg.format ssh` and `user.signingkey`), and upload the key to GitHub as a signing key.
-- **AWS:** set up **IAM Identity Center (SSO)** and a profile (e.g. `russetleaf-admin`) with `aws configure sso`; sign in with `aws sso login --profile russetleaf-admin`. Keep **no long-lived AWS access keys** on the workstation.
+- **AWS:** after step 2.0, sign in through **IAM Identity Center (SSO)**, with one profile per account and permission set (e.g. `rl-mgmt-admin`, `rl-security-admin`, `rl-home-admin`, `rl-com-admin`, `rl-infra-admin`, and read-only variants), created with `aws configure sso`; sign in with `aws sso login --sso-session russetleaf`. Until then, use the existing account's admin login. Keep **no long-lived AWS access keys** on the workstation.
 - **Cloudflare and Slack tokens:** don't put them in `~/.bashrc`. Use per-repo **direnv** files (`.envrc`, listed in `.gitignore`) that load them from a password manager CLI or from AWS Secrets Manager when you enter the repo folder.
 - **Cluster access files:** keep kubeconfig contexts named clearly (`talos-home`, `kind-ci`, `talos-local`) and talosconfig at `~/.talos/config`, both with `chmod 600`. Back them up in your password manager. (If they're lost, they can be regenerated from the Talos machine secrets in Terraform state.)
 - **Pre-commit hooks:** run `pre-commit install` in each repo after cloning (secret scan, YAML checks; in `wp-infra`, the **pre-commit-terraform** hooks: fmt, validate, tflint, terraform-docs, Checkov).
@@ -134,7 +134,7 @@ gh auth status
 
 ### Step 0.1: Accounts, tools and budget alert
 **Do:**
-- Accounts: AWS (with MFA on the root user and an admin IAM user or SSO for daily work), GitHub, Cloudflare (russetleaf.dev zone).
+- Accounts: AWS: your **existing account** (which becomes `russetleaf-home`) plus a **new, dedicated management account** (its own email address, root MFA on) for the AWS Organization in step 2.0; GitHub; Cloudflare (russetleaf.dev zone).
 - Set up the workstation: see [Local workstation setup](#local-workstation-setup-ubuntu-2404).
 - Create an **AWS Budget** with an email alert at about $25/month (by hand in the console is fine; Terraform takes over in step 2.1).
 - Pick an AWS region for the home lab's AWS resources (e.g. `us-east-1`) and use it everywhere.
@@ -168,7 +168,7 @@ Record each answer in the [decision log](#decision-log).
 **Do:**
 - Rename this repo to **`wp-gitops`**. Create **`wp-infra`**, **`wp-image`** and **`llm-summarizer`**.
 - In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a `LICENSE` if public, branch protection on `main` (pull requests and passing checks required).
-- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) `0016-process-allow-listing.md` (finish in step 10.1) and `0017-rollback-strategy.md` (finish in steps 3.1, 5.7, 6.1, 7.4 and 10.8) and `0018-intrusion-detection-and-prevention.md` (finish in steps 2.1, 2.2, 2.3, 4.6 and 10.9) and `0019-disaster-recovery.md` (finish in steps 0.1, 2.5 and 10.10); move them, and `docs/disaster-recovery.md`, with the other docs.
+- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4) and `0015-availability-levels.md` (finish in steps 2.2 and 4.5 and AWS step 3.1) `0016-process-allow-listing.md` (finish in step 10.1) and `0017-rollback-strategy.md` (finish in steps 3.1, 5.7, 6.1, 7.4 and 10.8) and `0018-intrusion-detection-and-prevention.md` (finish in steps 2.1, 2.2, 2.3, 4.6 and 10.9) and `0019-disaster-recovery.md` (finish in steps 0.1, 2.5 and 10.10) and `0020-aws-multi-account-sra.md` (finish in steps 2.0, 2.0b and 2.4); move them, and `docs/disaster-recovery.md`, with the other docs.
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo.
 - Add **OpenSSF Scorecard** (weekly scheduled workflow) and **zizmor** (on workflow changes) to every repo, and GitHub's **dependency-review action** to the repos with dependencies (`wp-image`, `llm-summarizer`).
 - Add **Checkov** to every repo's CI from the start, scanning the **GitHub Actions workflows** (unpinned actions, over-broad `permissions`, script injection), with a `.checkov.yaml` per repo. Later steps add each repo's other targets (Terraform, manifests, Dockerfiles, charts). Skips must carry a reason. See [Infrastructure and configuration scanning](aws-wp.md#infrastructure-and-configuration-scanning-checkov).
@@ -179,15 +179,33 @@ Record each answer in the [decision log](#decision-log).
 
 ## Phase 2: Infrastructure (`wp-infra`)
 
+### Step 2.0: AWS Organization and accounts (Security Reference Architecture)
+**Do** (`wp-infra/envs/org/`, applied locally with the new management account), following `aws-wp.md`'s [AWS account structure](aws-wp.md#aws-account-structure-and-best-practices-security-reference-architecture) and ADR 0020:
+- Create the **Organization** from the dedicated management account; **OUs**: Security, Infrastructure, Workloads.
+- **Accounts:** create **Security Tooling**, **Log Archive** and **Backup** (Security OU), **russetleaf-infra** (Infrastructure OU) and **russetleaf-com** (Workloads OU); **invite the existing account** and move it into Workloads as **russetleaf-home**.
+- **IAM Identity Center:** permission sets for admin, read-only and break-glass, MFA required; assign yourself per account.
+- **SCPs** (start by attaching them to a test OU, then to the real OUs): deny leaving the Organization; deny disabling CloudTrail, GuardDuty, Config, Security Hub and Access Analyzer; allow only us-east-1 and us-west-2 (global services excepted); deny member-account root actions; deny IAM users and access keys except a named exception for the home cluster's scoped-key users in russetleaf-home; protect the Log Archive and Backup buckets.
+- **Centralised root access management** (remove member accounts' root credentials), **tag policies**, **alternate security contacts** on every account, **delegated administrators** (Security Tooling for GuardDuty, Security Hub, Config, Access Analyzer).
+- **Budgets:** a consolidated one in the management account plus one per workload account; **activate the cost allocation tags** (`Project`, `Site`, `Env`, `Stack`, `ManagedBy`) here, in the management account, where they apply organisation-wide (a tag must exist on a resource first, so re-run after step 2.3 if needed; activation can take up to a day).
+- Update the break-glass kit: the management account's root access and the Identity Center logins (member accounts no longer have root credentials).
+
+**Test:** you can sign in to every account through Identity Center with MFA; a test action blocked by an SCP fails (e.g. creating a resource in eu-west-1, or disabling GuardDuty in russetleaf-home); member accounts show no root credentials; an untagged resource is flagged by the tag policy.
+
+### Step 2.0b: Organisation security services
+**Do** (`wp-infra/envs/security/`, applied with Security Tooling and Log Archive access):
+- **Log Archive:** S3 Object Lock buckets with **KMS customer-managed keys** for the **organisation CloudTrail trail** (management events, all accounts and regions, log-file validation), Config history and (later) VPC flow logs.
+- **Security Tooling:** organisation-wide **GuardDuty** (with EKS audit-log monitoring, auto-enabled for new accounts), **Security Hub** (AWS Foundational Security Best Practices and CIS standards in every account), **AWS Config** with **focused recording** (IAM, S3, security groups, KMS, EKS, RDS and other key types) and a **CIS conformance pack**, aggregated here, and **IAM Access Analyzer** (organisation external-access analyzer).
+- **Findings to Slack:** EventBridge rules for GuardDuty findings (medium and above) and Security Hub findings (critical and high) to SNS topics connected through **Amazon Q Developer in chat applications** (authorise the Slack workspace once) to `#rl-security` (critical also to `#rl-critical`).
+- **Account-level settings in every account:** S3 Block Public Access, EBS encryption by default, EBS snapshot and AMI public-access blocks.
+
+**Test:** GuardDuty sample findings (`aws guardduty create-sample-findings`) appear in `#rl-security`; CloudTrail log-file validation passes (`aws cloudtrail validate-logs`) for an event from each account; Security Hub shows every account with both standards enabled, and the first scores are recorded in the decision log; a deliberately public test bucket is blocked by Block Public Access and flagged by Access Analyzer.
+
 ### Step 2.1: Bootstrap (state bucket and CI roles)
 **Do** (`wp-infra/bootstrap/`, applied locally):
-- S3 bucket for Terraform state: versioning, encryption, public access blocked. Backends use `use_lockfile = true`.
-- GitHub OIDC provider in IAM, plus roles for `wp-infra` CI: a read-only **plan** role (pull requests), an **apply** role (`main` only), and a read-only **audit** role for Prowler (AWS's `SecurityAudit` and `ViewOnlyAccess` managed policies; used in step 10.5).
-- The AWS Budget alert (import the one from step 0.1 or recreate it).
-- **Account threat detection** (see `aws-wp.md`'s [Intrusion detection and prevention](aws-wp.md#intrusion-detection-and-prevention)): a multi-region **CloudTrail** trail (management events, log-file validation) to its own S3 bucket with `prevent_destroy`; **GuardDuty** (with EKS audit-log monitoring turned on for when the demo cluster exists); an **EventBridge** rule sending GuardDuty findings (medium severity and above) to an SNS topic connected to Slack `#rl-security` through **Amazon Q Developer in chat applications** (authorise the Slack workspace once in the AWS console; high severity also to `#rl-critical`).
-- **Activate the cost allocation tags** (`Project`, `Site`, `Env`, `Stack`, `ManagedBy`) with Terraform (`aws_ce_cost_allocation_tag`). A tag can only be activated once it exists on at least one resource, so apply this after the first tagged resources exist (re-run this step after step 2.3 if needed); activation can take up to a day to show.
+- In **russetleaf-infra**: the S3 bucket for Terraform state (versioning, KMS encryption, public access blocked, TLS required, `prevent_destroy`). Backends use `use_lockfile = true`. Bucket policy granting each account's CI roles access to their own state keys only.
+- In **each account** that CI deploys to (russetleaf-home, russetleaf-infra, and later russetleaf-com and the security accounts): the GitHub OIDC provider, a read-only **plan** role (pull requests), an **apply** role (only from the `apply` GitHub Environment), and a read-only **audit** role for Prowler (AWS's `SecurityAudit` and `ViewOnlyAccess` managed policies; used in step 10.5).
 
-**Test:** GuardDuty sample findings (`aws guardduty create-sample-findings`) appear in `#rl-security`; CloudTrail log-file validation passes (`aws cloudtrail validate-logs`); a scratch root module with the S3 backend runs `terraform init` and `plan`; a GitHub Actions job in `wp-infra` assumes the plan role and runs `aws sts get-caller-identity`.
+**Test:** a scratch root module with the S3 backend runs `terraform init` and `plan`; a GitHub Actions job in `wp-infra` assumes the plan role in russetleaf-home and runs `aws sts get-caller-identity`; the same job can't read another account's state key.
 
 ### Step 2.2: Talos cluster (box 1 + box 2)
 **Do** (`wp-infra/envs/home/`, applied locally; uses the `siderolabs/talos` provider):
@@ -205,7 +223,7 @@ The cluster is deliberately **not highly available** (one control-plane node); s
 **Test:** `kubectl get nodes` shows both nodes `Ready`; `kubectl describe node <box2>` shows the label and taint; `talosctl health` passes; `cilium status` is all green and `cilium connectivity test` passes; `cilium encrypt status` shows WireGuard on with box 1 and box 2 as peers; there's no kube-proxy DaemonSet. Rebuild once from scratch to prove it's reproducible, and **record how long the rebuild took** as the recovery time in `docs/adr/0015-availability-levels.md`.
 
 ### Step 2.3: AWS and Cloudflare resources for the home lab
-**Do** (`wp-infra/modules/` + `envs/home/`):
+**Do** (`wp-infra/modules/` + `envs/home/`; all AWS resources in the **russetleaf-home** account):
 - Modules: `s3-media`, `s3-backups`, `sqs-queue` (with dead-letter queue), `secrets`, `bedrock-access`.
 - russetleaf.dev resources: media bucket, database-backup bucket (lifecycle: expire after 30 days), **model mirror bucket** (for the self-hosted model's file, used in step 8.1), **Loki log bucket** (lifecycle: expire after 7 days, used in step 4.6, plus a scoped IAM key for Loki), **Tempo trace bucket** (lifecycle: expire after 3 days, used in step 10.4, with its own scoped key), summary queue + dead-letter queue, Secrets Manager entries (empty placeholders; values set by hand or generated), Bedrock budget alert.
 - **`prevent_destroy`** on every stateful resource (the state bucket, media, backup, log, trace and model mirror buckets, and Secrets Manager entries), so no plan, including a revert's, can delete them without a deliberate code change (see `aws-wp.md`'s [Rollback strategy](aws-wp.md#rollback-strategy)).
@@ -220,7 +238,7 @@ The cluster is deliberately **not highly available** (one control-plane node); s
 
 ### Step 2.4: `wp-infra` CI
 **Do:** the pipeline described in `aws-wp.md` ([Terraform pipeline](aws-wp.md#terraform-pipeline-wp-infra)):
-- **Pull requests:** `terraform fmt -check` → `validate` → **tflint** with **`tflint-ruleset-aws`** → **Checkov** on the source with **custom policies** in `.checkov/` (required `Project`/`Site`/`Env` tags, `us-east-1` only, approved instance families, S3 Block Public Access) → **`terraform test`** for the modules → `terraform plan -out` (saved as a private workflow artifact with short retention) → **Checkov on the plan** → **Infracost** cost-difference comment → plan comment → gitleaks.
+- **Pull requests:** `terraform fmt -check` → `validate` → **tflint** with **`tflint-ruleset-aws`** → **Checkov** on the source with **custom policies** in `.checkov/` (required `Project`/`Site`/`Env` tags, `us-east-1` only, approved instance families, S3 Block Public Access) → **`terraform test`** for the modules → `terraform plan -out` (saved as a private workflow artifact with short retention) → **Checkov on the plan** → **IAM Access Analyzer** policy checks (`validate-policy`, and its custom checks for new public or cross-account access) → **Infracost** cost-difference comment → plan comment → gitleaks.
 - **After merge:** a GitHub Environment **`apply`** with required reviewers (you), limited to `main`; the OIDC apply role trusts only that environment; the job applies **the saved plan from the pull request**, not a fresh plan.
 - **Weekly scheduled** drift-check plan.
 - **Repo hygiene:** `.pre-commit-config.yaml` with the **pre-commit-terraform** hooks plus gitleaks; **terraform-docs** generating module READMEs; `.terraform.lock.hcl` with hashes for Linux and your workstation (`terraform providers lock -platform=...`); turn on **GitHub secret scanning with push protection** when the repo goes public.
@@ -230,8 +248,8 @@ The cluster is deliberately **not highly available** (one control-plane node); s
 
 ### Step 2.5: Disaster recovery copies
 **Do:** as described in `docs/disaster-recovery.md` and ADR 0019:
-- Create an **AWS Organization** (the main account becomes its management account) and a **backup account**; secure its root login with MFA and add it to the break-glass kit; give yourself an IAM Identity Center login to it.
-- `wp-infra/envs/dr/`: in the backup account, **S3 Object Lock** buckets in **us-west-2** (30-day retention, governance mode at first), versioned and encrypted; in the main account, **replication** rules (with a write-only role) from the Terraform state, MariaDB backup, media and CloudTrail buckets.
+- The **Backup** account already exists (step 2.0).
+- `wp-infra/envs/dr/`: in the Backup account, **S3 Object Lock** buckets in **us-west-2** (30-day retention, governance mode at first), versioned and **KMS-encrypted**; **replication** rules (with write-only roles) from the Terraform state bucket (russetleaf-infra) and the MariaDB backup and media buckets (russetleaf-home). (CloudTrail logs are already isolated in the Log Archive account.)
 - A **daily repo-mirror** workflow (`git bundle` of each repo) uploading to the backup account through a write-only OIDC role.
 - Add the **Talos secrets bundle** and talosconfig (from step 2.2) to the break-glass kit.
 
@@ -561,7 +579,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Test:** publishing a post produces **one trace** in Grafana covering WordPress → the queue message → the summarizer → the gateway → the model call → saving the summary, showing which model answered; a slow page's trace shows its database queries; clicking a trace opens its logs in Loki; no span contains post text, prompts or summaries; with tracing off, nothing is sent and there's no measurable overhead.
 
 ### Step 10.5: AWS account posture (Prowler)
-**Do:** a GitHub Actions workflow in `wp-infra`, **scheduled monthly** and runnable by hand, that assumes the read-only **audit role** (step 2.1) through GitHub OIDC and runs **Prowler** against the AWS account (CIS AWS Foundations and AWS Foundational Security Best Practices). Keep the full report as a workflow artifact, commit a summary to `wp-gitops/docs/security/` (failed checks by severity, plus accepted findings with reasons), and post the counts of failed high and critical checks to `#rl-security`. Fix what's worth fixing in Terraform (not by hand). Record the first run's baseline in `docs/adr/0007-prowler-not-threatmapper.md`. See `aws-wp.md` ([Runtime security and compliance](aws-wp.md#runtime-security-and-compliance)).
+**Do:** a GitHub Actions workflow in `wp-infra`, **scheduled monthly** and runnable by hand, that assumes the read-only **audit role** (step 2.1) through GitHub OIDC and runs **Prowler** against **every account** in turn (assuming the audit role in each), with CIS AWS Foundations and AWS Foundational Security Best Practices, as a free **second opinion** to Security Hub's continuous checks (step 2.0b). Keep the full report as a workflow artifact, commit a summary to `wp-gitops/docs/security/` (failed checks by severity, plus accepted findings with reasons), and post the counts of failed high and critical checks to `#rl-security`. Fix what's worth fixing in Terraform (not by hand). Record the first run's baseline in `docs/adr/0007-prowler-not-threatmapper.md`. See `aws-wp.md` ([Runtime security and compliance](aws-wp.md#runtime-security-and-compliance)).
 
 **Test:** the workflow runs without stored AWS keys; a deliberately weakened setting (e.g. turning off S3 Block Public Access on a test bucket) shows up as a failed check, then passes once reverted; the summary and Slack message appear.
 
@@ -603,7 +621,7 @@ Record each drill's time in the decision log and compare it with the expected ti
 **Test:** each pod works with no AWS key in its Secrets; the old keys are deleted from IAM.
 
 ### Step 11.2: Documentation and polish
-**Do:** hub README with the russetleaf.dev architecture diagram and links to all repos; screenshots of Grafana (site, LLM, cost), Argo CD and an evaluation report; update `aws-wp.md` wherever the build differed from the design; check every repo with `gitleaks`, then make them public; **also make each GHCR package public** in its package settings (a repo going public doesn't change its packages), then remove the image pull secrets and Argo CD's GHCR credentials and confirm everything still pulls; add each repo's **OpenSSF Scorecard** badge to its README (record the scores in the decision log), and switch on **SARIF upload** of Checkov's results to GitHub code scanning in each (free for public repos), so findings appear on pull requests and in the Security tab.
+**Do:** run an **AWS Well-Architected review** of the design in the free Well-Architected Tool (Security pillar first, then the others), save the report in `docs/`, and fix or record the high-risk items; hub README with the russetleaf.dev architecture diagram and links to all repos; screenshots of Grafana (site, LLM, cost), Argo CD and an evaluation report; update `aws-wp.md` wherever the build differed from the design; check every repo with `gitleaks`, then make them public; **also make each GHCR package public** in its package settings (a repo going public doesn't change its packages), then remove the image pull secrets and Argo CD's GHCR credentials and confirm everything still pulls; add each repo's **OpenSSF Scorecard** badge to its README (record the scores in the decision log), and switch on **SARIF upload** of Checkov's results to GitHub code scanning in each (free for public repos), so findings appear on pull requests and in the Security tab.
 
 **Test:** someone unfamiliar with the project can follow the README to understand it in five minutes.
 
@@ -627,6 +645,8 @@ These keep russetleaf.dev healthy once it's running. Add each as a calendar remi
 | Check staging still works | Monthly, if nothing has been promoted | Run `staging-test` by hand, so a broken staging setup is found before it blocks a real release |
 | Check the staging scrub | After any plugin that stores personal data is added | Confirm the `staging-data` Job also clears that plugin's tables |
 | Review GuardDuty findings and audit alerts | Weekly (findings also alert in real time) | Check GuardDuty's console for low-severity findings not sent to Slack; tune audit alert rules that fire on expected activity |
+| Review Security Hub | Weekly | Check new failed controls and findings across accounts; fix in Terraform or suppress with a recorded reason |
+| Well-Architected review | Yearly | Update the review in the free Well-Architected Tool; keep the report in `docs/` |
 | Prowler AWS account scan | Monthly (automatic) | Review the workflow's summary and Slack message; fix new failures in Terraform or record why they're accepted |
 | Kubescape posture scan | Monthly | Run the Kubescape CLI against the home cluster; save the report in `docs/security/`; compare scores with the previous run and investigate any drop |
 | Review the admin allow-list | Quarterly | Remove people who no longer need access, in the plugin's allow-list and the Cloudflare Access policy |
@@ -657,6 +677,8 @@ The home lab already builds most of what these need: the shared Terraform module
 | 0.1 Accounts, tools, budget | ☐ | | | |
 | 0.2 Decisions | ☐ | | | |
 | 1.1 Four repos | ☐ | | | |
+| 2.0 AWS Organization and accounts (SRA) | ☐ | | | |
+| 2.0b Organisation security services | ☐ | | | |
 | 2.1 Terraform bootstrap | ☐ | | | |
 | 2.2 Talos cluster | ☐ | | | |
 | 2.3 AWS + Cloudflare resources | ☐ | | | |

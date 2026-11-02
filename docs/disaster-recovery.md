@@ -12,23 +12,23 @@ This plan covers recovering from losses bigger than a single bad change or faile
 | Deployed configuration | `wp-gitops` (GitHub) | Repo mirror in the backup account | 90 days | Yes, from GitOps |
 | Application code | `wp-image`, `llm-summarizer` (GitHub) | Repo mirrors in the backup account | 90 days | Yes |
 | Images and charts | GHCR | None needed | — | Yes, rebuilt from the mirrored source |
-| Terraform state | S3 state bucket (us-east-1, main account) | **Replicated** to the backup account (us-west-2, Object Lock) | 30-day lock, versions kept 90 days | Partly (state can be re-imported, but slowly) |
+| Terraform state | S3 state bucket (us-east-1, **russetleaf-infra** account) | **Replicated** to the backup account (us-west-2, Object Lock) | 30-day lock, versions kept 90 days | Partly (state can be re-imported, but slowly) |
 | russetleaf.dev database | MariaDB backups in S3 (us-east-1), every 6 hours | **Replicated** to the backup account (Object Lock) | 30-day lock | No |
 | russetleaf.com database | RDS snapshots (us-east-1) | A **logical dump** taken at every `demo-down`, written to the russetleaf.com backup bucket and **replicated** to the backup account | 30-day lock | No (or re-seed from russetleaf.dev) |
 | Media (both sites) | S3 media buckets (us-east-1) | **Replicated** to the backup account (Object Lock) | 30-day lock | No |
-| CloudTrail logs | S3 (us-east-1) | **Replicated** to the backup account (Object Lock) | 30-day lock | No |
+| CloudTrail logs | Organisation trail in the **Log Archive** account's Object Lock bucket (separate from every workload account) | Already isolated; optionally replicated to us-west-2 | 30-day lock (longer retention by lifecycle) | No |
 | Talos machine secrets, talosconfig | Terraform state; your workstation | Break-glass kit | Until rotated | No (losing them means rebuilding the cluster from scratch) |
-| Secrets in Secrets Manager | Main account | Most are **regenerated** rather than copied (see below) | — | Mostly yes |
+| Secrets in Secrets Manager | The workload accounts (russetleaf-home, russetleaf-com) | Most are **regenerated** rather than copied (see below) | — | Mostly yes |
 | Account access (root logins, MFA recovery codes) | Password manager | Break-glass kit, including a printed copy | Until changed | No |
 | Logs and traces (Loki, Tempo) | S3 | None (short-lived operational data) | — | Not needed |
 
 **Secrets that are regenerated, not copied:** database passwords (MariaDB Operator generates new ones; RDS manages its own), the Cloudflare tunnel token, the Slack bot token, Google OAuth client secrets, scoped IAM keys, the WordPress application passwords. The break-glass kit holds only what can't be regenerated (account access and the Talos secrets bundle).
 
 ## Backup account and immutable copies
-- A separate **backup AWS account**, created in an **AWS Organization** with the main account as its management account. Nothing runs in it; it only holds copies.
+- A separate **Backup** account in the **Security OU** of the AWS Organization (whose **dedicated management account** runs nothing; see ADR 0020 and `aws-wp.md`'s [AWS account structure](../aws-wp.md#aws-account-structure-and-best-practices-security-reference-architecture)). Nothing runs in it; it only holds copies.
 - Its buckets are in a **second region (us-west-2)** with **S3 Object Lock** (30-day retention, governance mode at first, compliance mode once proven), versioning and encryption.
-- The main account's buckets **replicate** into them (S3 replication with a role that can only write, not delete).
-- Access to the backup account is through a separate login (IAM Identity Center permission set) that's part of the break-glass kit, so a compromise of the main account's day-to-day access doesn't reach it.
+- Buckets in **russetleaf-home**, **russetleaf-com** and **russetleaf-infra** **replicate** into them (S3 replication with roles that can only write, not delete); SCPs stop any account from deleting or weakening them.
+- Access to the backup account is through a separate login (IAM Identity Center permission set) that's part of the break-glass kit, so a compromise of a workload account doesn't reach it.
 - **Cost:** a few cents a month at this data size, plus replication requests.
 
 ## Repo mirrors
@@ -37,7 +37,7 @@ A scheduled GitHub Actions workflow (daily) creates a `git bundle` of each of th
 ## Break-glass kit
 Kept in your password manager, with a **printed copy** of the starred items stored somewhere safe at home and ideally a second location (e.g. with a family member).
 
-- ★ AWS: main account root email, password and **MFA recovery**; backup account root and its IAM Identity Center login
+- ★ AWS: the **management account's** root email, password and **MFA recovery** (member accounts have no root credentials: centralised root access management); the IAM Identity Center admin and break-glass logins
 - ★ GitHub: account login and **recovery codes**
 - ★ Cloudflare: account login and recovery codes
 - ★ Google: account recovery (for the Google Cloud project and Google sign-in)
@@ -55,8 +55,9 @@ Kept in your password manager, with a **printed copy** of the starred items stor
 | **Box 2 fails** | None (no unique data) | Hours, depending on hardware | The gateway falls back to Bedrock automatically; replace box 2 and re-apply `envs/home`. |
 | **Whole home lab destroyed** (fire, theft, flood) | 6 hours of database changes | 1–2 days (new hardware) | Using only the break-glass kit and the backups: get new hardware; follow the **bootstrap order** below. russetleaf.com can be brought up as a temporary replacement in the meantime (`demo-up` and seed from the latest russetleaf.dev backup). |
 | **Workstation lost** | None | Hours | Set up a new workstation ([workstation setup](../homelab-plan.md#local-workstation-setup-ubuntu-2404)); restore talosconfig, kubeconfig and logins from the break-glass kit; rotate anything that was stored only on the old machine. |
-| **AWS main account compromised** | Up to the last replicated copy | 1–3 days | Secure the account (root login, revoke all keys and sessions, review CloudTrail and GuardDuty). If data was deleted or encrypted, restore from the **backup account**: database backups, media, Terraform state. Rotate every secret and key; re-create Secrets Manager entries; re-apply Terraform. |
-| **AWS main account lost** (closed, locked) | Up to the last replicated copy | Days | Create a new account; restore Terraform state from the backup account and re-point the backends; re-apply `bootstrap/` and the environments; restore data from the backup account; regenerate secrets. |
+| **A workload account compromised** (russetleaf-home or russetleaf-com) | Up to the last replicated copy | 1–3 days | From the management and Security Tooling accounts: restrict the account with an SCP, revoke its sessions and keys, review the organisation CloudTrail (Log Archive) and GuardDuty/Security Hub findings. If data was deleted or encrypted, restore from the **Backup** account. Rotate every secret and key; re-create Secrets Manager entries; re-apply Terraform. The logs, backups and security tooling are in other accounts, so they're intact. |
+| **A workload account lost** (closed, locked) | Up to the last replicated copy | Days | Create a replacement account in the Organization (`envs/org`); re-apply `bootstrap/` and the environment; restore data from the Backup account; regenerate secrets. |
+| **Management account compromised or lost** | Up to the last replicated copy | Days | The worst case: recover access through AWS Support using the break-glass kit; the member accounts, logs and backups keep running meanwhile. If the Organization can't be recovered, create a new management account and move the member accounts into a new Organization. |
 | **AWS region outage** (us-east-1) | None, or up to the last replicated copy | Hours to wait, or a day to move | Usually wait it out (russetleaf.dev keeps running at home, though S3 media, SQS and Bedrock calls fail). For a long outage, re-point the home site's buckets and queue to us-west-2 using the replicated copies. |
 | **GitHub account or repos lost** | Commits since the last daily mirror | Hours | Restore the repos from the bundles in the backup account to a new GitHub account (or another Git host); update Argo CD's repo URLs, the OIDC trust (new repo identities) and Kyverno's signing identities; rebuild and re-sign images. |
 | **Cloudflare account lost** | None | Hours | New account; re-apply the Cloudflare parts of `envs/home` (tunnel, DNS, Access, rules); move russetleaf.dev's name servers. |
@@ -64,14 +65,14 @@ Kept in your password manager, with a **printed copy** of the starred items stor
 | **Ransomware or malicious deletion of backups** | Up to the last locked copy | 1–2 days | The Object Lock copies can't be deleted or overwritten for 30 days; restore from them. |
 
 ## Bootstrap order from zero
-1. **Access:** password manager → break-glass kit → AWS (both accounts), GitHub, Cloudflare, Google, registrar.
+1. **Access:** password manager → break-glass kit → AWS (management account, then IAM Identity Center into the others), GitHub, Cloudflare, Google, registrar.
 2. **Code:** restore the four repos (from GitHub, or the mirrors in the backup account).
-3. **Terraform state:** use the main account's state bucket, or copy it back from the backup account.
-4. **Account foundations:** apply `wp-infra/bootstrap/` (OIDC, roles, CloudTrail, GuardDuty, tags).
+3. **Terraform state:** use the russetleaf-infra state bucket, or copy it back from the Backup account.
+4. **Account foundations:** apply `wp-infra/envs/org/` (Organization, accounts, SCPs, Identity Center) and `envs/security/` (CloudTrail, GuardDuty, Security Hub, Config), then `bootstrap/` (state bucket, CI roles).
 5. **Home infrastructure:** apply `wp-infra/envs/home` (Talos on both boxes, Cloudflare, the AWS resources used from home).
 6. **Secrets:** create or regenerate the entries in Secrets Manager; create the External Secrets bootstrap credential.
 7. **GitOps:** install Argo CD and apply `wp-gitops/bootstrap/home`; let the platform come up in sync-wave order.
-8. **Data:** restore MariaDB from the latest backup (from the main account or the backup account); confirm media is present (or copy it back).
+8. **Data:** restore MariaDB from the latest backup (from russetleaf-home or the Backup account); confirm media is present (or copy it back).
 9. **Images:** if GHCR is unavailable, rebuild and re-sign the images from source, and update the version pins.
 10. **Checks:** site, admin sign-in, summarizer, monitoring and alerts, backups running again.
 11. **russetleaf.com** (if needed): re-apply `envs/aws-edge`, then `demo-up` when wanted.
