@@ -3,43 +3,56 @@
 **Phase 3** builds **russetleaf.com**: the same WordPress site on the full AWS production design (EKS with Karpenter, RDS for MariaDB behind RDS Proxy with IAM authentication, ElastiCache, CloudFront, ALB and AWS WAF), brought up only for demos, with an always-on CloudFront edge that shows an offline page the rest of the time. It needs Phase 1 and is optional. **Phase 2 is optional for it:** without Phase 2, russetleaf.com runs WordPress only, and the AI parts below (the summarizer, gateway and GPU model on EKS, fine-tuning) are skipped.
 
 - **Build plan:** [`plan.md`](plan.md)
-- **Decisions:** [`adr/`](adr/)
+- **Decisions:** this phase's ADRs, in the `adr/` folder and listed in the [overview's index](../overview.md#architecture-decision-records)
 - **Builds on:** [Phase 1 design](../phase-1-russetleaf-dev/design.md) (and, optionally, [Phase 2](../phase-2-ai-mlops/design.md)); how the two sites compare is in the [overview](../overview.md#the-two-sites)
 
 ## Architecture
 
+Diagrams follow the [C4 model](https://c4model.com/): system context, then containers.
 
+### System context
+
+```mermaid
+flowchart LR
+  visitor(["Visitor"])
+  admin(["Admin"])
+  op(["Operator (you)"])
+  site["russetleaf.com<br/>WordPress on EKS, demos only"]
+  dev["russetleaf.dev<br/>(Phase 1): Argo CD hub,<br/>CI runners, backups to seed from"]
+  aws["AWS<br/>russetleaf-com account and<br/>the Organization's security accounts"]
+  gh["GitHub<br/>repos, Actions, GHCR"]
+  slack["Slack"]
+  visitor -->|HTTPS| site
+  admin -->|"ALB OIDC + Google"| site
+  op -->|"demo-up / demo-down"| gh
+  gh -->|"workflows on home runners"| aws
+  dev -->|"Argo CD (hub), seed data"| site
+  site --> aws
+  site -->|alerts| slack
 ```
-Visitors to russetleaf.com
-  │
-  ▼
-Route 53 ──► CloudFront ─────────────── always on (envs/aws-edge) ───────────────
-               │            │                              │
-               │ default    │ /wp-content/uploads/*        │ if the origin is unreachable
-               │            ▼                              ▼ (502/503/504)
-               │       S3 media bucket              S3 offline page
-               │                                    ("demo offline, visit russetleaf.dev")
-               ▼
-origin.russetleaf.com ── demo stack only (envs/aws) ──────────────────────────────
-  │
-  ▼
-ALB + AWS WAF (TLS via ACM; accepts only CloudFront traffic)
-  │
-  ▼
-EKS: WordPress pods (stateless, 2–3+ replicas across AZs, Argo Rollouts canaries)
-  │                │                  │  publish/update event          ▲
-  ▼                ▼                  ▼                                │ REST API (save summary)
-RDS Proxy (IAM) ElastiCache Valkey   Amazon SQS ──► Post-summarizer pods (KEDA: 0–N)
-→ RDS MariaDB   (object cache)                            │
-  (Multi-AZ)                                              ▼
-                                              LiteLLM gateway (routing, fallback,
-                                              canary splits, rate limits, budgets)
-                                                 │                        │
-                                                 ▼                        ▼
-                                          Amazon Bedrock          Self-hosted model (llama.cpp)
-                                       (Claude Haiku, Nova Lite)  on dedicated LLM nodes (Karpenter GPU pool)
 
-            Prometheus + Grafana: tokens, latency, cost, errors per model and prompt version
+### Containers
+
+```mermaid
+flowchart TB
+  subgraph edge["Always on: envs/aws-edge (~$1/month)"]
+    r53["Route 53"] --> cf["CloudFront"]
+    cf -->|"/wp-content/uploads/*"| media[("S3 media bucket")]
+    cf -->|"origin unreachable: 503"| offline[("S3 offline page<br/>points to russetleaf.dev")]
+  end
+  subgraph demo["Demo stack only: envs/aws (VPC across three AZs)"]
+    alb["ALB + AWS WAF<br/>(only CloudFront traffic)"] --> wp["WordPress pods on EKS<br/>(Karpenter nodes across AZs,<br/>Argo Rollouts canaries)"]
+    wp --> proxy["RDS Proxy (IAM auth)"] --> rds[("RDS for MariaDB<br/>Multi-AZ")]
+    wp --> cache[("ElastiCache Valkey")]
+    subgraph ai["If Phase 2 is built"]
+      sqs[["SQS"]] --> sum["Summarizer (KEDA)"] --> gw["LiteLLM gateway"]
+      gw --> bedrock["Bedrock"]
+      gw --> gpu["llama.cpp (CUDA)<br/>Karpenter GPU pool"]
+    end
+    wp -.-> sqs
+  end
+  cf -->|"default: origin.russetleaf.com"| alb
+  rds -.->|"final snapshot on demo-down"| snap[("Snapshot")]
 ```
 
 ## Production design on AWS
@@ -61,8 +74,9 @@ RDS Proxy (IAM) ElastiCache Valkey   Amazon SQS ──► Post-summarizer pods (
 
 ### russetleaf.com: IAM authentication through RDS Proxy
 
-```
-WordPress pods ──(IAM auth token over TLS)──► RDS Proxy ──(pooled connections, password from Secrets Manager)──► RDS for MariaDB
+```mermaid
+flowchart LR
+  wp["WordPress pods"] -->|"IAM auth token over TLS"| proxy["RDS Proxy"] -->|"pooled connections,<br/>password from Secrets Manager"| rds[("RDS for MariaDB")]
 ```
 
 - **WordPress has no database password.** On each new connection, a small **`db.php` drop-in** in the WordPress image creates a short-lived **IAM auth token** (valid 15 minutes) with the AWS SDK for PHP, using WordPress's **Pod Identity** role, and sends it in place of a password over **TLS**. Creating the token is a local signing step, not an AWS API call, and the drop-in reuses a token for several minutes.

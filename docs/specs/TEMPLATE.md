@@ -7,7 +7,7 @@ the same pull request if the work turns out differently. Delete these comments.
 -->
 
 - **Issue:** #<number>
-- **Plan:** [Phase N step X.Y](../phase-N-.../plan.md#step-xy-...)
+- **Plan:** <link to the step in the phase plan, e.g. `../../phase-1-russetleaf-dev/plan.md#step-41-storage`>
 - **Tier / estimate:** <Core | Differentiator | Stretch | Staff> / <low–high> hours
 - **Status:** Draft | In progress | Done
 - **Dates:** started YYYY-MM-DD; finished YYYY-MM-DD

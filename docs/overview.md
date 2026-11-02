@@ -6,13 +6,38 @@ RussetLeaf is a portfolio project: a production-grade WordPress platform built t
 
 | Phase | What it builds | Needs | Design | Plan | Decisions |
 |---|---|---|---|---|---|
-| **1. russetleaf.dev** | WordPress on a three-node, highly available Talos cluster at home, running 24/7: GitOps, platform services, security, observability, staging and promotion, disaster recovery, and the AWS Organization it uses | — | [design](phase-1-russetleaf-dev/design.md) | [plan](phase-1-russetleaf-dev/plan.md) | [ADRs](phase-1-russetleaf-dev/adr/) |
-| **2. AI summaries and MLOps** | AI-generated post summaries on russetleaf.dev: an event-driven summarizer, an LLM gateway (Bedrock plus a self-hosted model on box 2), an evaluation gate, MLflow, guardrails, online evaluation and drift monitoring, feedback and data versioning | Phase 1 | [design](phase-2-ai-mlops/design.md) | [plan](phase-2-ai-mlops/plan.md) | [ADRs](phase-2-ai-mlops/adr/) |
-| **3. russetleaf.com** | The same site on the full AWS production design (EKS, Karpenter, RDS with RDS Proxy, ElastiCache, CloudFront, ALB, AWS WAF), brought up only for demos, with an always-on offline page; plus GPU fine-tuning if Phase 2 is built | Phase 1 (Phase 2 optional) | [design](phase-3-russetleaf-com/design.md) | [plan](phase-3-russetleaf-com/plan.md) | [ADRs](phase-3-russetleaf-com/adr/) |
+| **1. russetleaf.dev** | WordPress on a three-node, highly available Talos cluster at home, running 24/7: GitOps, platform services, security, observability, staging and promotion, disaster recovery, and the AWS Organization it uses | — | [design](phase-1-russetleaf-dev/design.md) | [plan](phase-1-russetleaf-dev/plan.md) | [ADRs](#architecture-decision-records) |
+| **2. AI summaries and MLOps** | AI-generated post summaries on russetleaf.dev: an event-driven summarizer, an LLM gateway (Bedrock plus a self-hosted model on box 2), an evaluation gate, MLflow, guardrails, online evaluation and drift monitoring, feedback and data versioning | Phase 1 | [design](phase-2-ai-mlops/design.md) | [plan](phase-2-ai-mlops/plan.md) | [ADRs](#architecture-decision-records) |
+| **3. russetleaf.com** | The same site on the full AWS production design (EKS, Karpenter, RDS with RDS Proxy, ElastiCache, CloudFront, ALB, AWS WAF), brought up only for demos, with an always-on offline page; plus GPU fine-tuning if Phase 2 is built | Phase 1 (Phase 2 optional) | [design](phase-3-russetleaf-com/design.md) | [plan](phase-3-russetleaf-com/plan.md) | [ADRs](#architecture-decision-records) |
 
 The reasoning for this split is in ADR 1037.
 
+## The system at a glance
+
+```mermaid
+flowchart LR
+  people(["Visitors, admins, operator"])
+  subgraph p1["Phase 1: russetleaf.dev (home, 24/7)"]
+    dev["WordPress on a three-node Talos cluster<br/>GitOps, security, observability, staging"]
+  end
+  subgraph p2["Phase 2 (optional): AI summaries"]
+    ai["Summarizer, LLM gateway, local model,<br/>evaluation gate, MLflow"]
+  end
+  subgraph p3["Phase 3 (optional): russetleaf.com (AWS, demos)"]
+    com["WordPress on EKS, RDS, CloudFront<br/>behind an always-on offline page"]
+  end
+  people --> dev
+  people --> com
+  ai -.->|"adds summaries to"| dev
+  ai -.->|"and, with Phase 3, to"| com
+  dev -->|"Argo CD hub, CI runners,<br/>seed data, promoted versions"| com
+  shared["Shared: GitHub (repos, CI, GHCR), Cloudflare,<br/>AWS Organization (S3, Secrets Manager, Bedrock,<br/>security accounts), Google sign-in, Slack"]
+  dev --- shared
+  com --- shared
+```
+
 ## How the documents are organised
+- **Where to read it:** in the `russetleaf-docs` repo, or as the docs site built from it (ADR 1038).
 - **This overview:** what's shared by all phases: how the two sites compare, security by layer, the threat model, platform security, compliance, portfolio highlights, the operations budget, effort and timelines, the repositories, and the index of all decisions.
 - **Each phase folder:** `design.md` (what's built and why), `plan.md` (the steps to build it, with a progress checklist), `roadmap.md` (milestones with target and actual dates; Phase 1's [roadmap](phase-1-russetleaf-dev/roadmap.md)) and `adr/` (the decisions first made in that phase).
 - **Tracking and step specs:** each step becomes a GitHub issue in its roadmap milestone (created by `tools/plan_to_issues.py`), and each step starts with a short spec written from [`specs/TEMPLATE.md`](specs/TEMPLATE.md) and kept in `docs/specs/`, linked from the issue and its pull request. Together with the plans' estimate-vs-actual columns and milestone retros, they show the work was planned, measured and adjusted.
@@ -243,11 +268,12 @@ Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS
 
 ## Repository structure (four repos)
 
-The project is split across four Git repositories, by **what each one controls** and **how often it changes**, not by environment. Both clusters (home Talos and AWS EKS) are driven from the same repos.
+The project's code is split across four Git repositories, by **what each one controls** and **how often it changes**, not by environment. Both clusters (home Talos and AWS EKS) are driven from the same repos. A fifth repo, **`russetleaf-docs`**, holds the project documentation and publishes it as the docs site (ADR 1038).
 
 | Repo | Purpose | Publishes | Who reads or writes it | Changes when |
 |---|---|---|---|---|
-| **`wp-gitops`** | The **source of truth for Argo CD**: everything that runs on both clusters (WordPress, monitoring, platform services, gateway, model server, summarizer settings), with `overlays/home` and `overlays/aws`. Also the project's **hub** (README, this document, diagrams, reports). | Nothing; it's what Argo CD reads | Both Argo CD instances (read only); bots from `wp-image` and `llm-summarizer` open version-bump pull requests | Config or version changes (often) |
+| **`wp-gitops`** | The **source of truth for Argo CD**: everything that runs on both clusters (WordPress, monitoring, platform services, gateway, model server, summarizer settings), with `overlays/home` and `overlays/aws`. | Nothing; it's what Argo CD reads | Both Argo CD instances (read only); bots from `wp-image` and `llm-summarizer` open version-bump pull requests | Config or version changes (often) |
+| **`russetleaf-docs`** | The **project documentation and hub**: the overview, phase designs, plans and roadmaps, all ADRs, step specs, the threat model, control matrix, strategy documents and postmortems; the planning issues, milestones and Projects board | The **docs site** (MkDocs on GitHub Pages) | Its own CI (a strict build that fails on broken links) | Every step (specs, ADRs, checklists, retros) |
 | **`wp-infra`** | All **Terraform**: shared modules, plus root modules for russetleaf.com (`envs/aws-edge`, always on; `envs/aws`, demo stack) and russetleaf.dev (`envs/home`) | Cloud and home infrastructure | Its own CI (the only place with cloud admin permissions), and you, locally | Infrastructure changes (rarely) |
 | **`wp-image`** | The **custom WordPress image**: plugins, themes, the SQS must-use plugin | Signed image + SBOM | Its own CI | Plugin, theme or WordPress updates |
 | **`llm-summarizer`** | The **standalone MLOps project**: summarizer code, prompts, evaluation set and gate, Helm chart, model card, local demo | Signed image + **Helm chart** (OCI), evaluation reports | Its own CI | Code, prompt or model-evaluation changes |
@@ -263,28 +289,25 @@ The home lab's Terraform creates AWS resources too (S3, SQS, Secrets Manager, Be
 
 ### How the repos connect
 
-```
-wp-infra ─────────► cloud + home infrastructure (EKS, RDS, SQS, IAM, Talos, Cloudflare)
-                                 ▲ used by everything below
-
-wp-image ────────── build, scan, sign ──► image ──────────────┐
-                                                              ├──► bot pull request ──► wp-gitops ──► Argo CD ──► Talos / EKS
-llm-summarizer ─── eval gate ─► build, scan, sign ─► image + chart ┘
+```mermaid
+flowchart LR
+  docs["russetleaf-docs<br/>design, plans, ADRs, roadmap"] -.->|"guides"| infra
+  infra["wp-infra<br/>Terraform: AWS, Cloudflare, Talos"] -->|"accounts, buckets, queues,<br/>IAM, the cluster"| clusters
+  image["wp-image"] -->|"build, scan, sign"| img[["image + chart (GHCR)"]]
+  llm["llm-summarizer<br/>(Phase 2)"] -->|"evaluation gate, build,<br/>scan, sign"| img
+  img -->|"bot pull request"| gitops["wp-gitops"]
+  gitops --> argo["Argo CD"] --> clusters["Talos (Phase 1)<br/>EKS (Phase 3)"]
 ```
 
 ### `wp-gitops`: the source of truth for Argo CD
 
 ```
 wp-gitops/
-  README.md                 # project hub: architecture diagram, links to all four repos, quick start
+  README.md                 # what the repo does; links to the docs site and the other repos
   tools/plan_to_issues.py   # creates GitHub milestones, labels and one issue per step from a phase's plan and roadmap
   docs/
-    overview.md             # this document: phases, shared design, effort, repos, ADR index
-    adr/0000-template.md    # ADR template (numbers: 1001+ Phase 1, 2001+ Phase 2, 3001+ Phase 3)
-    phase-1-russetleaf-dev/ # design.md, plan.md, roadmap.md, disaster-recovery.md, adr/
-    phase-2-ai-mlops/       # design.md, plan.md, adr/
-    phase-3-russetleaf-com/ # design.md, plan.md, adr/
-    specs/                  # one short spec per step (TEMPLATE.md; phase-1/, phase-2/, phase-3/)
+                            # (project docs live in russetleaf-docs; these are the operational docs
+                            #   that change with this repo's code)
     runbooks/               # one page per alert (what it means, how to check, how to fix), plus
                             #   rollback-<layer>.md runbooks
     slos/                   # SLO definitions (Sloth) and the error-budget policy
@@ -531,15 +554,33 @@ Work **infrastructure first, then code, then config**, so nothing is deployed be
 2. Wait for Argo CD to sync. Once ExternalDNS creates `origin.russetleaf.com`, russetleaf.com switches from the offline page to the live site on its own, and the workflow posts "demo started" to `#rl-com-alerts`. Demo.
 3. Silence russetleaf.com's alerts in Alertmanager, remove the Argo CD Applications (the ALB and `origin.russetleaf.com` are deleted, and russetleaf.com falls back to the offline page), then `terraform destroy` in `envs/aws`, and post "demo stopped" to `#rl-com-alerts`. Never destroy `envs/aws-edge`.
 
-### Moving from the current repo
-The current repo (`private-test-wordpress`) becomes `wp-gitops`:
-- Rename the repo on GitHub (GitHub redirects the old URL, but update the `repoURL` in Argo CD anyway).
-- Move `helm/wordpress/values.yaml` to `apps/wordpress/base/values.yaml`, and update the `$values` path in the WordPress Application.
-- Move `application.yaml` into the app-of-apps structure (`apps/wordpress/` plus `bootstrap/home/`).
-- Move this document and the two build plans to `docs/`.
-- Before making the repo public, check its history for secrets (e.g. with `gitleaks`).
+### `russetleaf-docs`: the project documentation
 
-**Keeping versions current:** enable **Renovate** (or Dependabot) on all four repos, for Helm chart versions, Terraform providers, base images, plugins and GitHub Actions. Each update then arrives as a pull request that goes through the same CI.
+```
+russetleaf-docs/
+  README.md                 # project hub: what it is, the phases, links to the docs site and every repo
+  mkdocs.yml                # docs site: navigation, theme, Mermaid diagrams, strict link checking
+  requirements-docs.txt     # pinned MkDocs and Material versions
+  .github/workflows/docs.yml  # build (strict) on pull requests; build and publish to GitHub Pages on main
+  tools/plan_to_issues.py   # creates milestones, labels and one issue per step from a phase's plan and roadmap
+  docs/
+    index.md                # docs site home page
+    overview.md             # this document
+    adr/0000-template.md    # ADR template (numbers: 1001+ Phase 1, 2001+ Phase 2, 3001+ Phase 3)
+    phase-1-russetleaf-dev/ # design.md, plan.md, roadmap.md, disaster-recovery.md, adr/
+    phase-2-ai-mlops/       # design.md, plan.md, adr/
+    phase-3-russetleaf-com/ # design.md, plan.md, adr/
+    specs/                  # one short spec per step (TEMPLATE.md; phase-1/, phase-2/, phase-3/)
+    security/               # threat model and control matrix
+    strategy/               # roadmap rationale, capacity and cost plan, migration plan, build-vs-buy
+    postmortems/            # blameless postmortems (template + incidents and drills)
+```
+
+**Where a document goes:** if it describes the whole project, a decision or a plan, it lives here; if it changes with one repo's code or is produced by its workflows (runbooks, SLO definitions, chaos results, performance and security reports, Talos hardening notes), it lives in that repo's `docs/`, and this site links to it. Each code repo's pull-request template asks whether the docs need updating.
+
+**History:** this repo began as `private-test-wordpress`, a test deployment of the Bitnami WordPress chart, and was renamed `russetleaf-docs` on 2026-11-02 once it held only documentation. `wp-gitops` is created fresh in Phase 1 step 1.1, and the old test cluster (with its test Argo CD Application) is replaced when box 1 is reinstalled in step 2.2.
+
+**Keeping versions current:** enable **Renovate** (or Dependabot) on all five repos, for Helm chart versions, Terraform providers, base images, plugins and GitHub Actions. Each update then arrives as a pull request that goes through the same CI.
 
 ## Architecture decision records
 
@@ -584,6 +625,7 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [1035](phase-1-russetleaf-dev/adr/1035-platform-security.md) | Platform security: admission resilience, cluster PKI, registry, observability access and VEX | 1 |
 | [1036](phase-1-russetleaf-dev/adr/1036-compliance-frameworks-and-privacy.md) | Compliance frameworks and privacy | 1 |
 | [1037](phase-1-russetleaf-dev/adr/1037-project-phases.md) | Build the project in three phases | 1 |
+| [1038](phase-1-russetleaf-dev/adr/1038-documentation-repo-and-site.md) | Separate documentation repo, published as a docs site | 1 |
 | [2001](phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback | 2 |
 | [2002](phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
 | [2003](phase-2-ai-mlops/adr/2003-self-hosted-model-on-box-2.md) | Self-hosted model on box 2 (CPU llama.cpp), dedicated by taint | 2 |

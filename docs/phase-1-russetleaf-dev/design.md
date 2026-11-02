@@ -3,7 +3,7 @@
 **Phase 1** builds **russetleaf.dev**: a production-grade WordPress site running 24/7 on a three-node, highly available Talos Kubernetes cluster at home, published through Cloudflare, using real AWS services where they're cheap (S3, Secrets Manager, SES) inside an AWS Organization built on the Security Reference Architecture. It's a complete project on its own.
 
 - **Build plan:** [`plan.md`](plan.md)
-- **Decisions:** [`adr/`](adr/) (the full index is in the [overview](../overview.md#architecture-decision-records))
+- **Decisions:** this phase's ADRs, in the `adr/` folder and listed in the [overview's index](../overview.md#architecture-decision-records)
 - **Shared design** (the phases, security by layer, threat model, compliance, repositories, effort): [`../overview.md`](../overview.md)
 - **Later phases:** [Phase 2: AI summaries and MLOps](../phase-2-ai-mlops/design.md) and [Phase 3: russetleaf.com on EKS](../phase-3-russetleaf-com/design.md), both optional
 
@@ -11,31 +11,62 @@ Where a shared design choice gains AI components in Phase 2 or differs on russet
 
 ## Architecture
 
+Diagrams follow the [C4 model](https://c4model.com/): a **system context** view (who and what the system talks to), then a **container** view (the main running parts and how they connect).
 
+### System context
+
+```mermaid
+flowchart LR
+  visitor(["Visitor"])
+  admin(["Admin or editor"])
+  op(["Operator (you)"])
+  site["russetleaf.dev<br/>WordPress platform on Talos"]
+  cf["Cloudflare<br/>DNS, CDN, WAF, Tunnel, Access"]
+  aws["AWS<br/>Organization, S3, Secrets Manager,<br/>SES, security services"]
+  gh["GitHub<br/>repos, Actions, GHCR"]
+  google["Google<br/>sign-in (OIDC)"]
+  slack["Slack<br/>alerts and notifications"]
+  visitor -->|HTTPS| cf --> site
+  admin -->|"Google sign-in"| cf
+  op -->|"kubectl, talosctl via Dex"| site
+  site -->|"media, secrets, email, backups"| aws
+  gh -->|"signed images, Git (Argo CD pulls)"| site
+  site --> google
+  site -->|alerts| slack
 ```
-Visitors to russetleaf.dev
-  │
-  ▼
-Cloudflare (DNS, CDN, WAF, TLS)
-  │
-  ▼
-Cloudflare Tunnel (outbound-only connection from home; no open ports on the router)
-  │
-  ▼
-cloudflared pods ──► ingress-nginx
-                        │
-                        ▼
-WordPress pods on boxes 3 and 1 (Argo Rollouts canaries) ── media ──► S3 bucket (real AWS)
-  │                │
-  ▼                ▼
-MariaDB         Valkey
-(primary box 3, (in-cluster)
- replica box 1,
- backups to S3)
 
-Box 2: a general-purpose third node (etcd member, CI runners, staging); it becomes the LLM node in Phase 2.
+### Containers
 
-            Prometheus + Grafana + Loki + Tempo: metrics, logs, traces and alerts
+```mermaid
+flowchart TB
+  subgraph edge["Cloudflare"]
+    dns["DNS, CDN, WAF, TLS"] --> access["Access (admin paths, tools)"]
+    tunnel["Tunnel (outbound-only from home)"]
+  end
+  subgraph lab["Home lab VLAN: Talos cluster, three control-plane nodes"]
+    cfd["cloudflared"] --> ingress["ingress-nginx"]
+    ingress --> wp["WordPress pods<br/>(boxes 3 and 1, Argo Rollouts canaries)"]
+    wp --> db[("MariaDB<br/>primary box 3, replica box 1")]
+    wp --> cache[("Valkey")]
+    argo["Argo CD"] -.->|syncs| wp
+    plat["Platform: Cilium, Kyverno, cert-manager,<br/>External Secrets, Dex, Falco, Trivy Operator"]
+    obs["Prometheus, Grafana, Alertmanager,<br/>Loki, Tempo, Hubble"]
+    runners["CI runners (ARC) and staging runs<br/>on box 2; box 2 becomes the LLM node in Phase 2"]
+  end
+  subgraph aws["AWS (russetleaf-home and security accounts)"]
+    s3[("S3: media, backups,<br/>logs, traces")]
+    sm["Secrets Manager"]
+    ses["SES"]
+    backup[("Backup and Log Archive<br/>accounts: Object Lock copies")]
+  end
+  dns --> tunnel --> cfd
+  wp -->|"uploads"| s3
+  wp --> ses
+  db -->|"backups every 6 hours"| s3
+  plat -->|"External Secrets"| sm
+  s3 -.->|replication| backup
+  obs -->|alerts| slack["Slack"]
+  github["GitHub: Git and GHCR"] -->|"manifests, signed images"| argo
 ```
 
 ## AWS account structure and best practices (Security Reference Architecture)

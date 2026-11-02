@@ -47,7 +47,7 @@ The optional later phases add about **85–144 hours** (Phase 2) and **125–210
 
 - One Talos node (box 1, `192.168.1.6`, Talos v1.14.4, Kubernetes v1.37.1), control plane, no taints.
 - Argo CD installed in the `argocd` namespace.
-- This repo (`private-test-wordpress`) holds an Argo CD Application that deploys the Bitnami WordPress chart into `wordpress-test`. Its pods are stuck in `Pending` because the cluster has no storage provisioner. This test deployment will be replaced.
+- An Argo CD Application, `private-test-wordpress`, deploys the Bitnami WordPress chart into `wordpress-test` from this repo's old test files (since removed; the repo was renamed `russetleaf-docs` on 2026-11-02 and now holds only documentation), so it shows sync errors. It goes away when box 1 is reinstalled in step 2.2; until then it's harmless (or delete it with `argocd app delete private-test-wordpress`).
 - russetleaf.dev is a Cloudflare zone.
 - Box 2 (Intel i3, 8 GB) is available, and **box 3 (Intel i5-8500T, 6 cores, 16 GB, NVMe SSD)** is being added, giving a **three-node, highly available cluster** (see `docs/phase-1-russetleaf-dev/adr/1020-three-node-ha-home-cluster.md`). Before installing Talos on box 3: update its BIOS, turn on **power on after AC loss** and virtualization, and set Secure Boot to match the Talos image. Do the same on boxes 1 and 2, and **check their disks: all three nodes need an SSD or NVMe drive** (etcd runs on every node); replace any spinning disk with an inexpensive SATA SSD before step 2.2.
 
@@ -200,9 +200,9 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 1.1: Create the repos
 **Do:**
-- Rename this repo to **`wp-gitops`**. Create **`wp-infra`** and **`wp-image`** (`llm-summarizer` is created in Phase 2).
+- Create **`wp-gitops`**, **`wp-infra`** and **`wp-image`** (`llm-summarizer` is created in Phase 2). The project documentation stays in this repo, **`russetleaf-docs`** (ADR 1038).
 - In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a `LICENSE` if public, branch protection on `main` (pull requests and passing checks required).
-- In `wp-gitops`: the `docs/` tree with **architecture decision records**, using the template in `docs/adr/0000-template.md` (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template and **all ADRs (1001–1037, 2001–2003, 3001–3008)** already exist as drafts in this repo, each in the `adr/` folder of its phase; move the whole `docs/` tree with the other docs, and give a new ADR the next free number in its phase (e.g. 1038). Each ADR's **Open items** are finished in these steps:
+- In `russetleaf-docs`: the design, plans, roadmap, ADRs and spec template already exist (ADR template in `docs/adr/0000-template.md`). Record the big step 0.2 decisions as ADRs (the next number in the phase, e.g. 1039) and link them from the decision log. Operational docs (runbooks, SLO definitions, performance and security reports, Talos hardening notes) go in `docs/` of the repo that produces or uses them, mostly `wp-gitops`. Each ADR's **Open items** are finished in these steps:
 
 | ADR | Phase 1 steps | Phase 2 steps | Phase 3 steps |
 |---|---|---|---|
@@ -254,14 +254,15 @@ Record each answer in the [decision log](#decision-log).
 | 3006 On-demand demo stack and always-on edge | — | — | 1.2, 6.1 |
 | 3007 RDS for MariaDB behind RDS Proxy | — | — | 1.6, 3.1 |
 | 3008 Karpenter node pools | — | — | 1.5, 2.3 |
+| 1038 Separate documentation repo and docs site | 1.1 | — | — |
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo, scan each repo's **full history**, and then **make the repos public** (ADR 1030); turn on **secret scanning with push protection**.
 - **GitHub organisation settings** in `wp-infra/envs/github/` (Terraform's GitHub provider): default workflow token **read-only**, only verified or allow-listed Actions, branch protection and required reviews, environments, secret scanning with push protection.
 - Add **OpenSSF Scorecard** (weekly scheduled workflow) and **zizmor** (on workflow changes) to every repo, and GitHub's **dependency-review action** to the repos with dependencies (`wp-image`; `llm-summarizer` in Phase 2).
 - Add **Checkov** to every repo's CI from the start, scanning the **GitHub Actions workflows** (unpinned actions, over-broad `permissions`, script injection), with a `.checkov.yaml` per repo. Later steps add each repo's other targets (Terraform, manifests, Dockerfiles, charts). Skips must carry a reason. See [Infrastructure and configuration scanning](design.md#infrastructure-and-configuration-scanning-checkov).
 - Add **Renovate** to every repo (Helm charts, Terraform providers, base images, GitHub Actions, `.mise.toml`, and later Composer and Python lock files), with a shared configuration following the Phase 1 design's [Update strategy](design.md#update-strategy): a weekly schedule (security updates immediately), grouping per platform component, **auto-merge for patch updates** of platform charts, CLI tools and GitHub Actions once CI passes, the **Dependency Dashboard**, and custom version rules for Talos and Kubernetes versions in Terraform.
-- In `wp-gitops`: move the `docs/` tree (overview, the phase folders and the ADRs) into `wp-gitops/docs/`, and write the hub README (what the project is, links to all four repos).
+- In `russetleaf-docs`: confirm the **docs site** builds and publishes (GitHub Pages, from the `docs` workflow), optionally at **`docs.russetleaf.dev`** (a CNAME record in Cloudflare, managed in `wp-infra` later); keep its README as the project hub (what the project is, the phases, links to the site and all repos). Give each code repo a README linking to the site, and a pull-request template with a "docs updated?" checkbox.
 
-- **Track the plan on GitHub:** once this repo is `wp-gitops`, run `tools/plan_to_issues.py --phase-dir docs/phase-1-russetleaf-dev --repo <you>/wp-gitops` (a dry run), check its output, then run it again with `--apply` to create the roadmap's milestones, the labels and one issue per step. Create a public **GitHub Projects** board with the issues, a **Roadmap** view grouped by milestone, and fields for estimate and actual hours.
+- **Track the plan on GitHub:** run `tools/plan_to_issues.py --phase-dir docs/phase-1-russetleaf-dev --repo <you>/russetleaf-docs` (a dry run), check its output, then run it again with `--apply` to create the roadmap's milestones, the labels and one issue per step. Create a public **GitHub Projects** board with these issues (and later issues from the code repos), a **Roadmap** view grouped by milestone, and fields for estimate and actual hours.
 
 **Test:** each repo is public with a clean `gitleaks` history scan and push protection on; each repo has protected `main`, the secret scan and Checkov run on a test pull request (a workflow with `permissions: write-all` fails Checkov), and Renovate opens its onboarding pull request. The Projects board shows one issue per step in the roadmap's milestones, and running the script again creates nothing new.
 

@@ -1,0 +1,134 @@
+site_name: RussetLeaf
+site_description: Design, plans, roadmap and architecture decisions for a production-grade WordPress platform on Talos Kubernetes (and AWS EKS).
+site_url: https://smscully.github.io/russetleaf-docs/
+repo_url: https://github.com/smscully/russetleaf-docs
+repo_name: smscully/russetleaf-docs
+edit_uri: edit/main/docs/
+copyright: Steven Scully
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.action.edit
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep orange
+      accent: brown
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep orange
+      accent: brown
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - tables
+  - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.details
+  - pymdownx.tilde
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+  links:
+    not_found: warn
+    anchors: warn
+    unrecognized_links: warn
+
+nav:
+  - Home: index.md
+  - Overview: overview.md
+  - "Phase 1: russetleaf.dev":
+      - Design: phase-1-russetleaf-dev/design.md
+      - Plan: phase-1-russetleaf-dev/plan.md
+      - Roadmap: phase-1-russetleaf-dev/roadmap.md
+      - Disaster recovery: phase-1-russetleaf-dev/disaster-recovery.md
+      - Decisions:
+          - "1001 No service mesh (Istio not used)": phase-1-russetleaf-dev/adr/1001-no-service-mesh.md
+          - "1002 Media on S3, code in the image (not EFS)": phase-1-russetleaf-dev/adr/1002-s3-media-not-efs.md
+          - "1003 Kubescape as an on-demand CLI scan, not an in-cluster operator": phase-1-russetleaf-dev/adr/1003-kubescape-cli-not-operator.md
+          - "1004 GitHub Container Registry (GHCR) instead of Amazon ECR": phase-1-russetleaf-dev/adr/1004-ghcr-not-ecr.md
+          - "1005 Loki and Grafana Alloy for logs": phase-1-russetleaf-dev/adr/1005-loki-alloy-for-logs.md
+          - "1006 Distributed tracing with Tempo and OpenTelemetry": phase-1-russetleaf-dev/adr/1006-tempo-tracing.md
+          - "1007 Prowler for AWS account posture; Deepfence ThreatMapper not used": phase-1-russetleaf-dev/adr/1007-prowler-not-threatmapper.md
+          - "1008 Google sign-in (OIDC) for WordPress admins, plus an edge login layer": phase-1-russetleaf-dev/adr/1008-google-sign-in-for-admins.md
+          - "1009 seccomp everywhere; gVisor for CI runners (and WordPress if performance allows); Kata not used": phase-1-russetleaf-dev/adr/1009-gvisor-sandboxing.md
+          - "1010 Local storage with S3 backups; no Ceph (Rook) or Longhorn": phase-1-russetleaf-dev/adr/1010-local-storage-no-ceph.md
+          - "1011 Update strategy: Git-driven, risk-tiered updates with Renovate": phase-1-russetleaf-dev/adr/1011-update-strategy.md
+          - "1012 OpenCost for in-cluster allocation, AWS billing for actual costs, and how cost alerts flow": phase-1-russetleaf-dev/adr/1012-opencost-and-aws-billing.md
+          - "1013 Image supply chain: SLSA provenance, Semgrep for SAST, and the build pipeline's tools": phase-1-russetleaf-dev/adr/1013-image-supply-chain.md
+          - "1014 Availability levels: home lab without HA; AWS designed for HA but run as a demo": phase-1-russetleaf-dev/adr/1014-availability-levels.md
+          - "1015 Process allow-listing with Falco; AppArmor and SELinux not used; Tetragon and custom seccomp as stretch goals": phase-1-russetleaf-dev/adr/1015-process-allow-listing.md
+          - "1016 Rollback strategy: Git revert by default, automatic canary rollback, back up before schema changes": phase-1-russetleaf-dev/adr/1016-rollback-strategy.md
+          - "1017 Intrusion detection and prevention in layers": phase-1-russetleaf-dev/adr/1017-intrusion-detection-and-prevention.md
+          - "1018 Disaster recovery with off-account immutable copies and a break-glass kit": phase-1-russetleaf-dev/adr/1018-disaster-recovery.md
+          - "1019 Multi-account AWS structure aligned with the AWS Security Reference Architecture": phase-1-russetleaf-dev/adr/1019-aws-multi-account-sra.md
+          - "1020 Three-node home cluster with a highly available control plane": phase-1-russetleaf-dev/adr/1020-three-node-ha-home-cluster.md
+          - "1021 SLOs with error budgets that gate promotions; DORA metrics": phase-1-russetleaf-dev/adr/1021-slos-and-error-budgets.md
+          - "1022 Internal developer platform (Backstage, golden paths, multi-tenancy) and hub-and-spoke Argo CD": phase-1-russetleaf-dev/adr/1022-internal-developer-platform.md
+          - "1023 Reliability practice: scheduled chaos experiments and blameless postmortems": phase-1-russetleaf-dev/adr/1023-reliability-practice.md
+          - "1024 Performance and stress testing with k6, and a performance regression gate": phase-1-russetleaf-dev/adr/1024-performance-and-stress-testing.md
+          - "1025 A custom block theme built into the image; Site Editor locked in production": phase-1-russetleaf-dev/adr/1025-site-design-in-git.md
+          - "1026 No CPU limits by default; CPU limits only to protect a specific neighbour": phase-1-russetleaf-dev/adr/1026-cpu-limits.md
+          - "1027 Cilium as the network plugin on both clusters": phase-1-russetleaf-dev/adr/1027-cilium-cni.md
+          - "1028 Internal certificates with cert-manager and an internal CA": phase-1-russetleaf-dev/adr/1028-internal-pki.md
+          - "1029 On-demand, scale-to-zero staging on the home cluster": phase-1-russetleaf-dev/adr/1029-on-demand-staging.md
+          - "1030 GitHub Actions for CI/CD, public repositories early, and the runner strategy": phase-1-russetleaf-dev/adr/1030-github-actions-ci.md
+          - "1031 Kubernetes component hardening": phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md
+          - "1032 Security by layer (the 4 C's) and the remaining controls": phase-1-russetleaf-dev/adr/1032-security-by-layer.md
+          - "1033 Identity and access to the clusters": phase-1-russetleaf-dev/adr/1033-identity-and-access.md
+          - "1034 Kubernetes threat model coverage": phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md
+          - "1035 Platform security: admission resilience, cluster PKI, registry, observability access and VEX": phase-1-russetleaf-dev/adr/1035-platform-security.md
+          - "1036 Compliance frameworks and privacy": phase-1-russetleaf-dev/adr/1036-compliance-frameworks-and-privacy.md
+          - "1037 Build the project in three phases": phase-1-russetleaf-dev/adr/1037-project-phases.md
+          - "1038 Separate documentation repo, published as a docs site": phase-1-russetleaf-dev/adr/1038-documentation-repo-and-site.md
+  - "Phase 2: AI and MLOps":
+      - Design: phase-2-ai-mlops/design.md
+      - Plan: phase-2-ai-mlops/plan.md
+      - Decisions:
+          - "2001 Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback": phase-2-ai-mlops/adr/2001-mlops-lifecycle.md
+          - "2002 Summary pipeline: event-driven summarizer behind an LLM gateway": phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md
+          - "2003 Self-hosted model on box 2 (CPU llama.cpp), dedicated by taint": phase-2-ai-mlops/adr/2003-self-hosted-model-on-box-2.md
+  - "Phase 3: russetleaf.com":
+      - Design: phase-3-russetleaf-com/design.md
+      - Plan: phase-3-russetleaf-com/plan.md
+      - Decisions:
+          - "3001 kube-bench on EKS only; Talos checked with its own hardening checks and Trivy Operator": phase-3-russetleaf-com/adr/3001-kube-bench-eks-only.md
+          - "3002 Fine-tuning on the EKS GPU node pool, with the challenger served at home": phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md
+          - "3003 Cilium on EKS in chaining mode with the VPC CNI": phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md
+          - "3004 EKS component hardening": phase-3-russetleaf-com/adr/3004-eks-component-hardening.md
+          - "3005 EKS access through Identity Center, and the EKS audit-log archive": phase-3-russetleaf-com/adr/3005-eks-access-and-audit-logs.md
+          - "3006 russetleaf.com as an on-demand demo stack behind an always-on edge": phase-3-russetleaf-com/adr/3006-on-demand-demo-stack.md
+          - "3007 RDS for MariaDB behind RDS Proxy, with IAM authentication": phase-3-russetleaf-com/adr/3007-rds-mariadb-with-rds-proxy.md
+          - "3008 Karpenter for EKS nodes, with general and GPU node pools": phase-3-russetleaf-com/adr/3008-karpenter-node-pools.md
+  - Templates:
+      - ADR template: adr/0000-template.md
+      - Step spec template: specs/TEMPLATE.md

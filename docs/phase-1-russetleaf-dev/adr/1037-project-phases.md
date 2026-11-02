@@ -38,4 +38,4 @@ Build in **three phases**, each complete and demonstrable on its own, with its o
 - A phase turns out too large to finish: split it further rather than leaving it half done.
 
 ## Open items
-- Phase 1 step 1.1: move the `docs/` tree into `wp-gitops` with the other docs.
+- ~~Phase 1 step 1.1: move the `docs/` tree into `wp-gitops`~~: the docs stay in their own repo (ADR 1038).

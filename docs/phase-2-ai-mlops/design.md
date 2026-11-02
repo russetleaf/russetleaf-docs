@@ -3,7 +3,7 @@
 **Phase 2** adds **AI-generated post summaries** to russetleaf.dev, run as an event-driven, monitored and tested LLM service with an MLOps lifecycle: an LLM gateway in front of Amazon Bedrock and a self-hosted model, an evaluation gate in CI, experiment tracking and a model registry, guardrails, online evaluation and drift monitoring, and a feedback loop. It needs Phase 1 and is optional.
 
 - **Build plan:** [`plan.md`](plan.md)
-- **Decisions:** [`adr/`](adr/)
+- **Decisions:** this phase's ADRs, in the `adr/` folder and listed in the [overview's index](../overview.md#architecture-decision-records)
 - **Builds on:** [Phase 1 design](../phase-1-russetleaf-dev/design.md); shared design in [`../overview.md`](../overview.md)
 
 ## What Phase 2 adds to Phase 1
@@ -12,6 +12,27 @@
 - AWS resources in russetleaf-home: the **SQS** summary queue and dead-letter queue, **Bedrock** access with a budget, the **model mirror bucket**, and staging equivalents.
 - WordPress changes in `wp-image`: the **summary-queue must-use plugin**, the `wordpress_posts_without_summary` metric and its alert, the **AI summary box** in the theme, and the summarizer's application password.
 - Platform additions: KEDA, LiteLLM, MLflow and Argo Workflows, plus the AI rows in Phase 1's shared sections (policies, network rules, Falco rules, tracing, alerts, SLOs, costs); see [AI components in the shared platform](#ai-components-in-the-shared-platform).
+
+## Architecture
+
+### Containers (what Phase 2 adds)
+
+```mermaid
+flowchart LR
+  wp["WordPress<br/>(summary-queue plugin)"] -->|"post ID on publish"| sqs[["Amazon SQS<br/>+ dead-letter queue"]]
+  keda["KEDA"] -.->|"scales 0–N on queue depth"| sum
+  sqs --> sum["Post-summarizer pods"]
+  sum -->|"read post, save summary<br/>(REST API)"| wp
+  sum --> gw["LiteLLM gateway<br/>routing, fallback, canaries, budgets"]
+  gw --> bedrock["Amazon Bedrock<br/>Claude Haiku, Nova Lite"]
+  gw --> llama["llama.cpp (CPU)<br/>on box 2, the LLM node"]
+  mirror[("Model mirror bucket")] -->|"model file"| llama
+  mlflow["MLflow<br/>tracking and registry"] -->|"feeds"| mirror
+  wf["Argo Workflows<br/>online evaluation, data export"] --> mlflow
+  sum --> prom["Prometheus and Grafana<br/>LLM metrics, traces in Tempo"]
+  gw --> prom
+```
+
 
 ## AI post summaries
 
@@ -70,13 +91,15 @@ Prometheus also collects the gateway's metrics (requests, spend and fallbacks pe
 
 The summary pipeline covers the **whole machine-learning lifecycle**, not just inference: **data → training → evaluation → registry → deployment → monitoring → retraining**. The reasoning is recorded in `docs/phase-2-ai-mlops/adr/2001-mlops-lifecycle.md`.
 
-```
- feedback & production samples ─┐
-                                ▼
- DVC-versioned datasets ──► fine-tuning (Phase 3: spot GPU on EKS) ──► evaluation vs baseline
-        ▲                                                                                     │
-        │                                                                                     ▼
- online evaluation & drift ◄── production (gateway canary → champion) ◄── MLflow model registry (aliases)
+```mermaid
+flowchart LR
+  fb["Feedback and<br/>production samples"] --> data[("DVC-versioned<br/>datasets")]
+  data --> train["Fine-tuning<br/>(Phase 3: spot GPU on EKS)"]
+  train --> evalb["Evaluation<br/>against the base"]
+  evalb --> reg["MLflow model registry<br/>champion / challenger"]
+  reg --> prod["Production<br/>gateway canary → champion"]
+  prod --> online["Online evaluation<br/>and drift monitoring"]
+  online -->|"retraining triggers"| data
 ```
 
 ### Experiment tracking and model registry (MLflow)

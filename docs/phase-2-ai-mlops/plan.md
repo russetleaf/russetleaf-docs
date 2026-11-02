@@ -27,7 +27,7 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | **Models** | **Claude Haiku** (default) and **Amazon Nova Lite** on Bedrock, plus a 4-bit **3B model** (e.g. Qwen2.5-3B or Llama 3.2 3B) on box 2 with llama.cpp. | Sets the budgets, the evaluation set and box 2's memory use. |
 | **AWS access for the AI components** | Pod roles through the cluster's OIDC provider if Phase 1 step 9.1 (keyless AWS access) is done; otherwise scoped IAM keys, like the rest of Phase 1. | Avoids adding new static keys if they can be avoided. |
 
-ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture) and 2003 (self-hosted model on box 2), in [`adr/`](adr/).
+ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture) and 2003 (self-hosted model on box 2), in `adr/` (see the [overview's index](../overview.md#architecture-decision-records)).
 
 ## Stage 1: Foundations
 
