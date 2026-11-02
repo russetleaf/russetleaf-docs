@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** all four repos (and repos created from the golden-path template)
-- **Phase:** 1. Later: Phase 2 adds `llm-summarizer`; Phase 3 runs the demo workflows on the home runners.
+- **Phase:** 1. Later: Phase 2 adds `russetleaf-llm-summarizer`; Phase 3 runs the demo workflows on the home runners.
 
 ## Context
 The project needs CI for Terraform, manifests, images, charts, evaluation and promotion, plus scheduled workflows (scans, reports, demos). The code lives on GitHub. The repos were planned to stay **private** until the end (Phase 1 step 9.2), but GitHub's free plan gives private repos only about **2,000 Actions minutes a month** (check current limits), which image builds, kind clusters, scans and integration tests across four repos would use up quickly. Some jobs also need to reach the home cluster or a restricted EKS API.

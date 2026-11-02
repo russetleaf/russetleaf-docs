@@ -16,10 +16,10 @@ Design, plans, roadmap and architecture decisions for **RussetLeaf**, a producti
 | Repo | Purpose |
 |---|---|
 | `russetleaf-docs` (this repo) | Project documentation, planning issues and the docs site |
-| `wp-gitops` | What runs on the clusters (Argo CD's source of truth), plus runbooks and operational docs |
-| `wp-infra` | Terraform for AWS, Cloudflare and the Talos cluster |
-| `wp-image` | The custom WordPress image and its Helm chart |
-| `llm-summarizer` | The AI summarizer and its MLOps pipeline (Phase 2) |
+| `russetleaf-gitops` | What runs on the clusters (Argo CD's source of truth), plus runbooks and operational docs |
+| `russetleaf-infra` | Terraform for AWS, Cloudflare and the Talos cluster |
+| `russetleaf-wordpress` | The custom WordPress image and its Helm chart |
+| `russetleaf-llm-summarizer` | The AI summarizer and its MLOps pipeline (Phase 2) |
 
 The code repos are created in Phase 1 step 1.1 (and Phase 2 step 1.1).
 

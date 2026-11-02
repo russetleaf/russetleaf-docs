@@ -11,7 +11,7 @@ WordPress needs somewhere to keep `wp-content`: uploaded media, plus (traditiona
 This project is containerized and GitOps-managed. Images are signed and pinned by digest, Kyverno requires a read-only root filesystem, Falco alerts on writes to `/var/www/html`, and every change is promoted through ci and staging. The home lab has no EFS, and box 1 has little spare memory.
 
 ## Decision
-- **WordPress code** (core, plugins, themes) is **built into the container image** in the `wp-image` repo. Plugin installs and updates from the admin screen are disabled (`DISALLOW_FILE_MODS`).
+- **WordPress code** (core, plugins, themes) is **built into the container image** in the `russetleaf-wordpress` repo. Plugin installs and updates from the admin screen are disabled (`DISALLOW_FILE_MODS`).
 - **Media uploads go to S3** through an offload plugin, served through CloudFront on russetleaf.com and from S3 at home.
 - **No shared filesystem** is used on either site.
 

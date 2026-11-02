@@ -8,9 +8,9 @@ This plan covers recovering from losses bigger than a single bad change or faile
 
 | Asset | Primary location | Independent copy | Retention of the copy | Rebuildable instead? |
 |---|---|---|---|---|
-| Infrastructure | `wp-infra` (GitHub) | Repo mirror in the backup account | 90 days of daily bundles | Yes, from Terraform |
-| Deployed configuration | `wp-gitops` (GitHub) | Repo mirror in the backup account | 90 days | Yes, from GitOps |
-| Application code | `wp-image` (and `llm-summarizer` from Phase 2) (GitHub) | Repo mirrors in the backup account | 90 days | Yes |
+| Infrastructure | `russetleaf-infra` (GitHub) | Repo mirror in the backup account | 90 days of daily bundles | Yes, from Terraform |
+| Deployed configuration | `russetleaf-gitops` (GitHub) | Repo mirror in the backup account | 90 days | Yes, from GitOps |
+| Application code | `russetleaf-wordpress` (and `russetleaf-llm-summarizer` from Phase 2) (GitHub) | Repo mirrors in the backup account | 90 days | Yes |
 | Images and charts | GHCR | None needed | — | Yes, rebuilt from the mirrored source |
 | Terraform state | S3 state bucket (us-east-1, **russetleaf-infra** account) | **Replicated** to the backup account (us-west-2, Object Lock) | 30-day lock, versions kept 90 days | Partly (state can be re-imported, but slowly) |
 | russetleaf.dev database | MariaDB backups in S3 (us-east-1), every 6 hours | **Replicated** to the backup account (Object Lock) | 30-day lock | No |
@@ -52,7 +52,7 @@ Kept in your password manager, with a **printed copy** of the starred items stor
 
 | Scenario | Data lost (at most) | Time to recover | Procedure |
 |---|---|---|---|
-| **Any one box fails** (disk or hardware) | Seconds of database changes (replication lag) | About a minute for the site (failover); hours to replace the box | Nothing urgent: etcd keeps quorum, the virtual IP moves, MariaDB fails over to its replica, and WordPress, ingress and cloudflared keep running on the other nodes. If it was box 2, the gateway falls back to Bedrock. Repair or replace the box, re-apply `wp-infra/envs/home` for it, and let it rejoin; MariaDB rebuilds its replica. |
+| **Any one box fails** (disk or hardware) | Seconds of database changes (replication lag) | About a minute for the site (failover); hours to replace the box | Nothing urgent: etcd keeps quorum, the virtual IP moves, MariaDB fails over to its replica, and WordPress, ingress and cloudflared keep running on the other nodes. If it was box 2, the gateway falls back to Bedrock. Repair or replace the box, re-apply `russetleaf-infra/envs/home` for it, and let it rejoin; MariaDB rebuilds its replica. |
 | **Two boxes fail at once** | Up to 6 hours of database changes, if the remaining box doesn't hold a current database copy | Hours to a day | etcd loses quorum, so the cluster stops. Repair one box to restore quorum (or, if two are lost for good, recover etcd from the latest snapshot with `talosctl` on the remaining node, then rejoin new boxes); restore MariaDB from replication or the latest S3 backup. |
 | **Whole home lab destroyed** (fire, theft, flood) | 6 hours of database changes | 1–2 days (new hardware) | Using only the break-glass kit and the backups: get new hardware; follow the **bootstrap order** below. In Phase 3, russetleaf.com can be brought up as a temporary replacement in the meantime (`demo-up` and seed from the latest russetleaf.dev backup). |
 | **Workstation lost** | None | Hours | Set up a new workstation ([workstation setup](plan.md#local-workstation-setup-ubuntu-2404)); restore talosconfig, kubeconfig and logins from the break-glass kit; rotate anything that was stored only on the old machine. |
@@ -69,10 +69,10 @@ Kept in your password manager, with a **printed copy** of the starred items stor
 1. **Access:** password manager → break-glass kit → AWS (management account, then IAM Identity Center into the others), GitHub, Cloudflare, Google, registrar.
 2. **Code:** restore the four repos (from GitHub, or the mirrors in the backup account).
 3. **Terraform state:** use the russetleaf-infra state bucket, or copy it back from the Backup account.
-4. **Account foundations:** apply `wp-infra/envs/org/` (Organization, accounts, SCPs, Identity Center) and `envs/security/` (CloudTrail, GuardDuty, Security Hub, Config), then `bootstrap/` (state bucket, CI roles).
-5. **Home infrastructure:** apply `wp-infra/envs/home` (Talos on all three boxes, Cloudflare, the AWS resources used from home).
+4. **Account foundations:** apply `russetleaf-infra/envs/org/` (Organization, accounts, SCPs, Identity Center) and `envs/security/` (CloudTrail, GuardDuty, Security Hub, Config), then `bootstrap/` (state bucket, CI roles).
+5. **Home infrastructure:** apply `russetleaf-infra/envs/home` (Talos on all three boxes, Cloudflare, the AWS resources used from home).
 6. **Secrets:** create or regenerate the entries in Secrets Manager; create the External Secrets bootstrap credential.
-7. **GitOps:** install Argo CD and apply `wp-gitops/bootstrap/home`; let the platform come up in sync-wave order.
+7. **GitOps:** install Argo CD and apply `russetleaf-gitops/bootstrap/home`; let the platform come up in sync-wave order.
 8. **Data:** restore MariaDB from the latest backup (from russetleaf-home or the Backup account); confirm media is present (or copy it back).
 9. **Images:** if GHCR is unavailable, rebuild and re-sign the images from source, and update the version pins.
 10. **Checks:** site, admin sign-in, the summarizer (Phase 2), monitoring and alerts, backups running again.

@@ -31,9 +31,9 @@ ThreatMapper's management console bundles several databases and services; its do
 ## Decision
 - **Don't use ThreatMapper.**
 - **Use Prowler** (open source) to scan the AWS account against **CIS AWS Foundations**, **AWS Foundational Security Best Practices** and related checks:
-  - a **scheduled GitHub Actions workflow** in `wp-infra`, **monthly** (the account exists permanently), plus manual runs; it assumes a **read-only audit role** through GitHub OIDC (AWS's `SecurityAudit` and `ViewOnlyAccess` managed policies), so no keys are stored
+  - a **scheduled GitHub Actions workflow** in `russetleaf-infra`, **monthly** (the account exists permanently), plus manual runs; it assumes a **read-only audit role** through GitHub OIDC (AWS's `SecurityAudit` and `ViewOnlyAccess` managed policies), so no keys are stored
   - an extra run **once per AWS demo** with the demo stack up, to check EKS, RDS, the ALB and the rest while they exist
-  - reports kept as workflow artifacts, a summary committed to `wp-gitops/docs/security/`, and a short Slack message to `#rl-security` with the counts of failed high and critical checks
+  - reports kept as workflow artifacts, a summary committed to `russetleaf-gitops/docs/security/`, and a short Slack message to `#rl-security` with the counts of failed high and critical checks
   - accepted findings explained in the summary (e.g. checks that don't apply to a demo account)
 
 ## Alternatives considered

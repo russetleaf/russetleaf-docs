@@ -22,7 +22,7 @@ The design used OpenCost on both clusters (with Kubecost as an optional alternat
 - **Reports:**
   - a **weekly OpenCost allocation summary** for the home cluster, from a scheduled workflow on the in-cluster runners
   - a **per-demo actual-cost report** from **Cost Explorer** (grouped by `Site` and `Stack`), run daily because of Cost Explorer's ~24-hour lag, comparing actual cost per demo hour with the ~$1/hour estimate
-- **Activate the cost allocation tags** with Terraform (`aws_ce_cost_allocation_tag`) in `wp-infra/bootstrap/`.
+- **Activate the cost allocation tags** with Terraform (`aws_ce_cost_allocation_tag`) in `russetleaf-infra/bootstrap/`.
 
 ## Alternatives considered
 - **Kubecost (free tier or the EKS bundle):** adds billing reconciliation and built-in budget alerts, but runs more components (memory box 1 can't spare) and would differ between sites; the Cost Explorer report covers reconciliation more simply.

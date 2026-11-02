@@ -2,14 +2,14 @@
 
 - **Status:** Accepted (split from ADR 2001)
 - **Date:** 2026-11-02
-- **Applies to:** `llm-summarizer/training/`, the EKS GPU NodePool, the home MLflow registry and llama.cpp
+- **Applies to:** `russetleaf-llm-summarizer/training/`, the EKS GPU NodePool, the home MLflow registry and llama.cpp
 - **Phase:** 3 (needs Phase 2)
 
 ## Context
 ADR 2001 defines the MLOps lifecycle. Its training half, fine-tuning the small self-hosted model, needs a GPU, which only exists on EKS's spot GPU node pool. With the project in three phases (ADR 1037), fine-tuning can only happen once both Phase 2 (the lifecycle, registry and datasets) and Phase 3 (the GPU) exist.
 
 ## Decision
-- **A fine-tuning (distillation) pipeline** defined as an **Argo Workflows** template in `llm-summarizer/training/`, run on the EKS **spot GPU NodePool** during an AWS session: fetch the DVC-versioned dataset → **LoRA** fine-tune the 3B base model → **evaluate against the base** (including the adversarial cases) → convert to GGUF → **register** in the home MLflow as a `local-summarizer` version with its scores and lineage → propose it as **challenger** if it beats the base.
+- **A fine-tuning (distillation) pipeline** defined as an **Argo Workflows** template in `russetleaf-llm-summarizer/training/`, run on the EKS **spot GPU NodePool** during an AWS session: fetch the DVC-versioned dataset → **LoRA** fine-tune the 3B base model → **evaluate against the base** (including the adversarial cases) → convert to GGUF → **register** in the home MLflow as a `local-summarizer` version with its scores and lineage → propose it as **challenger** if it beats the base.
 - **Cross-account access:** the training role in russetleaf-com gets a narrow grant to write to the MLflow artifact and DVC buckets in russetleaf-home.
 - **Serving at home:** the challenger is deployed to box 2's llama.cpp, gets a canary share through the gateway, is compared with the champion by online evaluation, and is promoted only if it holds up for a week.
 - **Training data:** curated summaries from the feedback loop and the evaluation set, plus a stronger **teacher** model's outputs only where the provider's terms allow; otherwise an open-weights teacher.

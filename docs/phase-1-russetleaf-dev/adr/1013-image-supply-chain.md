@@ -2,8 +2,8 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-01
-- **Applies to:** `wp-image` and `llm-summarizer` (and Scorecard on all four repos)
-- **Phase:** 1 (`wp-image`). Later: Phase 2 builds `llm-summarizer` through the same pipeline.
+- **Applies to:** `russetleaf-wordpress` and `russetleaf-llm-summarizer` (and Scorecard on all four repos)
+- **Phase:** 1 (`russetleaf-wordpress`). Later: Phase 2 builds `russetleaf-llm-summarizer` through the same pipeline.
 
 ## Context
 The image pipelines already had gitleaks, Checkov, Trivy (critical vulnerabilities), WPScan, Syft SBOMs, cosign keyless signing, signed SBOM attestations and Rekor transparency-log entries, with Kyverno verifying signatures and SBOM attestations at admission. Missing were: language linting and application security analysis (SAST) for the project's own Python and PHP; dependency checks before the build; Dockerfile linting; deeper workflow security analysis; checks on the built image's properties; secrets baked into image layers; **build provenance** (how and where an image was built); in-pipeline verification of signatures; and an audit of the repos' own security practices.

@@ -48,7 +48,7 @@ flowchart LR
 
 > russetleaf.com exists once **Phase 3** is built; the rows about summaries, the gateway and models apply once **Phase 2** is built.
 
-The two sites are **fully independent**: each has its own URL, database, cache, media bucket, queues, secrets and content. Nothing is shared at runtime. What they share is how they're built: the same WordPress image (`wp-image`), the same summarizer chart (`llm-summarizer`), the same base manifests (`wp-gitops`) and the same Terraform modules (`wp-infra`). Each site's specifics (domain, endpoints, bucket names, queue URLs, secrets) live in its own overlay and Terraform environment.
+The two sites are **fully independent**: each has its own URL, database, cache, media bucket, queues, secrets and content. Nothing is shared at runtime. What they share is how they're built: the same WordPress image (`russetleaf-wordpress`), the same summarizer chart (`russetleaf-llm-summarizer`), the same base manifests (`russetleaf-gitops`) and the same Terraform modules (`russetleaf-infra`). Each site's specifics (domain, endpoints, bucket names, queue URLs, secrets) live in its own overlay and Terraform environment.
 
 | | **russetleaf.com** (AWS) | **russetleaf.dev** (home lab) |
 |---|---|---|
@@ -78,8 +78,8 @@ The two sites are **fully independent**: each has its own URL, database, cache, 
 | AWS resource tags | `Project=russetleaf`, `Site=com` | `Project=russetleaf`, `Site=dev` |
 | Self-hosted model | llama.cpp (CUDA build) on a Karpenter GPU node | llama.cpp (CPU build) on box 2 |
 | Bedrock | Same models through the gateway, with its own budget alert | Same models through the gateway, with its own budget alert |
-| Terraform environment (`wp-infra`) | `envs/aws-edge` (always on) + `envs/aws` (demo stack) | `envs/home` |
-| GitOps overlay (`wp-gitops`) | `overlays/aws` | `overlays/home` |
+| Terraform environment (`russetleaf-infra`) | `envs/aws-edge` (always on) + `envs/aws` (demo stack) | `envs/home` |
+| GitOps overlay (`russetleaf-gitops`) | `overlays/aws` | `overlays/home` |
 | Alerts (Slack) | `#rl-com-alerts` (+ `#rl-critical` for criticals) | `#rl-dev-alerts` (+ `#rl-critical` for criticals) |
 | Environments | prod only (demo); versions arrive after passing home staging and russetleaf.dev | local → ci → staging (on demand) → prod |
 | Availability | **Highly available design within one region while running** (EKS control plane, nodes across zones, RDS Multi-AZ, ElastiCache replica, multi-zone ALB, CloudFront), with two demo cuts (one NAT Gateway, one spot GPU node); runs **only during demos** | **Highly available for a single node failure**: three control-plane nodes, replicated MariaDB with automatic failover, WordPress, ingress and cloudflared spread across nodes; still **one home power supply and internet connection** |
@@ -160,7 +160,7 @@ The platform's own security (supply chain, registry, observability, mesh, PKI, m
 | Topic | How it's covered |
 |---|---|
 | **Supply chain security** | Signed images with SBOM and SLSA provenance, verified at admission and pinned by digest; signed charts; mirrored upstream images; Renovate, Scorecard, zizmor, gitleaks, Checkov; accepted vulnerabilities as signed **OpenVEX** statements. See [Supply chain and policy](phase-1-russetleaf-dev/design.md#supply-chain-and-policy). |
-| **Image repository** | GHCR, each package linked to its repo with write access only from that repo's Actions; images pinned by digest; a monthly **cleanup workflow** that never deletes a digest referenced in `wp-gitops` in the last 90 days or one of the last 10 releases. |
+| **Image repository** | GHCR, each package linked to its repo with write access only from that repo's Actions; images pinned by digest; a monthly **cleanup workflow** that never deletes a digest referenced in `russetleaf-gitops` in the last 90 days or one of the last 10 releases. |
 | **Observability** | Grafana through Cloudflare Access and Dex SSO; **two Loki tenants**, with the audit log and runtime-security events in a **Security** Grafana organization visible only to platform admins; Loki, Prometheus, Tempo and Alertmanager reachable only by Grafana, Alloy and Prometheus (network policies are their access control; none is exposed); token masking in logs. |
 | **Service mesh** | Not used (ADR 1001); its features are covered by Cilium (WireGuard, layer-7 policies, Hubble) and Argo Rollouts; Istio ambient tried as an experiment. |
 | **Kubernetes PKI** | Talos manages the cluster CAs and rotates leaf certificates; **kubelet serving certificates signed by the cluster CA** (no `--kubelet-insecure-tls` anywhere); certificate expiry alerts; a rehearsed **CA rotation runbook**; yearly talosconfig renewal; the internal CA for applications (ADR 1028). On EKS, AWS runs the cluster PKI. |
@@ -208,8 +208,8 @@ What each phase lets you show. Phase 1 on its own is a complete portfolio projec
 - **Self-hosted CI on Kubernetes:** ephemeral GitHub Actions runners managed by ARC, with fork pull requests gated for a public repo.
 - **Pod permissions without stored keys at home (ADR 1033):** publish the Talos cluster's service-account OIDC discovery files (e.g. in a public S3 bucket) and register them as an IAM OIDC provider. Pods such as WordPress (S3, SQS), the summarizer (SQS) and the gateway (Bedrock) then assume IAM roles without stored keys, just like IRSA on EKS. Until then, the home cluster uses narrowly scoped IAM user keys kept in Secrets Manager.
 - **A gated Terraform pipeline:** linting (tflint + AWS ruleset), Checkov with custom project policies, module tests, Infracost cost diffs, secret scanning with push protection, and approved applies of the exact reviewed plan through a GitHub Environment.
-- **Terraform for both sides, in one repo (`wp-infra`):** shared modules, plus separate root modules for russetleaf.com's always-on edge, its demo stack (including Karpenter and its NodePools), and the russetleaf.dev home lab (Talos provider `siderolabs/talos` for all three nodes' machine configs, Cloudflare provider for the tunnel, DNS and WAF rules, and the AWS pieces used from home). *(Completed by Phase 3.)*
-- **CI on GitHub in every repo:** Terraform checks and plans in `wp-infra`; manifest validation and Kyverno policy tests in `wp-gitops`; image builds with SBOMs, scans and signing in `wp-image` and `llm-summarizer`; and the prompt evaluation gate in `llm-summarizer`. Employers see all of it without the AWS stack running.
+- **Terraform for both sides, in one repo (`russetleaf-infra`):** shared modules, plus separate root modules for russetleaf.com's always-on edge, its demo stack (including Karpenter and its NodePools), and the russetleaf.dev home lab (Talos provider `siderolabs/talos` for all three nodes' machine configs, Cloudflare provider for the tunnel, DNS and WAF rules, and the AWS pieces used from home). *(Completed by Phase 3.)*
+- **CI on GitHub in every repo:** Terraform checks and plans in `russetleaf-infra`; manifest validation and Kyverno policy tests in `russetleaf-gitops`; image builds with SBOMs, scans and signing in `russetleaf-wordpress` and `russetleaf-llm-summarizer`; and the prompt evaluation gate in `russetleaf-llm-summarizer`. Employers see all of it without the AWS stack running.
 - **A highly available home cluster:** three Talos control-plane nodes with a virtual IP, replicated MariaDB with automatic failover, workloads spread across nodes, rolling upgrades without downtime, and recorded node-failure drills (unplug a node, the site stays up).
 - **An AWS Security Reference Architecture foundation:** separate management, security tooling, log archive, backup, infrastructure and workload accounts; SCP guardrails; centralized root access management; Identity Center with MFA; organization-wide Security Hub, GuardDuty, Config, Access Analyzer and CloudTrail, all in Terraform; and a Well-Architected review.
 - **Disaster recovery beyond a single account:** immutable, cross-account and cross-region copies (S3 Object Lock), daily repo mirrors, a break-glass kit, a written plan with scenarios and a bootstrap order, and a yearly full-rebuild drill.
@@ -225,7 +225,7 @@ What each phase lets you show. Phase 1 on its own is a complete portfolio projec
 - **Generative AI run like production software:** Bedrock integration with least-privilege IAM, event-driven scaling to zero, a dead-letter queue, and cost controls, with the same code running on both clusters.
 - **Model serving on Kubernetes:** a self-hosted model on dedicated nodes (labels, taints, tolerations, node selectors), behind an LLM gateway with routing, fallback, canary splits, rate limits and budgets, so no single model provider is a dependency.
 - **The full MLOps lifecycle:** MLflow experiment tracking and model registry with lineage, guardrails against prompt injection and personal-data leaks, online evaluation and drift alerts, a LoRA fine-tuning (distillation) pipeline on a spot GPU (Phase 3) with evaluation against the base model, DVC-versioned data, and an editor feedback loop.
-- **A standalone MLOps repo (`llm-summarizer`):** versioned prompts, an evaluation set, a CI gate that compares every model and blocks changes that lower summary quality, releases gated on evaluation, a model card, a published Helm chart, and a local demo anyone can run. It's the repo to link on a CV for AI and MLOps roles.
+- **A standalone MLOps repo (`russetleaf-llm-summarizer`):** versioned prompts, an evaluation set, a CI gate that compares every model and blocks changes that lower summary quality, releases gated on evaluation, a model card, a published Helm chart, and a local demo anyone can run. It's the repo to link on a CV for AI and MLOps roles.
 - **LLM monitoring:** token, latency, error, fallback and cost metrics per model and prompt version, plus model-server throughput, in Prometheus and Grafana, with alerts.
 
 ### Phase 3: russetleaf.com on EKS
@@ -272,37 +272,37 @@ The project's code is split across four Git repositories, by **what each one con
 
 | Repo | Purpose | Publishes | Who reads or writes it | Changes when |
 |---|---|---|---|---|
-| **`wp-gitops`** | The **source of truth for Argo CD**: everything that runs on both clusters (WordPress, monitoring, platform services, gateway, model server, summarizer settings), with `overlays/home` and `overlays/aws`. | Nothing; it's what Argo CD reads | Both Argo CD instances (read only); bots from `wp-image` and `llm-summarizer` open version-bump pull requests | Config or version changes (often) |
+| **`russetleaf-gitops`** | The **source of truth for Argo CD**: everything that runs on both clusters (WordPress, monitoring, platform services, gateway, model server, summarizer settings), with `overlays/home` and `overlays/aws`. | Nothing; it's what Argo CD reads | Both Argo CD instances (read only); bots from `russetleaf-wordpress` and `russetleaf-llm-summarizer` open version-bump pull requests | Config or version changes (often) |
 | **`russetleaf-docs`** | The **project documentation and hub**: the overview, phase designs, plans and roadmaps, all ADRs, step specs, the threat model, control matrix, strategy documents and postmortems; the planning issues, milestones and Projects board | The **docs site** (MkDocs on GitHub Pages) | Its own CI (a strict build that fails on broken links) | Every step (specs, ADRs, checklists, retros) |
-| **`wp-infra`** | All **Terraform**: shared modules, plus root modules for russetleaf.com (`envs/aws-edge`, always on; `envs/aws`, demo stack) and russetleaf.dev (`envs/home`) | Cloud and home infrastructure | Its own CI (the only place with cloud admin permissions), and you, locally | Infrastructure changes (rarely) |
-| **`wp-image`** | The **custom WordPress image**: plugins, themes, the SQS must-use plugin | Signed image + SBOM | Its own CI | Plugin, theme or WordPress updates |
-| **`llm-summarizer`** | The **standalone MLOps project**: summarizer code, prompts, evaluation set and gate, Helm chart, model card, local demo | Signed image + **Helm chart** (OCI), evaluation reports | Its own CI | Code, prompt or model-evaluation changes |
+| **`russetleaf-infra`** | All **Terraform**: shared modules, plus root modules for russetleaf.com (`envs/aws-edge`, always on; `envs/aws`, demo stack) and russetleaf.dev (`envs/home`) | Cloud and home infrastructure | Its own CI (the only place with cloud admin permissions), and you, locally | Infrastructure changes (rarely) |
+| **`russetleaf-wordpress`** | The **custom WordPress image**: plugins, themes, the SQS must-use plugin | Signed image + SBOM | Its own CI | Plugin, theme or WordPress updates |
+| **`russetleaf-llm-summarizer`** | The **standalone MLOps project**: summarizer code, prompts, evaluation set and gate, Helm chart, model card, local demo | Signed image + **Helm chart** (OCI), evaluation reports | Its own CI | Code, prompt or model-evaluation changes |
 
 ### Why four repos instead of one
-- **Config is kept separate from code** (standard Argo CD practice). Argo CD watches only `wp-gitops`, so building an image never triggers a deploy by accident, and every deploy is a reviewed commit in one place.
-- **Permissions stay limited by repo.** Only `wp-infra`'s CI can change cloud infrastructure. The image repos can push images and open pull requests, nothing more. Argo CD only reads.
+- **Config is kept separate from code** (standard Argo CD practice). Argo CD watches only `russetleaf-gitops`, so building an image never triggers a deploy by accident, and every deploy is a reviewed commit in one place.
+- **Permissions stay limited by repo.** Only `russetleaf-infra`'s CI can change cloud infrastructure. The image repos can push images and open pull requests, nothing more. Argo CD only reads.
 - **Each repo changes at its own pace**, with its own history, CI and releases.
-- **`llm-summarizer` stands on its own** as a CV piece for AI and MLOps roles: it can be understood, tested and deployed without the rest of the project.
+- **`russetleaf-llm-summarizer` stands on its own** as a CV piece for AI and MLOps roles: it can be understood, tested and deployed without the rest of the project.
 
 ### Why Terraform isn't split by environment
-The home lab's Terraform creates AWS resources too (S3, SQS, Secrets Manager, Bedrock IAM), and the AWS stack needs the same ones. Two Terraform repos would mean duplicating those modules or making one repo depend on the other. One `wp-infra` repo with **shared modules** and a **separate root module and state per environment** avoids both. Destroying the AWS demo never touches the home lab's state.
+The home lab's Terraform creates AWS resources too (S3, SQS, Secrets Manager, Bedrock IAM), and the AWS stack needs the same ones. Two Terraform repos would mean duplicating those modules or making one repo depend on the other. One `russetleaf-infra` repo with **shared modules** and a **separate root module and state per environment** avoids both. Destroying the AWS demo never touches the home lab's state.
 
 ### How the repos connect
 
 ```mermaid
 flowchart LR
   docs["russetleaf-docs<br/>design, plans, ADRs, roadmap"] -.->|"guides"| infra
-  infra["wp-infra<br/>Terraform: AWS, Cloudflare, Talos"] -->|"accounts, buckets, queues,<br/>IAM, the cluster"| clusters
-  image["wp-image"] -->|"build, scan, sign"| img[["image + chart (GHCR)"]]
-  llm["llm-summarizer<br/>(Phase 2)"] -->|"evaluation gate, build,<br/>scan, sign"| img
-  img -->|"bot pull request"| gitops["wp-gitops"]
+  infra["russetleaf-infra<br/>Terraform: AWS, Cloudflare, Talos"] -->|"accounts, buckets, queues,<br/>IAM, the cluster"| clusters
+  image["russetleaf-wordpress"] -->|"build, scan, sign"| img[["image + chart (GHCR)"]]
+  llm["russetleaf-llm-summarizer<br/>(Phase 2)"] -->|"evaluation gate, build,<br/>scan, sign"| img
+  img -->|"bot pull request"| gitops["russetleaf-gitops"]
   gitops --> argo["Argo CD"] --> clusters["Talos (Phase 1)<br/>EKS (Phase 3)"]
 ```
 
-### `wp-gitops`: the source of truth for Argo CD
+### `russetleaf-gitops`: the source of truth for Argo CD
 
 ```
-wp-gitops/
+russetleaf-gitops/
   README.md                 # what the repo does; links to the docs site and the other repos
   tools/plan_to_issues.py   # creates GitHub milestones, labels and one issue per step from a phase's plan and roadmap
   docs/
@@ -324,12 +324,12 @@ wp-gitops/
     aws/                    # root "app of apps" Application for EKS
   apps/                     # the applications, each with base + overlays/home (prod), overlays/home-staging,
                             #   overlays/aws, overlays/ci
-    wordpress/              # values for the wp-image Helm chart (version pinned), analysis templates
+    wordpress/              # values for the russetleaf-wordpress Helm chart (version pinned), analysis templates
                             #   (home: Prometheus/ingress-nginx; aws: CloudWatch/ALB)
     staging-data/           # Job: load the latest prod backup into staging MariaDB and scrub personal data
     db-setup/               # PreSync Job: create the wordpress DB user behind RDS Proxy (aws only)
     smoke-tests/            # Job: staging smoke tests (pages, uploads, summary end to end)
-    post-summarizer/        # values for the llm-summarizer Helm chart (chart version pinned), per environment:
+    post-summarizer/        # values for the russetleaf-llm-summarizer Helm chart (chart version pinned), per environment:
                             #   queue URL, gateway URL, scaling limits, IAM role
     seed-from-dev/          # one-off Job: load the latest russetleaf.dev backup + media into russetleaf.com
                             #   (aws only, manual sync)
@@ -389,9 +389,9 @@ wp-gitops/
     llm-gateway/            # LiteLLM + routing config: model list, fallbacks, canary weights, budgets
     llm-serving/            # llama.cpp model server, tolerations/node selector;
                             #   home: CPU build on box 2, aws: CUDA build on the GPU NodePool
-    actions-runner-controller/  # ARC + ephemeral self-hosted GitHub Actions runners (for llm-summarizer's
-                            #   evaluation gate and wp-gitops' staging-test workflow), running under gVisor
-    runtime-classes/        # gvisor RuntimeClass (home only; the Talos gVisor extension is in wp-infra)
+    actions-runner-controller/  # ARC + ephemeral self-hosted GitHub Actions runners (for russetleaf-llm-summarizer's
+                            #   evaluation gate and russetleaf-gitops' staging-test workflow), running under gVisor
+    runtime-classes/        # gvisor RuntimeClass (home only; the Talos gVisor extension is in russetleaf-infra)
   .github/workflows/        # render every overlay (Helm/Kustomize), validate against Kubernetes schemas
                             #   (kubeconform), run Kyverno CLI policy tests, promtool tests; install changed
                             #   platform components into kind; staging-test (on ARC runners); promote-to-prod; mirror-images
@@ -402,12 +402,12 @@ wp-gitops/
 - **App of apps:** each cluster gets one root Argo CD Application (`bootstrap/home` or `bootstrap/aws`) that points at the overlays for that environment. Argo CD then creates an Application for every app and platform service.
 - **Sync order:** use Argo CD **sync waves** so operators and CRDs come up before the things that need them: Cilium (adopted from Terraform's bootstrap install) and the `prometheus-operator-crds` chart first, then storage, External Secrets and Kyverno, then monitoring, KEDA, Argo Rollouts and the gateway, then WordPress and the summarizer. Start Kyverno policies in **audit mode** and switch them to enforce once everything passes.
 - **What's in `platform/` vs `apps/`:** `platform/` holds cluster services the applications depend on; `apps/` holds the applications themselves. Components marked "home only" exist only in the home overlays because AWS supplies a managed service in their place. Components marked "aws only" exist only in the AWS overlays because they don't apply to fixed home hardware or to Talos.
-- **Which model runs in production** is decided here, in `platform/llm-gateway/`. **Whether a model is good enough** is decided by the evaluation in `llm-summarizer`. A routing change should link to the evaluation report that justifies it.
+- **Which model runs in production** is decided here, in `platform/llm-gateway/`. **Whether a model is good enough** is decided by the evaluation in `russetleaf-llm-summarizer`. A routing change should link to the evaluation report that justifies it.
 
-### `wp-infra`: Terraform
+### `russetleaf-infra`: Terraform
 
 ```
-wp-infra/
+russetleaf-infra/
   bootstrap/                # applied once, locally (russetleaf-infra): S3 bucket for Terraform state; in each
                             #   account, the GitHub OIDC provider and CI roles (plan, apply, image push) and a
                             #   read-only audit role for Prowler
@@ -444,7 +444,7 @@ wp-infra/
                             #   Karpenter IAM + interruption queue, RDS (restored from the latest snapshot;
                             #   master password managed by RDS), RDS Proxy (IAM auth + TLS required),
                             #   ElastiCache, WAF, SQS, Budgets, plus the shared modules; installs Argo CD and
-                            #   points it at wp-gitops/bootstrap/aws; reads aws-edge outputs (zone, certificate,
+                            #   points it at russetleaf-gitops/bootstrap/aws; reads aws-edge outputs (zone, certificate,
                             #   secret header) from its remote state
     home/                   # russetleaf.dev: Talos machine configs (three control-plane nodes with a shared
                             #   virtual IP and system/kubelet reservations; TPM-sealed disk encryption, host
@@ -461,15 +461,15 @@ wp-infra/
 ```
 
 - **State:** every environment stores state in the S3 bucket in the **russetleaf-infra** account, under separate keys (CI roles in each account are granted access to their own keys only), using Terraform's built-in S3 state locking (`use_lockfile = true`, Terraform 1.10+; no DynamoDB table needed).
-- **CI permissions without stored keys:** GitHub Actions authenticates to AWS through **GitHub's OIDC provider**, in each target account (russetleaf-home, russetleaf-com, russetleaf-infra, and the security accounts for `envs/security`). Pull requests get a read-only *plan* role; the *apply* role trusts only the **`apply` GitHub Environment** (required reviewers, `main` only), which applies the **saved, reviewed plan**; see [Terraform pipeline](phase-1-russetleaf-dev/design.md#terraform-pipeline-wp-infra). The Cloudflare API token is a GitHub secret.
+- **CI permissions without stored keys:** GitHub Actions authenticates to AWS through **GitHub's OIDC provider**, in each target account (russetleaf-home, russetleaf-com, russetleaf-infra, and the security accounts for `envs/security`). Pull requests get a read-only *plan* role; the *apply* role trusts only the **`apply` GitHub Environment** (required reviewers, `main` only), which applies the **saved, reviewed plan**; see [Terraform pipeline](phase-1-russetleaf-dev/design.md#terraform-pipeline-russetleaf-infra). The Cloudflare API token is a GitHub secret.
 - **The home environment needs local network access:** the Talos provider talks to the boxes directly, which GitHub's hosted runners can't reach. Run the first `envs/home` apply from your own machine. After the cluster and ARC are up, later home applies can run on the in-cluster ARC runners.
 - **Why the AWS side has two environments:** `envs/aws-edge` holds what russetleaf.com needs even when the demo is down (DNS, CloudFront, the offline page, media), and is never destroyed. `envs/aws` holds the expensive demo stack and is created and destroyed for each demo. Destroying one can never touch the other's state.
 - **Tearing down the AWS demo:** delete the Argo CD Applications first (or scale the root app to nothing) so the AWS Load Balancer Controller removes the ALB, ExternalDNS removes `origin.russetleaf.com`, and Karpenter removes its nodes. Otherwise `terraform destroy` can hang on resources Terraform didn't create. `terraform destroy` then takes the final RDS snapshot that the next demo restores from.
 
-### `wp-image`: the WordPress image
+### `russetleaf-wordpress`: the WordPress image
 
 ```
-wp-image/
+russetleaf-wordpress/
   Dockerfile                # based on the official wordpress image, plugins and themes added, OPcache on,
                             #   RDS CA bundle
   db.php                    # database drop-in: IAM auth token mode (database.auth: iam) or plain password
@@ -507,50 +507,50 @@ wp-image/
                             #   misconfig), WPScan, kind integration tests; release: push by digest, cosign sign,
                             #   SBOM attestation, SLSA provenance, verify, release notes with Rekor links;
                             #   weekly scheduled rebuild + WPScan run + OpenSSF Scorecard, push image
-                            #   + chart to GHCR, open a version-bump pull request on wp-gitops (staging overlay)
+                            #   + chart to GHCR, open a version-bump pull request on russetleaf-gitops (staging overlay)
 ```
 
 ### Release and promotion flow
-1. A change is merged in `wp-image` or `llm-summarizer` after its unit tests and **ci** kind-cluster tests pass (for `llm-summarizer`, a release tag such as `v1.4.0`, after the evaluation gate passes).
+1. A change is merged in `russetleaf-wordpress` or `russetleaf-llm-summarizer` after its unit tests and **ci** kind-cluster tests pass (for `russetleaf-llm-summarizer`, a release tag such as `v1.4.0`, after the evaluation gate passes).
 2. CI builds the image (and chart), generates the SBOM, scans it, signs it with cosign, and pushes it to the registry.
-3. The bot opens a pull request on `wp-gitops` that changes only the version in **`overlays/home-staging`**, linking the release notes (and, for the summarizer, the evaluation report). It merges automatically once `wp-gitops` CI (rendering, schema checks, Kyverno policy tests) passes.
+3. The bot opens a pull request on `russetleaf-gitops` that changes only the version in **`overlays/home-staging`**, linking the release notes (and, for the summarizer, the evaluation report). It merges automatically once `russetleaf-gitops` CI (rendering, schema checks, Kyverno policy tests) passes.
 4. The `staging-test` workflow creates staging, loads scrubbed data, runs the smoke tests and a short soak, then deletes staging again (see [Environments and promotion](phase-1-russetleaf-dev/design.md#environments-and-promotion)).
 5. If staging passed, the bot opens a pull request bumping the version in **`overlays/home`** and **`overlays/aws`**, with the staging results attached. You review and merge.
 6. Argo CD syncs the home cluster. Argo Rollouts runs the canary and rolls back automatically if its checks fail. The AWS overlay uses the same versions, so the next AWS demo deploys exactly what's running at home.
 
-**Bot identity:** use a **GitHub App** (preferred) or a fine-grained personal access token that can only open (and, for staging bumps, auto-merge) pull requests on `wp-gitops`, stored as a secret in `wp-image` and `llm-summarizer`. Argo CD Image Updater is an alternative, but bot pull requests keep every deploy reviewable.
+**Bot identity:** use a **GitHub App** (preferred) or a fine-grained personal access token that can only open (and, for staging bumps, auto-merge) pull requests on `russetleaf-gitops`, stored as a secret in `russetleaf-wordpress` and `russetleaf-llm-summarizer`. Argo CD Image Updater is an alternative, but bot pull requests keep every deploy reviewable.
 
 ### Who can do what
 
 | Identity | Access |
 |---|---|
-| `wp-infra` CI | AWS through GitHub OIDC: read-only *plan* role on pull requests, *apply* role on `main`; Cloudflare API token |
-| `wp-image` CI | Push to the image registry; cosign keyless signing (GitHub OIDC); pull requests on `wp-gitops` via the bot |
-| `llm-summarizer` CI | Push images and charts; cosign keyless signing; pull requests on `wp-gitops` via the bot; evaluation runs on in-cluster ARC runners, which call Bedrock through the gateway |
-| Argo CD (both clusters) | Read `wp-gitops` and pull charts and images (public repos and public GHCR packages need no credentials; GHCR packages are private by default, even in public repos, so make them public separately or provide credentials) |
+| `russetleaf-infra` CI | AWS through GitHub OIDC: read-only *plan* role on pull requests, *apply* role on `main`; Cloudflare API token |
+| `russetleaf-wordpress` CI | Push to the image registry; cosign keyless signing (GitHub OIDC); pull requests on `russetleaf-gitops` via the bot |
+| `russetleaf-llm-summarizer` CI | Push images and charts; cosign keyless signing; pull requests on `russetleaf-gitops` via the bot; evaluation runs on in-cluster ARC runners, which call Bedrock through the gateway |
+| Argo CD (both clusters) | Read `russetleaf-gitops` and pull charts and images (public repos and public GHCR packages need no credentials; GHCR packages are private by default, even in public repos, so make them public separately or provide credentials) |
 | `staging-test` workflow (ARC runners) | An Argo CD account limited to the staging project (sync and delete staging Applications only); posts to `#rl-staging` |
-| Kyverno | Admits only images signed by the `wp-image` and `llm-summarizer` release workflows (cosign keyless: GitHub OIDC issuer `https://token.actions.githubusercontent.com`, subject matching each repo's release workflow on `main` or a tag) and carrying their signed SBOM and SLSA provenance attestations; verifies upstream publishers' signatures where they sign |
+| Kyverno | Admits only images signed by the `russetleaf-wordpress` and `russetleaf-llm-summarizer` release workflows (cosign keyless: GitHub OIDC issuer `https://token.actions.githubusercontent.com`, subject matching each repo's release workflow on `main` or a tag) and carrying their signed SBOM and SLSA provenance attestations; verifies upstream publishers' signatures where they sign |
 
 ### Making a change that spans repos
 Work **infrastructure first, then code, then config**, so nothing is deployed before what it depends on exists. Example: the summarizer needs a new SQS queue.
-1. `wp-infra`: add the queue and its IAM permission; merge and apply.
-2. `llm-summarizer`: add support for it in code; release.
-3. `wp-gitops`: merge the bot's chart-bump pull request and add the new queue URL to the values for each environment.
+1. `russetleaf-infra`: add the queue and its IAM permission; merge and apply.
+2. `russetleaf-llm-summarizer`: add support for it in code; release.
+3. `russetleaf-gitops`: merge the bot's chart-bump pull request and add the new queue URL to the values for each environment.
 
 ### Building it from scratch
 **russetleaf.dev home lab (once):**
-1. `wp-infra/bootstrap`: apply locally to create the Terraform state bucket and the GitHub OIDC roles.
-2. `wp-infra/envs/home`: apply locally to create the Talos cluster on all three boxes, the Cloudflare tunnel and DNS for russetleaf.dev, and the AWS resources used from home. Save the kubeconfig and talosconfig it produces somewhere safe (not in Git).
-3. Install Argo CD once with Helm, then apply `wp-gitops/bootstrap/home`. From then on, Argo CD manages everything else, including itself if you add Argo CD to `platform/`.
+1. `russetleaf-infra/bootstrap`: apply locally to create the Terraform state bucket and the GitHub OIDC roles.
+2. `russetleaf-infra/envs/home`: apply locally to create the Talos cluster on all three boxes, the Cloudflare tunnel and DNS for russetleaf.dev, and the AWS resources used from home. Save the kubeconfig and talosconfig it produces somewhere safe (not in Git).
+3. Install Argo CD once with Helm, then apply `russetleaf-gitops/bootstrap/home`. From then on, Argo CD manages everything else, including itself if you add Argo CD to `platform/`.
 4. Add the secrets the cluster needs to AWS Secrets Manager (WordPress admin and application passwords; **not** the database passwords, which MariaDB Operator generates; Cloudflare tunnel token, scoped IAM keys for home until the OIDC stretch goal is done); External Secrets syncs them in.
 
 **russetleaf.com always-on edge (once):**
 1. If russetleaf.com is registered outside Route 53, point the domain's name servers at the Route 53 hosted zone after the first apply.
-2. `terraform apply` in `wp-infra/envs/aws-edge`. This creates the hosted zone, certificates, CloudFront distribution, offline page and media bucket.
+2. `terraform apply` in `russetleaf-infra/envs/aws-edge`. This creates the hosted zone, certificates, CloudFront distribution, offline page and media bucket.
 3. Check that russetleaf.com shows the offline page with a link to russetleaf.dev.
 
-**russetleaf.com demo (each time):** run the `demo-up` and `demo-down` workflows in `wp-infra`, which perform these steps:
-1. `terraform apply` in `wp-infra/envs/aws`. This creates the stack (restoring RDS from the latest snapshot) and installs Argo CD pointed at `wp-gitops/bootstrap/aws`.
+**russetleaf.com demo (each time):** run the `demo-up` and `demo-down` workflows in `russetleaf-infra`, which perform these steps:
+1. `terraform apply` in `russetleaf-infra/envs/aws`. This creates the stack (restoring RDS from the latest snapshot) and installs Argo CD pointed at `russetleaf-gitops/bootstrap/aws`.
 2. Wait for Argo CD to sync. Once ExternalDNS creates `origin.russetleaf.com`, russetleaf.com switches from the offline page to the live site on its own, and the workflow posts "demo started" to `#rl-com-alerts`. Demo.
 3. Silence russetleaf.com's alerts in Alertmanager, remove the Argo CD Applications (the ALB and `origin.russetleaf.com` are deleted, and russetleaf.com falls back to the offline page), then `terraform destroy` in `envs/aws`, and post "demo stopped" to `#rl-com-alerts`. Never destroy `envs/aws-edge`.
 
@@ -578,7 +578,7 @@ russetleaf-docs/
 
 **Where a document goes:** if it describes the whole project, a decision or a plan, it lives here; if it changes with one repo's code or is produced by its workflows (runbooks, SLO definitions, chaos results, performance and security reports, Talos hardening notes), it lives in that repo's `docs/`, and this site links to it. Each code repo's pull-request template asks whether the docs need updating.
 
-**History:** this repo began as `private-test-wordpress`, a test deployment of the Bitnami WordPress chart, and was renamed `russetleaf-docs` on 2026-11-02 once it held only documentation. `wp-gitops` is created fresh in Phase 1 step 1.1, and the old test cluster (with its test Argo CD Application) is replaced when box 1 is reinstalled in step 2.2.
+**History:** this repo began as `private-test-wordpress`, a test deployment of the Bitnami WordPress chart, and was renamed `russetleaf-docs` on 2026-11-02 once it held only documentation. `russetleaf-gitops` is created fresh in Phase 1 step 1.1, and the old test cluster (with its test Argo CD Application) is replaced when box 1 is reinstalled in step 2.2.
 
 **Keeping versions current:** enable **Renovate** (or Dependabot) on all five repos, for Helm chart versions, Terraform providers, base images, plugins and GitHub Actions. Each update then arrives as a pull request that goes through the same CI.
 

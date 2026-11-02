@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-02
-- **Applies to:** russetleaf.com's database, `wp-image`'s `db.php` drop-in, `wp-infra/envs/aws`
+- **Applies to:** russetleaf.com's database, `russetleaf-wordpress`'s `db.php` drop-in, `russetleaf-infra/envs/aws`
 - **Phase:** 3
 
 ## Context

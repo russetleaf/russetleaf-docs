@@ -9,11 +9,11 @@
 russetleaf.dev is the project's public face, so it needs a custom design and a logo rather than a default theme. Modern WordPress **block themes** can be customized in the admin **Site Editor**, but those changes are stored **in the database**, not in files. That would let the live design drift from Git and bypass review, signing, staging and promotion, contradicting ADR 1002 (code in the image, nothing changed in production).
 
 ## Decision
-- A project block theme, **`russetleaf`**, in `wp-image/themes/russetleaf/`, built into the image.
+- A project block theme, **`russetleaf`**, in `russetleaf-wordpress/themes/russetleaf/`, built into the image.
 - **Design locally** (Docker Compose WordPress, Site Editor, AI assistance), then **export to files** with the **Create Block Theme** plugin and commit; the plugin is used only locally, not in the production image.
 - **Lock the Site Editor in production** with a must-use plugin that removes the capability to change templates and global styles.
 - **AI-assisted design:** Claude generates the theme from a brief and iterates from screenshots; the **logo** is an SVG (mark plus wordmark), preferably written directly as vector code, with derived icons, an Open Graph image and the theme palette; image generators only for concept exploration, followed by vectorizing. Check generator terms, copyright limits on AI-generated images, and trademarks before public use.
-- **Front-end quality gates:** Playwright visual regression, axe-core accessibility checks and Lighthouse CI budgets in `wp-image` CI and the staging gate.
+- **Front-end quality gates:** Playwright visual regression, axe-core accessibility checks and Lighthouse CI budgets in `russetleaf-wordpress` CI and the staging gate.
 
 ## Alternatives considered
 - **A marketplace or third-party theme:** quick, but generic, often bundles page builders and its own update cycle, and rarely matches the read-only, minimal-plugin design.

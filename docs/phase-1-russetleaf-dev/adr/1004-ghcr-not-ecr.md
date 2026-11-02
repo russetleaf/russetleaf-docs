@@ -8,14 +8,14 @@
 
 > **Update (ADR 1030):** The repos are now made **public early** (ADR 1030), so the GHCR packages are made public at first push: no private-package storage limit and no pull secrets are needed. The private-package mitigations below apply only if a repo has to stay private.
 ## Context
-The project builds two images, each with a Helm chart published as an OCI artifact: the WordPress image (`wp-image`) and the post-summarizer (`llm-summarizer`). Both sites must pull them:
+The project builds two images, each with a Helm chart published as an OCI artifact: the WordPress image (`russetleaf-wordpress`) and the post-summarizer (`russetleaf-llm-summarizer`). Both sites must pull them:
 - **russetleaf.dev** runs 24/7 on a home Talos cluster, **outside AWS**.
 - **russetleaf.com** runs on EKS only during demos.
 
 Images are built and signed (cosign keyless) in GitHub Actions, and Kyverno only admits images signed by those workflows and pulled from allowed registries. ~~The repos are private while being built and become public later (Phase 1 step 9.2).~~ **Superseded by ADR 1030:** the repos are made public early (step 1.1).
 
 ## Decision
-Use **GHCR** for all project images and charts: `ghcr.io/<github-user>/wp-image` and `ghcr.io/<github-user>/llm-summarizer`. Both sites pull from GHCR. On AWS, an **ECR pull-through cache** in front of GHCR is optional.
+Use **GHCR** for all project images and charts: `ghcr.io/<github-user>/russetleaf-wordpress` and `ghcr.io/<github-user>/russetleaf-llm-summarizer`. Both sites pull from GHCR. On AWS, an **ECR pull-through cache** in front of GHCR is optional.
 
 Reasons, in order of importance:
 1. **The home cluster runs outside AWS.** Private ECR needs AWS credentials, and ECR login tokens **expire every 12 hours**, so the home cluster would need a job or credential helper refreshing its pull secret, which can quietly break pulls. Public GHCR packages need no credentials.

@@ -2,7 +2,7 @@
 
 - **Status:** Accepted; fine-tuning split out to ADR 3002
 - **Date:** 2026-11-01
-- **Applies to:** `llm-summarizer`, the LLM gateway and the self-hosted model, on both sites
+- **Applies to:** `russetleaf-llm-summarizer`, the LLM gateway and the self-hosted model, on both sites
 - **Phase:** 2. Fine-tuning is in Phase 3 (ADR 3002).
 
 > **Update (ADR 3002):** the project is now built in three phases (ADR 1037). This ADR is Phase 2's. **Fine-tuning** (the distillation pipeline and deploying a fine-tuned challenger) needs a GPU, so it moved to Phase 3 and is recorded in ADR 3002; the rest of the lifecycle below runs at home in Phase 2.
@@ -17,7 +17,7 @@ The summary pipeline already had strong **inference-side** practices (often call
 - a feedback loop
 
 ## Decision
-- **MLflow** (on the home cluster; MariaDB for metadata, S3 for artifacts) for experiment tracking and a **model registry**, with `summarizer-config` and `local-summarizer` registered models, `champion` and `challenger` aliases, and promotion through reviewed `wp-gitops` pull requests.
+- **MLflow** (on the home cluster; MariaDB for metadata, S3 for artifacts) for experiment tracking and a **model registry**, with `summarizer-config` and `local-summarizer` registered models, `champion` and `challenger` aliases, and promotion through reviewed `russetleaf-gitops` pull requests.
 - **Guardrails** in the summarizer: injection-resistant prompting, output validation, personal-data redaction before calls leave the cluster, adversarial evaluation cases, and guardrail metrics and alerts.
 - **Online evaluation and drift monitoring:** a daily sampled scoring job (Argo Workflows) logging to MLflow and Prometheus, with `SummaryQualityDegraded` and `InputDriftDetected` alerts.
 - **Argo Workflows** as the workflow engine for the online evaluation and the nightly data export (and, in Phase 3, the fine-tuning pipeline; ADR 3002): Kubernetes-native (each step a pod, so it uses the cluster's scheduling, GPU node pool, policies and monitoring), defined as YAML in Git and synced by Argo CD, light (a controller and a server, about 0.2–0.3 GB), and part of the Argo family the project already uses.

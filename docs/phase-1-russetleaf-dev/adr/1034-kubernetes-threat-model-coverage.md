@@ -28,7 +28,7 @@ Four had gaps:
   - **API server throttling:** keep Kubernetes' **API Priority and Fairness** defaults, and alert (`KubeAPIRequestsRejected`) when the API server rejects requests because of it.
 - **Privilege escalation through RBAC:**
   - A Kyverno policy **rejects** Roles and ClusterRoles that grant `escalate`, `bind` or `impersonate`, access to `nodes/proxy`, or wildcard verbs or resources, and bindings to `cluster-admin`, except for a named allow-list (Kubernetes' own roles, Argo CD, the `platform-admin` role, and third-party components that genuinely need them, each with a reason).
-  - **CI:** `wp-gitops` runs Kubescape's RBAC controls on the rendered manifests, so a chart upgrade that adds a risky permission fails the pull request or needs an accepted-finding entry.
+  - **CI:** `russetleaf-gitops` runs Kubescape's RBAC controls on the rendered manifests, so a chart upgrade that adds a risky permission fails the pull request or needs an accepted-finding entry.
   - **Live review:** the monthly Kubescape scan lists who can create pods, read Secrets or reach nodes in each namespace; accepted findings are recorded in `docs/security/rbac-accepted.yaml`.
 - **Exfiltration test:** the network-policy tests include trying to send data from each application pod to an unlisted destination (blocked, and visible in Hubble).
 

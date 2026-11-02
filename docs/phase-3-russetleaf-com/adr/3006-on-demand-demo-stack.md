@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-02
-- **Applies to:** russetleaf.com, `wp-infra/envs/aws-edge` and `envs/aws`, the demo workflows
+- **Applies to:** russetleaf.com, `russetleaf-infra/envs/aws-edge` and `envs/aws`, the demo workflows
 - **Phase:** 3
 
 ## Context

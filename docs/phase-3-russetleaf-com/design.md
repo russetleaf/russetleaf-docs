@@ -102,20 +102,20 @@ The one uncertain part of this design is whether **PHP's MariaDB client (mysqlnd
 | Connection pooling, fast failover, TLS | Yes | Yes (still through RDS Proxy) |
 | Chart setting | `database.auth: iam` | `database.auth: password` (the same mode the home lab uses) |
 
-Switching between the two is an **overlay change** in `wp-gitops` (`database.auth` and the credential source) plus the proxy's auth setting in `wp-infra`; the WordPress image supports both.
+Switching between the two is an **overlay change** in `russetleaf-gitops` (`database.auth` and the credential source) plus the proxy's auth setting in `russetleaf-infra`; the WordPress image supports both.
 - **Cost:** RDS Proxy is billed per vCPU of the database instance, about $0.015 per vCPU-hour: roughly **$0.03/hour** for a db.t4g.medium (pennies per demo; about $22/month if it ran 24/7).
 
 ### How it fits the repos
 
 | Repo | What changes |
 |---|---|
-| `wp-image` | The `db.php` drop-in (IAM token mode) and a chart setting **`database.auth: password | iam`** (default `password`), plus the RDS CA certificate bundle for TLS |
-| `wp-infra` | russetleaf.com: RDS Proxy (IAM required, TLS required), the `wordpress` secret and the proxy's role to read it, `manage_master_user_password`, `rds-db:connect` on the WordPress and seed-Job roles |
-| `wp-gitops` `overlays/aws` | `database.auth: iam`, the proxy endpoint, the `db-setup` PreSync Job, CiliumNetworkPolicy allowing WordPress → the proxy endpoint (by DNS name) |
-| `wp-gitops` `overlays/home`, `overlays/home-staging` | `database.auth: password`, pointing at the MariaDB Operator-generated Secret |
-| `wp-gitops` `base/` | Unchanged, except that **no database credential source lives in the base**: each overlay supplies its own |
+| `russetleaf-wordpress` | The `db.php` drop-in (IAM token mode) and a chart setting **`database.auth: password | iam`** (default `password`), plus the RDS CA certificate bundle for TLS |
+| `russetleaf-infra` | russetleaf.com: RDS Proxy (IAM required, TLS required), the `wordpress` secret and the proxy's role to read it, `manage_master_user_password`, `rds-db:connect` on the WordPress and seed-Job roles |
+| `russetleaf-gitops` `overlays/aws` | `database.auth: iam`, the proxy endpoint, the `db-setup` PreSync Job, CiliumNetworkPolicy allowing WordPress → the proxy endpoint (by DNS name) |
+| `russetleaf-gitops` `overlays/home`, `overlays/home-staging` | `database.auth: password`, pointing at the MariaDB Operator-generated Secret |
+| `russetleaf-gitops` `base/` | Unchanged, except that **no database credential source lives in the base**: each overlay supplies its own |
 
-The WordPress Rollout, Service, HPA and the rest of the base are the same for both sites; only where the credential comes from differs, which is exactly what overlays are for. A `wp-image` release adding the drop-in goes through ci → staging → prod like any other.
+The WordPress Rollout, Service, HPA and the rest of the base are the same for both sites; only where the credential comes from differs, which is exactly what overlays are for. A `russetleaf-wordpress` release adding the drop-in goes through ci → staging → prod like any other.
 
 **Interview angle:** in the cloud, the database trusts **IAM identities**, so the application has no secret at all; self-hosted, you can't remove every secret, so you **minimize, generate, isolate and rotate** them.
 
@@ -126,7 +126,7 @@ This extends Phase 2's MLOps lifecycle with the one part that needs a GPU (ADR 3
 ### Fine-tuning pipeline (distillation)
 - **Goal:** improve the small self-hosted model by **fine-tuning** it (LoRA) on high-quality example summaries, then compare it with the base model.
 - **Training data:** curated summaries from the feedback loop and the evaluation set, plus summaries from a stronger **teacher** model. **Check the teacher's terms first:** some model providers' terms restrict using their outputs to train other models. An **open-weights teacher** (e.g. a larger open model run on the GPU) avoids the question.
-- **The pipeline**, defined as an **Argo Workflows** template in `llm-summarizer/training/` and run on **EKS's GPU NodePool** during an AWS session (spot GPU; a few dollars per run): fetch the versioned dataset (DVC) → fine-tune (LoRA) → **evaluate against the base model** on the evaluation set (including the adversarial cases) → convert to GGUF → **register** in MLflow as a `local-summarizer` version with its scores → if it beats the champion, propose it as the **challenger**.
+- **The pipeline**, defined as an **Argo Workflows** template in `russetleaf-llm-summarizer/training/` and run on **EKS's GPU NodePool** during an AWS session (spot GPU; a few dollars per run): fetch the versioned dataset (DVC) → fine-tune (LoRA) → **evaluate against the base model** on the evaluation set (including the adversarial cases) → convert to GGUF → **register** in MLflow as a `local-summarizer` version with its scores → if it beats the champion, propose it as the **challenger**.
 - **Deployment:** the challenger enters the gateway **canary** at home; online evaluation compares it with the champion; promotion to champion is a reviewed pull request.
 - **Retraining triggers:** online quality dropping, enough new feedback accumulating, or a new base model.
 
@@ -142,8 +142,8 @@ These are illustrative russetleaf.com (AWS overlay) values for the project's own
 
 ```yaml
 image:
-  repository: ghcr.io/<github-user>/wp-image
-  tag: "1.0.0"                     # bumped by the wp-image release bot
+  repository: ghcr.io/<github-user>/russetleaf-wordpress
+  tag: "1.0.0"                     # bumped by the russetleaf-wordpress release bot
 
 site:
   url: https://russetleaf.com      # sets WP_HOME and WP_SITEURL
@@ -263,7 +263,7 @@ Summarizing an existing back catalog is a one-time cost: about **$0.40 for 100 p
 When the EKS demo stack isn't running, **russetleaf.com must still answer** with a simple static page, served by CloudFront, that says the AWS demo is offline and links visitors to **russetleaf.dev**. It must switch to the offline page **automatically** when the stack is destroyed, and back to the live site automatically when the stack comes up, with no manual DNS changes.
 
 ### Mechanism: an always-on CloudFront edge with error fallback (recommended)
-Split the AWS Terraform into two root modules in `wp-infra`:
+Split the AWS Terraform into two root modules in `russetleaf-infra`:
 - **`envs/aws-edge` (always on, ~$1/month):** the Route 53 hosted zone for russetleaf.com, ACM certificates, the CloudFront distribution, the S3 bucket holding the offline page, the russetleaf.com **media bucket**, the **model mirror bucket**, and the secret header value CloudFront sends to the ALB.
 - **`envs/aws` (demo stack):** everything else (VPC, EKS, Karpenter, RDS, ElastiCache, WAF, SQS, ...). The ALB itself is created by the AWS Load Balancer Controller from the WordPress Ingress, and **ExternalDNS** creates the `origin.russetleaf.com` record pointing at it.
 
@@ -294,7 +294,7 @@ This also works for any HTTP method (logins and form posts get the offline page 
 Each demo creates a new RDS instance, so content needs a plan:
 - **Final snapshot on destroy (recommended):** set `skip_final_snapshot = false` on the RDS instance, and have the next `terraform apply` restore from the most recent snapshot. Posts, summaries and settings carry over. Snapshot storage costs a few cents a month for a site this size.
 - **Media is never lost:** the russetleaf.com media bucket lives in `envs/aws-edge`, so uploads survive between demos.
-- **Optional: seed from russetleaf.dev.** For the first demo, or to refresh russetleaf.com with the live site's content, run the **seed Job** (`wp-gitops/apps/seed-from-dev/`, an Argo CD Application set to manual sync, AWS only). It:
+- **Optional: seed from russetleaf.dev.** For the first demo, or to refresh russetleaf.com with the live site's content, run the **seed Job** (`russetleaf-gitops/apps/seed-from-dev/`, an Argo CD Application set to manual sync, AWS only). It:
   1. downloads the latest backup of russetleaf.dev from its S3 backup bucket (see [russetleaf.dev database backups](../phase-1-russetleaf-dev/design.md#russetleafdev-database-backups))
   2. imports it into RDS for MariaDB through RDS Proxy, logging in with an IAM auth token like WordPress (same engine, so no conversion is needed)
   3. runs `wp search-replace 'russetleaf.dev' 'russetleaf.com' --all-tables` to fix links and settings
@@ -314,7 +314,7 @@ Each demo creates a new RDS instance, so content needs a plan:
 | **Total** | **~$1 / month** |
 
 ### Short AWS demos
-The full AWS design costs roughly **$1.00/hour** while running, including about $0.25–$0.35/hour for the spot GPU node. Run `terraform apply` in `envs/aws`, record a walkthrough of russetleaf.com or take screenshots, then tear it down. The `demo-up` and `demo-down` GitHub Actions workflows in `wp-infra` do this in the right order, and a scheduled safety-net workflow alerts (or tears down) if the stack is left running too long; see [Building it from scratch](../overview.md#building-it-from-scratch). The always-on edge (`envs/aws-edge`) is never destroyed, so russetleaf.com switches to its offline page automatically.
+The full AWS design costs roughly **$1.00/hour** while running, including about $0.25–$0.35/hour for the spot GPU node. Run `terraform apply` in `envs/aws`, record a walkthrough of russetleaf.com or take screenshots, then tear it down. The `demo-up` and `demo-down` GitHub Actions workflows in `russetleaf-infra` do this in the right order, and a scheduled safety-net workflow alerts (or tears down) if the stack is left running too long; see [Building it from scratch](../overview.md#building-it-from-scratch). The always-on edge (`envs/aws-edge`) is never destroyed, so russetleaf.com switches to its offline page automatically.
 
 | Demo time per month | Est. cost |
 |---|---|
@@ -410,13 +410,13 @@ AWS has no separate staging: russetleaf.com is already temporary, its Terraform 
 
 | Report | How | Where |
 |---|---|---|
-| **Per-demo actual cost** (AWS) | A **daily** scheduled workflow in `wp-infra` (Cost Explorer data lags ~24 hours) checks for recent demo usage, queries **Cost Explorer** grouped by the `Site` and `Stack` tags, and compares the result with the hours the demo ran and the ~$1/hour estimate | "Last demo: $X for Y hours ($Z/hour)" posted to `#rl-costs`, and recorded in the AWS plan's decision log |
+| **Per-demo actual cost** (AWS) | A **daily** scheduled workflow in `russetleaf-infra` (Cost Explorer data lags ~24 hours) checks for recent demo usage, queries **Cost Explorer** grouped by the `Site` and `Stack` tags, and compares the result with the hours the demo ran and the ~$1/hour estimate | "Last demo: $X for Y hours ($Z/hour)" posted to `#rl-costs`, and recorded in the AWS plan's decision log |
 
 ### Updates
 
 | Layer | How updates arrive | How they're tested and rolled out | Cadence |
 |---|---|---|---|
-| **EKS** | Versions bumped in `wp-infra/envs/aws`: cluster version, **pinned EKS add-on versions** (VPC CNI, CoreDNS, kube-proxy, EBS CSI, Pod Identity agent; Renovate can't track these, so the monthly version-age workflow checks `aws eks describe-addon-versions` for the cluster version and opens a pull request when newer compatible versions exist), **pinned AMI version** in Karpenter's node class (Renovate-tracked), RDS and ElastiCache engine versions | The stack is rebuilt every demo, so there are no in-place upgrades; `demo-up` uses the new versions. RDS's MariaDB version is kept **matched to the home MariaDB**, so backups restore cleanly | Before each demo; always in EKS **standard support** |
+| **EKS** | Versions bumped in `russetleaf-infra/envs/aws`: cluster version, **pinned EKS add-on versions** (VPC CNI, CoreDNS, kube-proxy, EBS CSI, Pod Identity agent; Renovate can't track these, so the monthly version-age workflow checks `aws eks describe-addon-versions` for the cluster version and opens a pull request when newer compatible versions exist), **pinned AMI version** in Karpenter's node class (Renovate-tracked), RDS and ElastiCache engine versions | The stack is rebuilt every demo, so there are no in-place upgrades; `demo-up` uses the new versions. RDS's MariaDB version is kept **matched to the home MariaDB**, so backups restore cleanly | Before each demo; always in EKS **standard support** |
 
 ### Rollback
 

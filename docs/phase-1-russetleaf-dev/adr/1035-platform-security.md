@@ -29,12 +29,12 @@ Supply chain security was strong (signed images with SBOM and SLSA provenance ve
   - On EKS, the cluster PKI is AWS's responsibility; this is stated in the security review.
 - **Image repository (GHCR):**
   - Each package is **linked to its repo**, with write access only for that repo's Actions; no personal access tokens with `write:packages`; only the account owner can delete packages.
-  - A monthly **cleanup workflow** deletes untagged versions older than 90 days, but **never** a digest referenced anywhere in `wp-gitops` in the last 90 days or one of the last 10 releases; signatures and attestations are kept with their images. It runs in dry-run mode first.
+  - A monthly **cleanup workflow** deletes untagged versions older than 90 days, but **never** a digest referenced anywhere in `russetleaf-gitops` in the last 90 days or one of the last 10 releases; signatures and attestations are kept with their images. It runs in dry-run mode first.
   - The mirrored upstream images follow the same rules.
 - **Observability access:**
   - Loki runs with **two tenants**: `apps` (application and platform logs) and `security` (API audit log, Argo CD audit events, Falco and Tetragon events). Grafana gets a separate **Security organization** holding the `security` data source and security dashboards; only the **platform-admin** group is a member (mapped from Dex groups).
   - Loki, Prometheus, Tempo and Alertmanager have no login inside the cluster; **network policies are their access control** (only Grafana, Alloy, Prometheus and the ruler can reach them), and none is exposed outside the cluster. Hubble UI is reachable only through Cloudflare Access (home) or port-forward (AWS).
-- **Supply chain: VEX:** accepted vulnerabilities are recorded as **OpenVEX** statements (`.vex/` in `wp-image` and `llm-summarizer`), each with a justification and a review date, read by Trivy in CI (`--vex`) and attached to the image as a signed attestation; `.trivyignore` stays only for secret and misconfiguration findings.
+- **Supply chain: VEX:** accepted vulnerabilities are recorded as **OpenVEX** statements (`.vex/` in `russetleaf-wordpress` and `russetleaf-llm-summarizer`), each with a justification and a review date, read by Trivy in CI (`--vex`) and attached to the image as a signed attestation; `.trivyignore` stays only for secret and misconfiguration findings.
 
 ## Alternatives considered
 - **Kyverno fail-open:** keeps deployments flowing when Kyverno is down, but admits unchecked workloads; the exclusions and runbook already make fail-closed safe to recover from.

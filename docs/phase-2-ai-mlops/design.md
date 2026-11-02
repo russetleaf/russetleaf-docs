@@ -7,10 +7,10 @@
 - **Builds on:** [Phase 1 design](../phase-1-russetleaf-dev/design.md); shared design in [`../overview.md`](../overview.md)
 
 ## What Phase 2 adds to Phase 1
-- A fourth repo, **`llm-summarizer`** (prompts, evaluation set, the summarizer service and its chart).
+- A fourth repo, **`russetleaf-llm-summarizer`** (prompts, evaluation set, the summarizer service and its chart).
 - **Box 2 becomes the dedicated LLM node** (label `workload=llm`, taint `dedicated=llm:NoSchedule`) running llama.cpp, with the CI runners next to it.
 - AWS resources in russetleaf-home: the **SQS** summary queue and dead-letter queue, **Bedrock** access with a budget, the **model mirror bucket**, and staging equivalents.
-- WordPress changes in `wp-image`: the **summary-queue must-use plugin**, the `wordpress_posts_without_summary` metric and its alert, the **AI summary box** in the theme, and the summarizer's application password.
+- WordPress changes in `russetleaf-wordpress`: the **summary-queue must-use plugin**, the `wordpress_posts_without_summary` metric and its alert, the **AI summary box** in the theme, and the summarizer's application password.
 - Platform additions: KEDA, LiteLLM, MLflow and Argo Workflows, plus the AI rows in Phase 1's shared sections (policies, network rules, Falco rules, tracing, alerts, SLOs, costs); see [AI components in the shared platform](#ai-components-in-the-shared-platform).
 
 ## Architecture
@@ -63,18 +63,18 @@ The summarizer authenticates to WordPress with an **application password** store
 - On AWS, the LLM nodes come from Karpenter's **GPU NodePool** (e.g. g6.xlarge on spot), using a CUDA build of llama.cpp. At home, it's a **dedicated CPU worker node** (see the home lab section). The same manifests deploy both, with per-environment overlays. On EKS, the **NVIDIA device plugin** (a DaemonSet) lets the model server request the GPU (`nvidia.com/gpu: 1`); the Amazon Linux 2023 NVIDIA AMI already includes the drivers.
 
 ### Prompt versioning and evaluation in CI
-The summarizer is its own repo, `llm-summarizer`, built to stand alone as an MLOps project (see [Repository structure](../overview.md#repository-structure-four-repos)).
+The summarizer is its own repo, `russetleaf-llm-summarizer`, built to stand alone as an MLOps project (see [Repository structure](../overview.md#repository-structure-four-repos)).
 
-- The summarizer prompts and model settings live in `llm-summarizer/prompts/`, with a **version number** that the summarizer records alongside each summary.
-- A fixed **evaluation set** of 20–30 sample posts lives in `llm-summarizer/evals/`.
-- The gateway's **routing settings** (which models run in production, fallbacks, canary weights) are deployment config, so they live in `wp-gitops`. A routing change there should link to the evaluation report that justifies it.
-- On every `llm-summarizer` pull request that changes a prompt, the model list being evaluated, or the summarizer code, a GitHub Actions job:
+- The summarizer prompts and model settings live in `russetleaf-llm-summarizer/prompts/`, with a **version number** that the summarizer records alongside each summary.
+- A fixed **evaluation set** of 20–30 sample posts lives in `russetleaf-llm-summarizer/evals/`.
+- The gateway's **routing settings** (which models run in production, fallbacks, canary weights) are deployment config, so they live in `russetleaf-gitops`. A routing change there should link to the evaluation report that justifies it.
+- On every `russetleaf-llm-summarizer` pull request that changes a prompt, the model list being evaluated, or the summarizer code, a GitHub Actions job:
   - generates summaries for the evaluation set **with each model behind the gateway**
   - scores them with **rule-based checks** (length, required keywords, no made-up links) and an **LLM-as-judge** call that grades how faithful each summary is to its post
   - posts the scores **per model** as a **PR comment**, comparing them with the main branch
   - **fails the check** if quality drops below a set threshold
 - The job runs on **self-hosted GitHub Actions runners inside the cluster**, managed by **Actions Runner Controller (ARC)**, so it can reach the gateway and the self-hosted model. Runners are **ephemeral** (a fresh pod per job), and jobs from pull requests opened from forks require manual approval, since the repo is public.
-- The same gate runs again on a **release tag**. Only if it passes does CI publish the image and Helm chart, attach the evaluation report to the GitHub release, update `MODEL_CARD.md`, and open a version-bump pull request on `wp-gitops`.
+- The same gate runs again on a **release tag**. Only if it passes does CI publish the image and Helm chart, attach the evaluation report to the GitHub release, update `MODEL_CARD.md`, and open a version-bump pull request on `russetleaf-gitops`.
 - New code rolls out through the Argo Rollouts canary; new models roll out through the gateway's canary split.
 
 ### LLM monitoring
@@ -108,7 +108,7 @@ flowchart LR
 - **Registered models**, with lineage back to the runs that produced them:
   - `summarizer-config`: the prompt, model choice and generation settings as one versioned unit
   - `local-summarizer`: the self-hosted model's file (base or fine-tuned, in llama.cpp's GGUF format)
-- **Aliases** mark the roles: `champion` (production) and `challenger` (in the gateway canary). Promotion is a reviewed change: the pipeline proposes it, a pull request on `wp-gitops` changes the gateway's routing to the registered version, and the MLflow alias is updated when it merges.
+- **Aliases** mark the roles: `champion` (production) and `challenger` (in the gateway canary). Promotion is a reviewed change: the pipeline proposes it, a pull request on `russetleaf-gitops` changes the gateway's routing to the registered version, and the MLflow alias is updated when it merges.
 - The model mirror bucket keeps serving files to llama.cpp; it's fed **from the registry**, so every file in use has a registry entry.
 
 ### Guardrails
@@ -136,14 +136,14 @@ Fine-tuning the self-hosted model needs a GPU, which the home lab doesn't have, 
 MLflow, Argo Workflows and the online-evaluation job run on the home cluster (box 3 has the memory); the extra Bedrock calls for daily judging cost cents a month; each fine-tuning run costs **a few dollars** of spot GPU time on EKS.
 
 ### Rolling back bad AI summaries
-Rolling back a prompt or model doesn't fix summaries already saved. Each summary is stored with its **prompt version and model** (as post metadata), so a **re-summarize job** in `llm-summarizer` can find every post summarized by a bad version and **re-queue** it through SQS, regenerating the summaries with the restored version.
+Rolling back a prompt or model doesn't fix summaries already saved. Each summary is stored with its **prompt version and model** (as post metadata), so a **re-summarize job** in `russetleaf-llm-summarizer` can find every post summarized by a bad version and **re-queue** it through SQS, regenerating the summaries with the restored version.
 
-## Repository: `llm-summarizer`
+## Repository: `russetleaf-llm-summarizer`
 
-### `llm-summarizer`: the standalone MLOps project
+### `russetleaf-llm-summarizer`: the standalone MLOps project
 
 ```
-llm-summarizer/
+russetleaf-llm-summarizer/
   src/                      # SQS consumer, content source/sink adapters, OpenAI-compatible model client,
                             #   OpenTelemetry metrics
     adapters/wordpress/     # WordPress REST API adapter (the first of possibly several)
@@ -170,12 +170,12 @@ llm-summarizer/
                             #   evaluation gate (on ARC runners); weekly OpenSSF Scorecard;
                             #   on release: gate again, build image and chart, SBOM, scan, sign + attest SBOM and
                             #   SLSA provenance, verify, publish (release notes with digests and Rekor links),
-                            #   open a chart-bump pull request on wp-gitops (staging overlay)
+                            #   open a chart-bump pull request on russetleaf-gitops (staging overlay)
 ```
 
 Design choices that make it stand on its own:
 - **Clear interfaces:** jobs come in from a queue (`{"post_id": ...}`), content is read and written through an **adapter** (WordPress is the first), and models are reached through any **OpenAI-compatible endpoint**. LiteLLM (and Bedrock through it) and llama.cpp both qualify, so the summarizer has no hard dependency on any one provider.
-- **Its own Helm chart**, published to an OCI registry with the same version as the image. `wp-gitops` only supplies values (queue URL, gateway URL, scaling limits, IAM role). The chart also ships the summarizer's alerts and Grafana dashboard, so whoever deploys it gets monitoring too.
+- **Its own Helm chart**, published to an OCI registry with the same version as the image. `russetleaf-gitops` only supplies values (queue URL, gateway URL, scaling limits, IAM role). The chart also ships the summarizer's alerts and Grafana dashboard, so whoever deploys it gets monitoring too.
 - **Releases gated on quality:** a release tag runs the evaluation gate first; only a passing release is published, with its evaluation report attached to the GitHub release.
 - **Model card:** reviewers see which models were compared (Claude Haiku, Nova Lite and the self-hosted model), the scores, the cost per summary and known limitations, without running anything.
 - **Local demo:** `docker compose up` runs it against sample posts, so anyone can try it in minutes.
@@ -185,17 +185,17 @@ Design choices that make it stand on its own:
 
 | AI component | Repo |
 |---|---|
-| Summarizer code, prompts, guardrails, evaluation set and gate, online evaluation, fine-tuning pipeline, DVC datasets, model card, Helm chart, dashboard and alerts | `llm-summarizer` |
-| MLflow, Argo Workflows | `wp-gitops` (platform) |
-| Summary feedback plugin | `wp-image` |
-| Summarizer deployment settings per environment (queue URL, gateway URL, scaling, chart version) | `wp-gitops` |
-| LiteLLM gateway and its routing config (models, fallbacks, canary weights, budgets) | `wp-gitops` |
-| Self-hosted model server (llama.cpp Deployment, tolerations, home CPU / AWS CUDA overlays) | `wp-gitops` |
-| Box 2's Talos label and taint; Karpenter GPU NodePool IAM | `wp-infra` |
-| Bedrock model access, gateway IAM role, SQS queues, Bedrock budget alert | `wp-infra` |
-| SQS must-use plugin that queues posts | `wp-image` |
+| Summarizer code, prompts, guardrails, evaluation set and gate, online evaluation, fine-tuning pipeline, DVC datasets, model card, Helm chart, dashboard and alerts | `russetleaf-llm-summarizer` |
+| MLflow, Argo Workflows | `russetleaf-gitops` (platform) |
+| Summary feedback plugin | `russetleaf-wordpress` |
+| Summarizer deployment settings per environment (queue URL, gateway URL, scaling, chart version) | `russetleaf-gitops` |
+| LiteLLM gateway and its routing config (models, fallbacks, canary weights, budgets) | `russetleaf-gitops` |
+| Self-hosted model server (llama.cpp Deployment, tolerations, home CPU / AWS CUDA overlays) | `russetleaf-gitops` |
+| Box 2's Talos label and taint; Karpenter GPU NodePool IAM | `russetleaf-infra` |
+| Bedrock model access, gateway IAM role, SQS queues, Bedrock budget alert | `russetleaf-infra` |
+| SQS must-use plugin that queues posts | `russetleaf-wordpress` |
 
-The self-hosted model isn't a special case: its deployment is ordinary platform config in `wp-gitops`, on a dedicated node defined in `wp-infra`, and its quality is judged in `llm-summarizer` alongside the Bedrock models.
+The self-hosted model isn't a special case: its deployment is ordinary platform config in `russetleaf-gitops`, on a dedicated node defined in `russetleaf-infra`, and its quality is judged in `russetleaf-llm-summarizer` alongside the Bedrock models.
 ## AI components in the shared platform
 
 These parts of Phase 1's shared platform sections exist only once the AI pipeline is added.
@@ -219,7 +219,7 @@ These parts of Phase 1's shared platform sections exist only once the AI pipelin
 
 | Repo | What Checkov scans |
 |---|---|
-| `llm-summarizer` | The **Dockerfile**, the summarizer **Helm chart** |
+| `russetleaf-llm-summarizer` | The **Dockerfile**, the summarizer **Helm chart** |
 
 ### Runtime security and compliance scanning
 

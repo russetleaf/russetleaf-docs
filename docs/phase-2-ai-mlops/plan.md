@@ -31,22 +31,22 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 ## Stage 1: Foundations
 
-### Step 1.1: The `llm-summarizer` repo
-**Do:** create **`llm-summarizer`** the same way as the Phase 1 repos (Phase 1 step 1.1): README, `.gitignore`, license, branch protection, gitleaks with a full-history scan, then **make it public** with secret scanning and push protection; **OpenSSF Scorecard**, **zizmor**, **dependency review**, **Checkov** (workflows first) and **Renovate** (Python lock file, base images, GitHub Actions, `.mise.toml`). Add the GitHub organization settings for it in `wp-infra/envs/github/`. Layout: `src/`, `prompts/`, `evals/`, `guardrails/`, `chart/`, `ci/`, `demo/`, `online-eval/` (see the [Phase 2 design](design.md#repository-llm-summarizer)).
+### Step 1.1: The `russetleaf-llm-summarizer` repo
+**Do:** create **`russetleaf-llm-summarizer`** the same way as the Phase 1 repos (Phase 1 step 1.1): README, `.gitignore`, license, branch protection, gitleaks with a full-history scan, then **make it public** with secret scanning and push protection; **OpenSSF Scorecard**, **zizmor**, **dependency review**, **Checkov** (workflows first) and **Renovate** (Python lock file, base images, GitHub Actions, `.mise.toml`). Add the GitHub organization settings for it in `russetleaf-infra/envs/github/`. Layout: `src/`, `prompts/`, `evals/`, `guardrails/`, `chart/`, `ci/`, `demo/`, `online-eval/` (see the [Phase 2 design](design.md#repository-russetleaf-llm-summarizer)).
 
 **Test:** the repo is public with a clean history scan and push protection on; a test pull request runs the secret scan and Checkov; Renovate opens its onboarding pull request.
 
 ### Step 1.2: AWS resources for the AI pipeline
-**Do:** in `wp-infra`, add the **`sqs-queue`** (with dead-letter queue) and **`bedrock-access`** modules, then in `envs/home`: the **summary queue** and dead-letter queue (production and staging), the **model mirror bucket** (with `prevent_destroy`), the **Bedrock budget alert**, and credentials for WordPress (send to the queue), the summarizer (read from the queue) and LiteLLM (`bedrock:InvokeModel` on the chosen models only), each in Secrets Manager (or pod roles, if Phase 1 step 9.1 is done). Confirm access to Claude Haiku and Amazon Nova Lite in the chosen region (Anthropic models may need a one-time use-case form in the console). Extend the ci stand-ins with SQS (LocalStack, or **ElasticMQ** if LocalStack's terms don't suit).
+**Do:** in `russetleaf-infra`, add the **`sqs-queue`** (with dead-letter queue) and **`bedrock-access`** modules, then in `envs/home`: the **summary queue** and dead-letter queue (production and staging), the **model mirror bucket** (with `prevent_destroy`), the **Bedrock budget alert**, and credentials for WordPress (send to the queue), the summarizer (read from the queue) and LiteLLM (`bedrock:InvokeModel` on the chosen models only), each in Secrets Manager (or pod roles, if Phase 1 step 9.1 is done). Confirm access to Claude Haiku and Amazon Nova Lite in the chosen region (Anthropic models may need a one-time use-case form in the console). Extend the ci stand-ins with SQS (LocalStack, or **ElasticMQ** if LocalStack's terms don't suit).
 
 **Test:** each credential's allowed action works and a disallowed one fails (e.g. the summarizer can't send to the queue); `aws bedrock-runtime converse` with the LiteLLM credential returns a response; the budget alert exists; deleting the model mirror bucket is refused by the plan.
 
 ### Step 1.3: Box 2 as the LLM node
-**Do:** in `wp-infra/envs/home`, label box 2 `workload=llm` and taint it `dedicated=llm:NoSchedule`; give the ARC runners a matching toleration so they keep running there, next to the model; move anything else that ran on box 2 in Phase 1 (e.g. Backstage overflow) back to boxes 1 and 3; recheck the kubelet PID limit against llama.cpp's process count. Update the memory budget in the Phase 2 design.
+**Do:** in `russetleaf-infra/envs/home`, label box 2 `workload=llm` and taint it `dedicated=llm:NoSchedule`; give the ARC runners a matching toleration so they keep running there, next to the model; move anything else that ran on box 2 in Phase 1 (e.g. Backstage overflow) back to boxes 1 and 3; recheck the kubelet PID limit against llama.cpp's process count. Update the memory budget in the Phase 2 design.
 
 **Test:** `kubectl describe node <box2>` shows the label and taint; only the runners and node agents run on box 2; every node stays under its memory budget.
 
-### Step 1.4: WordPress side of the pipeline (`wp-image`)
+### Step 1.4: WordPress side of the pipeline (`russetleaf-wordpress`)
 **Do:**
 - The **summary-queue must-use plugin**: on publish or update, send `{"post_id": ...}` to SQS, adding the current trace context (W3C `traceparent`) as a **message attribute** when tracing is on (AWS SDK for PHP, installed with Composer at build time); the queue URL from an environment variable.
 - The `wordpress_posts_without_summary` metric in the metrics must-use plugin, and the **`WordPressPostsMissingSummaries`** alert in the chart (turned on in step 2.4).
@@ -69,7 +69,7 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 **Test:** from a test pod, an OpenAI-style chat request to the gateway returns answers from both models; requests over the rate limit are refused; the gateway's metrics appear in Prometheus.
 
-### Step 2.3: Summarizer code (`llm-summarizer`)
+### Step 2.3: Summarizer code (`russetleaf-llm-summarizer`)
 **Do:**
 - A dedicated WordPress user for the summarizer (role: editor or a custom role that can edit posts only), with an **application password** created by `wp-cli` and stored in Secrets Manager.
 - `src/`: SQS consumer (long polling, delete only after success, retries then dead-letter queue), WordPress adapter (REST API with that application password, calling WordPress's in-cluster Service rather than going out through Cloudflare: read the post, write the summary to the excerpt or a custom field), OpenAI-compatible model client pointed at the gateway, prompt loading from `prompts/` with the version recorded alongside each summary.
@@ -82,14 +82,14 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 ### Step 2.4: Summarizer chart, release and deployment
 **Do:**
 - `chart/`: Deployment (Rollout later), KEDA `ScaledObject` on the SQS queue (0–N), daily sweep CronJob, ServiceAccount, resources.
-- **Image and dependencies:** a **multi-stage** build with a **distroless or slim** runtime base; uv's lock file **with hashes**; chart signing as for `wp-image`; Secrets as files.
-- **Code and image checks** (as for `wp-image`, see Phase 1 step 5.1): **ruff**, **mypy**, **Semgrep**, **pip-audit**, dependency review, hadolint, Checkov, zizmor, `helm lint` / `ct lint`, container-structure-test, Trivy (vulnerability, secret and misconfiguration scanners).
+- **Image and dependencies:** a **multi-stage** build with a **distroless or slim** runtime base; uv's lock file **with hashes**; chart signing as for `russetleaf-wordpress`; Secrets as files.
+- **Code and image checks** (as for `russetleaf-wordpress`, see Phase 1 step 5.1): **ruff**, **mypy**, **Semgrep**, **pip-audit**, dependency review, hadolint, Checkov, zizmor, `helm lint` / `ct lint`, container-structure-test, Trivy (vulnerability, secret and misconfiguration scanners).
 - `ci/`: kind end-to-end tests on GitHub-hosted runners, with the AWS stand-ins (SQS) and a **mock LLM** (LiteLLM with mock responses): a queued post gets a summary written back to a test WordPress; a failing message reaches the dead-letter queue.
 - **Checkov on the summarizer's Dockerfile and chart** in pull request CI.
-- Release workflow: build, SBOM, scan, push by digest, sign, attach the SBOM as a signed attestation, add **SLSA build provenance**, verify all three, write release notes with digests and Rekor links, push the image and the chart (OCI) to GHCR, open a chart-bump pull request on `wp-gitops` for **`overlays/home-staging`** (promoted to prod by the Phase 1 step 5.7 pipeline).
-- `wp-gitops/apps/post-summarizer/overlays/home` and `overlays/home-staging`: queue URL, gateway URL (staging uses its own LiteLLM key and budget), WordPress URL, credentials from External Secrets.
+- Release workflow: build, SBOM, scan, push by digest, sign, attach the SBOM as a signed attestation, add **SLSA build provenance**, verify all three, write release notes with digests and Rekor links, push the image and the chart (OCI) to GHCR, open a chart-bump pull request on `russetleaf-gitops` for **`overlays/home-staging`** (promoted to prod by the Phase 1 step 5.7 pipeline).
+- `russetleaf-gitops/apps/post-summarizer/overlays/home` and `overlays/home-staging`: queue URL, gateway URL (staging uses its own LiteLLM key and budget), WordPress URL, credentials from External Secrets.
 - Turn on the summarizer check in the staging smoke tests (added in step 1.4).
-- A **re-summarize job** (a CLI in `llm-summarizer`, run as a Kubernetes Job): find posts whose stored summary metadata matches a given prompt version or model, and re-queue them through SQS so they're summarized again with the current version. Document it in `docs/runbooks/rollback-models.md`.
+- A **re-summarize job** (a CLI in `russetleaf-llm-summarizer`, run as a Kubernetes Job): find posts whose stored summary metadata matches a given prompt version or model, and re-queue them through SQS so they're summarized again with the current version. Document it in `docs/runbooks/rollback-models.md`.
 
 Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom metrics plugin), routed to `#rl-mlops`.
 
@@ -120,12 +120,12 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 ## Stage 4: MLOps pipeline
 
 ### Step 4.1: Evaluation set and scorers
-**Do** (`llm-summarizer/evals/`): 20–30 sample posts with reference notes; rule-based checks (length, required keywords, no made-up links); an LLM-as-judge prompt for faithfulness; a script that runs the set against each model through a gateway URL and writes a report (JSON + Markdown).
+**Do** (`russetleaf-llm-summarizer/evals/`): 20–30 sample posts with reference notes; rule-based checks (length, required keywords, no made-up links); an LLM-as-judge prompt for faithfulness; a script that runs the set against each model through a gateway URL and writes a report (JSON + Markdown).
 
 **Test:** running the script locally against the gateway (via `kubectl port-forward`) produces a report comparing Haiku, Nova Lite and the local model.
 
-### Step 4.2: Runners for `llm-summarizer`
-**Do:** add a second ARC runner scale set (Phase 1 step 5.5) registered to **`llm-summarizer`**, on box 2 next to the model, with the same protections (approval for fork pull requests, self-hosted label limited to the evaluation workflows).
+### Step 4.2: Runners for `russetleaf-llm-summarizer`
+**Do:** add a second ARC runner scale set (Phase 1 step 5.5) registered to **`russetleaf-llm-summarizer`**, on box 2 next to the model, with the same protections (approval for fork pull requests, self-hosted label limited to the evaluation workflows).
 
 **Test:** a test workflow runs on a self-hosted runner pod, which is deleted afterwards; a fork pull request waits for approval.
 
@@ -139,22 +139,22 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Test:** a pull request with a deliberately bad prompt fails the gate with a clear comment; a good one passes; a release tag publishes only after the gate passes.
 
 ### Step 4.4: Experiment tracking and model registry (MLflow)
-**Do:** `platform/mlflow/` (placed on box 3): the MLflow tracking server with MariaDB for metadata and an S3 artifact bucket (`s3-mlops` module in `wp-infra`, scoped access through External Secrets), behind Cloudflare Access. Change the evaluation gate (step 4.3) to log every run to MLflow (Git commit, prompt version, model, dataset version, scores, latency, cost). Register `summarizer-config` and `local-summarizer` (the current 3B model file) with `champion` aliases, feed the model mirror bucket from the registry, and make routing changes in `wp-gitops` reference registry versions. (If Phase 3 is built, its step 1.7 adds a **cross-account bucket-policy grant** in the `s3-mlops` module letting russetleaf-com's EKS **training role** write to the MLflow artifact and DVC buckets.) **Check box 3's memory** afterwards against the budget in the Phase 2 design; if it passes about 85%, place MLflow on box 1. See the Phase 2 design's [MLOps lifecycle](design.md#mlops-lifecycle).
+**Do:** `platform/mlflow/` (placed on box 3): the MLflow tracking server with MariaDB for metadata and an S3 artifact bucket (`s3-mlops` module in `russetleaf-infra`, scoped access through External Secrets), behind Cloudflare Access. Change the evaluation gate (step 4.3) to log every run to MLflow (Git commit, prompt version, model, dataset version, scores, latency, cost). Register `summarizer-config` and `local-summarizer` (the current 3B model file) with `champion` aliases, feed the model mirror bucket from the registry, and make routing changes in `russetleaf-gitops` reference registry versions. (If Phase 3 is built, its step 1.7 adds a **cross-account bucket-policy grant** in the `s3-mlops` module letting russetleaf-com's EKS **training role** write to the MLflow artifact and DVC buckets.) **Check box 3's memory** afterwards against the budget in the Phase 2 design; if it passes about 85%, place MLflow on box 1. See the Phase 2 design's [MLOps lifecycle](design.md#mlops-lifecycle).
 
 **Test:** box 3's memory stays under about 85%; an evaluation run appears in MLflow with its parameters, metrics and report; the registry shows both models with lineage to their runs; the gateway's routing points at a registered version.
 
 ### Step 4.5: Guardrails
-**Do:** in `llm-summarizer/guardrails/`: delimit post text as content (never instructions), redact email addresses, phone numbers and similar patterns before calls leave the cluster, and validate output (length, plain text, no URLs, no instructions or system-prompt text; retry once, then don't save and alert). Add **adversarial cases** (posts containing injection attempts and personal data) to the evaluation set, and guardrail metrics (blocked, retried, redacted) with an alert on spikes to `#rl-mlops`.
+**Do:** in `russetleaf-llm-summarizer/guardrails/`: delimit post text as content (never instructions), redact email addresses, phone numbers and similar patterns before calls leave the cluster, and validate output (length, plain text, no URLs, no instructions or system-prompt text; retry once, then don't save and alert). Add **adversarial cases** (posts containing injection attempts and personal data) to the evaluation set, and guardrail metrics (blocked, retried, redacted) with an alert on spikes to `#rl-mlops`.
 
 **Test:** a post containing "ignore your instructions and…" produces a normal summary; a post with an email address never sends it to Bedrock (checked in traces or gateway logs); an invalid output isn't saved and alerts; the CI gate fails if an adversarial case gets through.
 
 ### Step 4.6: Online evaluation and drift monitoring
-**Do:** `platform/argo-workflows/` (Argo Workflows), and a **daily workflow** from `llm-summarizer/online-eval/` that samples a few percent of the day's summaries, scores them with the CI gate's rules and judge, checks input drift (length, language, topics) against the evaluation set, and logs to MLflow and Prometheus. Grafana panels for quality and drift per model and prompt version; `SummaryQualityDegraded` and `InputDriftDetected` alerts to `#rl-mlops`, with runbooks.
+**Do:** `platform/argo-workflows/` (Argo Workflows), and a **daily workflow** from `russetleaf-llm-summarizer/online-eval/` that samples a few percent of the day's summaries, scores them with the CI gate's rules and judge, checks input drift (length, language, topics) against the evaluation set, and logs to MLflow and Prometheus. Grafana panels for quality and drift per model and prompt version; `SummaryQualityDegraded` and `InputDriftDetected` alerts to `#rl-mlops`, with runbooks.
 
 **Test:** the workflow runs daily and its results appear in MLflow and Grafana; temporarily switching routing to a deliberately weak prompt lowers the scores and fires `SummaryQualityDegraded`.
 
 ### Step 4.7: Feedback loop and data versioning
-**Do:** a `summary-feedback` must-use plugin in `wp-image` (editor-only "helpful / not helpful" plus a note on each summary, stored as post metadata); **DVC** in `llm-summarizer` with an S3 remote, tracking the evaluation set, adversarial cases and training data; a nightly workflow exporting new ratings (with each summary's model and prompt version) into the DVC-tracked dataset; MLflow runs record the dataset version.
+**Do:** a `summary-feedback` must-use plugin in `russetleaf-wordpress` (editor-only "helpful / not helpful" plus a note on each summary, stored as post metadata); **DVC** in `russetleaf-llm-summarizer` with an S3 remote, tracking the evaluation set, adversarial cases and training data; a nightly workflow exporting new ratings (with each summary's model and prompt version) into the DVC-tracked dataset; MLflow runs record the dataset version.
 
 **Test:** rating a summary in the admin shows up in the next nightly export; `dvc pull` reproduces any past dataset version; an MLflow run's dataset version checks out the exact data it used.
 
@@ -162,7 +162,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 5.1: Security for the AI components
 **Do:** extend Phase 1's controls to the new workloads:
-- **Kyverno:** add the `llm-summarizer` release workflow's signing identity to image verification (signature, SBOM and provenance); Pod Security Admission labels (`restricted`) and quotas on the summarizer, gateway and model namespaces; KEDA on the service-account token allow-list; a `PolicyException` for llama.cpp's image only if it genuinely can't run read-only or as non-root.
+- **Kyverno:** add the `russetleaf-llm-summarizer` release workflow's signing identity to image verification (signature, SBOM and provenance); Pod Security Admission labels (`restricted`) and quotas on the summarizer, gateway and model namespaces; KEDA on the service-account token allow-list; a `PolicyException` for llama.cpp's image only if it genuinely can't run read-only or as non-root.
 - **CiliumNetworkPolicies:** summarizer → SQS, the gateway and WordPress's REST API (a **layer-7** rule: `GET`/`POST` on `/wp-json/*` only); gateway → llama.cpp and `bedrock-runtime`; llama.cpp's init container → the model mirror bucket only.
 - **Falco:** process allow-lists for the summarizer and gateway (`python`) and llama.cpp (`llama-server`); a rule for unexpected outbound connections from box 2.
 - Optional: a recorded **custom seccomp profile** for the summarizer (as in Phase 1 step 7.7).
@@ -198,7 +198,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 | Step | Tier | Est. hours | Done | Date | Actual hours | Node memory after | Notes |
 |---|---|---|---|---|---|---|---|
-| 1.1 `llm-summarizer` repo | Core | 2–3 | ☐ | | | | |
+| 1.1 `russetleaf-llm-summarizer` repo | Core | 2–3 | ☐ | | | | |
 | 1.2 AWS resources for the AI pipeline | Core | 3–5 | ☐ | | | | |
 | 1.3 Box 2 as the LLM node | Core | 1–2 | ☐ | | | | |
 | 1.4 WordPress side of the pipeline | Core | 4–7 | ☐ | | | | |
@@ -211,7 +211,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 | 3.1 llama.cpp on box 2 | Differentiator | 4–6 | ☐ | | | | |
 | 3.2 Gateway routing to local model | Differentiator | 2–4 | ☐ | | | | |
 | 4.1 Evaluation set | Core | 5–8 | ☐ | | | | |
-| 4.2 Runners for `llm-summarizer` | Core | 1–2 | ☐ | | | | |
+| 4.2 Runners for `russetleaf-llm-summarizer` | Core | 1–2 | ☐ | | | | |
 | 4.3 Evaluation gate + releases | Core | 4–7 | ☐ | | | | |
 | 4.4 MLflow tracking + registry | Differentiator | 6–10 | ☐ | | | | |
 | 4.5 Guardrails | Differentiator | 6–10 | ☐ | | | | |

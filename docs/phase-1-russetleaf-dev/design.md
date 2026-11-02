@@ -85,7 +85,7 @@ The AWS side follows the **AWS Security Reference Architecture (SRA)**: separate
 | **russetleaf-home** | Workloads | The AWS resources russetleaf.dev uses (S3, Secrets Manager, SES; SQS and Bedrock from Phase 2); this is the **existing account**, which joins the Organization |
 | **russetleaf-com** | Workloads | russetleaf.com: the always-on edge (`envs/aws-edge`) and the demo stack (`envs/aws`). **Created in Phase 3.** |
 
-Separate workload accounts limit how far a compromise can spread, and give each site its own costs, quotas (e.g. the GPU quota) and limits. Accounts are free. All of it is managed by Terraform in `wp-infra/envs/org/` (Organization, OUs, accounts, SCPs, Identity Center, tag policies) and `wp-infra/envs/security/` (the security services), applied from your workstation with management-account and Security Tooling access.
+Separate workload accounts limit how far a compromise can spread, and give each site its own costs, quotas (e.g. the GPU quota) and limits. Accounts are free. All of it is managed by Terraform in `russetleaf-infra/envs/org/` (Organization, OUs, accounts, SCPs, Identity Center, tag policies) and `russetleaf-infra/envs/security/` (the security services), applied from your workstation with management-account and Security Tooling access.
 
 **Cross-account access the design needs** (each a narrow, explicit grant): the russetleaf.com seed Job reads russetleaf.dev's backup and media buckets (bucket policies in `russetleaf-home`); every account's backup-bound buckets replicate into the Backup account; CI roles in each account read and write Terraform state in `russetleaf-infra`.
 
@@ -139,7 +139,7 @@ The project depends on more than AWS: **GitHub** (code, CI, packages, attestatio
 - **BIOS passwords** on all three nodes.
 
 ### Artifact integrity
-- **Helm charts are signed** with cosign like the images, verified in CI before the version-bump pull request, and **pinned by digest** in `wp-gitops` (a tag can be overwritten in GHCR; a digest can't).
+- **Helm charts are signed** with cosign like the images, verified in CI before the version-bump pull request, and **pinned by digest** in `russetleaf-gitops` (a tag can be overwritten in GHCR; a digest can't).
 - **Mirrored third-party images:** a scheduled workflow copies the critical upstream images (Cilium, Argo CD, Kyverno, MariaDB, cert-manager and others) **by digest** into GHCR after verifying the publishers' signatures where they exist, and re-signs them; the clusters pull from the mirror, protecting against upstream deletions and Docker Hub rate limits.
 - **Hash-pinned dependencies:** uv's lock file with hashes (Python) and `composer.lock` (PHP), so a compromised package version can't be swapped in.
 
@@ -163,12 +163,12 @@ The project depends on more than AWS: **GitHub** (code, CI, packages, attestatio
 - `DISALLOW_FILE_MODS` set to `true` (no plugin or theme installs from the admin screen).
 
 ### Supply chain and policy
-- CI builds each image, generates an **SBOM** (a list of every package in the image) with **Syft**, scans it with **Trivy**, **signs** it with **cosign** (keyless, using GitHub's OIDC identity), attaches the SBOM to the image as a **signed attestation** (`cosign attest`, e.g. in SPDX JSON format), and adds a signed **SLSA build provenance** attestation (`actions/attest-build-provenance`). The full set of checks before and after the build is in [Image build pipeline](#image-build-pipeline-wp-image-llm-summarizer). The attestation is stored in GHCR next to the image and recorded in Sigstore's transparency log, so anyone can check which packages a given image contains, and that the list came from the project's own CI.
+- CI builds each image, generates an **SBOM** (a list of every package in the image) with **Syft**, scans it with **Trivy**, **signs** it with **cosign** (keyless, using GitHub's OIDC identity), attaches the SBOM to the image as a **signed attestation** (`cosign attest`, e.g. in SPDX JSON format), and adds a signed **SLSA build provenance** attestation (`actions/attest-build-provenance`). The full set of checks before and after the build is in [Image build pipeline](#image-build-pipeline-russetleaf-wordpress-russetleaf-llm-summarizer). The attestation is stored in GHCR next to the image and recorded in Sigstore's transparency log, so anyone can check which packages a given image contains, and that the list came from the project's own CI.
 - **Kyverno** policies in the cluster (each named after its equivalent in the official Kyverno policy library):
 
 | Policy | Kyverno equivalent | What it enforces here |
 |---|---|---|
-| Signed images | Image verification (`verifyImages`, cosign keyless) | Only images signed by the `wp-image` release workflow (and, from Phase 2, `llm-summarizer`'s) run as the project's own workloads; tags are replaced with **digests** at admission (`mutateDigest`), so a re-pushed tag can't change what runs |
+| Signed images | Image verification (`verifyImages`, cosign keyless) | Only images signed by the `russetleaf-wordpress` release workflow (and, from Phase 2, `russetleaf-llm-summarizer`'s) run as the project's own workloads; tags are replaced with **digests** at admission (`mutateDigest`), so a re-pushed tag can't change what runs |
 | SBOM attestations | Image verification with an `attestations` check | The project's own images must also carry a **signed SBOM attestation** from the same release workflow; an image without one is rejected |
 | Build provenance | Image verification with an `attestations` check for **SLSA provenance** | The project's own images must also carry a **SLSA build provenance** attestation from GitHub's attestation action, issued to the project's **reusable build workflow** (check Kyverno's current support for GitHub attestation bundles) |
 | Signed upstream images | Image verification (`verifyImages`) per upstream publisher | Third-party images from publishers that sign with cosign (e.g. **Kyverno** and **Cilium**; check each upstream's current practice before relying on it) must carry a valid signature from **that publisher's** release identity, so a tampered or substituted upstream image is rejected, not just one from an unknown registry. Images from publishers that don't sign stay covered by the registry allow-list and digest pinning. The list of verified publishers and their identities is kept in the policy, and new entries start in audit mode. Kyverno's own namespace is excluded from these checks, so Kyverno can always start (otherwise it could block itself) |
@@ -197,7 +197,7 @@ The project depends on more than AWS: **GitHub** (code, CI, packages, attestatio
 
 **Rollout:** every policy starts in **audit mode**; Policy Reporter's findings go to `#rl-security`; fix or add a justified exception for each; then switch to **enforce**.
 
-- The **Kyverno CLI** (`kyverno test` and `kyverno apply`) runs the same policies in `wp-gitops` CI against every manifest change, so violations fail the pull request before Argo CD ever deploys them. This covers the "policy checks before deploy" role often given to OPA, without a second policy engine.
+- The **Kyverno CLI** (`kyverno test` and `kyverno apply`) runs the same policies in `russetleaf-gitops` CI against every manifest change, so violations fail the pull request before Argo CD ever deploys them. This covers the "policy checks before deploy" role often given to OPA, without a second policy engine.
 - **Checkov** scans infrastructure and configuration code in **all four repos'** CI (see below), so insecure settings fail the pull request before anything is applied, built or deployed.
 
 ### Sandboxed runtimes (gVisor)
@@ -212,7 +212,7 @@ Normally every container shares the node's Linux kernel, so a kernel exploit fro
 | **WordPress** | **Trial**, kept only if performance is acceptable | Internet-facing PHP; plugin vulnerabilities are WordPress's most common attack route. gVisor slows workloads that make many system calls and do lots of file I/O, so a before-and-after load test decides |
 | Platform components (and, from Phase 2, the summarizer and gateway) | No | Project code or trusted infrastructure (Cilium, Falco and other node agents need host access) |
 
-**How it's installed (home):** Talos's official **gVisor system extension**, added to the Talos image for each node (through Talos's Image Factory, managed in `wp-infra/envs/home`), plus a `RuntimeClass` named `gvisor` in `wp-gitops`.
+**How it's installed (home):** Talos's official **gVisor system extension**, added to the Talos image for each node (through Talos's Image Factory, managed in `russetleaf-infra/envs/home`), plus a `RuntimeClass` named `gvisor` in `russetleaf-gitops`.
 
 **Effects on other tools:**
 - **Falco** must have its **gVisor event source** turned on, or it sees much less inside gVisor pods.
@@ -302,9 +302,9 @@ The lists are kept in Git next to the rules, and **tested**: starting any unlist
 
 | Repo | What Checkov scans |
 |---|---|
-| `wp-infra` | **Terraform** source, plus the **plan** (`terraform show -json` output), which catches problems that only appear once variables and modules are resolved |
-| `wp-gitops` | The **rendered Kubernetes manifests** for every overlay (the output of Helm and Kustomize, i.e. exactly what Argo CD would apply), and the Helm values |
-| `wp-image` | The **Dockerfile**, the WordPress **Helm chart** |
+| `russetleaf-infra` | **Terraform** source, plus the **plan** (`terraform show -json` output), which catches problems that only appear once variables and modules are resolved |
+| `russetleaf-gitops` | The **rendered Kubernetes manifests** for every overlay (the output of Helm and Kustomize, i.e. exactly what Argo CD would apply), and the Helm values |
+| `russetleaf-wordpress` | The **Dockerfile**, the WordPress **Helm chart** |
 | All four | **GitHub Actions workflows**: actions not pinned to a commit, over-broad `permissions`, untrusted input used in scripts (script injection) |
 
 How it's run:
@@ -314,7 +314,7 @@ How it's run:
 - **Overlap with Kyverno is intended:** Checkov checks manifests *before* they're merged, using its own rule set; Kyverno enforces the project's policies *at admission* in the cluster (and its CLI tests the same policies in CI).
 
 
-### Terraform pipeline (`wp-infra`)
+### Terraform pipeline (`russetleaf-infra`)
 All Terraform runs through **GitHub Actions** (apart from the first local applies of `bootstrap/` and `envs/home`), with every check passing before anything reaches AWS, Cloudflare or Talos.
 
 | Stage | Tool | What it does |
@@ -339,17 +339,17 @@ All Terraform runs through **GitHub Actions** (apart from the first local applie
 
 **Deliberately not used:** tfsec or Trivy's Terraform scanning (they overlap heavily with Checkov); Atlantis, Terraform Cloud or Spacelift (GitHub Actions with OIDC, Environments and saved plans covers a single maintainer); OPA/Conftest (Checkov custom policies cover the project's rules).
 
-### Image build pipeline (`wp-image`, `llm-summarizer`)
+### Image build pipeline (`russetleaf-wordpress`, `russetleaf-llm-summarizer`)
 Both images are built in **GitHub Actions** and only reach GHCR after passing code, dependency, build and image checks; every release is signed, attested and recorded in the **Rekor** transparency log. The reasoning for the less obvious choices is in `docs/phase-1-russetleaf-dev/adr/1013-image-supply-chain.md`.
 
 | Stage | Tool | What it does |
 |---|---|---|
 | Secret scanning | **gitleaks** (pre-commit and CI); **GitHub secret scanning with push protection** (public repos) | Stops secrets entering the repo |
 | Dockerfile linting | **hadolint** (includes ShellCheck for `RUN` lines) | Dockerfile correctness and best practices |
-| Language linting | **ruff** and **mypy** (Python, summarizer); **PHP_CodeSniffer with the WordPress Coding Standards** and **PHPStan** (PHP, `wp-image`'s must-use plugins and `db.php`) | Style, types and bugs; the WordPress standards include security checks (output escaping, nonces, input sanitization) |
+| Language linting | **ruff** and **mypy** (Python, summarizer); **PHP_CodeSniffer with the WordPress Coding Standards** and **PHPStan** (PHP, `russetleaf-wordpress`'s must-use plugins and `db.php`) | Style, types and bugs; the WordPress standards include security checks (output escaping, nonces, input sanitization) |
 | SAST | **Semgrep Community Edition** (Python and PHP, open-source security rules) | Security bugs in the project's own code |
 | Dependency checks | `composer audit`, **pip-audit**; GitHub's **dependency-review action** (public repos) | Known-vulnerable dependencies, before building; the dependency review blocks a pull request that adds one |
-| WordPress plugin vulnerabilities | **WPScan** (`wp-image`) | Known plugin and theme vulnerabilities |
+| WordPress plugin vulnerabilities | **WPScan** (`russetleaf-wordpress`) | Known plugin and theme vulnerabilities |
 | Build configuration | **Checkov** (Dockerfile, Helm chart, workflows); **zizmor** (GitHub Actions workflow security: untrusted input in scripts, risky triggers, credential exposure) | Insecure build and CI configuration |
 | Chart checks | `helm lint` and `ct lint` (chart-testing) | Chart correctness |
 | Build | Docker Buildx | Builds the image (base images pinned by digest) |
@@ -361,12 +361,12 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
 | SBOM | **Syft** SBOM, attached with **cosign attest** | Attestation recorded in **Rekor** |
 | Build provenance | GitHub's **`actions/attest-build-provenance`**, with the build run as a **reusable workflow** | A signed **SLSA provenance** record of how and where the image was built (repo, commit, workflow, runner), stored with the image and, on public repos, recorded in **Rekor**. On its own this is **SLSA Build Level 2**; running the build in a reusable workflow (a shared build workflow each repo's release calls) reaches **Build Level 3** as GitHub documents it |
 | Verify | `cosign verify`, `cosign verify-attestation`, `gh attestation verify` on the pushed digest | A broken signature or attestation fails the release, not the deploy |
-| Chart signing | **cosign** on the Helm chart (OCI) | Charts are signed like images, verified in CI before the version-bump pull request, and pinned **by digest** in `wp-gitops` |
+| Chart signing | **cosign** on the Helm chart (OCI) | Charts are signed like images, verified in CI before the version-bump pull request, and pinned **by digest** in `russetleaf-gitops` |
 | Permissions | Workflow token **read-only by default** | `packages: write` and signing permissions granted only to the release jobs |
 | Release notes | GitHub release | Image and chart **digests** plus **Rekor log entry** links, so anyone can audit the transparency log (e.g. with `rekor-cli`) |
 | Repo practices | **OpenSSF Scorecard** (weekly, all four repos) | Scores branch protection, pinned dependencies, token permissions, signed releases and more; badge on each README |
 
-**Pull request flow:** gitleaks → hadolint → ruff/mypy or PHPCS/PHPStan → Semgrep → `composer audit` / pip-audit → dependency review → Checkov → zizmor → `helm lint` / `ct lint` → unit tests → build → container-structure-test → Trivy → kind integration tests (+ evaluation gate). **Release:** the same checks → push by digest → cosign sign → SBOM attestation → SLSA provenance → verify → release notes → version-bump pull request on `wp-gitops`. **Weekly:** scheduled rebuild, WPScan, Scorecard.
+**Pull request flow:** gitleaks → hadolint → ruff/mypy or PHPCS/PHPStan → Semgrep → `composer audit` / pip-audit → dependency review → Checkov → zizmor → `helm lint` / `ct lint` → unit tests → build → container-structure-test → Trivy → kind integration tests (+ evaluation gate). **Release:** the same checks → push by digest → cosign sign → SBOM attestation → SLSA provenance → verify → release notes → version-bump pull request on `russetleaf-gitops`. **Weekly:** scheduled rebuild, WPScan, Scorecard.
 
 **Deliberately not used:** CodeQL (free on public repos but doesn't support PHP; Semgrep covers both languages), Docker Scout, Snyk Container and Grype (overlap with Trivy), Chainguard/Wolfi base images (free tier offers only `latest` tags, which conflicts with pinned versions; worth revisiting).
 
@@ -384,21 +384,21 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
 | `FalcosidekickOutputErrors` | Falcosidekick fails to deliver alerts to Alertmanager or Slack | `#rl-security` |
 | `FalcoEventsDropped` | Falco reports dropped system-call events (it can't keep up, so detections may be missed) | `#rl-security` |
 - **API server authorization: only Node and RBAC; ABAC and `AlwaysAllow` off** on both clusters.
-  - **Home (Talos):** Talos configures the API server with Kubernetes' structured authorization config file (`--authorization-config`), enabling only the **Node** and **RBAC** authorizers. The Talos machine config in `wp-infra` must **never override** it (no custom authorization config, no ABAC policy file). Talos's defaults also turn off anonymous access to the kubelet and use webhook authorization for it (verified on box 1: `kubelet.yaml` has `authentication.anonymous.enabled: false` and `authorization.mode: Webhook`, and an anonymous request to the kubelet API on port 10250 returns **401 Unauthorized**). Checked with `talosctl -n <control-plane-ip> read /system/config/kubernetes/kube-apiserver/authorization-config.yaml`, which must list only `Node` and `RBAC`; documented in `docs/talos-hardening.md`.
+  - **Home (Talos):** Talos configures the API server with Kubernetes' structured authorization config file (`--authorization-config`), enabling only the **Node** and **RBAC** authorizers. The Talos machine config in `russetleaf-infra` must **never override** it (no custom authorization config, no ABAC policy file). Talos's defaults also turn off anonymous access to the kubelet and use webhook authorization for it (verified on box 1: `kubelet.yaml` has `authentication.anonymous.enabled: false` and `authorization.mode: Webhook`, and an anonymous request to the kubelet API on port 10250 returns **401 Unauthorized**). Checked with `talosctl -n <control-plane-ip> read /system/config/kubernetes/kube-apiserver/authorization-config.yaml`, which must list only `Node` and `RBAC`; documented in `docs/talos-hardening.md`.
   - **Both:** the Kubescape CLI scans flag risky RBAC, such as bindings that grant permissions to `system:anonymous` or `system:authenticated`.
 - **Trivy Operator** runs continuously in the cluster, producing CIS compliance reports, vulnerability reports for running images, and configuration audits. Its **compliance results are published as Prometheus metrics** on both clusters, feeding a **Grafana "Compliance" dashboard** that shows both sites side by side, and a `ComplianceFailuresIncreased` alert to `#rl-security` when the number of failing CIS controls rises. This is the continuous compliance signal; kube-bench adds deeper node-level checks on EKS.
-- **Kubescape CLI**, run on demand (monthly at home, once per AWS demo on EKS) from the workstation or the in-cluster CI runners, with **nothing installed in the cluster**: scores each cluster against the **NSA-CISA** and **MITRE ATT&CK** frameworks and analyzes **RBAC** for risky permissions, the one area no other tool here covers. Reports are saved in `docs/` in `wp-gitops`. It complements kube-bench rather than replacing it: kube-bench checks node and control-plane configuration directly on the nodes; Kubescape checks workloads and permissions through the Kubernetes API. The in-cluster Kubescape operator is deliberately not used (0.5–1 GB of memory, mostly duplicating Trivy Operator and Falco); see `docs/phase-1-russetleaf-dev/adr/1003-kubescape-cli-not-operator.md`.
+- **Kubescape CLI**, run on demand (monthly at home, once per AWS demo on EKS) from the workstation or the in-cluster CI runners, with **nothing installed in the cluster**: scores each cluster against the **NSA-CISA** and **MITRE ATT&CK** frameworks and analyzes **RBAC** for risky permissions, the one area no other tool here covers. Reports are saved in `docs/` in `russetleaf-gitops`. It complements kube-bench rather than replacing it: kube-bench checks node and control-plane configuration directly on the nodes; Kubescape checks workloads and permissions through the Kubernetes API. The in-cluster Kubescape operator is deliberately not used (0.5–1 GB of memory, mostly duplicating Trivy Operator and Falco); see `docs/phase-1-russetleaf-dev/adr/1003-kubescape-cli-not-operator.md`.
 - **Security Hub** (with the AWS Foundational Security Best Practices and CIS standards) is the **continuous** check of every account's configuration; see [AWS account structure](#aws-account-structure-and-best-practices-security-reference-architecture).
-- **Prowler**, as a free **second opinion** across **all the accounts**: a scheduled GitHub Actions workflow in `wp-infra` runs it **monthly**, plus once per AWS demo with the stack up, using a **read-only audit role** in each account through GitHub OIDC. It checks the account's actual settings (IAM users and keys, root MFA, CloudTrail, S3 public access, security groups, encryption defaults) against **CIS AWS Foundations** and **AWS Foundational Security Best Practices**, catching anything configured outside Terraform. Reports are kept as workflow artifacts with a summary in `docs/security/` and a short message to `#rl-security`. Deepfence ThreatMapper was considered and not used (its console needs more memory than box 1 has, and it duplicates the tools above); see `docs/phase-1-russetleaf-dev/adr/1007-prowler-not-threatmapper.md`.
+- **Prowler**, as a free **second opinion** across **all the accounts**: a scheduled GitHub Actions workflow in `russetleaf-infra` runs it **monthly**, plus once per AWS demo with the stack up, using a **read-only audit role** in each account through GitHub OIDC. It checks the account's actual settings (IAM users and keys, root MFA, CloudTrail, S3 public access, security groups, encryption defaults) against **CIS AWS Foundations** and **AWS Foundational Security Best Practices**, catching anything configured outside Terraform. Reports are kept as workflow artifacts with a summary in `docs/security/` and a short message to `#rl-security`. Deepfence ThreatMapper was considered and not used (its console needs more memory than box 1 has, and it duplicates the tools above); see `docs/phase-1-russetleaf-dev/adr/1007-prowler-not-threatmapper.md`.
 
 ### Stateless operation
-- **Custom WordPress image** with plugins and themes built in, built by the `wp-image` repo's CI, pushed to the registry, and deployed by Argo CD.
+- **Custom WordPress image** with plugins and themes built in, built by the `russetleaf-wordpress` repo's CI, pushed to the registry, and deployed by Argo CD.
 - **Media uploads offloaded to S3** (S3-Uploads or WP Offload Media, chosen in Phase 1 step 5.1), so WordPress pods need no persistent volume (`persistence.enabled: false`). Not EFS, by decision; see [Media storage: S3, not EFS](#media-storage-s3-not-efs-by-decision).
 - **WP-Cron turned off** in WordPress (`DISABLE_WP_CRON`) and run as a **Kubernetes CronJob** instead.
 - **Outgoing email through Amazon SES** with an SMTP plugin; each site has its own SES domain identity with DKIM.
 
 ### Media storage: S3, not EFS (by decision)
-Many WordPress-on-AWS guides, including AWS's own reference architecture, put `wp-content` on **EFS**, a shared network filesystem mounted by every server. This project deliberately doesn't. Media goes to **S3**, and WordPress's code (core, plugins, themes) is **built into the container image**. The reasoning is recorded as an ADR, `docs/phase-1-russetleaf-dev/adr/1002-s3-media-not-efs.md` in `wp-gitops`.
+Many WordPress-on-AWS guides, including AWS's own reference architecture, put `wp-content` on **EFS**, a shared network filesystem mounted by every server. This project deliberately doesn't. Media goes to **S3**, and WordPress's code (core, plugins, themes) is **built into the container image**. The reasoning is recorded as an ADR, `docs/phase-1-russetleaf-dev/adr/1002-s3-media-not-efs.md` in `russetleaf-gitops`.
 
 **Two production patterns, for two kinds of site:**
 - **EFS (shared `wp-content`):** traditional or lift-and-shift WordPress on EC2 Auto Scaling groups. It needs no changes to WordPress, so admin-screen plugin installs, caching plugins and plugins that write files all just work. The right choice when site owners install plugins themselves.
@@ -441,11 +441,11 @@ Whichever is chosen must also work with a **custom S3 endpoint**, so the ci test
 - **Tagging**: every AWS resource gets `Project`, `Site`, `Env` and `ManagedBy` tags (plus `Stack=edge|demo` on russetleaf.com in Phase 3) through the AWS provider's `default_tags`, so leftovers can be found and costs split per site.
 
 ### WordPress image and Helm chart
-The site uses a **custom image built on the official `wordpress` image** and a **small Helm chart of its own** (Deployment/Rollout, Service, Ingress, HPA, PDB, WP-Cron CronJob), both maintained in the `wp-image` repo and released together. The Bitnami WordPress chart isn't used: it only works with Bitnami-format images, and Bitnami cut back its free images in 2025. Owning the chart removes that dependency and keeps every setting visible.
+The site uses a **custom image built on the official `wordpress` image** and a **small Helm chart of its own** (Deployment/Rollout, Service, Ingress, HPA, PDB, WP-Cron CronJob), both maintained in the `russetleaf-wordpress` repo and released together. The Bitnami WordPress chart isn't used: it only works with Bitnami-format images, and Bitnami cut back its free images in 2025. Owning the chart removes that dependency and keeps every setting visible.
 
 **Repos and packages are public early** (ADR 1030): the repos are made public in Phase 1 step 1.1, after a secret scan, which gives free GitHub-hosted CI minutes, and the GHCR packages are made public at first push.
 
-**Where images and charts are hosted:** on **GitHub Container Registry (GHCR)** under the project's GitHub account: `ghcr.io/<github-user>/wp-image` and `ghcr.io/<github-user>/llm-summarizer`, each holding its image and its Helm chart (as an OCI artifact). Each package is linked to the repo whose CI publishes it. **GHCR packages have their own visibility setting, separate from the repo's:** a package stays **private** even after its repo is made public, until its visibility is changed in the package's settings. While packages are private, both clusters need credentials to pull them: an image pull secret for the kubelet, and OCI repository credentials for Argo CD (both from a GitHub token with `read:packages` only, kept in Secrets Manager and synced by External Secrets). Once the packages are public, both can be removed. While packages are private, GitHub's free-plan limits for private packages apply (roughly 500 MB of storage and limited transfer), so either make the packages public early or delete old untagged versions automatically. Why GHCR rather than ECR is recorded in `docs/phase-1-russetleaf-dev/adr/1004-ghcr-not-ecr.md`. **Access and cleanup (ADR 1035):** each package accepts writes only from its own repo's Actions (no personal tokens with `write:packages`); a monthly cleanup workflow deletes untagged versions older than 90 days but never a digest referenced in `wp-gitops` in the last 90 days or one of the last 10 releases, so rollbacks always find their image.
+**Where images and charts are hosted:** on **GitHub Container Registry (GHCR)** under the project's GitHub account: `ghcr.io/<github-user>/russetleaf-wordpress` and `ghcr.io/<github-user>/russetleaf-llm-summarizer`, each holding its image and its Helm chart (as an OCI artifact). Each package is linked to the repo whose CI publishes it. **GHCR packages have their own visibility setting, separate from the repo's:** a package stays **private** even after its repo is made public, until its visibility is changed in the package's settings. While packages are private, both clusters need credentials to pull them: an image pull secret for the kubelet, and OCI repository credentials for Argo CD (both from a GitHub token with `read:packages` only, kept in Secrets Manager and synced by External Secrets). Once the packages are public, both can be removed. While packages are private, GitHub's free-plan limits for private packages apply (roughly 500 MB of storage and limited transfer), so either make the packages public early or delete old untagged versions automatically. Why GHCR rather than ECR is recorded in `docs/phase-1-russetleaf-dev/adr/1004-ghcr-not-ecr.md`. **Access and cleanup (ADR 1035):** each package accepts writes only from its own repo's Actions (no personal tokens with `write:packages`); a monthly cleanup workflow deletes untagged versions older than 90 days but never a digest referenced in `russetleaf-gitops` in the last 90 days or one of the last 10 releases, so rollbacks always find their image.
 
 ## Networking: Cilium and Hubble
 
@@ -460,7 +460,7 @@ Both clusters run **Cilium** (the choice and its alternatives are recorded in `d
 | Installed by | Terraform (Helm provider) right after the cluster bootstraps, because nothing (including Argo CD) can run without a CNI; Argo CD then manages it from `platform/cilium/` | Terraform (Helm provider) right after the cluster and its managed node group are created; Argo CD then manages it |
 | New nodes | Fixed hardware | Karpenter NodePools add the startup taint `node.cilium.io/agent-not-ready=true:NoExecute`, so no pod lands on a new node before Cilium is ready on it |
 
-Terraform installs Cilium only once (later changes are ignored by Terraform, using `lifecycle { ignore_changes }`); from then on, the values in `wp-gitops/platform/cilium/` (with `overlays/home` and `overlays/aws`) are the source of truth, and Cilium upgrades go through Git like everything else.
+Terraform installs Cilium only once (later changes are ignored by Terraform, using `lifecycle { ignore_changes }`); from then on, the values in `russetleaf-gitops/platform/cilium/` (with `overlays/home` and `overlays/aws`) are the source of truth, and Cilium upgrades go through Git like everything else.
 
 ### Policies: CiliumNetworkPolicies, not plain NetworkPolicies
 
@@ -525,7 +525,7 @@ encryption:
 - **Check:** `cilium encrypt status` (or `cilium status`) shows WireGuard enabled with a peer for each other node.
 
 ### Service mesh (Istio): not used, by decision
-The project deliberately has **no service mesh**. The reasoning is recorded as an **architecture decision record (ADR)**, `docs/phase-1-russetleaf-dev/adr/1001-no-service-mesh.md` in `wp-gitops`:
+The project deliberately has **no service mesh**. The reasoning is recorded as an **architecture decision record (ADR)**, `docs/phase-1-russetleaf-dev/adr/1001-no-service-mesh.md` in `russetleaf-gitops`:
 
 | What a mesh like Istio would add | How this design already covers it |
 |---|---|
@@ -629,7 +629,7 @@ Admins and editors sign in to WordPress with their **Google accounts**, using **
 
 An admin signs in once with Google at the edge, then once more (one click, no password) in WordPress.
 
-**Google Cloud setup (free):** one Google Cloud project with an OAuth consent screen using only the basic scopes (`openid`, `email`, `profile`), and an OAuth client per site (and one for local testing). With only basic scopes, Google's app review isn't usually required; until the app is published, only listed test users can sign in (check Google's current rules). OAuth clients for web apps are created in the Google Cloud console and documented in `wp-infra`'s README, since they can't be fully managed with Terraform; their secrets are stored in Secrets Manager.
+**Google Cloud setup (free):** one Google Cloud project with an OAuth consent screen using only the basic scopes (`openid`, `email`, `profile`), and an OAuth client per site (and one for local testing). With only basic scopes, Google's app review isn't usually required; until the app is published, only listed test users can sign in (check Google's current rules). OAuth clients for web apps are created in the Google Cloud console and documented in `russetleaf-infra`'s README, since they can't be fully managed with Terraform; their secrets are stored in Secrets Manager.
 
 **The plugin:** a generic OIDC client plugin (e.g. "OpenID Connect Generic Client"; check current maintenance before choosing), pinned in `composer.json` (through WPackagist) and configured entirely from **environment variables and constants** (client ID, client secret, endpoints, allowed emails), never from the admin screen.
 
@@ -654,7 +654,7 @@ russetleaf.dev is the portfolio's front door, so it gets a **custom design and a
 Modern WordPress **block themes** are styled through `theme.json` (colors, typography, spacing), templates and patterns. The **Site Editor** can change them, but it saves those changes **in the database**, which would let the live site drift from Git. So:
 1. **Design locally** in the Docker Compose WordPress, using the Site Editor and AI help.
 2. **Export to files** with the **Create Block Theme** plugin (from the WordPress team) as the project's own theme, `russetleaf`.
-3. **Commit** it to `wp-image/themes/russetleaf/` and build it into the image like any other theme; the same image serves both sites.
+3. **Commit** it to `russetleaf-wordpress/themes/russetleaf/` and build it into the image like any other theme; the same image serves both sites.
 4. **Lock the Site Editor in production:** a small must-use plugin removes the ability to change the theme's templates and global styles, so the design only changes through a pull request (and the staging and promotion pipeline).
 
 ### Using AI to design it quickly
@@ -665,10 +665,10 @@ Modern WordPress **block themes** are styled through `theme.json` (colors, typog
 - **Logo design:** a simple mark (e.g. a stylized russet leaf) plus a "RussetLeaf" wordmark, produced as **SVG** (vector, crisp at any size, tiny, easy to edit). The quickest route is to have Claude write the SVG directly and iterate on it; an AI image generator (e.g. Ideogram, ChatGPT's image generation, Adobe Firefly, Midjourney) can be used to explore concepts first, but its raster output then needs **vectorizing** (e.g. Inkscape's trace) and cleaning up.
 - **Derived assets:** favicon set, WordPress site icon, Apple touch icon, and an **Open Graph share image** for links on social media, all generated from the SVG; the theme's **palette is derived from the logo**.
 - **Checks before public use:** the image generator's **commercial-use terms** (if one was used); that purely AI-generated images may not be protectable by copyright in some jurisdictions; and a quick **trademark search** for "RussetLeaf".
-- Brand assets live in `wp-image/brand/` (source SVG, exported icons, the palette).
+- Brand assets live in `russetleaf-wordpress/brand/` (source SVG, exported icons, the palette).
 
 ### Front-end quality gates
-In `wp-image` CI and the staging gate:
+In `russetleaf-wordpress` CI and the staging gate:
 - **Visual regression tests:** **Playwright** screenshots of key pages (home, a post, an archive, light and dark mode, mobile and desktop widths) compared with approved baselines; any unexpected change fails the check until a new baseline is approved in the pull request.
 - **Accessibility checks:** **axe-core** (through Playwright) on the same pages, failing on serious issues (contrast, headings, alt text, keyboard navigation).
 - **Lighthouse CI** performance budgets (page weight, Largest Contentful Paint, total blocking time), complementing the k6 load tests.
@@ -692,7 +692,7 @@ Prometheus **scrapes** (pulls) metrics from HTTP endpoints; nothing pushes to it
 (If the image is ever switched from Apache to PHP-FPM + nginx, use **php-fpm_exporter** instead of apache_exporter.)
 
 ### The custom metrics plugin
-A must-use plugin in `wp-image` (`mu-plugins/metrics/`) exposes a handful of metrics specific to this project:
+A must-use plugin in `russetleaf-wordpress` (`mu-plugins/metrics/`) exposes a handful of metrics specific to this project:
 
 | Metric | Meaning | Used for |
 |---|---|---|
@@ -814,12 +814,12 @@ A cluster can't report that it's completely down, so two outside checks back up 
   - russetleaf.dev must return 200
 
 ### AWS and Cloudflare alerts
-- **AWS:** CloudWatch alarms (ALB 5xx, RDS CPU/storage/connections, ElastiCache memory), AWS Budgets and Cost Anomaly Detection publish to **SNS** topics, which **Amazon Q Developer in chat applications** forwards to Slack. All of it is defined in `wp-infra` Terraform (an `alerting` module).
+- **AWS:** CloudWatch alarms (ALB 5xx, RDS CPU/storage/connections, ElastiCache memory), AWS Budgets and Cost Anomaly Detection publish to **SNS** topics, which **Amazon Q Developer in chat applications** forwards to Slack. All of it is defined in `russetleaf-infra` Terraform (an `alerting` module).
 - **Cloudflare:** notifications for tunnel health and security events go to a Slack webhook (`#rl-dev-alerts`).
 
 ### Alerts as code
 - Alert rules are `PrometheusRule` resources in Git (in each component's `base/`, plus the summarizer's chart), tested in CI with **`promtool test rules`**.
-- Every alert has `severity`, `summary`, `description` and a **`runbook_url`** pointing to `docs/runbooks/<alert>.md` in `wp-gitops`: what it means, how to check, how to fix.
+- Every alert has `severity`, `summary`, `description` and a **`runbook_url`** pointing to `docs/runbooks/<alert>.md` in `russetleaf-gitops`: what it means, how to check, how to fix.
 - **Every alert must be actionable.** If nobody would act on it, it's a dashboard panel, not an alert. A monthly review removes or tunes noisy alerts.
 - Alertmanager's routing config lives in `platform/monitoring/` (with `overlays/home` and `overlays/aws` setting the site-specific receivers).
 
@@ -843,15 +843,15 @@ Changes never go straight to a live site. Every change to the WordPress image or
 
 
 ### ci: test clusters in GitHub Actions
-- **Charts and images** (`wp-image`, `llm-summarizer`): each pull request creates a kind cluster, installs the chart with the `ci` values (LocalStack endpoints, mock LLM, test credentials), and runs integration tests:
+- **Charts and images** (`russetleaf-wordpress`, `russetleaf-llm-summarizer`): each pull request creates a kind cluster, installs the chart with the `ci` values (LocalStack endpoints, mock LLM, test credentials), and runs integration tests:
   - WordPress: the site installs and loads, an upload lands in the LocalStack S3 bucket, publishing a post sends a message to the LocalStack SQS queue
-- **Manifests** (`wp-gitops`): pull requests render and validate every overlay (as before), and changes to shared platform components are installed into a kind cluster to check they start.
+- **Manifests** (`russetleaf-gitops`): pull requests render and validate every overlay (as before), and changes to shared platform components are installed into a kind cluster to check they start.
 - **LocalStack note:** LocalStack's free-tier terms have changed over time. If its current terms don't suit, use **MinIO** (S3) and **ElasticMQ** (SQS) instead, with a plain Kubernetes Secret in place of Secrets Manager.
 
 ### staging: on-demand, scale-to-zero
 Staging exists **only while it's being tested** (scale-to-zero): it keeps the cluster lean and shows an on-demand environment pattern, even though the three-node cluster could now afford an always-on copy (see `docs/phase-1-russetleaf-dev/adr/1029-on-demand-staging.md`):
 - **Staging Argo CD Applications** (WordPress and a small MariaDB; the summarizer from Phase 2) are in Git under `overlays/home-staging`, but with **auto-sync off**. When idle, nothing is deployed and staging uses no memory.
-- **The `staging-test` workflow** (in `wp-gitops`, on the in-cluster ARC runners, using an Argo CD account limited to the staging project) runs each time a staging version changes:
+- **The `staging-test` workflow** (in `russetleaf-gitops`, on the in-cluster ARC runners, using an Argo CD account limited to the staging project) runs each time a staging version changes:
   1. Syncs the staging Applications and waits until they're healthy.
   2. Runs the **data Job**: copies the latest russetleaf.dev production backup from S3, imports it into the staging MariaDB, and **scrubs personal data** (user emails, commenter names and emails, application passwords) before anything else touches it.
   3. Runs the **smoke-test Job**: the home page and a few posts load, an upload goes to the staging S3 bucket (Phase 2 adds: publishing a post produces a summary through the real gateway and Bedrock).
@@ -862,8 +862,8 @@ Staging exists **only while it's being tested** (scale-to-zero): it keeps the cl
 - **Alerts:** `env=staging` alerts go only to `#rl-staging`, never to `#rl-critical`.
 
 ### How a change is promoted
-1. **Pull request** in `wp-image` or `llm-summarizer`: unit tests, the **ci** kind-cluster tests, and (for the summarizer) the evaluation gate on the home runners.
-2. **Release:** CI builds, scans, signs and publishes the image and chart, then the bot opens a pull request bumping the version in **`overlays/home-staging`**. It **merges automatically** once `wp-gitops` CI passes.
+1. **Pull request** in `russetleaf-wordpress` or `russetleaf-llm-summarizer`: unit tests, the **ci** kind-cluster tests, and (for the summarizer) the evaluation gate on the home runners.
+2. **Release:** CI builds, scans, signs and publishes the image and chart, then the bot opens a pull request bumping the version in **`overlays/home-staging`**. It **merges automatically** once `russetleaf-gitops` CI passes.
 3. **Staging test:** the merge starts the `staging-test` workflow (above). Results are posted to `#rl-staging`.
 4. **Promotion to prod:** if staging passed, the bot opens a pull request bumping the same version in **`overlays/home`** (russetleaf.dev; and `overlays/aws` for russetleaf.com in Phase 3), with the staging results and release notes attached. **You review and merge.** If staging failed, the bot posts the failure to `#rl-staging` and `#rl-deploys`, and nothing is promoted.
 5. **Production rollout:** Argo CD syncs russetleaf.dev, and the Argo Rollouts canary is the last check. In Phase 3, the next russetleaf.com demo deploys the same version.
@@ -887,7 +887,7 @@ Performance is tested on purpose, at several levels, not just checked for correc
 | **Soak** | Moderate load for 4–8 hours | Home staging, overnight | Memory leaks, connection-pool exhaustion, growing queues |
 
 ### How it's run
-- **k6** scripts (home page, posts, search, the REST API, admin sign-in through a test identity provider in staging) live in `wp-gitops/perf/`, with **thresholds in code** (e.g. 95th-percentile latency under 1 second, errors under 1%) so each run passes or fails.
+- **k6** scripts (home page, posts, search, the REST API, admin sign-in through a test identity provider in staging) live in `russetleaf-gitops/perf/`, with **thresholds in code** (e.g. 95th-percentile latency under 1 second, errors under 1%) so each run passes or fails.
 - **The k6 Operator** runs tests **inside the cluster**, distributed across pods and aimed at the ingress, so tests aren't limited by your home internet connection and don't go through Cloudflare. Its namespace gets a CiliumNetworkPolicy allowing only the ingress as a target, and its images go on the Kyverno registry allow-list.
 - **Edge tests** (through Cloudflare or CloudFront, to test caching and the WAFs themselves) use a narrow, **temporary WAF allow rule** for the test source, applied through Terraform and removed afterwards, so the WAFs are tested deliberately rather than tripped by accident.
 - **Results** go to **Prometheus** (k6's remote-write output), shown in Grafana beside the system metrics (CPU, memory, database, queue depth, Bedrock calls) for the same time window, and are summarized in `docs/performance/`.
@@ -931,7 +931,7 @@ The OpenCost alerts are `PrometheusRule`s in `platform/opencost/`, labeled `team
 | **Monthly review** | AWS Budgets, Cost Explorer (by `Site`), OpenCost dashboards, Bedrock spend | Ongoing-operations task in both plans |
 
 ### Cost allocation tags must be activated
-AWS only lets Budgets and Cost Explorer filter by your own tags (`Project`, `Site`, `Env`, `Stack`, `ManagedBy`) after they're **activated as cost allocation tags** in the Billing console, or with Terraform (`aws_ce_cost_allocation_tag`, in `wp-infra/bootstrap/`). A tag can only be activated after it has appeared on at least one resource, activation can take up to a day to show, and costs are only tagged from activation onwards, so activate them early.
+AWS only lets Budgets and Cost Explorer filter by your own tags (`Project`, `Site`, `Env`, `Stack`, `ManagedBy`) after they're **activated as cost allocation tags** in the Billing console, or with Terraform (`aws_ce_cost_allocation_tag`, in `russetleaf-infra/bootstrap/`). A tag can only be activated after it has appeared on at least one resource, activation can take up to a day to show, and costs are only tagged from activation onwards, so activate them early.
 
 ## Update strategy
 
@@ -941,10 +941,10 @@ Every update, from a WordPress plugin to a Kubernetes version, arrives as a **pu
 
 | Layer | How updates arrive | How they're tested and rolled out | Cadence |
 |---|---|---|---|
-| **WordPress core, plugins, themes** (`wp-image`) | **Renovate** pull requests. Plugins and themes are managed with **Composer through WPackagist** (a Composer mirror of the WordPress.org plugin and theme directories), so Renovate can track them | Build → kind ci tests → **staging** → promotion PR to prod → Argo Rollouts canary | Weekly; **security releases within 48 hours** |
+| **WordPress core, plugins, themes** (`russetleaf-wordpress`) | **Renovate** pull requests. Plugins and themes are managed with **Composer through WPackagist** (a Composer mirror of the WordPress.org plugin and theme directories), so Renovate can track them | Build → kind ci tests → **staging** → promotion PR to prod → Argo Rollouts canary | Weekly; **security releases within 48 hours** |
 | **Base images** (official `wordpress`, Python) | Renovate updates the **pinned digests**; a **weekly scheduled rebuild** picks up OS patches even without code changes | Same pipeline as above | Weekly |
-| **Platform components** (Cilium, Argo CD, Kyverno, Falco, Loki, Tempo, etc.) | Renovate in `wp-gitops`, **grouped** into one pull request per component | **Patch versions:** auto-merge once CI passes. **Minor and major versions:** read the changelog, try on a **local Talos-in-Docker cluster** first, merge by hand. (Staging doesn't help here: platform components are shared by staging and prod.) | Weekly review; minors monthly |
-| **Talos and Kubernetes** (home) | Versions bumped in `wp-infra/envs/home` (Renovate tracks them with a custom version rule) | Take an **etcd snapshot** and an on-demand MariaDB backup; rehearse on a local Talos cluster; check Cilium and other components support the new Kubernetes version; upgrade **Talos one node at a time** (box 2, box 1, then box 3), checking etcd health between nodes, so the site stays up throughout, then Kubernetes (`talosctl upgrade-k8s`). Roll back with `talosctl rollback` | Talos patches monthly; Kubernetes minor versions within a few months of release, staying **within the supported window** |
+| **Platform components** (Cilium, Argo CD, Kyverno, Falco, Loki, Tempo, etc.) | Renovate in `russetleaf-gitops`, **grouped** into one pull request per component | **Patch versions:** auto-merge once CI passes. **Minor and major versions:** read the changelog, try on a **local Talos-in-Docker cluster** first, merge by hand. (Staging doesn't help here: platform components are shared by staging and prod.) | Weekly review; minors monthly |
+| **Talos and Kubernetes** (home) | Versions bumped in `russetleaf-infra/envs/home` (Renovate tracks them with a custom version rule) | Take an **etcd snapshot** and an on-demand MariaDB backup; rehearse on a local Talos cluster; check Cilium and other components support the new Kubernetes version; upgrade **Talos one node at a time** (box 2, box 1, then box 3), checking etcd health between nodes, so the site stays up throughout, then Kubernetes (`talosctl upgrade-k8s`). Roll back with `talosctl rollback` | Talos patches monthly; Kubernetes minor versions within a few months of release, staying **within the supported window** |
 | **Terraform providers and modules** | Renovate (with the lock file) | CI plan, Checkov, `terraform test` | Monthly |
 | **CLI tools and GitHub Actions** | Renovate (`.mise.toml`; actions pinned to commit hashes) | CI | Monthly; patches auto-merge |
 | **Workstation** (Ubuntu) | Unattended security upgrades | — | Automatic |
@@ -957,12 +957,12 @@ Every update, from a WordPress plugin to a Kubernetes version, arrives as a **pu
 - **Custom version rules** for versions Renovate can't find by itself (Talos and Kubernetes versions in Terraform, the EKS AMI version).
 
 ### Vulnerability-driven updates
-- **WordPress plugin vulnerabilities:** Trivy scans operating-system and language packages but doesn't know about WordPress plugin vulnerabilities, which are WordPress's main risk. **WPScan** (free API token, limited daily requests) runs in `wp-image` CI and on a **weekly schedule** against the current plugin and theme list, failing the build or alerting `#rl-security` on a known vulnerability. That alert starts the 48-hour security release.
+- **WordPress plugin vulnerabilities:** Trivy scans operating-system and language packages but doesn't know about WordPress plugin vulnerabilities, which are WordPress's main risk. **WPScan** (free API token, limited daily requests) runs in `russetleaf-wordpress` CI and on a **weekly schedule** against the current plugin and theme list, failing the build or alerting `#rl-security` on a known vulnerability. That alert starts the 48-hour security release.
 - **Running images:** Trivy Operator alerts on new critical vulnerabilities in what's already deployed.
 - **AWS and cluster posture:** Prowler and Kubescape reports surface outdated or insecure settings.
 
 ### Version-age report
-A **monthly scheduled workflow** in `wp-gitops` checks running versions (Talos, Kubernetes, EKS, MariaDB, Valkey, and major platform charts) against their **end-of-life dates** (e.g. from the endoflife.date API) and posts anything within 90 days of end of support to `#rl-deploys`. Renovate's Dependency Dashboard covers everything else.
+A **monthly scheduled workflow** in `russetleaf-gitops` checks running versions (Talos, Kubernetes, EKS, MariaDB, Valkey, and major platform charts) against their **end-of-life dates** (e.g. from the endoflife.date API) and posts anything within 90 days of end of support to `#rl-deploys`. Renovate's Dependency Dashboard covers everything else.
 
 ### Safety nets for every update
 - **Before:** backups (etcd snapshot, on-demand MariaDB backup) and changelogs read for anything minor or major.
@@ -1078,14 +1078,14 @@ Two parts of the AWS design deliberately don't run at home:
 ### russetleaf.dev database backups
 The database is protected in two ways. Against a **node failure**, MariaDB Operator runs **primary–replica replication** (primary on box 3, replica on box 1) with **automatic failover**, so at most a few seconds of changes are lost. Against **disasters** (data deleted or corrupted, or the whole home lab lost), these **backups** run **every 6 hours**, so at most 6 hours of posts and settings can be lost. Volumes are on local disks with no replicated storage (no Ceph or Longhorn; see `docs/phase-1-russetleaf-dev/adr/1010-local-storage-no-ceph.md`).
 
-**MariaDB Operator** (not Talos) backs up the russetleaf.dev database. Talos has its own snapshot feature, but it only covers the cluster's internal state (etcd), not application data. The operator's `Backup` resource, deployed by Argo CD from `wp-gitops/platform/mariadb/`, runs a scheduled dump and uploads it to S3.
+**MariaDB Operator** (not Talos) backs up the russetleaf.dev database. Talos has its own snapshot feature, but it only covers the cluster's internal state (etcd), not application data. The operator's `Backup` resource, deployed by Argo CD from `russetleaf-gitops/platform/mariadb/`, runs a scheduled dump and uploads it to S3.
 
 | Setting | Value |
 |---|---|
 | Backup type | **Logical** (`mariadb-dump`, plain SQL, gzip-compressed). It can be restored into the home MariaDB **and** into RDS for MariaDB. Physical backups (`mariadb-backup`) can't be restored into RDS. |
 | Schedule | **Every 6 hours**, giving a recovery point of at most 6 hours of lost changes (the home cluster has no replicated storage; see `docs/phase-1-russetleaf-dev/adr/1010-local-storage-no-ceph.md`) |
 | Retention | 14 days (the operator's `maxRetention`), plus an S3 lifecycle rule as a safety net |
-| Bucket | `russetleaf-dev-db-backups` (example name), created in `wp-infra/envs/home` with the `s3-backups` module: versioning on, encryption on, public access blocked, objects and old versions expire after 30 days |
+| Bucket | `russetleaf-dev-db-backups` (example name), created in `russetleaf-infra/envs/home` with the `s3-backups` module: versioning on, encryption on, public access blocked, objects and old versions expire after 30 days |
 | Credentials | IAM key allowed only to write to and read from that bucket, kept in Secrets Manager and synced by External Secrets (or a keyless IAM role once keyless OIDC access (Phase 1 step 9.1) is done) |
 | Monitoring | The `Backup` runs as a Kubernetes CronJob, so kube-state-metrics reports its last success. Alertmanager alerts if the last successful backup is more than 7 hours old. |
 | Restore test | Monthly: restore the latest backup into a scratch MariaDB instance in the cluster (the operator's `Restore` resource, or a new `MariaDB` that bootstraps from the backup), check the post count, then delete it |

@@ -15,7 +15,7 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 - **Security services, delegated to Security Tooling:** Security Hub (AWS Foundational Security Best Practices and CIS standards; critical and high findings to Slack), AWS Config (focused recording and a CIS conformance pack), IAM Access Analyzer (external-access findings, plus policy checks in the Terraform pipeline), organization GuardDuty, an organization CloudTrail trail into Log Archive. Inspector optional; Macie and Detective not used.
 - **Resource practices:** account-level S3 Block Public Access, TLS-only bucket policies, bucket-owner-enforced ownership; EBS encryption by default; KMS customer-managed keys for logs and backups; snapshot and AMI public-access blocks; IMDSv2 with hop limit 1 on EKS nodes; VPC endpoints, flow logs, empty default security groups, default VPCs removed.
 - **A Well-Architected review** with the free tool, kept in `docs/`, revisited yearly.
-- Everything in Terraform: `wp-infra/envs/org/` and `wp-infra/envs/security/`, with existing environments moved into their accounts.
+- Everything in Terraform: `russetleaf-infra/envs/org/` and `russetleaf-infra/envs/security/`, with existing environments moved into their accounts.
 
 ## Alternatives considered
 - **Single account (the previous design):** simplest and cheapest, but a compromise or mistake can reach everything; no separation of security tooling and logs from workloads; doesn't match the SRA.

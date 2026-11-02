@@ -13,8 +13,8 @@ labels and issues that already exist (matched by title) are left alone.
 Needs the GitHub CLI (`gh`), signed in with access to the repo.
 
 Usage:
-  tools/plan_to_issues.py --phase-dir docs/phase-1-russetleaf-dev --repo smscully/wp-gitops
-  tools/plan_to_issues.py --phase-dir docs/phase-1-russetleaf-dev --repo smscully/wp-gitops --apply
+  tools/plan_to_issues.py --phase-dir docs/phase-1-russetleaf-dev --repo smscully/russetleaf-docs
+  tools/plan_to_issues.py --phase-dir docs/phase-1-russetleaf-dev --repo smscully/russetleaf-docs --apply
 """
 import argparse
 import datetime as dt

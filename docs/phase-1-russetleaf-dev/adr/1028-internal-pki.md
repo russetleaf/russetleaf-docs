@@ -9,7 +9,7 @@
 Public TLS is handled at the edge: Cloudflare (russetleaf.dev) and ACM (russetleaf.com). Inside the clusters, several things need certificates: MariaDB's TLS for WordPress connections (required for the `wordpress` user), the optional client-certificate stretch goal, and any internal endpoint that should use TLS (e.g. OTLP receivers, internal admin services). The design referred to "certificates from the operator or cert-manager" without deciding.
 
 ## Decision
-- **cert-manager** in `wp-gitops/platform/cert-manager/` on both clusters, with an **internal CA**: a self-signed root, kept as a Kubernetes Secret and backed up in the break-glass kit, issuing an intermediate CA used by a **ClusterIssuer**.
+- **cert-manager** in `russetleaf-gitops/platform/cert-manager/` on both clusters, with an **internal CA**: a self-signed root, kept as a Kubernetes Secret and backed up in the break-glass kit, issuing an intermediate CA used by a **ClusterIssuer**.
 - **trust-manager** distributes the CA bundle to the namespaces that need it, so clients can verify internal certificates.
 - Internal certificates for MariaDB (and other internal TLS endpoints) come from this issuer, with automatic renewal and expiry alerts (cert-manager's metrics in Prometheus).
 - Components that manage their own webhook certificates (Kyverno, External Secrets, Cilium's Hubble) keep doing so.

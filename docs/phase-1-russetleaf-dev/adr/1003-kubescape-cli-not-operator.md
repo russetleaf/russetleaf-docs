@@ -27,7 +27,7 @@ Box 1 of the home lab has 8 GB of RAM and already uses about 6–7 GB.
 - **Run the Kubescape CLI on demand** against each live cluster, from the workstation or the in-cluster CI runners, with nothing installed in the cluster:
   - frameworks: **NSA-CISA** and **MITRE ATT&CK**, plus the **RBAC** analysis
   - **monthly** on the home cluster, and **once per AWS demo** on EKS
-  - reports saved in `wp-gitops/docs/` (e.g. `docs/security/kubescape-<site>-<date>.json` with a short Markdown summary), next to the kube-bench and Trivy reports; accepted findings explained in the summary
+  - reports saved in `russetleaf-gitops/docs/` (e.g. `docs/security/kubescape-<site>-<date>.json` with a short Markdown summary), next to the kube-bench and Trivy reports; accepted findings explained in the summary
 
 ## Alternatives considered
 - **Kubescape operator in the cluster:** continuous scanning and in-cluster reports, but several components using roughly 0.5–1 GB of memory, most of it duplicating Trivy Operator and Falco. Doesn't fit box 1.
