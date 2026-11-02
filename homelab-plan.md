@@ -21,21 +21,21 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, the custom site design and logo, and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.6, 5.1–5.7, 5.10, 6.1, 6.3, 11.2 | **~136–231** |
-| **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model, MLflow tracking and registry, guardrails, online evaluation and drift monitoring), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–9.6, 10.1–10.6, 10.8–10.12 | **~121–210** |
+| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, the custom site design and logo, and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.6, 5.1–5.7, 5.10, 6.1, 6.3, 11.2 | **~148–245** |
+| **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model, MLflow tracking and registry, guardrails, online evaluation and drift monitoring), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–9.6, 10.1–10.6, 10.8–10.12 | **~122–211** |
 | **Stretch** | Extras: the rest of the MLOps lifecycle (feedback loop, DVC, deploying a fine-tuned model; valuable for MLOps roles specifically), custom seccomp profiles, keyless AWS access. | 9.7, 9.8, 10.7, 11.1 | **~19–35** |
-| **Staff** | Beyond senior: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management, chaos experiments and postmortems, a threat model and control matrix, strategy documents, and public writing. Shows staff-level judgement; staff roles also expect evidence of leading people. | 12.1–12.9 | **~81–132** |
-| **Total** | | | **~357–608** |
+| **Staff** | Beyond senior: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management, chaos experiments and postmortems, a threat model and control matrix, strategy documents, and public writing. Shows staff-level judgement; staff roles also expect evidence of leading people. | 12.1–12.9 | **~82–133** |
+| **Total** | | | **~371–624** |
 
 **Calendar time** (home lab only):
 
 | Hours per week | Core | + Differentiators | + Stretch | + Staff (everything) |
 |---|---|---|---|---|
-| ~10 | 3–6 months | 6–10 months | 6–11 months | 8–14 months |
-| ~20 | 7–12 weeks | 13–22 weeks | 14–24 weeks | 18–30 weeks |
-| ~40 | 3–6 weeks | 6–11 weeks | 7–12 weeks | 9–15 weeks |
+| ~10 | 4–6 months | 6–11 months | 7–11 months | 9–14 months |
+| ~20 | 7–12 weeks | 14–23 weeks | 14–25 weeks | 19–31 weeks |
+| ~40 | 4–6 weeks | 7–11 weeks | 7–12 weeks | 9–16 weeks |
 
-Add the AWS plan (~116–198 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~473–806 hours** (about **382–659** without the Staff tier).
+Add the AWS plan (~117–199 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~488–823 hours** (about **396–675** without the Staff tier).
 
 **Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to explain it in an interview**.
 
@@ -166,6 +166,7 @@ gh auth status
 - Create an **AWS Budget** with an email alert at about $25/month (by hand in the console is fine; Terraform takes over in step 2.1).
 - Pick an AWS region for the home lab's AWS resources (e.g. `us-east-1`) and use it everywhere.
 
+- **SaaS account hardening** (`docs/adr/0034-security-by-layer.md`): **passkeys or hardware security keys** on GitHub, Cloudflare, Google, Slack, the registrars and AWS Identity Center; **registrar lock** on russetleaf.com and russetleaf.dev; Cloudflare **API tokens scoped** to the zones and permissions each job needs.
 - **Break-glass kit** (see `docs/disaster-recovery.md`): in your password manager, record the AWS root login and **MFA recovery**, GitHub, Cloudflare and Google recovery codes, and the domain registrar logins; print the essentials and store the printed copy safely (ideally a second copy elsewhere). Add the Talos secrets bundle after step 2.2.
 - **Slack:** create the project workspace and the channels from `aws-wp.md` ([Alerting and notifications](aws-wp.md#alerting-and-notifications-slack)): `#rl-critical`, `#rl-dev-alerts`, `#rl-com-alerts`, `#rl-deploys`, `#rl-security`, `#rl-mlops`, `#rl-costs`, `#rl-staging`. Create the custom Slack app ("russetleaf-bot") with a bot token allowed to post to those channels, and install the **GitHub** app for Slack. Turn on phone notifications for `#rl-critical` only.
 - **Outside monitoring accounts** (free plans): a heartbeat service (e.g. healthchecks.io) and an uptime checker (e.g. UptimeRobot or Better Stack), both posting to Slack.
@@ -188,6 +189,11 @@ Record each answer in the [decision log](#decision-log).
 | **Staging** | **On-demand, scale-to-zero** staging on the home cluster (created for each promotion, deleted afterwards). Promotion with plain **GitHub Actions** workflows; consider **Kargo** later only if memory allows. | Box 1 has no memory to spare for an always-on staging copy. |
 | **AWS stand-ins for ci tests** | **LocalStack** (S3, SQS, Secrets Manager), if its current free-tier terms suit; otherwise **MinIO** (S3) + **ElasticMQ** (SQS) + plain Kubernetes Secrets. | ci tests must run without an AWS account. |
 | **Resource tagging** | Every AWS resource gets `Project=russetleaf`, `Site=dev`, `Env=prod|staging`, `ManagedBy=terraform`, set as the AWS provider's `default_tags`. | Lets you find leftovers and see costs per site in Cost Explorer. The AWS plan uses the same scheme with `Site=com`. |
+
+### Step 0.3: Home network segmentation
+**Do:** put the three nodes on a **lab VLAN** (or a separate subnet on a second router) with firewall rules: the lab can reach the internet and your workstation can reach the lab (Kubernetes API, Talos API, SSH-free management), but the lab **can't reach household devices**, and nothing is allowed in from the internet (the Cloudflare Tunnel is outbound-only). Give the nodes fixed addresses there. Set **BIOS passwords** on all three nodes. See `aws-wp.md`'s [Security by layer](aws-wp.md#security-by-layer-the-4-cs).
+
+**Test:** from a test pod, a household device's address is unreachable while the internet is reachable; from the workstation, the Talos and Kubernetes APIs are reachable; from another household device, they aren't.
 
 ## Phase 1: Repositories
 
@@ -232,7 +238,9 @@ Record each answer in the [decision log](#decision-log).
 | 0031 On-demand staging | 5.6, 5.7 |
 | 0032 GitHub Actions and public repos | 1.1, 5.5 (and AWS 1.4, 6.1) |
 | 0033 Kubernetes component hardening | 2.2, 6.1, 10.2 (and AWS 1.4, 5.1) |
+| 0034 Security by layer | 0.1, 0.3, 1.1, 2.2, 2.3, 5.1, 5.2, 5.6, 5.7, 6.1, 7.4, 12.5 (and AWS 1.2, 2.4, 5.1) |
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo, scan each repo's **full history**, and then **make the repos public** (ADR 0032); turn on **secret scanning with push protection**.
+- **GitHub organisation settings** in `wp-infra/envs/github/` (Terraform's GitHub provider): default workflow token **read-only**, only verified or allow-listed Actions, branch protection and required reviews, environments, secret scanning with push protection.
 - Add **OpenSSF Scorecard** (weekly scheduled workflow) and **zizmor** (on workflow changes) to every repo, and GitHub's **dependency-review action** to the repos with dependencies (`wp-image`, `llm-summarizer`).
 - Add **Checkov** to every repo's CI from the start, scanning the **GitHub Actions workflows** (unpinned actions, over-broad `permissions`, script injection), with a `.checkov.yaml` per repo. Later steps add each repo's other targets (Terraform, manifests, Dockerfiles, charts). Skips must carry a reason. See [Infrastructure and configuration scanning](aws-wp.md#infrastructure-and-configuration-scanning-checkov).
 - Add **Renovate** to every repo (Helm charts, Terraform providers, base images, GitHub Actions, `.mise.toml`, and later Composer and Python lock files), with a shared configuration following `aws-wp.md`'s [Update strategy](aws-wp.md#update-strategy): a weekly schedule (security updates immediately), grouping per platform component, **auto-merge for patch updates** of platform charts, CLI tools and GitHub Actions once CI passes, the **Dependency Dashboard**, and custom version rules for Talos and Kubernetes versions in Terraform.
@@ -275,6 +283,8 @@ Record each answer in the [decision log](#decision-log).
 - Generate machine secrets; machine configs for **three control-plane nodes**, all schedulable: **box 3** (main workloads), **box 1** (secondary workloads) and **box 2** (LLM). Give each a fixed IP (DHCP reservations or static addresses).
 - **Shared virtual IP** for the Kubernetes API (Talos's `vip` setting on the nodes' network interface), on a free address in your LAN; kubeconfig and Talos endpoints point at it.
 - **Reservations on every node** (kubelet `systemReserved` and `kubeReserved` for CPU and memory), so workloads can't starve etcd, the API server or the kubelet.
+- **Secure Boot:** install Talos from its **Secure Boot images** (Image Factory), with the keys enrolled in each node's firmware, so the TPM-sealed disk encryption only unlocks on an untampered boot chain (ADR 0034).
+- **User namespaces:** confirm the Kubernetes and Talos versions support pods with `hostUsers: false`; record the result (step 6.1 enforces it if so).
 - **Hardening** (`docs/adr/0033-kubernetes-component-hardening.md`): **disk encryption** of the system-state and data partitions, **sealed to the TPM** (check each box has TPM 2.0 enabled in the BIOS; otherwise use Talos's static-key option and record it); a **host firewall** (Talos ingress rules) allowing ports 6443 and 50000 only from the LAN and your workstation; kubelet **`seccompDefault: true`**; the API server's **Pod Security Admission defaults** (`baseline` enforced cluster-wide, `restricted` for warn and audit), with per-namespace labels set in step 6.1.
 - Box 2: node label `workload=llm`, taint `dedicated=llm:NoSchedule`.
 - Box 3 and box 1: labels for the workload roles (e.g. `role=main`, `role=secondary`), used for placement (e.g. the MariaDB primary on box 3).
@@ -297,7 +307,7 @@ The cluster is **highly available for a single node failure** (three etcd member
 - **Staging resources** (a second, smaller set of the same modules, tagged `Env=staging`): staging media bucket, summary queue + dead-letter queue, Secrets Manager entries, and a scoped IAM key that can **read** the production backup bucket but write only to staging resources. Used from step 5.6.
 - **Email:** an SES domain identity for russetleaf.dev, with its DKIM and SPF records created in Cloudflare, and SES SMTP credentials stored in Secrets Manager. (New SES accounts are in the "sandbox" and can only send to verified addresses; verify your own address for testing, or request production access.)
 - Scoped IAM users and keys for the home cluster, one per job: External Secrets (read the russetleaf.dev secrets only), WordPress (media bucket + send to queue), MariaDB backups (backup bucket), summarizer (read from queue), LiteLLM (`bedrock:InvokeModel` on the chosen models only). Store each key in Secrets Manager.
-- Cloudflare (Cloudflare provider): the tunnel, its token (stored in Secrets Manager), DNS records for `russetleaf.dev` and `www`, **DNSSEC** for russetleaf.dev (Cloudflare's one-click setting, plus the DS record at the registrar), basic WAF/security settings plus Cloudflare's free **managed rule set**, a **rate-limiting rule** on `/wp-login.php`, and a rule **blocking `/xmlrpc.php`**, **Cloudflare Access** policies for admin UIs (Argo CD, Grafana) so they're never public, with **Google** configured as Cloudflare Access's login provider (used for WordPress admin paths in step 5.8), **Cloudflare notifications** (tunnel health, security events) to a Slack webhook for `#rl-dev-alerts`, and a `staging.russetleaf.dev` hostname behind Cloudflare Access (used from step 5.6).
+- Cloudflare (Cloudflare provider): the tunnel, its token (stored in Secrets Manager), DNS records for `russetleaf.dev` and `www`, **DNSSEC** for russetleaf.dev (Cloudflare's one-click setting, plus the DS record at the registrar), **HSTS** and security-header transform rules at Cloudflare, basic WAF/security settings plus Cloudflare's free **managed rule set**, a **rate-limiting rule** on `/wp-login.php`, and a rule **blocking `/xmlrpc.php`**, **Cloudflare Access** policies for admin UIs (Argo CD, Grafana) so they're never public, with **Google** configured as Cloudflare Access's login provider (used for WordPress admin paths in step 5.8), **Cloudflare notifications** (tunnel health, security events) to a Slack webhook for `#rl-dev-alerts`, and a `staging.russetleaf.dev` hostname behind Cloudflare Access (used from step 5.6).
 - The Slack bot token in Secrets Manager (set by hand; Terraform creates the empty entry).
 - Bedrock: confirm access to Claude Haiku and Amazon Nova Lite in the chosen region (Anthropic models may need a one-time use-case form in the console).
 
@@ -412,6 +422,9 @@ Check `kubectl top nodes` after each step.
 - A **`db.php` drop-in** whose behaviour is chosen by the chart setting **`database.auth`**. Build only the **`password`** mode now (reads the password from a Secret, connects over TLS); it's what the home lab uses, and it's the AWS fallback too. Leave a clear extension point for an **`iam`** mode, which is written **only after** the AWS plan's early test (step 1.6) shows that PHP can log in to RDS Proxy with an IAM token. That way no work is wasted if the test fails. Add the **RDS CA certificate bundle** to the image now (harmless at home, needed on AWS).
 - The **metrics must-use plugin** (`mu-plugins/metrics/`), as described in `aws-wp.md` ([WordPress monitoring](aws-wp.md#wordpress-monitoring)): `wordpress_posts_without_summary`, `wordpress_cron_overdue_events`, `wordpress_object_cache_hit_ratio`, `wordpress_info`, and simple counts, served on a **separate internal port** (a second Apache listener, e.g. 9117), cached for about a minute. Also turn on Apache's `mod_status`, reachable from localhost only (for the apache_exporter sidecar). Unit-test the output format.
 - **OpenTelemetry tracing, built in but off by default:** the OpenTelemetry **PHP extension** and **Composer packages** (SDK, OTLP exporter, and auto-instrumentation for WordPress, database access and HTTP calls; check current package names in the OpenTelemetry PHP contrib project). **No WordPress plugin** is needed; it's switched on by environment variables (`OTEL_PHP_AUTOLOAD_ENABLED`, `OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`, sampler settings) set in the chart values. Include trace IDs in WordPress's log lines.
+- **WordPress hardening must-use plugins:** `harden-users` (block anonymous user enumeration through author archives and the REST `users` endpoint) and `security-headers` (Content-Security-Policy in **report-only** mode at first, plus headers not set at the edge); **auth keys and salts** read from Secrets Manager (via environment-free files), with a documented rotation.
+- **Hash-pinned dependencies:** `composer.lock` committed and installed with `composer install` (never `update`) in the build.
+- **Chart signing:** the release workflow signs the chart (OCI) with cosign and verifies it; `packages: write` and signing permissions only in the release job.
 - **XML-RPC disabled** inside WordPress (a must-use plugin returning `false` from the `xmlrpc_enabled` filter), as well as being blocked at the edge.
 - The **summary-queue must-use plugin**: on publish or update, send `{"post_id": ...}` to SQS, adding the current trace context (W3C `traceparent`) as a **message attribute** when tracing is on (AWS SDK for PHP, installed with Composer at build time).
 - `tests/`: a smoke test (Docker Compose with MariaDB: the container starts, plugins are active, health check passes).
@@ -425,6 +438,7 @@ Check `kubectl top nodes` after each step.
 ### Step 5.2: WordPress chart and deployment (`wp-gitops/apps/wordpress/`)
 **Do:**
 - The `wp-image` chart, which sets the pod security context (non-root user, read-only root filesystem, no privilege escalation, dropped capabilities, **seccomp `RuntimeDefault`**, and an optional `runtimeClassName` used in step 6.5), the `emptyDir` volumes above, **readiness and liveness probes**, the required labels (`app.kubernetes.io/name`, `app.kubernetes.io/part-of`, `env`) and **CPU/memory requests with a memory limit (no CPU limit)**, deployed from `wp-gitops` with the home overlay (values only): russetleaf.dev hostname, MariaDB and Valkey hosts, `database.auth: password` pointing at the **MariaDB Operator-generated Secret**, media bucket and queue settings, other credentials from External Secrets, resources, `persistence` off, WP-Cron as a Kubernetes CronJob.
+- **Secrets as files:** database, SMTP and other credentials mounted as files, not environment variables; **user namespaces** (`hostUsers: false`) on the WordPress pods if step 2.2 confirmed support.
 - **Replicas and spreading:** WordPress runs **2–3 replicas** spread across box 3 and box 1 (topology spread or anti-affinity) with a PodDisruptionBudget, so a node failure or a rolling upgrade never takes the site down.
 - Remove the old test Application and the `wordpress-test` namespace.
 - First-run setup (admin user, plugin settings) done by a one-off `wp-cli` Job or wp-config constants, so a rebuild needs no clicking.
@@ -458,6 +472,7 @@ Check `kubectl top nodes` after each step.
 - `overlays/home-staging` for WordPress (1 replica, `staging.russetleaf.dev`, no Valkey), a small staging **MariaDB** (MariaDB Operator, with its own generated passwords), and the staging AWS resources and secrets from step 2.3. Label everything `env=staging`.
 - Staging Argo CD Applications in their own **Argo CD project**, with **auto-sync off**, so nothing runs until a test starts.
 - `apps/staging-data/`: a Job that downloads the latest russetleaf.dev production backup from S3, imports it into the staging MariaDB, and **scrubs personal data** (user emails replaced with `user<ID>@example.invalid`, commenter names/emails/IPs cleared, application passwords and sessions deleted), then runs `wp search-replace 'russetleaf.dev' 'staging.russetleaf.dev'`.
+- **DAST:** an OWASP **ZAP baseline scan** of staging, failing the staging test on high-risk findings (and reporting the Content-Security-Policy violations collected so far).
 - `apps/smoke-tests/`: a Job that checks the home page and sample posts load, an upload goes to the staging bucket, and a published post gets a summary (once Phase 7 exists; skip that check until then).
 - An Argo CD account with RBAC limited to the staging project (sync and delete only); its token in Secrets Manager.
 - The **`staging-test`** workflow (on the ARC runners): sync staging → wait for healthy → run `staging-data` → run `smoke-tests` → soak ~30 minutes checking Prometheus for errors and restarts → record results → **delete** the staging Applications with cascade (volumes included) → post results to `#rl-staging`.
@@ -469,6 +484,7 @@ Check `kubectl top nodes` after each step.
 - Change the `wp-image` release bot (step 5.3) to bump **`overlays/home-staging`** instead of prod, with **auto-merge** once `wp-gitops` CI passes.
 - Trigger `staging-test` on pushes to `main` that change a staging version.
 - **Schema changes:** CI in `wp-image` compares WordPress's database version (`$wp_db_version`) between the old and new images (and plugin release notes flag schema changes), labelling such releases **`schema-change`**. For those, the promotion workflow runs an **on-demand MariaDB backup** and waits for it to succeed before the prod pull request can be merged; the rollback runbook explains restore-and-roll-back versus fix-forward.
+- Version bumps pin **charts by digest** (not just version), and CI **verifies the chart's signature** before the pull request is opened.
 - On a pass, a **`promote-to-prod`** job opens a pull request bumping the same version in `overlays/home` (and `overlays/aws` once it exists), with the staging results attached. On a failure, post to `#rl-staging` and `#rl-deploys` and promote nothing.
 
 **Test:** a release that changes `$wp_db_version` is labelled `schema-change` and its prod pull request is blocked until the pre-release backup succeeds; release a trivial `wp-image` change → it auto-merges to staging → `staging-test` passes → a promotion pull request appears with results → merging it rolls out to russetleaf.dev. Release a deliberately broken version → staging fails → no promotion pull request, and `#rl-staging` shows why.
@@ -525,6 +541,8 @@ Check `kubectl top nodes` after each step.
 - **Require Pod Probes** (readiness and liveness on long-running workloads)
 - **Disallow NodePort**, plus blocking `LoadBalancer` Services
 - **Unique Ingress Host and Path**
+- **Secrets Not From Env Vars** and (if supported) a **`hostUsers: false`** requirement for application namespaces.
+- **Mirrored third-party images:** a scheduled `mirror-images` workflow in `wp-gitops` copying the critical upstream images by digest into GHCR (verifying publishers' signatures where they exist, then re-signing); the registry allow-list and image references point at the mirror.
 - **Pod Security Admission labels** on every namespace (`restricted` for application namespaces; `baseline` for platform services; `privileged` only for Cilium, Falco, Alloy and the storage provisioner), set in each namespace's manifest, with a Kyverno rule requiring the label.
 - **Kyverno's Pod Security `restricted` set** for application namespaces (alongside PSA), and a **mutate rule turning off service-account token mounting** by default (`automountServiceAccountToken: false`), with an allow-list for workloads that call the Kubernetes API (operators, Argo CD, KEDA, External Secrets).
 - **Namespace quotas:** a generate rule giving every application namespace a **LimitRange** (default requests and memory limits) and a **ResourceQuota** (total CPU requests, memory, pod count); HPAs and KEDA objects set maximum replicas.
@@ -594,6 +612,7 @@ Review the policy reports, fix violations, then switch to **enforce**.
 ### Step 7.4: Summarizer chart, release and deployment
 **Do:**
 - `chart/`: Deployment (Rollout later), KEDA `ScaledObject` on the SQS queue (0–N), daily sweep CronJob, ServiceAccount, resources.
+- **Image and dependencies:** a **multi-stage** build with a **distroless or slim** runtime base; uv's lock file **with hashes**; chart signing as for `wp-image`; Secrets as files.
 - **Code and image checks** (as for `wp-image`, see step 5.1): **ruff**, **mypy**, **Semgrep**, **pip-audit**, dependency review, hadolint, Checkov, zizmor, `helm lint` / `ct lint`, container-structure-test, Trivy (vulnerability, secret and misconfiguration scanners).
 - `ci/`: kind end-to-end tests on GitHub-hosted runners, with the AWS stand-ins (SQS) and a **mock LLM** (LiteLLM with mock responses): a queued post gets a summary written back to a test WordPress; a failing message reaches the dead-letter queue.
 - **Checkov on the summarizer's Dockerfile and chart** in pull request CI.
@@ -761,7 +780,7 @@ Record each drill's time in the decision log and compare it with the expected ti
 **Test:** the second service runs in production with its own SLOs, dashboard and alerts; it can't exceed its quota or deploy outside its namespace; OpenCost shows its cost separately; the onboarding time is recorded.
 
 ### Step 12.5: Threat model and control matrix
-**Do:** `docs/security/threat-model.md`: a **STRIDE** analysis of the whole system (trust boundaries, data flows, threats, mitigations), linked to the ADRs. `docs/security/controls-matrix.md`: every implemented control mapped to the **CIS Controls** (and SOC 2-style criteria), each with its evidence (policy, configuration, report or test).
+**Do:** `docs/security/threat-model.md`: a **STRIDE** analysis of the whole system (trust boundaries, data flows, threats, mitigations), **organised by the 4 C's** (Cloud, Cluster, Container, Code), linked to the ADRs. `docs/security/controls-matrix.md`: every implemented control mapped to the **CIS Controls** (and SOC 2-style criteria), plus an **OWASP ASVS** mapping for the web application, each with its evidence (policy, configuration, report or test).
 
 **Test:** every trust boundary has its threats and mitigations listed; every control in the matrix links to evidence that exists.
 
@@ -836,6 +855,9 @@ These keep russetleaf.dev healthy once it's running. Add each as a calendar remi
 | Kubescape posture scan | Monthly | Run the Kubescape CLI against the home cluster; save the report in `docs/security/`; compare scores with the previous run and investigate any drop |
 | Review the admin allow-list | Quarterly | Remove people who no longer need access, in the plugin's allow-list and the Cloudflare Access policy |
 | Rotate the Google OAuth client secrets | Yearly | Create a new secret in the Google Cloud console, update Secrets Manager, let External Secrets sync it, delete the old one |
+| SaaS access review | Quarterly | Review users, tokens, apps and keys in GitHub, Cloudflare, Google Cloud, Slack, AWS Identity Center and the registrars; remove anything unused |
+| Enforce CSP / review CSP reports | Weekly until enforced, then monthly | Fix violations, then switch Content-Security-Policy from report-only to enforced |
+| Rotate WordPress keys and salts | Quarterly | Update in Secrets Manager; signs everyone out |
 | Rotate MariaDB passwords | Quarterly | Regenerate the operator-managed Secret (or use the operator's rotation feature), then restart WordPress through its Rollout; check the backup user still works |
 | Rotate scoped IAM keys | Every 90 days, until step 11.1 removes them | Create a new key in Terraform, update Secrets Manager, let External Secrets sync it, delete the old key |
 | Review alerts, costs and Bedrock spend | Monthly | Grafana, OpenCost, the AWS Budget and Cost Explorer (filter by `Site=dev`) |
@@ -861,12 +883,13 @@ The home lab already builds most of what these need: the shared Terraform module
 |---|---|---|---|---|---|---|---|
 | 0.1 Accounts, tools, budget | Core | 4–8 | ☐ | | | | |
 | 0.2 Decisions | Core | 1–2 | ☐ | | | | |
-| 1.1 Four repos | Core | 3–6 | ☐ | | | | |
+| 0.3 Home network segmentation | Core | 2–4 | ☐ | | | | |
+| 1.1 Four repos | Core | 4–7 | ☐ | | | | |
 | 2.0 AWS Organization and accounts (SRA) | Core | 6–10 | ☐ | | | | |
 | 2.0b Organisation security services | Core | 4–8 | ☐ | | | | |
 | 2.1 Terraform bootstrap | Core | 3–5 | ☐ | | | | |
-| 2.2 Talos cluster | Core | 10–16 | ☐ | | | | |
-| 2.3 AWS + Cloudflare resources | Core | 6–9 | ☐ | | | | |
+| 2.2 Talos cluster | Core | 11–17 | ☐ | | | | |
+| 2.3 AWS + Cloudflare resources | Core | 7–10 | ☐ | | | | |
 | 2.4 `wp-infra` CI | Core | 4–6 | ☐ | | | | |
 | 2.5 Disaster recovery copies | Differentiator | 3–6 | ☐ | | | | |
 | 3.1 GitOps structure + Argo CD | Core | 5–9 | ☐ | | | | |
@@ -876,18 +899,18 @@ The home lab already builds most of what these need: the shared Terraform module
 | 4.4 Monitoring + Slack alerting | Core | 7–11 | ☐ | | | | |
 | 4.5 MariaDB + backups + Valkey | Core | 6–10 | ☐ | | | | |
 | 4.6 Logging (Loki + Alloy) | Core | 4–7 | ☐ | | | | |
-| 5.1 WordPress image | Core | 12–20 | ☐ | | | | |
-| 5.2 WordPress deployment | Core | 8–14 | ☐ | | | | |
+| 5.1 WordPress image | Core | 14–22 | ☐ | | | | |
+| 5.2 WordPress deployment | Core | 9–15 | ☐ | | | | |
 | 5.3 Image promotion | Core | 2–4 | ☐ | | | | |
 | 5.4 ci test clusters | Core | 5–8 | ☐ | | | | |
 | 5.5 Self-hosted runners (ARC) | Core | 2–4 | ☐ | | | | |
-| 5.6 On-demand staging | Core | 6–10 | ☐ | | | | |
-| 5.7 Promotion pipeline | Core | 4–7 | ☐ | | | | |
+| 5.6 On-demand staging | Core | 7–11 | ☐ | | | | |
+| 5.7 Promotion pipeline | Core | 5–8 | ☐ | | | | |
 | 5.8 Google sign-in for admins | Differentiator | 4–7 | ☐ | | | | |
 | 5.9 Performance testing + regression gate | Differentiator | 5–8 | ☐ | | | | |
 | 5.10 Site design and brand (incl. logo) | Core | 6–12 | ☐ | | | | |
 | 5.11 Front-end quality gates | Differentiator | 4–6 | ☐ | | | | |
-| 6.1 Kyverno | Core | 9–13 | ☐ | | | | |
+| 6.1 Kyverno | Core | 11–15 | ☐ | | | | |
 | 6.2 Argo Rollouts | Differentiator | 4–7 | ☐ | | | | |
 | 6.3 CiliumNetworkPolicies | Core | 5–8 | ☐ | | | | |
 | 6.4 Service mesh ADR (+ optional Istio experiment) | Differentiator | 2–6 | ☐ | | | | |
@@ -895,7 +918,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 7.1 KEDA | Differentiator | 1–3 | ☐ | | | | |
 | 7.2 LiteLLM gateway | Differentiator | 3–5 | ☐ | | | | |
 | 7.3 Summarizer code | Differentiator | 8–12 | ☐ | | | | |
-| 7.4 Summarizer chart + deploy | Differentiator | 5–9 | ☐ | | | | |
+| 7.4 Summarizer chart + deploy | Differentiator | 6–10 | ☐ | | | | |
 | 7.5 LLM monitoring | Differentiator | 3–6 | ☐ | | | | |
 | 7.6 AI pipeline burst test | Differentiator | 3–5 | ☐ | | | | |
 | 8.1 llama.cpp on box 2 | Differentiator | 4–6 | ☐ | | | | |
@@ -926,7 +949,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 12.2 DORA metrics | Staff | 6–10 | ☐ | | | | |
 | 12.3 Backstage and golden path | Staff | 15–25 | ☐ | | | | |
 | 12.4 Second service + multi-tenancy | Staff | 10–15 | ☐ | | | | |
-| 12.5 Threat model + control matrix | Staff | 8–12 | ☐ | | | | |
+| 12.5 Threat model + control matrix | Staff | 9–13 | ☐ | | | | |
 | 12.6 Chaos experiments + postmortems | Staff | 10–15 | ☐ | | | | |
 | 12.7 Strategy documents | Staff | 6–10 | ☐ | | | | |
 | 12.8 Fleet management (hub) | Staff | 6–10 | ☐ | | | | |

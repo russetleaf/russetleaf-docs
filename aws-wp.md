@@ -172,6 +172,40 @@ Separate workload accounts limit how far a compromise can spread, and give each 
 ### Cost
 Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-access findings are free. **Security Hub, Config and KMS** add roughly **$5–15/month**, depending mostly on how many resources Config records (focused recording keeps the demo stack's churn in check). That brought the always-on total to about $15–35/month; with box 3's electricity (ADR 0021) it's now about **$18–40/month**. That figure is the **whole** always-on cost (the security services are already included in it, not added on top). With about 20 demo hours a month (~$20), the total is **$30–60/month**; keeping demos to about 10 hours keeps it **under $50**.
 
+## Security by layer (the 4 C's)
+
+Cloud-native security is commonly described in four layers, the **4 C's**: **Cloud**, **Cluster**, **Container** and **Code**, each depending on the one outside it. This table maps the project's controls to them; details are in the sections below and in `docs/adr/0034-security-by-layer.md`.
+
+| Layer | Controls |
+|---|---|
+| **Cloud** (providers, accounts, infrastructure) | **AWS:** SRA multi-account structure, SCPs, root access removed, Identity Center with MFA, GuardDuty, Security Hub, Config, organisation CloudTrail, Access Analyzer, KMS, Prowler, VPC design with private subnets, endpoints and flow logs, WAF, DNSSEC. **Other providers:** hardened GitHub, Cloudflare, Google Cloud, Slack and registrar accounts (below). **Home infrastructure:** lab VLAN, Talos (immutable, API-only), Secure Boot with TPM-sealed disk encryption, host firewall, BIOS passwords, Cloudflare Tunnel (no inbound ports). **IaC:** Checkov with custom policies, Access Analyzer policy checks, reviewed saved plans. |
+| **Cluster** (Kubernetes) | Node and RBAC authorization only; audit logging with alerts; Secrets encrypted at rest; per-namespace Pod Security Admission with Kyverno's restricted set; admission policies (signatures, provenance, registries, quotas); CiliumNetworkPolicies (default-deny, DNS-name egress, layer 7), WireGuard, Hubble; service-account tokens off by default; least-privilege RBAC; isolation by namespace, node taints and gVisor; kubelet hardening; etcd mutual TLS and encrypted snapshots; Kubescape, kube-bench, Trivy Operator. |
+| **Container** (images and runtime) | Minimal, signed images with SBOM and SLSA provenance, verified at admission and pinned by digest; Trivy (vulnerabilities, secrets, misconfiguration) in CI and in the cluster; non-root, read-only root filesystem, all capabilities dropped, seccomp RuntimeDefault, **user namespaces** where supported; gVisor for CI runners; Falco process allow-lists and Tetragon (optional); Secrets as files, not environment variables. |
+| **Code** (application and dependencies) | Semgrep, PHPCS (WordPress security checks), PHPStan, ruff and mypy; dependency audits and hash-pinned lock files; WPScan; gitleaks and push protection; prompt-injection guardrails; Google sign-in, no passwords; XML-RPC off; **HTTP security headers**, **DAST** (ZAP), WordPress user-enumeration blocking, rotated keys and salts; an **OWASP ASVS** mapping in the control matrix. |
+
+### SaaS account hardening
+The project depends on more than AWS: **GitHub** (code, CI, packages, attestations), **Cloudflare** (DNS, tunnel, WAF, Access), **Google Cloud** (sign-in), **Slack** (alerts) and the **domain registrars**. Each gets:
+- **Phishing-resistant sign-in:** passkeys or hardware security keys, with recovery codes in the break-glass kit.
+- **Least privilege:** GitHub's default workflow token **read-only** (jobs request more only when needed, e.g. `packages: write` in release jobs only), only verified or allow-listed Actions, required reviews and environment protections, managed with Terraform's **GitHub provider** where possible; Cloudflare **API tokens scoped** to the zones and permissions each job needs.
+- **Registrar lock** and 2FA on both domains (alongside DNSSEC).
+- **Audit logs** reviewed (GitHub, Cloudflare), and a **quarterly access review** across all providers.
+
+### Home network and boot
+- **A lab VLAN** (or a separate router subnet): the cluster can reach the internet (for Cloudflare, AWS, GitHub) and your workstation can reach the cluster, but the cluster **can't reach household devices** and nothing comes in from outside (the Cloudflare Tunnel is outbound-only).
+- **Secure Boot** with Talos's Secure Boot images, so only signed Talos boot components run; combined with the **TPM-sealed disk encryption** (ADR 0033), disks only unlock on the expected, untampered system.
+- **BIOS passwords** on all three nodes.
+
+### Artifact integrity
+- **Helm charts are signed** with cosign like the images, verified in CI before the version-bump pull request, and **pinned by digest** in `wp-gitops` (a tag can be overwritten in GHCR; a digest can't).
+- **Mirrored third-party images:** a scheduled workflow copies the critical upstream images (Cilium, Argo CD, Kyverno, MariaDB, cert-manager and others) **by digest** into GHCR after verifying the publishers' signatures where they exist, and re-signs them; the clusters pull from the mirror, protecting against upstream deletions and Docker Hub rate limits.
+- **Hash-pinned dependencies:** uv's lock file with hashes (Python) and `composer.lock` (PHP), so a compromised package version can't be swapped in.
+
+### Web application security
+- **HTTP security headers** on both sites: **HSTS** (set at Cloudflare and with a CloudFront response-headers policy), **Content-Security-Policy** (report-only first, with reports collected, then enforced), `X-Content-Type-Options: nosniff`, `frame-ancestors` (or X-Frame-Options), Referrer-Policy and Permissions-Policy.
+- **DAST:** an OWASP **ZAP** baseline scan of staging in the promotion gate (failing on high-risk findings), and once against russetleaf.com during a demo.
+- **WordPress hardening:** anonymous **user enumeration blocked** (author archives and the REST `users` endpoint), **auth keys and salts** from Secrets Manager and rotated on a schedule, XML-RPC off, file modifications off.
+- **OWASP ASVS:** the control matrix (Staff tier) maps the site's controls to ASVS requirements.
+
 ## What production-ready adds
 
 ### High availability
@@ -220,6 +254,8 @@ Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-acc
 | Requests and limits | **Require Requests and Limits** (`require-requests-limits`) | CPU and memory **requests** and a **memory limit** on every container. **CPU limits are deliberately not required by default** (they cause throttling even on idle nodes); they're used only where a neighbour needs protecting: llama.cpp and the CI runners on box 2 (to protect etcd) and k6 load generators. See `docs/adr/0028-cpu-limits.md` |
 | No privileged containers | **Disallow Privileged Containers** (`disallow-privileged-containers`), within Kyverno's **Pod Security Standards** `baseline` rule set | No privileged containers, host paths or host namespaces (network, PID, IPC). Talos already enforces Pod Security `baseline`; Kyverno adds reporting, CI tests and narrow exceptions |
 | Pod Security `restricted` (app namespaces) | Kyverno's **Pod Security Standards `restricted`** rule set, for application namespaces | Everything in the `restricted` profile (non-root, no privilege escalation, all capabilities dropped, seccomp), matching the namespaces' Pod Security Admission `restricted` labels |
+| Secrets as files | **Secrets Not From Env Vars** (`secrets-not-from-env-vars`) | Secrets are mounted as files, not passed as environment variables (which leak into process listings, crash dumps and child processes) |
+| User namespaces (app namespaces) | A validate rule on `hostUsers` | Application pods set `hostUsers: false`, so root in a container maps to an unprivileged user on the node (enabled once the Kubernetes and Talos versions support it) |
 | No service-account token by default | A **mutate** rule | Sets `automountServiceAccountToken: false` unless the workload is on the list that needs the Kubernetes API |
 | Run as non-root | **Require Run As Non-Root** (`require-run-as-nonroot`), from the Pod Security `restricted` set | Containers run as a non-root user. The WordPress image runs Apache as `www-data` on port 8080 (non-root processes can't use port 80) |
 | seccomp profile | **Restrict Seccomp (Strict)** (`restrict-seccomp-strict`), from the Pod Security `restricted` set | Every container runs with `seccompProfile: RuntimeDefault`, which blocks dozens of rarely needed, risky system calls at no cost; see [Sandboxed runtimes](#sandboxed-runtimes-gvisor) |
@@ -396,6 +432,8 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
 | SBOM | **Syft** SBOM, attached with **cosign attest** | Attestation recorded in **Rekor** |
 | Build provenance | GitHub's **`actions/attest-build-provenance`**, with the build run as a **reusable workflow** | A signed **SLSA provenance** record of how and where the image was built (repo, commit, workflow, runner), stored with the image and, on public repos, recorded in **Rekor**. On its own this is **SLSA Build Level 2**; running the build in a reusable workflow (a shared build workflow each repo's release calls) reaches **Build Level 3** as GitHub documents it |
 | Verify | `cosign verify`, `cosign verify-attestation`, `gh attestation verify` on the pushed digest | A broken signature or attestation fails the release, not the deploy |
+| Chart signing | **cosign** on the Helm chart (OCI) | Charts are signed like images, verified in CI before the version-bump pull request, and pinned **by digest** in `wp-gitops` |
+| Permissions | Workflow token **read-only by default** | `packages: write` and signing permissions granted only to the release jobs |
 | Release notes | GitHub release | Image and chart **digests** plus **Rekor log entry** links, so anyone can audit the transparency log (e.g. with `rekor-cli`) |
 | Repo practices | **OpenSSF Scorecard** (weekly, all four repos) | Scores branch protection, pinned dependencies, token permissions, signed releases and more; badge on each README |
 
@@ -1606,6 +1644,7 @@ Together with the home lab (~$18–40/month always on), the total is about **$30
 - **Defence in depth for containers:** seccomp `RuntimeDefault` everywhere, Falco process allow-lists per workload (with Tetragon enforcement as a stretch goal), and gVisor sandboxing for the self-hosted CI runners that run pull-request code (with a measured trial for WordPress), backed by an ADR comparing gVisor and Kata Containers.
 - **A custom, tested front end:** an AI-assisted block theme and SVG logo kept in Git (Site Editor locked in production), with visual regression, accessibility and Lighthouse checks in CI and staging.
 - **Passwordless admin access:** Google sign-in (OIDC) for WordPress, an edge login layer (Cloudflare Access at home, ALB OIDC on AWS), application passwords kept only for the REST API, and break-glass recovery with `wp-cli`.
+- **Security organised by layer (the 4 C's):** cloud (AWS SRA plus hardened GitHub, Cloudflare, Google and registrar accounts, lab VLAN, Secure Boot), cluster, container (signed images and charts, mirrored dependencies, user namespaces) and code (SAST, DAST, security headers, ASVS mapping).
 - **Kubernetes component hardening:** per-namespace Pod Security Admission with Kyverno's `restricted` set, service-account tokens off by default, Secrets and disks encrypted at rest (TPM-sealed at home, customer-managed KMS on EKS), kubelet `seccompDefault`, a Talos host firewall, and verified control-plane settings.
 - **Layered intrusion detection and prevention:** WAFs and edge login, Cilium policies, Kyverno admission, runtime controls, plus detection at runtime (Falco), in the Kubernetes API (audit logs with alert rules) and in the AWS account (CloudTrail, GuardDuty), all reporting to Slack.
 - **Zero-trust networking with Cilium on both clusters:** WireGuard encryption between nodes, default-deny CiliumNetworkPolicies, outbound traffic allowed by DNS name, layer-7 rules where useful, and Hubble flow visibility with metrics, dashboards and alerts in the same Prometheus and Grafana.
@@ -1697,11 +1736,11 @@ The two build plans tier every step as **Core**, **Differentiator** or **Stretch
 
 | Plan | Core | Differentiator | Stretch | Staff | Total |
 |---|---|---|---|---|---|
-| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~136–231 | ~121–210 | ~19–35 | ~81–132 | ~357–608 |
-| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~70–118 | ~14–27 | ~22–38 | ~10–15 | ~116–198 |
-| **Whole project** | ~206–349 | ~135–237 | ~41–73 | ~91–147 | **~473–806** |
+| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~148–245 | ~122–211 | ~19–35 | ~82–133 | ~371–624 |
+| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~71–119 | ~14–27 | ~22–38 | ~10–15 | ~117–199 |
+| **Whole project** | ~219–364 | ~136–238 | ~41–73 | ~92–148 | **~488–823** |
 
-At about **20 hours a week**, the home lab's Core tier takes roughly **7–12 weeks**, everything except the Staff tier roughly **4–8 months**, and the whole project including it roughly **5–9 months** (about **11–18 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
+At about **20 hours a week**, the home lab's Core tier takes roughly **7–12 weeks**, everything except the Staff tier roughly **5–8 months**, and the whole project including it roughly **6–10 months** (about **11–19 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
 
 **Portfolio level:** the home lab's **Core tier on its own reads as strong intermediate work**; adding the **Differentiators**, especially the AI pipeline with its evaluation gate and **evidence of operating the system** (rollback, node-failure and disaster drills, a restore from the Backup account, a recorded AWS demo), is what makes it **senior-level**. For **MLOps** roles specifically, the inference-side work (evaluation gate, gateway, self-hosted model, monitoring) reads as strong intermediate (senior for LLMOps); **MLflow, guardrails and online evaluation** (Differentiators) make it senior for LLM-focused MLOps; the **fine-tuning pipeline, DVC and the feedback loop** (Stretch) complete the full lifecycle expected of senior MLOps generally. The **Staff** tier (SLOs and error budgets, DORA metrics, the developer platform proven with a second service, fleet management, chaos and postmortems, the threat model, strategy documents and public writing) shows **staff-level judgement**; staff roles also expect evidence of leading people and teams, which comes from your work history rather than the project. A finished subset is worth more than an unfinished whole: finish Core first.
 
@@ -1770,7 +1809,7 @@ wp-gitops/
                             #   0026-performance-and-stress-testing.md, 0027-site-design-in-git.md,
                             #   0028-cpu-limits.md, 0029-cilium-cni.md, 0030-internal-pki.md,
                             #   0031-on-demand-staging.md, 0032-github-actions-ci.md,
-                            #   0033-kubernetes-component-hardening.md)
+                            #   0033-kubernetes-component-hardening.md, 0034-security-by-layer.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
@@ -1846,7 +1885,8 @@ wp-gitops/
     runtime-classes/        # gvisor RuntimeClass (home only; the Talos gVisor extension is in wp-infra)
   .github/workflows/        # render every overlay (Helm/Kustomize), validate against Kubernetes schemas
                             #   (kubeconform), run Kyverno CLI policy tests, promtool tests; install changed
-                            #   platform components into kind; staging-test (on ARC runners); promote-to-prod
+                            #   platform components into kind; staging-test (on ARC runners); promote-to-prod; mirror-images
+                            #   (scheduled: copy critical upstream images by digest into GHCR, verify, re-sign)
   .mise.toml                # pinned CLI tool versions (same versions locally and in CI)
 ```
 
@@ -1862,6 +1902,8 @@ wp-infra/
   bootstrap/                # applied once, locally (russetleaf-infra): S3 bucket for Terraform state; in each
                             #   account, the GitHub OIDC provider and CI roles (plan, apply, image push) and a
                             #   read-only audit role for Prowler
+  envs/github/               # GitHub organisation and repo settings (GitHub provider): branch protection,
+                            #   default read-only workflow token, allowed Actions, environments, push protection
   envs/org/                 # management account: Organization, OUs, accounts, SCPs, IAM Identity Center permission
                             #   sets, tag policies, centralised root access management, alternate contacts,
                             #   delegated administrators, budgets, cost allocation tag activation
@@ -1934,6 +1976,8 @@ wp-image/
                             #   design work with Create Block Theme
   brand/                    # logo (source SVG), favicon set, site and touch icons, Open Graph image, palette
   mu-plugins/
+    harden-users/           # blocks anonymous user enumeration (author archives, REST users endpoint)
+    security-headers/       # CSP (report-only, then enforced) and other headers not set at the edge
     lock-site-editor/       # removes template and global-style editing in production (design changes via Git)
     summary-queue/          # sends post IDs to SQS when a post is published or updated
     summary-feedback/       # editor-only rating of each summary (stored as post metadata)
@@ -1975,7 +2019,7 @@ llm-summarizer/
     reports/                # saved results per release, compared across models
   chart/                    # Helm chart: Rollout, KEDA ScaledObject, sweep CronJob, ServiceAccount,
                             #   PrometheusRule alerts, Grafana dashboard ConfigMap
-  docker/                   # Dockerfile
+  docker/                   # Dockerfile (multi-stage, distroless or slim runtime base)
   demo/                     # docker compose: sample posts + local model or Bedrock, no Kubernetes needed
   ci/                       # kind config, ci chart values (LocalStack SQS, mock LLM), end-to-end tests
   MODEL_CARD.md             # models evaluated (including fine-tuned versions), scores, cost per summary, known
