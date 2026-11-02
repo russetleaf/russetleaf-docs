@@ -289,7 +289,7 @@ Whichever is chosen must also work with a **custom S3 endpoint**, so the ci test
   - a **general pool** (spot and on-demand, several instance types) for WordPress and platform services, with **consolidation** to remove idle or underused nodes
   - a **GPU pool** for the self-hosted model, with the `workload=llm` label and `dedicated=llm:NoSchedule` taint, on spot
   - **spot interruption handling** through an SQS queue fed by EventBridge, so pods move before AWS reclaims a spot node
-- **Cost visibility** with **OpenCost** (or the free Kubecost EKS bundle, which reads AWS billing data): cost per namespace, workload and node, including the GPU node's share and cost per summary alongside the Bedrock spend.
+- **Cost visibility** with **OpenCost** on both sites (cost per namespace, workload and node, including the GPU node's share and cost per summary alongside the Bedrock spend), and **AWS billing** for actual costs, with cost alerts and reports in `#rl-costs`; see [Cost monitoring and alerts](#cost-monitoring-and-alerts).
 - **Progressive delivery** with **Argo Rollouts**: new WordPress and summarizer versions go out as canaries (e.g. 10% → 50% → 100%). An analysis step checks Prometheus metrics (error rate, latency) at each stage and **rolls back automatically** if they get worse. The metrics come from **CloudWatch** on AWS (ALB 5xx rate and response time, through Argo Rollouts' CloudWatch provider) and from **ingress-nginx's Prometheus metrics** at home.
 - **Metrics, logs and alerts**: Prometheus, **Loki** (logs, collected by Grafana Alloy; see [Logging](#logging-loki--alloy)), Grafana and Alertmanager, including the LLM metrics described below, with every alert routed to **Slack** by site and topic; see [Alerting and notifications](#alerting-and-notifications-slack).
 - **Deployment notifications**: Argo CD and Argo Rollouts post syncs, failures, canary steps and rollbacks to `#rl-deploys`.
@@ -729,7 +729,7 @@ One Slack workspace for the project. The free plan is enough: it keeps 90 days o
 | `#rl-deploys` | Syncs, failed syncs, unhealthy apps, canary progress and automatic rollbacks, merged version-bump pull requests | Argo CD Notifications, Argo Rollouts notifications, GitHub |
 | `#rl-security` | Falco alerts, Kyverno policy violations, critical vulnerabilities in running images | Falcosidekick, Policy Reporter (Kyverno's reporting add-on), Trivy Operator metrics → Alertmanager |
 | `#rl-mlops` | Evaluation gate results, summarizer releases, Bedrock spend, dead-letter queue, model server down | GitHub, Alertmanager |
-| `#rl-costs` | AWS Budgets, Cost Anomaly Detection, weekly OpenCost summary | Amazon Q Developer in chat applications (formerly AWS Chatbot), Alertmanager |
+| `#rl-costs` | AWS Budgets, Cost Anomaly Detection, Bedrock budget, OpenCost-based alerts (`GPUNodeRunningLong`, `NamespaceDailyCostSpike`), the weekly OpenCost summary, the per-demo actual-cost report, the demo safety net | Amazon Q Developer in chat applications (formerly AWS Chatbot), Alertmanager, scheduled workflows |
 | `#rl-staging` | Staging test runs: started, passed, failed (with results); staging alerts | `staging-test` workflow, Alertmanager (`env=staging`) |
 
 Every message carries a **`site=dev` or `site=com` label** (or a `[dev]` / `[com]` prefix), so the shared channels still show which site it came from.
@@ -816,6 +816,43 @@ Box 1 doesn't have memory to spare for an always-on staging copy, so staging exi
 Infrastructure changes follow the same idea with different tools: Terraform modules are tested with **`terraform test`** in CI, Talos version upgrades are rehearsed on a **local Talos-in-Docker cluster** first, and `envs/home` changes are planned in CI before being applied.
 
 **Kargo (optional, later):** Kargo, a GitOps promotion tool from the makers of Argo CD, can replace the promotion workflows with a visual pipeline (stages, verification, approvals). It's a good portfolio addition, but its controllers are always on, so add it only if box 1 has memory to spare. The workflows above are the lightweight default.
+
+## Cost monitoring and alerts
+
+Costs are tracked from two angles that complement each other. The reasoning is recorded in `docs/adr/0013-opencost-and-aws-billing.md`.
+
+| | **AWS billing** (the actual bill) | **OpenCost** (allocation inside the cluster) |
+|---|---|---|
+| What it measures | What AWS actually charges: EKS, EC2, RDS, NAT, S3, Bedrock, everything | How each cluster's cost splits across namespaces, workloads and nodes, estimated from **list prices** (AWS on-demand/spot prices on EKS; custom prices for the home hardware, e.g. electricity per node) |
+| Where | AWS Budgets, Cost Anomaly Detection, Cost Explorer | Both clusters, using each cluster's Prometheus |
+| Strength | Exact, and covers everything outside Kubernetes | Shows *which workload* costs what (e.g. the GPU node's share, cost per summary) |
+| Limitation | Doesn't see inside the cluster; Cost Explorer data lags about 24 hours | Estimates, not the bill; on EKS its data is **lost at every `demo-down`** (it lives in the demo cluster's Prometheus) |
+
+**OpenCost on both sites, not Kubecost.** Kubecost (now owned by IBM) is built on OpenCost and adds billing reconciliation and its own alerts, but needs more components (memory box 1 can't spare). The per-demo Cost Explorer report below covers reconciliation more simply, and alerts come from Prometheus like everything else.
+
+### Cost alerts (all to `#rl-costs`)
+
+| Alert | Source | Fires when |
+|---|---|---|
+| Monthly budget thresholds | **AWS Budgets** → SNS → Amazon Q Developer | Spend passes set levels (e.g. $25 for the account; $20 and $40 for the demo stack) |
+| Unusual spend | **Cost Anomaly Detection** → SNS → Amazon Q Developer | AWS detects an unexpected cost pattern |
+| Bedrock spend | **AWS Budgets** (Bedrock filter) and the gateway's daily-spend metric | Bedrock spending passes its limit |
+| Demo left running | The **demo safety-net workflow** | The demo stack has been up longer than its limit (also alerts `#rl-critical`) |
+| `GPUNodeRunningLong` (EKS) | **OpenCost metrics** → Prometheus → Alertmanager | A GPU node has been running for more than a few hours: an early warning before the safety net |
+| `NamespaceDailyCostSpike` (both) | **OpenCost metrics** → Prometheus → Alertmanager | A namespace's estimated daily cost jumps well above its recent average (e.g. a runaway summarizer scaling out) |
+
+The OpenCost alerts are `PrometheusRule`s in `platform/opencost/`, labelled `team=cost` so Alertmanager routes them to `#rl-costs`, each with a runbook.
+
+### Cost reports
+
+| Report | How | Where |
+|---|---|---|
+| **Weekly allocation summary** (home) | A scheduled GitHub Actions workflow on the in-cluster runners queries OpenCost's API (last 7 days, grouped by namespace) | Top namespaces and their costs posted to `#rl-costs` |
+| **Per-demo actual cost** (AWS) | A **daily** scheduled workflow in `wp-infra` (Cost Explorer data lags ~24 hours) checks for recent demo usage, queries **Cost Explorer** grouped by the `Site` and `Stack` tags, and compares the result with the hours the demo ran and the ~$1/hour estimate | "Last demo: $X for Y hours ($Z/hour)" posted to `#rl-costs`, and recorded in the AWS plan's decision log |
+| **Monthly review** | AWS Budgets, Cost Explorer (by `Site`), OpenCost dashboards, Bedrock spend | Ongoing-operations task in both plans |
+
+### Cost allocation tags must be activated
+AWS only lets Budgets and Cost Explorer filter by your own tags (`Project`, `Site`, `Env`, `Stack`, `ManagedBy`) after they're **activated as cost allocation tags** in the Billing console, or with Terraform (`aws_ce_cost_allocation_tag`, in `wp-infra/bootstrap/`). A tag can only be activated after it has appeared on at least one resource, activation can take up to a day to show, and costs are only tagged from activation onwards, so activate them early.
 
 ## Update strategy
 
@@ -1182,7 +1219,7 @@ Together with the home lab, the total stays within **$30–$50/month**. If the A
 - **Zero-trust networking with Cilium on both clusters:** WireGuard encryption between nodes, default-deny CiliumNetworkPolicies, outbound traffic allowed by DNS name, layer-7 rules where useful, and Hubble flow visibility with metrics, dashboards and alerts in the same Prometheus and Grafana.
 - **Supply-chain security and policy as code:** SBOMs attached as signed attestations, vulnerability scans and signed images in CI, signature checks on upstream images too, with the same Kyverno policies tested in CI and enforced in the cluster (signatures, tags, resource limits), plus Checkov scanning Terraform, rendered manifests, Helm charts, Dockerfiles and GitHub Actions workflows in all four repos, with results in GitHub code scanning.
 - **Runtime security and compliance:** Falco rules written for this application (shells in pods, writes to WordPress code, unexpected egress from LLM nodes), alerts in Grafana, CIS benchmark reports from kube-bench on EKS, continuous Trivy Operator compliance reports on both clusters, periodic Kubescape NSA-CISA, MITRE ATT&CK and RBAC reports, and monthly Prowler scans of the AWS account against CIS AWS Foundations.
-- **Cost awareness (FinOps):** OpenCost shows cost per namespace and workload, including the GPU node and cost per summary, next to the Bedrock spend.
+- **Cost awareness (FinOps):** OpenCost shows cost per namespace and workload (including the GPU node and cost per summary) with cost-spike alerts; AWS Budgets and Cost Anomaly Detection alert on the real bill; and a per-demo report compares actual Cost Explorer costs with the estimates.
 - **EKS node autoscaling with Karpenter:** general and GPU NodePools, spot with interruption handling, and consolidation, with a documented reason it doesn't apply to fixed home hardware.
 - **Self-hosted CI on Kubernetes:** ephemeral GitHub Actions runners managed by ARC, with fork pull requests gated for a public repo.
 - **Pod permissions without stored keys at home (stretch goal):** publish the Talos cluster's service-account OIDC discovery files (e.g. in a public S3 bucket) and register them as an IAM OIDC provider. Pods such as WordPress (S3, SQS), the summarizer (SQS) and the gateway (Bedrock) then assume IAM roles without stored keys, just like IRSA on EKS. Until then, the home cluster uses narrowly scoped IAM user keys kept in Secrets Manager.
@@ -1242,7 +1279,7 @@ wp-gitops/
                             #   0006-tempo-tracing.md, 0007-prowler-not-threatmapper.md,
                             #   0008-google-sign-in-for-admins.md, 0009-gvisor-sandboxing.md,
                             #   0010-local-storage-no-ceph.md, 0011-update-strategy.md,
-                            #   0012-kube-bench-eks-only.md)
+                            #   0012-kube-bench-eks-only.md, 0013-opencost-and-aws-billing.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
@@ -1289,7 +1326,8 @@ wp-gitops/
                             #   alerts (FalcoNotRunning, FalcosidekickOutputErrors, FalcoEventsDropped)
     trivy-operator/         # continuous CIS compliance (+ Prometheus metrics, Compliance dashboard, alert),
                             #   running-image vulnerability and config reports
-    opencost/               # OpenCost (cost per namespace/workload/node)
+    opencost/               # OpenCost (cost per namespace/workload/node) + cost alerts (GPUNodeRunningLong,
+                            #   NamespaceDailyCostSpike) + weekly summary workflow config
     logging/                # Loki (single binary, S3 storage, ruler for log-based alerts) + Grafana Alloy
                             #   DaemonSet (labels, noise dropping, masking; Talos log receiver at home; OTLP
                             #   receiver forwarding traces to Tempo)
@@ -1320,7 +1358,7 @@ wp-gitops/
 wp-infra/
   bootstrap/                # applied once, locally: S3 bucket for Terraform state, GitHub OIDC provider,
                             #   IAM roles for each repo's CI (plan, apply, image push), read-only audit role
-                            #   for Prowler
+                            #   for Prowler, cost allocation tag activation
   modules/                  # reusable modules shared by both environments
     s3-media/               # media bucket, versioning, IAM policy
     s3-logs/                # Loki log and Tempo trace buckets: encryption, lifecycle matching retention, IAM policy

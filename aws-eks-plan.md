@@ -169,7 +169,7 @@ Record each answer in the [decision log](#decision-log).
 - **Tracing:** `platform/tracing/overlays/aws`: Tempo (S3 via a Pod Identity role on the trace bucket, 7-day retention), **always on**; Alloy's OTLP receiver forwards to it; tracing turned on in the WordPress, summarizer and gateway values with **100% sampling**.
 - Falco: modern eBPF on AL2023, same custom rules; Falcosidekick to `#rl-security`; the same health alerts as home (`FalcoNotRunning`, `FalcosidekickOutputErrors`, `FalcoEventsDropped`). On EKS, `FalcoNotRunning` also catches a new Karpenter node where Falco hasn't started.
 - Kyverno's Policy Reporter and Argo Rollouts notifications: same Slack setup as home, prefixed `[com]`.
-- Trivy Operator, OpenCost (with AWS on-demand/spot pricing).
+- Trivy Operator, OpenCost (with AWS on-demand/spot pricing), and the AWS overlay's OpenCost alert **`GPUNodeRunningLong`** (to `#rl-costs`), an early warning before the demo safety net.
 
 **Test:** each component is healthy; russetleaf.com's logs are searchable in Grafana and remain in the log bucket after `demo-down`; the home lab's Kyverno rejection tests (unsigned image, unlisted registry, `:latest`, missing labels or memory limit, privileged, root, writable root filesystem, no probes, NodePort/LoadBalancer Service, duplicate Ingress host) all still fail on EKS; OpenCost shows EC2 costs for the nodes.
 
@@ -236,9 +236,9 @@ Record each answer in the [decision log](#decision-log).
 **Test:** a written checklist in `docs/` with each item checked.
 
 ### Step 5.2: Cost review
-**Do:** after a full demo, compare **AWS Cost Explorer** (filtered by the `Project` and `Stack` tags) with the estimates in `aws-wp.md`, and with OpenCost.
+**Do:** a **daily scheduled workflow** in `wp-infra` (Cost Explorer data lags about 24 hours) that checks for recent demo usage, queries **Cost Explorer** grouped by the `Site` and `Stack` tags (the cost allocation tags activated in home plan step 2.1), and posts "Last demo: $X for Y hours ($Z/hour)" to `#rl-costs`, compared with the ~$1/hour estimate. After the first full demo, also compare it with OpenCost's estimate for the same demo (captured before `demo-down`), and record both in `docs/adr/0013-opencost-and-aws-billing.md`.
 
-**Test:** actual cost per demo hour is recorded in the decision log, and `aws-wp.md` is updated if the estimates were off.
+**Test:** the day after a demo, the cost report appears in `#rl-costs` with the right hours; actual cost per demo hour is recorded in the decision log, and `aws-wp.md` is updated if the estimates were off.
 
 ### Step 5.3 (optional): Istio ambient experiment on EKS
 **Do:** during a demo session, install **Istio ambient mode** alongside Cilium on the EKS cluster (Istio's instructions for running with Cilium), add the WordPress and summarizer namespaces to the mesh, and try mTLS plus one layer-7 authorization policy. Measure the extra memory and latency, note any conflicts with Cilium's policies, then remove it before `demo-down`. Add the findings to `docs/adr/0001-no-service-mesh.md`. Nothing in the site depends on it.
@@ -280,6 +280,7 @@ Record each answer in the [decision log](#decision-log).
 | Prowler AWS scan with the stack up | Once per demo | Trigger the `wp-infra` Prowler workflow during the demo; review findings for the demo resources |
 | kube-bench scan | Every demo (automatic, in `demo-up`) | Review the summary pull request and any new failures flagged in `#rl-security`; fix in Terraform or the node class, or add to the accepted-findings file with a reason |
 | Kubescape posture scan | Once per demo | Run the Kubescape CLI against EKS during the demo; save the report in `docs/security/` |
+| Review the per-demo cost report | The day after each demo (automatic) | Check the `#rl-costs` report; investigate if cost per hour is well above the ~$1 estimate |
 | Review costs | After each demo | Cost Explorer filtered by `Site=com`, compared with the demo hours recorded |
 
 ## Progress checklist
