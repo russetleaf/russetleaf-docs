@@ -167,7 +167,7 @@ Record each answer in the [decision log](#decision-log).
 - Argo Rollouts: an `AnalysisTemplate` variant using **CloudWatch** (ALB 5xx rate and target response time) instead of ingress-nginx metrics.
 - **Logging:** `platform/logging/overlays/aws`: Loki (S3 via a Pod Identity role on the russetleaf.com log bucket, 14-day retention) and Alloy with `site=com`; no Talos log receiver; the EKS control-plane audit logs stay in CloudWatch. Alloy gets the same narrow Kyverno exception as at home.
 - **Tracing:** `platform/tracing/overlays/aws`: Tempo (S3 via a Pod Identity role on the trace bucket, 7-day retention), **always on**; Alloy's OTLP receiver forwards to it; tracing turned on in the WordPress, summarizer and gateway values with **100% sampling**.
-- Falco: modern eBPF on AL2023, same custom rules; Falcosidekick to `#rl-security`; the same health alerts as home (`FalcoNotRunning`, `FalcosidekickOutputErrors`, `FalcoEventsDropped`). On EKS, `FalcoNotRunning` also catches a new Karpenter node where Falco hasn't started.
+- Falco: modern eBPF on AL2023, same custom rules (including the **process allow-lists**); Falcosidekick to `#rl-security`; the same health alerts as home (`FalcoNotRunning`, `FalcosidekickOutputErrors`, `FalcoEventsDropped`). On EKS, `FalcoNotRunning` also catches a new Karpenter node where Falco hasn't started.
 - Kyverno's Policy Reporter and Argo Rollouts notifications: same Slack setup as home, prefixed `[com]`.
 - Trivy Operator, OpenCost (with AWS on-demand/spot pricing), and the AWS overlay's OpenCost alert **`GPUNodeRunningLong`** (to `#rl-costs`), an early warning before the demo safety net.
 
@@ -245,6 +245,11 @@ Record each answer in the [decision log](#decision-log).
 
 **Test:** the ADR includes the EKS findings (resource use, latency, setup issues, what it added), and Istio is fully removed afterwards.
 
+### Step 5.4 (optional): Tetragon process enforcement on EKS
+**Do:** during a demo session, install **Tetragon** (Cilium's runtime-security tool) and add a tracing policy that **kills any process** in the WordPress pods that isn't on its allow-list (`apache2`, `php`). Check that normal traffic, uploads and the summarizer still work, then try running an unlisted program. Measure Tetragon's memory use per node, remove it before `demo-down`, and record the findings in `docs/adr/0016-process-allow-listing.md` (including whether it's worth trying at home).
+
+**Test:** an unlisted process in a WordPress pod is killed immediately (and reported); the site keeps working; Tetragon is fully removed afterwards.
+
 ## Phase 6: Demo operations
 
 ### Step 6.1: Demo workflows
@@ -312,6 +317,7 @@ Record each answer in the [decision log](#decision-log).
 | 5.1 Security review | ☐ | | | |
 | 5.2 Cost review | ☐ | | | |
 | 5.3 Istio ambient experiment (optional) | ☐ | | | |
+| 5.4 Tetragon enforcement (optional) | ☐ | | | |
 | 6.1 Demo workflows | ☐ | | | |
 | 6.2 Rehearsal + recording | ☐ | | | |
 | 6.3 Documentation | ☐ | | | |

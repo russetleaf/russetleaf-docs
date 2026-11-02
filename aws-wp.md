@@ -203,6 +203,30 @@ Normally every container shares the node's Linux kernel, so a kernel exploit fro
 
 The reasoning is recorded in `docs/adr/0009-gvisor-sandboxing.md`.
 
+### Process allow-listing
+The goal of process allow-listing is "**only these programs may run in this container**". It's done with Falco (detection, both sites) rather than AppArmor or SELinux profiles. The reasoning is recorded in `docs/adr/0016-process-allow-listing.md`.
+
+| Mechanism | Used? | Why |
+|---|---|---|
+| **seccomp `RuntimeDefault`** | **Yes** (both sites, required by Kyverno) | A kernel feature that works the same on Talos and EKS; blocks risky system calls at no cost |
+| **Falco process allow-list rules** | **Yes** (both sites) | Per-workload lists of expected programs; anything else raises an alert. No extra memory: Falco already runs |
+| **Fewer programs in the images** | **Yes** | The read-only root filesystem, non-root user, and images without download tools (`curl`, `wget`) or package managers leave little for an attacker to run; container-structure-test checks this |
+| **Tetragon enforcement** | **Optional stretch** | Cilium's eBPF runtime-security tool can **kill a process the moment it starts** if it isn't on the allow-list, blocking rather than reporting; integrates with Cilium and Hubble; roughly 100–300 MB per node |
+| **Custom per-workload seccomp profiles** | **Optional stretch** | The Security Profiles Operator records the exact system calls each app uses and builds a tight profile; works on both clusters, but a missed call breaks the app after an update |
+| **AppArmor** | **No** | Talos doesn't ship it, and EKS's Amazon Linux 2023 nodes don't use it |
+| **Custom SELinux policies** | **No** | Talos's SELinux support is limited (check its current status) and AL2023 typically runs SELinux in permissive mode; writing container policies is a large effort for little gain here |
+
+**The allow-lists** (Falco rules in `platform/falco/`, alerting `#rl-security`):
+
+| Workload | Expected processes | Anything else |
+|---|---|---|
+| WordPress | `apache2`, `php` (and the image's startup script at container start) | Alert (e.g. a shell, `curl`, `wget`, a crypto miner) |
+| Post-summarizer | `python` | Alert |
+| LiteLLM gateway | `python` (LiteLLM) | Alert |
+| llama.cpp | the `llama-server` binary (and the init container's download step) | Alert |
+
+The lists are kept in Git next to the rules, and **tested**: starting any unlisted process in each workload must raise an alert. When an image legitimately starts a new program (e.g. after an update), the release pull request updates the list.
+
 ### Infrastructure and configuration scanning (Checkov)
 **Checkov** (free, open source, no account needed) is the project's scanner for infrastructure-as-code and configuration. Snyk isn't used: it's a commercial platform whose free tier limits monthly scans, and it would overlap with Checkov (configuration) and Trivy (images and dependencies) without adding coverage.
 
@@ -277,6 +301,7 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
 ### Runtime security and compliance
 - **Falco** watches running containers (using its modern eBPF driver) and alerts on suspicious behaviour. Kyverno only checks resources when they're created; Falco covers what happens after. Custom rules for this design:
   - a **shell started** in a WordPress, summarizer or gateway pod, which normally never happens
+  - **any process not on a workload's allow-list** (e.g. anything other than `apache2` and `php` in WordPress); see [Process allow-listing](#process-allow-listing)
   - **files written under `/var/www/html`**, since WordPress code is built into the image and `DISALLOW_FILE_MODS` is set
   - **unexpected outbound connections** from the LLM nodes, which should only download model files (the CiliumNetworkPolicies also block these; Falco detects any attempt)
 - **Falcosidekick** sends Falco alerts to Alertmanager, Grafana and Slack (`#rl-security`). (On AWS, GuardDuty EKS Runtime Monitoring is the managed alternative; Falco runs the same on both clusters.)
@@ -1271,7 +1296,7 @@ Together with the home lab, the total stays within **$30–$50/month**. If the A
 - **LLM monitoring:** token, latency, error, fallback and cost metrics per model and prompt version, plus model-server throughput, in Prometheus and Grafana, with alerts.
 - **Progressive delivery:** Argo Rollouts canaries with automatic rollback based on Prometheus metrics, plus gateway canaries for model changes.
 - **Architecture decision records:** documented choices with their trade-offs, e.g. why media is on S3 rather than the commonly recommended EFS, and why there's no service mesh and when one would be added, with an optional Istio ambient experiment to back it up.
-- **Defence in depth for containers:** seccomp `RuntimeDefault` everywhere, and gVisor sandboxing for the self-hosted CI runners that run pull-request code (with a measured trial for WordPress), backed by an ADR comparing gVisor and Kata Containers.
+- **Defence in depth for containers:** seccomp `RuntimeDefault` everywhere, Falco process allow-lists per workload (with Tetragon enforcement as a stretch goal), and gVisor sandboxing for the self-hosted CI runners that run pull-request code (with a measured trial for WordPress), backed by an ADR comparing gVisor and Kata Containers.
 - **Passwordless admin access:** Google sign-in (OIDC) for WordPress, an edge login layer (Cloudflare Access at home, ALB OIDC on AWS), application passwords kept only for the REST API, and break-glass recovery with `wp-cli`.
 - **Zero-trust networking with Cilium on both clusters:** WireGuard encryption between nodes, default-deny CiliumNetworkPolicies, outbound traffic allowed by DNS name, layer-7 rules where useful, and Hubble flow visibility with metrics, dashboards and alerts in the same Prometheus and Grafana.
 - **Supply-chain security and policy as code:** linting and Semgrep SAST for the project's own code, dependency and workflow audits (dependency review, zizmor), SBOMs and SLSA build provenance attached as signed, Rekor-logged attestations, vulnerability and secret scans and signed images in CI, OpenSSF Scorecard on every repo, signature checks on upstream images too, with the same Kyverno policies tested in CI and enforced in the cluster (signatures, tags, resource limits), plus Checkov scanning Terraform, rendered manifests, Helm charts, Dockerfiles and GitHub Actions workflows in all four repos, with results in GitHub code scanning.
@@ -1338,7 +1363,8 @@ wp-gitops/
                             #   0008-google-sign-in-for-admins.md, 0009-gvisor-sandboxing.md,
                             #   0010-local-storage-no-ceph.md, 0011-update-strategy.md,
                             #   0012-kube-bench-eks-only.md, 0013-opencost-and-aws-billing.md,
-                            #   0014-image-supply-chain.md, 0015-availability-levels.md)
+                            #   0014-image-supply-chain.md, 0015-availability-levels.md,
+                            #   0016-process-allow-listing.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
@@ -1381,7 +1407,8 @@ wp-gitops/
                             #   Ingress hosts) + PolicyExceptions + the default-deny Cilium generate rule
                             #   + policy tests + Policy Reporter (violations to Slack)
     falco/                  # Falco (modern eBPF) + custom rules + Falcosidekick + ServiceMonitors and health
-                            #   gVisor event source (home) for sandboxed pods
+                            #   gVisor event source (home) for sandboxed pods; per-workload process allow-list
+                            #   rules and their tests
                             #   alerts (FalcoNotRunning, FalcosidekickOutputErrors, FalcoEventsDropped)
     trivy-operator/         # continuous CIS compliance (+ Prometheus metrics, Compliance dashboard, alert),
                             #   running-image vulnerability and config reports
