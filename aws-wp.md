@@ -1487,7 +1487,7 @@ The two build plans tier every step as **Core**, **Differentiator** or **Stretch
 | [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~67–115 | ~14–27 | ~6–10 | ~87–152 |
 | **Whole project** | ~183–319 | ~90–162 | ~21–39 | **~290–520** |
 
-At about **20 hours a week**, the home lab's Core tier takes roughly **6–10 weeks**, and the whole project roughly **4–7 months** (about **7–13 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
+At about **20 hours a week**, the home lab's Core tier takes roughly **6–10 weeks**, and the whole project roughly **3.5–6 months** (about **7–12 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
 
 **Portfolio level:** the home lab's **Core tier on its own reads as strong intermediate work**; adding the **Differentiators**, especially the AI pipeline with its evaluation gate and **evidence of operating the system** (rollback and disaster drills, a restore from the Backup account, a recorded AWS demo), is what makes it **senior-level**. A finished subset is worth more than an unfinished whole: finish Core first.
 
