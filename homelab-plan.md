@@ -8,11 +8,37 @@ Each step is sized for one or a few Claude sessions, and ends with a **test** th
 
 - **Start each session** with something like: *"Read `aws-wp.md` and `homelab-plan.md`. We're working on step 7. Here's where I left off: ..."*. Claude has no memory of earlier sessions, so these two files are the shared context.
 - **One step at a time.** Build it, run the step's test, fix, commit. Don't start the next step until the test passes.
+- **Core first.** Each step has a tier (Core, Differentiator, Stretch) and an hour estimate; see [Priorities and time estimates](#priorities-and-time-estimates). Record actual hours in the checklist.
 - **Keep the plan current.** Tick the [progress checklist](#progress-checklist) and add to the [decision log](#decision-log) whenever something is decided or differs from `aws-wp.md`. Ask Claude to update this file at the end of each session.
 - **Watch box 1's memory.** After every step that adds something to the cluster, run `kubectl top nodes` and note the result in the checklist. Box 1 has 8 GB and the full design uses about 6–7 GB of it.
 - **Build the home overlays only, but keep the base clean.** Put anything environment-specific (domain, hostnames, endpoints, credentials) in `overlays/home` (prod), `overlays/home-staging` or `overlays/ci`, never in `base`, so `overlays/aws` can be added later without rework.
 - **Use the environments.** Try changes **locally** first (Docker Compose or a local kind/Talos cluster); once step 5.4 exists, every pull request is tested in a **ci** kind cluster; once step 5.6 exists, new versions go through **staging** before production. See [Environments and promotion](aws-wp.md#environments-and-promotion).
 - **Never commit secrets.** Secrets go in AWS Secrets Manager and reach the cluster through External Secrets. Terraform state (which can contain secrets) lives in an encrypted S3 bucket. kubeconfig and talosconfig files stay outside Git.
+
+## Priorities and time estimates
+
+Every step in the [progress checklist](#progress-checklist) has a **tier** and an **estimate** in focused hours (with Claude's help). Estimates are rough (expect ±50%); record **actual hours** in the checklist and re-estimate after phase 2.
+
+| Tier | What it means | Steps | Est. hours |
+|---|---|---|---|
+| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), Talos with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.6, 5.1–5.7, 6.1, 6.3, 11.2 | **~116–204** |
+| **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, Google sign-in, and **evidence of operating it** (rollback and disaster drills). | 2.5, 5.8, 6.2, 6.4, 6.5, 7.1–9.3, 10.1–10.3, 10.5, 10.6, 10.8, 10.10 | **~76–135** |
+| **Stretch** | Optional extras with diminishing returns: tracing, custom seccomp profiles, CrowdSec, keyless AWS access. | 10.4, 10.7, 10.9, 11.1 | **~15–29** |
+| **Total** | | | **~207–368** |
+
+**Calendar time** (home lab only):
+
+| Hours per week | Core | Core + differentiators | Everything |
+|---|---|---|---|
+| ~10 | 3–5 months | 5–8 months | 5–9 months |
+| ~20 | 6–10 weeks | 10–17 weeks | 10–18 weeks |
+| ~40 | 3–5 weeks | 5–9 weeks | 5–9 weeks |
+
+Add the AWS plan (~87–152 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~290–520 hours**.
+
+**Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to explain it in an interview**.
+
+**Recommended order:** finish **all Core steps first** (in plan order), and publish them; then add Differentiators, starting with the AI pipeline (phases 7–9) and the drills (10.8, 10.10), which give the most interview material; leave Stretch steps until everything else is done. A finished subset is worth more than an unfinished whole.
 
 ## Starting point (as of 2026-10-31)
 
@@ -672,60 +698,60 @@ The home lab already builds most of what these need: the shared Terraform module
 
 ## Progress checklist
 
-| Step | Done | Date | Box 1 memory after | Notes |
-|---|---|---|---|---|
-| 0.1 Accounts, tools, budget | ☐ | | | |
-| 0.2 Decisions | ☐ | | | |
-| 1.1 Four repos | ☐ | | | |
-| 2.0 AWS Organization and accounts (SRA) | ☐ | | | |
-| 2.0b Organisation security services | ☐ | | | |
-| 2.1 Terraform bootstrap | ☐ | | | |
-| 2.2 Talos cluster | ☐ | | | |
-| 2.3 AWS + Cloudflare resources | ☐ | | | |
-| 2.4 `wp-infra` CI | ☐ | | | |
-| 2.5 Disaster recovery copies | ☐ | | | |
-| 3.1 GitOps structure + Argo CD | ☐ | | | |
-| 4.1 Storage | ☐ | | | |
-| 4.2 Secrets | ☐ | | | |
-| 4.3 Ingress + tunnel | ☐ | | | |
-| 4.4 Monitoring + Slack alerting | ☐ | | | |
-| 4.5 MariaDB + backups + Valkey | ☐ | | | |
-| 4.6 Logging (Loki + Alloy) | ☐ | | | |
-| 5.1 WordPress image | ☐ | | | |
-| 5.2 WordPress deployment | ☐ | | | |
-| 5.3 Image promotion | ☐ | | | |
-| 5.4 ci test clusters | ☐ | | | |
-| 5.5 Self-hosted runners (ARC) | ☐ | | | |
-| 5.6 On-demand staging | ☐ | | | |
-| 5.7 Promotion pipeline | ☐ | | | |
-| 5.8 Google sign-in for admins | ☐ | | | |
-| 6.1 Kyverno | ☐ | | | |
-| 6.2 Argo Rollouts | ☐ | | | |
-| 6.3 CiliumNetworkPolicies | ☐ | | | |
-| 6.4 Service mesh ADR (+ optional Istio experiment) | ☐ | | | |
-| 6.5 Sandboxed runtime (gVisor) | ☐ | | | |
-| 7.1 KEDA | ☐ | | | |
-| 7.2 LiteLLM gateway | ☐ | | | |
-| 7.3 Summarizer code | ☐ | | | |
-| 7.4 Summarizer chart + deploy | ☐ | | | |
-| 7.5 LLM monitoring | ☐ | | | |
-| 8.1 llama.cpp on box 2 | ☐ | | | |
-| 8.2 Gateway routing to local model | ☐ | | | |
-| 9.1 Evaluation set | ☐ | | | |
-| 9.2 Runners for `llm-summarizer` | ☐ | | | |
-| 9.3 Evaluation gate + releases | ☐ | | | |
-| 10.1 Falco | ☐ | | | |
-| 10.2 Trivy Operator, Kubescape scan, Talos notes | ☐ | | | |
-| 10.3 OpenCost | ☐ | | | |
-| 10.4 Tracing with Tempo (optional, on demand) | ☐ | | | |
-| 10.5 AWS account posture (Prowler) | ☐ | | | |
-| 10.6 Version-age report | ☐ | | | |
-| 10.7 Custom seccomp profiles (optional) | ☐ | | | |
-| 10.8 Rollback runbooks and drills | ☐ | | | |
-| 10.9 CrowdSec (optional) | ☐ | | | |
-| 10.10 First full disaster drill | ☐ | | | |
-| 11.1 Keyless AWS access (optional) | ☐ | | | |
-| 11.2 Docs + go public | ☐ | | | |
+| Step | Tier | Est. hours | Done | Date | Actual hours | Box 1 memory after | Notes |
+|---|---|---|---|---|---|---|---|
+| 0.1 Accounts, tools, budget | Core | 4–8 | ☐ | | | | |
+| 0.2 Decisions | Core | 1–2 | ☐ | | | | |
+| 1.1 Four repos | Core | 3–5 | ☐ | | | | |
+| 2.0 AWS Organization and accounts (SRA) | Core | 6–10 | ☐ | | | | |
+| 2.0b Organisation security services | Core | 4–8 | ☐ | | | | |
+| 2.1 Terraform bootstrap | Core | 3–5 | ☐ | | | | |
+| 2.2 Talos cluster | Core | 6–12 | ☐ | | | | |
+| 2.3 AWS + Cloudflare resources | Core | 5–8 | ☐ | | | | |
+| 2.4 `wp-infra` CI | Core | 4–6 | ☐ | | | | |
+| 2.5 Disaster recovery copies | Differentiator | 3–6 | ☐ | | | | |
+| 3.1 GitOps structure + Argo CD | Core | 4–8 | ☐ | | | | |
+| 4.1 Storage | Core | 1–2 | ☐ | | | | |
+| 4.2 Secrets | Core | 2–4 | ☐ | | | | |
+| 4.3 Ingress + tunnel | Core | 3–6 | ☐ | | | | |
+| 4.4 Monitoring + Slack alerting | Core | 6–10 | ☐ | | | | |
+| 4.5 MariaDB + backups + Valkey | Core | 4–8 | ☐ | | | | |
+| 4.6 Logging (Loki + Alloy) | Core | 4–7 | ☐ | | | | |
+| 5.1 WordPress image | Core | 12–20 | ☐ | | | | |
+| 5.2 WordPress deployment | Core | 8–14 | ☐ | | | | |
+| 5.3 Image promotion | Core | 2–4 | ☐ | | | | |
+| 5.4 ci test clusters | Core | 5–8 | ☐ | | | | |
+| 5.5 Self-hosted runners (ARC) | Core | 2–4 | ☐ | | | | |
+| 5.6 On-demand staging | Core | 6–10 | ☐ | | | | |
+| 5.7 Promotion pipeline | Core | 4–7 | ☐ | | | | |
+| 5.8 Google sign-in for admins | Differentiator | 4–7 | ☐ | | | | |
+| 6.1 Kyverno | Core | 6–10 | ☐ | | | | |
+| 6.2 Argo Rollouts | Differentiator | 4–7 | ☐ | | | | |
+| 6.3 CiliumNetworkPolicies | Core | 5–8 | ☐ | | | | |
+| 6.4 Service mesh ADR (+ optional Istio experiment) | Differentiator | 2–6 | ☐ | | | | |
+| 6.5 Sandboxed runtime (gVisor) | Differentiator | 4–7 | ☐ | | | | |
+| 7.1 KEDA | Differentiator | 1–3 | ☐ | | | | |
+| 7.2 LiteLLM gateway | Differentiator | 3–5 | ☐ | | | | |
+| 7.3 Summarizer code | Differentiator | 8–12 | ☐ | | | | |
+| 7.4 Summarizer chart + deploy | Differentiator | 5–9 | ☐ | | | | |
+| 7.5 LLM monitoring | Differentiator | 3–6 | ☐ | | | | |
+| 8.1 llama.cpp on box 2 | Differentiator | 4–6 | ☐ | | | | |
+| 8.2 Gateway routing to local model | Differentiator | 2–4 | ☐ | | | | |
+| 9.1 Evaluation set | Differentiator | 5–8 | ☐ | | | | |
+| 9.2 Runners for `llm-summarizer` | Differentiator | 1–2 | ☐ | | | | |
+| 9.3 Evaluation gate + releases | Differentiator | 4–7 | ☐ | | | | |
+| 10.1 Falco | Differentiator | 3–6 | ☐ | | | | |
+| 10.2 Trivy Operator, Kubescape scan, Talos notes | Differentiator | 3–5 | ☐ | | | | |
+| 10.3 OpenCost | Differentiator | 2–4 | ☐ | | | | |
+| 10.4 Tracing with Tempo (optional, on demand) | Stretch | 3–6 | ☐ | | | | |
+| 10.5 AWS account posture (Prowler) | Differentiator | 2–4 | ☐ | | | | |
+| 10.6 Version-age report | Differentiator | 2–3 | ☐ | | | | |
+| 10.7 Custom seccomp profiles (optional) | Stretch | 4–8 | ☐ | | | | |
+| 10.8 Rollback runbooks and drills | Differentiator | 5–8 | ☐ | | | | |
+| 10.9 CrowdSec (optional) | Stretch | 3–5 | ☐ | | | | |
+| 10.10 First full disaster drill | Differentiator | 6–10 | ☐ | | | | |
+| 11.1 Keyless AWS access (optional) | Stretch | 5–10 | ☐ | | | | |
+| 11.2 Docs + go public | Core | 6–10 | ☐ | | | | |
 
 ## Decision log
 

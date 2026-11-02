@@ -4,7 +4,7 @@ EKS, the WordPress Helm chart, S3 media offload and RDS together make a standard
 
 The project runs **two separate WordPress sites** from the same code and manifests: **russetleaf.com** on the full AWS design (brought up only for demos) and **russetleaf.dev** on a budget home lab (running 24/7). See [The two sites](#the-two-sites). Changes reach them through **local → ci → staging → prod** environments; see [Environments and promotion](#environments-and-promotion).
 
-Step-by-step build plans: [`homelab-plan.md`](homelab-plan.md) (russetleaf.dev, built first) and [`aws-eks-plan.md`](aws-eks-plan.md) (russetleaf.com, built second).
+Step-by-step build plans: [`homelab-plan.md`](homelab-plan.md) (russetleaf.dev, built first) and [`aws-eks-plan.md`](aws-eks-plan.md) (russetleaf.com, built second), with priorities and effort estimates summarised in [Build plans, priorities and effort](#build-plans-priorities-and-effort).
 
 The project is split across **four Git repositories** (`wp-gitops`, `wp-infra`, `wp-image` and `llm-summarizer`); see [Repository structure](#repository-structure-four-repos) at the end.
 
@@ -1476,6 +1476,20 @@ Together with the home lab, the total stays within **$30–$50/month**. If the A
 - **Application-level monitoring:** exporters around WordPress (Apache, database, cache, synthetic probes) plus a custom metrics plugin with a business-level signal (`posts_without_summary`) tied to an alert and a runbook.
 - **Operational alerting:** alerts as code with tests and runbooks, routed to Slack by site and severity, with inhibition rules, a dead man's switch, external uptime checks and silences during demo teardown.
 - **Documentation:** architecture diagrams for both environments, the cost breakdown, Grafana dashboard screenshots, Slack alert screenshots, runbooks, sample evaluation reports comparing models, and demo recordings.
+
+## Build plans, priorities and effort
+
+The two build plans tier every step as **Core**, **Differentiator** or **Stretch**, with hour estimates (focused hours with Claude's help; expect ±50%):
+
+| Plan | Core | Differentiator | Stretch | Total |
+|---|---|---|---|---|
+| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~116–204 | ~76–135 | ~15–29 | ~207–368 |
+| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~67–115 | ~14–27 | ~6–10 | ~87–152 |
+| **Whole project** | ~183–319 | ~90–162 | ~21–39 | **~290–520** |
+
+At about **20 hours a week**, the home lab's Core tier takes roughly **6–10 weeks**, and the whole project roughly **4–7 months** (about **7–13 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
+
+**Portfolio level:** the home lab's **Core tier on its own reads as strong intermediate work**; adding the **Differentiators**, especially the AI pipeline with its evaluation gate and **evidence of operating the system** (rollback and disaster drills, a restore from the Backup account, a recorded AWS demo), is what makes it **senior-level**. A finished subset is worth more than an unfinished whole: finish Core first.
 
 ## Repository structure (four repos)
 

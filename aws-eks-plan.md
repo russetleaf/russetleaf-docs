@@ -18,6 +18,23 @@ Use the same Ubuntu 24.04 setup as the home lab ([Local workstation setup](homel
 - An AWS SSO profile for the demo account (or the same account), and `aws eks update-kubeconfig --name <cluster> --alias eks-com --profile <profile>` after each `demo-up`, so the kubeconfig context is clearly named.
 - Nothing else to install: `terraform`, `kubectl`, `helm`, `argocd` and the AWS CLI from the home lab setup cover EKS. Pin the `kubectl` version in `wp-infra`'s `.mise.toml` within one minor version of the EKS version.
 
+## Priorities and time estimates
+
+Every step in the [progress checklist](#progress-checklist) has a **tier** and an **estimate** in focused hours (with Claude's help); expect ±50%, and record **actual hours** (and the stack cost) per session.
+
+| Tier | What it means | Steps | Est. hours |
+|---|---|---|---|
+| **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the summarizer, the demo workflows, one rehearsed and **recorded demo**, and the docs. | 0.1–2.4, 3.1, 3.2, 4.1, 6.1, 6.2, 6.3 | **~67–115** |
+| **Differentiator** | kube-bench and Kubescape on EKS, the GPU model server, evaluation and tracing on AWS, the security and cost reviews, and the EKS rollback drill. | 2.5, 4.2, 4.3, 4.4, 5.1, 5.2, 6.1b | **~14–27** |
+| **Stretch** | Istio ambient and Tetragon experiments. | 5.3, 5.4 | **~6–10** |
+| **Total** | | | **~87–152** |
+
+**Calendar time:** about **5–8 weeks at ~20 hours a week** for the whole AWS plan, after the home lab's Core tier is done (this plan depends on it). Allow for waiting: the **GPU quota** request (days; submit it in step 0.1 well ahead), **SES production access**, and **Bedrock model access** in the new account.
+
+**Money:** the stack costs about **$1/hour** while running, so batch work into focused sessions and run `demo-down` at the end of each; record each session's cost in the checklist.
+
+**Recommended order:** do the Core tier in plan order, with **3.1 → 6.1 → 6.2** (WordPress, demo workflows, recorded demo) as the first milestone; add the GPU model server and the reviews next; the experiments last.
+
 ## Prerequisites from the home lab
 
 These home lab steps must be done first, because this plan builds on them:
@@ -302,38 +319,38 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 
 ## Progress checklist
 
-| Step | Done | Date | Stack cost this session | Notes |
-|---|---|---|---|---|
-| 0.1 GPU quota, DNS, guardrails | ☐ | | | |
-| 0.2 Decisions | ☐ | | | |
-| 1.1 CI roles | ☐ | | | |
-| 1.2 Always-on edge | ☐ | | | |
-| 1.3 Network | ☐ | | | |
-| 1.4 EKS cluster | ☐ | | | |
-| 1.5 Karpenter infrastructure | ☐ | | | |
-| 1.6 RDS for MariaDB + Valkey | ☐ | | | |
-| 1.7 App resources + permissions | ☐ | | | |
-| 1.8 Argo CD on EKS | ☐ | | | |
-| 1.9 CI for AWS environments | ☐ | | | |
-| 2.1 AWS root app | ☐ | | | |
-| 2.2 Load Balancer Controller, ExternalDNS, storage | ☐ | | | |
-| 2.3 Karpenter NodePools + NVIDIA plugin | ☐ | | | |
-| 2.4 Shared platform overlays | ☐ | | | |
-| 2.5 kube-bench + Kubescape scan | ☐ | | | |
-| 3.1 WordPress AWS overlay | ☐ | | | |
-| 3.2 Seed + snapshot cycle | ☐ | | | |
-| 4.1 Summarizer + gateway | ☐ | | | |
-| 4.2 GPU model server | ☐ | | | |
-| 4.3 Evaluation on AWS | ☐ | | | |
-| 4.4 End-to-end tracing | ☐ | | | |
-| 5.1 Security review | ☐ | | | |
-| 5.2 Cost review | ☐ | | | |
-| 5.3 Istio ambient experiment (optional) | ☐ | | | |
-| 5.4 Tetragon enforcement (optional) | ☐ | | | |
-| 6.1 Demo workflows | ☐ | | | |
-| 6.1b Rollback drill on EKS | ☐ | | | |
-| 6.2 Rehearsal + recording | ☐ | | | |
-| 6.3 Documentation | ☐ | | | |
+| Step | Tier | Est. hours | Done | Date | Actual hours | Stack cost this session | Notes |
+|---|---|---|---|---|---|---|---|
+| 0.1 GPU quota, DNS, guardrails | Core | 2–3 | ☐ | | | | |
+| 0.2 Decisions | Core | 1–2 | ☐ | | | | |
+| 1.1 CI roles | Core | 2–3 | ☐ | | | | |
+| 1.2 Always-on edge | Core | 5–8 | ☐ | | | | |
+| 1.3 Network | Core | 3–5 | ☐ | | | | |
+| 1.4 EKS cluster | Core | 4–8 | ☐ | | | | |
+| 1.5 Karpenter infrastructure | Core | 3–5 | ☐ | | | | |
+| 1.6 RDS for MariaDB + Valkey | Core | 6–10 | ☐ | | | | |
+| 1.7 App resources + permissions | Core | 4–7 | ☐ | | | | |
+| 1.8 Argo CD on EKS | Core | 2–3 | ☐ | | | | |
+| 1.9 CI for AWS environments | Core | 2–4 | ☐ | | | | |
+| 2.1 AWS root app | Core | 2–3 | ☐ | | | | |
+| 2.2 Load Balancer Controller, ExternalDNS, storage | Core | 3–5 | ☐ | | | | |
+| 2.3 Karpenter NodePools + NVIDIA plugin | Core | 4–7 | ☐ | | | | |
+| 2.4 Shared platform overlays | Core | 4–8 | ☐ | | | | |
+| 2.5 kube-bench + Kubescape scan | Differentiator | 2–3 | ☐ | | | | |
+| 3.1 WordPress AWS overlay | Core | 5–9 | ☐ | | | | |
+| 3.2 Seed + snapshot cycle | Core | 3–5 | ☐ | | | | |
+| 4.1 Summarizer + gateway | Core | 2–4 | ☐ | | | | |
+| 4.2 GPU model server | Differentiator | 4–7 | ☐ | | | | |
+| 4.3 Evaluation on AWS | Differentiator | 1–3 | ☐ | | | | |
+| 4.4 End-to-end tracing | Differentiator | 1–3 | ☐ | | | | |
+| 5.1 Security review | Differentiator | 2–4 | ☐ | | | | |
+| 5.2 Cost review | Differentiator | 2–3 | ☐ | | | | |
+| 5.3 Istio ambient experiment (optional) | Stretch | 3–5 | ☐ | | | | |
+| 5.4 Tetragon enforcement (optional) | Stretch | 3–5 | ☐ | | | | |
+| 6.1 Demo workflows | Core | 5–8 | ☐ | | | | |
+| 6.1b Rollback drill on EKS | Differentiator | 2–4 | ☐ | | | | |
+| 6.2 Rehearsal + recording | Core | 3–5 | ☐ | | | | |
+| 6.3 Documentation | Core | 2–3 | ☐ | | | | |
 
 ## Decision log
 
