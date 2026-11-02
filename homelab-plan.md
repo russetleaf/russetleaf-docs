@@ -21,21 +21,21 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 6.1, 6.3, 11.2 | **~157–258** |
-| **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model, MLflow tracking and registry, guardrails, online evaluation and drift monitoring), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–9.6, 10.1–10.6, 10.8–10.12, 11.1 | **~127–221** |
+| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, and the docs. **Finished on its own, this reads as strong intermediate work.** | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 6.1, 6.3, 11.2 | **~162–264** |
+| **Differentiator** | What moves it to senior: the AI summary pipeline and MLOps (evaluation gate, local model, MLflow tracking and registry, guardrails, online evaluation and drift monitoring), progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–9.6, 10.1–10.6, 10.8–10.12, 11.1 | **~128–222** |
 | **Stretch** | Extras: the rest of the MLOps lifecycle (feedback loop, DVC, deploying a fine-tuned model; valuable for MLOps roles specifically), custom seccomp profiles. | 9.7, 9.8, 10.7 | **~14–25** |
-| **Staff** | Beyond senior: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management, chaos experiments and postmortems, a threat model and control matrix, strategy documents, and public writing. Shows staff-level judgement; staff roles also expect evidence of leading people. | 12.1–12.9 | **~82–133** |
-| **Total** | | | **~380–637** |
+| **Staff** | Beyond senior: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management, chaos experiments and postmortems, a threat model and control matrix, strategy documents, and public writing. Shows staff-level judgement; staff roles also expect evidence of leading people. | 12.1–12.9 | **~83–134** |
+| **Total** | | | **~387–645** |
 
 **Calendar time** (home lab only):
 
 | Hours per week | Core | + Differentiators | + Stretch | + Staff (everything) |
 |---|---|---|---|---|
 | ~10 | 4–6 months | 7–11 months | 7–12 months | 9–15 months |
-| ~20 | 8–13 weeks | 14–24 weeks | 15–25 weeks | 19–32 weeks |
-| ~40 | 4–7 weeks | 7–12 weeks | 7–13 weeks | 10–16 weeks |
+| ~20 | 8–13 weeks | 15–24 weeks | 15–26 weeks | 19–32 weeks |
+| ~40 | 4–7 weeks | 7–12 weeks | 8–13 weeks | 10–16 weeks |
 
-Add the AWS plan (~119–201 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~499–838 hours** (about **407–690** without the Staff tier).
+Add the AWS plan (~120–202 hours; see [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates)) for the full project: **~507–847 hours** (about **414–698** without the Staff tier).
 
 **Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to explain it in an interview**.
 
@@ -240,6 +240,7 @@ Record each answer in the [decision log](#decision-log).
 | 0033 Kubernetes component hardening | 2.2, 6.1, 10.2 (and AWS 1.4, 5.1) |
 | 0034 Security by layer | 0.1, 0.3, 1.1, 2.2, 2.3, 5.1, 5.2, 5.6, 5.7, 6.1, 7.4, 12.5 (and AWS 1.2, 2.4, 5.1) |
 | 0035 Identity and access | 4.6, 4.7, 6.1, 6.3, 11.1 (and AWS 1.4, 1.7) |
+| 0036 Kubernetes threat model coverage | 2.2, 3.1, 4.4, 4.6, 6.1, 6.3, 10.2, 12.5 (and AWS 1.4, 2.3, 5.1) |
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo, scan each repo's **full history**, and then **make the repos public** (ADR 0032); turn on **secret scanning with push protection**.
 - **GitHub organisation settings** in `wp-infra/envs/github/` (Terraform's GitHub provider): default workflow token **read-only**, only verified or allow-listed Actions, branch protection and required reviews, environments, secret scanning with push protection.
 - Add **OpenSSF Scorecard** (weekly scheduled workflow) and **zizmor** (on workflow changes) to every repo, and GitHub's **dependency-review action** to the repos with dependencies (`wp-image`, `llm-summarizer`).
@@ -283,7 +284,7 @@ Record each answer in the [decision log](#decision-log).
 **Do** (`wp-infra/envs/home/`, applied locally; uses the `siderolabs/talos` provider):
 - Generate machine secrets; machine configs for **three control-plane nodes**, all schedulable: **box 3** (main workloads), **box 1** (secondary workloads) and **box 2** (LLM). Give each a fixed IP (DHCP reservations or static addresses).
 - **Shared virtual IP** for the Kubernetes API (Talos's `vip` setting on the nodes' network interface), on a free address in your LAN; kubeconfig and Talos endpoints point at it.
-- **Reservations on every node** (kubelet `systemReserved` and `kubeReserved` for CPU and memory), so workloads can't starve etcd, the API server or the kubelet.
+- **Reservations on every node** (kubelet `systemReserved` and `kubeReserved` for CPU and memory), so workloads can't starve etcd, the API server or the kubelet; plus a **per-pod PID limit** (`podPidsLimit`, e.g. 4096; check WordPress's and llama.cpp's process counts first) and **hard eviction thresholds** for memory, disk and inodes (ADR 0036).
 - **Secure Boot:** install Talos from its **Secure Boot images** (Image Factory), with the keys enrolled in each node's firmware, so the TPM-sealed disk encryption only unlocks on an untampered boot chain (ADR 0034).
 - **User namespaces:** confirm the Kubernetes and Talos versions support pods with `hostUsers: false`; record the result (step 6.1 enforces it if so).
 - **Hardening** (`docs/adr/0033-kubernetes-component-hardening.md`): **disk encryption** of the system-state and data partitions, **sealed to the TPM** (check each box has TPM 2.0 enabled in the BIOS; otherwise use Talos's static-key option and record it); a **host firewall** (Talos ingress rules) allowing ports 6443 and 50000 only from the LAN and your workstation; kubelet **`seccompDefault: true`**; the API server's **Pod Security Admission defaults** (`baseline` enforced cluster-wide, `restricted` for warn and audit), with per-namespace labels set in step 6.1.
@@ -298,7 +299,7 @@ Record each answer in the [decision log](#decision-log).
 
 The cluster is **highly available for a single node failure** (three etcd members, the virtual IP); see `docs/adr/0021-three-node-ha-home-cluster.md` and `docs/adr/0015-availability-levels.md`.
 
-**Test:** `kubectl get nodes` shows all three nodes `Ready`; `kubectl describe node <box2>` shows the label and taint; `talosctl health` passes; the partitions show as encrypted; ports 6443 and 50000 are refused from a device outside the allowed range; `cilium status` is all green and `cilium connectivity test` passes; `etcd` has **three healthy members** (`talosctl etcd members`); the API answers on the virtual IP, and still answers after shutting down whichever node holds it; `cilium encrypt status` shows WireGuard on with the other two nodes as peers on each node; there's no kube-proxy DaemonSet. Rebuild once from scratch to prove it's reproducible, and **record how long the rebuild took** as the recovery time in `docs/adr/0015-availability-levels.md`.
+**Test:** `kubectl get nodes` shows all three nodes `Ready`; `kubectl describe node <box2>` shows the label and taint; `talosctl health` passes; a fork bomb in a throwaway pod stops at the PID limit while the node stays `Ready`; the partitions show as encrypted; ports 6443 and 50000 are refused from a device outside the allowed range; `cilium status` is all green and `cilium connectivity test` passes; `etcd` has **three healthy members** (`talosctl etcd members`); the API answers on the virtual IP, and still answers after shutting down whichever node holds it; `cilium encrypt status` shows WireGuard on with the other two nodes as peers on each node; there's no kube-proxy DaemonSet. Rebuild once from scratch to prove it's reproducible, and **record how long the rebuild took** as the recovery time in `docs/adr/0015-availability-levels.md`.
 
 ### Step 2.3: AWS and Cloudflare resources for the home lab
 **Do** (`wp-infra/modules/` + `envs/home/`; all AWS resources in the **russetleaf-home** account):
@@ -342,9 +343,10 @@ The cluster is **highly available for a single node failure** (three etcd member
 - `bootstrap/home/`: the root "app of apps" that creates one Argo CD Application per component, with **sync waves** (Cilium and the `prometheus-operator-crds` chart, from the prometheus-community Helm repository, first, then storage and secrets, then ingress, monitoring, operators, then apps).
 - Expose the Argo CD UI only through Cloudflare Access (after step 4.3), or use `kubectl port-forward` until then.
 - **Argo CD Notifications** to `#rl-deploys` (sync succeeded, sync failed, app degraded), using the Slack bot token. Until External Secrets exists (step 4.2), create the token Secret by hand; switch it to an `ExternalSecret` afterwards.
+- **AppProjects** (platform, apps, staging) restricting each to its repos, namespaces and resource kinds, with **orphaned-resource warnings** on, so objects Argo CD doesn't own are flagged (ADR 0036); Argo CD Notifications sends them to `#rl-security` once that channel's routing exists.
 - CI: render every component's home overlay (Helm/Kustomize), validate with `kubeconform`, and run **Checkov on the rendered manifests** (what Argo CD would actually apply).
 
-**Test:** apply the root app; Argo CD shows it `Synced`/`Healthy` with a trivial test component; a sync posts to `#rl-deploys`; a pull request that breaks a manifest fails CI.
+**Test:** apply the root app; Argo CD shows it `Synced`/`Healthy` with a trivial test component; a sync posts to `#rl-deploys`; a ConfigMap created by hand in a managed namespace shows as orphaned; a pull request that breaks a manifest fails CI.
 
 ## Phase 4: Platform services (`wp-gitops/platform/`)
 
@@ -379,7 +381,7 @@ Check `kubectl top nodes` after each step.
 - **Dead man's switch:** route the always-firing `Watchdog` alert to the heartbeat service's URL; the heartbeat service alerts `#rl-critical` if pings stop.
 - **blackbox_exporter** (in `platform/monitoring/`) with probes for key URLs inside the cluster; start with a test target, then add `/`, `/wp-login.php` and `/wp-json/` once WordPress exists (step 5.2).
 - **External uptime check** for `https://russetleaf.dev` (and, once the AWS edge exists, russetleaf.com expecting 200 or the 503 offline page).
-- **Alerts as code:** a starter set of `PrometheusRule`s (site down, pod crash-looping, node memory high, disk filling, certificate/tunnel down), each with `severity`, `summary`, `description` and `runbook_url`; a runbook for each in `docs/runbooks/`; `promtool test rules` in `wp-gitops` CI.
+- **Alerts as code:** a starter set of `PrometheusRule`s (site down, pod crash-looping, node memory high, disk filling, certificate/tunnel down, and **`KubeAPIRequestsRejected`** when the API server's Priority and Fairness rejects requests; ADR 0036), each with `severity`, `summary`, `description` and `runbook_url`; a runbook for each in `docs/runbooks/`; `promtool test rules` in `wp-gitops` CI.
 
 **Test:** Grafana shows node and pod dashboards for all three nodes, plus the Cilium and Hubble dashboards with live data; Prometheus' targets page lists the Cilium agent, operator and Hubble endpoints as up; a test critical alert appears in both `#rl-critical` and `#rl-dev-alerts` with a working runbook link; stopping Alertmanager for longer than the heartbeat period makes the heartbeat service post to `#rl-critical`; a broken alert rule fails `promtool` in CI.
 
@@ -397,7 +399,7 @@ Check `kubectl top nodes` after each step.
 ### Step 4.6: Logging (Loki + Alloy)
 **Do:** `platform/logging/`, as described in `aws-wp.md` ([Logging](aws-wp.md#logging-loki--alloy)):
 - **Loki** in single-binary mode, storing data in the Loki S3 bucket (scoped key from External Secrets), a small local cache volume, **7-day retention**, the **ruler** sending alerts to Alertmanager.
-- **Kubernetes audit logs:** Alloy also collects the **API server audit log** from box 1 (label `job=kube-audit`), and Loki's ruler gets the audit alerts from `aws-wp.md` (`KubeExecIntoProdPod`, `KubeUnexpectedSecretRead`, `KubeRBACChangedOutsideArgoCD`, `KubeAnonymousOrForbiddenSpike`, `KubeAuditLogMissing`), routed to `#rl-security` with runbooks. Argo CD's service account is the expected source of production changes.
+- **Kubernetes audit logs:** Alloy also collects the **API server audit log** from box 1 (label `job=kube-audit`), and Loki's ruler gets the audit alerts from `aws-wp.md` (`KubeExecIntoProdPod`, `KubeUnexpectedSecretRead`, `KubeRBACChangedOutsideArgoCD`, `KubeAnonymousOrForbiddenSpike`, `KubeAuditLogMissing`, and the persistence alerts `KubeWorkloadCreatedOutsideArgoCD`, `KubeAdmissionWebhookChanged` and `KubeTokenSecretCreated` from ADR 0036, with the controllers that create objects legitimately (operators, KEDA, Argo Rollouts, the HPA) on the expected-identity list), routed to `#rl-security` with runbooks. Argo CD's service account is the expected source of production changes.
 - **Grafana Alloy** DaemonSet: an **OTLP receiver** for traces (forwarding to Tempo once it exists; until then traces are dropped); collect all container logs; labels `site=dev`, `env`, `cluster`, `namespace`, `app`, `container` only; drop debug lines and health-check access logs; mask tokens and passwords in query strings; a host port receiving **Talos system logs**.
 - In `wp-infra/envs/home`, point Talos's machine logging at Alloy's host port on each node.
 - A narrow Kyverno **`PolicyException`** for Alloy (host paths for log files, the host port).
@@ -406,7 +408,7 @@ Check `kubectl top nodes` after each step.
 - **Argo CD audit events:** collect Argo CD's API server logs (who synced, changed or deleted which Application) with the label `job=argocd-audit`.
 - Record memory use in the checklist, and daily log volume and memory after a week in `docs/adr/0005-loki-alloy-for-logs.md`.
 
-**Test:** in Grafana, logs from every namespace and from the Talos nodes (kubelet, etcd) are searchable by `namespace` and `app`; `kubectl exec` into a production pod fires `KubeExecIntoProdPod`, and editing a RoleBinding by hand fires `KubeRBACChangedOutsideArgoCD`; a deleted pod's logs are still there; a secret in a test log line is masked; the day's audit log appears in the Log Archive bucket and can't be deleted; a manual sync in Argo CD shows up with the user's name; stopping Loki fires `LokiIngestionErrors` in `#rl-dev-alerts`; objects older than the retention period are removed from the bucket.
+**Test:** in Grafana, logs from every namespace and from the Talos nodes (kubelet, etcd) are searchable by `namespace` and `app`; `kubectl exec` into a production pod fires `KubeExecIntoProdPod`, editing a RoleBinding by hand fires `KubeRBACChangedOutsideArgoCD`, and a CronJob created by hand in a production namespace fires `KubeWorkloadCreatedOutsideArgoCD`; a deleted pod's logs are still there; a secret in a test log line is masked; the day's audit log appears in the Log Archive bucket and can't be deleted; a manual sync in Argo CD shows up with the user's name; stopping Loki fires `LokiIngestionErrors` in `#rl-dev-alerts`; objects older than the retention period are removed from the bucket.
 
 ### Step 4.7: Cluster access: OIDC sign-in, roles and SSO
 **Do:** as described in `aws-wp.md`'s [Identity and access to the clusters](aws-wp.md#identity-and-access-to-the-clusters) (ADR 0035):
@@ -559,16 +561,18 @@ Check `kubectl top nodes` after each step.
 - **Mirrored third-party images:** a scheduled `mirror-images` workflow in `wp-gitops` copying the critical upstream images by digest into GHCR (verifying publishers' signatures where they exist, then re-signing); the registry allow-list and image references point at the mirror.
 - **Pod Security Admission labels** on every namespace (`restricted` for application namespaces; `baseline` for platform services; `privileged` only for Cilium, Falco, Alloy and the storage provisioner), set in each namespace's manifest with **`enforce-version` pinned** to the cluster's Kubernetes minor version (bumped deliberately during upgrades), and a Kyverno rule requiring the labels.
 - **Kyverno's Pod Security `restricted` set** for application namespaces (alongside PSA), and a **mutate rule turning off service-account token mounting** by default (`automountServiceAccountToken: false`), with an allow-list for workloads that call the Kubernetes API (operators, Argo CD, KEDA, External Secrets).
-- **Namespace quotas:** a generate rule giving every application namespace a **LimitRange** (default requests and memory limits) and a **ResourceQuota** (total CPU requests, memory, pod count); HPAs and KEDA objects set maximum replicas.
+- **Namespace quotas:** a generate rule giving every application namespace a **LimitRange** (default requests and memory limits, and default **ephemeral-storage** requests and limits) and a **ResourceQuota** (total CPU requests, memory, ephemeral storage, pod count); HPAs and KEDA objects set maximum replicas.
 - **Webhook exclusions and recovery:** Kyverno's webhooks exclude `kube-system`, `kyverno` and `argocd`, so Argo CD and Kyverno itself can always be repaired; write `docs/runbooks/rollback-kyverno.md` (revert in Git; in an emergency, delete Kyverno's webhook configurations so deployments go through, and let Kyverno recreate them once healthy).
 - **`PolicyException`s**, each naming the exact namespace and workload, only where needed: Cilium, Falco, local-path-provisioner (privileged/host access); upstream images that can't run read-only or as non-root (e.g. some operators or llama.cpp's image, if so). The project's own workloads get **no** exceptions.
+- **No risky RBAC (ADR 0036):** a validate rule rejecting Roles and ClusterRoles with `escalate`, `bind` or `impersonate`, access to `nodes/proxy`, or wildcard verbs or resources, and bindings to `cluster-admin`, except a named allow-list (Kubernetes' own roles, Argo CD, `platform-admin`, and third-party components that need them, each with a reason); and a rule rejecting **long-lived service-account token Secrets**. Start in audit mode: third-party charts are the likely violations.
+- **Kubescape RBAC check in CI:** `wp-gitops` CI runs Kubescape's RBAC controls on the rendered manifests, so a chart upgrade that adds a risky permission fails the pull request or needs an entry in `docs/security/rbac-accepted.yaml`.
 - Policy tests with `kyverno test` (a passing and a failing example per policy), run in `wp-gitops` CI.
 
 - **Policy Reporter** (Kyverno's reporting add-on) sending new policy violations to `#rl-security`.
 
 Review the policy reports, fix violations, then switch to **enforce**.
 
-**Test:** a pod requesting extra capabilities or privilege escalation is rejected in an application namespace (by both PSA and Kyverno); a WordPress pod has no service-account token mounted; a new application namespace automatically gets its LimitRange and ResourceQuota, and a Deployment scaled beyond the quota stops at the limit; in enforce mode, each of these is rejected: an unsigned image, a project image that's signed but has **no SBOM attestation** or **no provenance attestation**, an image from a verified upstream registry that **isn't signed by that publisher** (e.g. a different project's image under the same registry), an image from an unlisted registry, a `:latest` image, a pod without the required labels (where the mutate rule can't fill them), a container without a memory limit, a privileged pod, a root container, a writable root filesystem, a Deployment without probes, a NodePort Service, and an Ingress reusing an existing host and path. Running pods show image digests rather than tags. The existing workloads keep running; Policy Reporter shows no unexplained violations; a pull request that violates a policy fails CI.
+**Test:** a pod requesting extra capabilities or privilege escalation is rejected in an application namespace (by both PSA and Kyverno); a WordPress pod has no service-account token mounted; a new application namespace automatically gets its LimitRange and ResourceQuota, and a Deployment scaled beyond the quota stops at the limit; in enforce mode, each of these is rejected: an unsigned image, a project image that's signed but has **no SBOM attestation** or **no provenance attestation**, an image from a verified upstream registry that **isn't signed by that publisher** (e.g. a different project's image under the same registry), an image from an unlisted registry, a `:latest` image, a pod without the required labels (where the mutate rule can't fill them), a container without a memory limit, a privileged pod, a root container, a writable root filesystem, a Deployment without probes, a NodePort Service, an Ingress reusing an existing host and path, a Role granting `impersonate`, and a `kubernetes.io/service-account-token` Secret. Running pods show image digests rather than tags. The existing workloads keep running; Policy Reporter shows no unexplained violations; a pull request that violates a policy fails CI.
 
 ### Step 6.2: Argo Rollouts
 **Do:** `platform/argo-rollouts/`; convert WordPress to a `Rollout` with canary steps (e.g. 20% → 50% → 100%) and an `AnalysisTemplate` that queries Prometheus (ingress-nginx error rate and latency for the WordPress service). Argo Rollouts notifications post canary steps, aborts and rollbacks to `#rl-deploys`.
@@ -584,7 +588,7 @@ Review the policy reports, fix violations, then switch to **enforce**.
 - CI: validate the policies against the Cilium CRD schemas, and exercise them in the ci kind cluster (install Cilium there too).
 - Roll out one namespace at a time, watching `hubble observe --verdict DROPPED` for anything legitimate being blocked.
 
-**Test:** from a test pod in another namespace, MariaDB is unreachable; from a WordPress pod, `curl https://example.com` is **blocked** while uploads to S3 still work; a non-REST-API request from the summarizer to WordPress is blocked at layer 7; from a pod in `argocd`, a request to an unlisted site is blocked while syncs still work; a burst of blocked requests triggers `HubblePolicyDropsSpike` in `#rl-security`; the site, the summarizer, backups and monitoring all still work.
+**Test:** from a test pod in another namespace, MariaDB is unreachable; from a WordPress pod, `curl https://example.com` is **blocked** while uploads to S3 still work; an **exfiltration test** (posting a file from each application pod to an unlisted destination) is blocked and shows in `hubble observe --verdict DROPPED`; a non-REST-API request from the summarizer to WordPress is blocked at layer 7; from a pod in `argocd`, a request to an unlisted site is blocked while syncs still work; a burst of blocked requests triggers `HubblePolicyDropsSpike` in `#rl-security`; the site, the summarizer, backups and monitoring all still work.
 
 ### Step 6.4: Service mesh decision (ADR) and optional Istio experiment
 **Do:**
@@ -719,7 +723,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 ### Step 10.2: Trivy Operator, Kubescape scan and Talos hardening notes
 **Do:** add the **component hardening checks** from `docs/adr/0033-kubernetes-component-hardening.md` to `docs/talos-hardening.md`: `talosctl` reads of the API server, controller-manager and scheduler arguments (profiling off, local-only binding, NodeRestriction and PodSecurity admission, per-controller service-account credentials, kubelet certificate rotation); confirmation that **Secrets are encrypted at rest** in etcd; the kubelet's **read-only port (10255) refused** on every node; disk encryption status; the firewall test. Then `platform/trivy-operator/` with modest scan concurrency (scans are memory hungry; keep them off box 2), with its **CIS compliance results published as Prometheus metrics** (turn on the operator's cluster-compliance metrics; check the exact setting for your version) and a ServiceMonitor; a **Grafana "Compliance" dashboard** (built to show both clusters once EKS exists) and a `ComplianceFailuresIncreased` alert to `#rl-security`; write `docs/talos-hardening.md` explaining how Talos meets the CIS benchmark (no shell or SSH, read-only system, API-only management, default pod security), including **API server authorization**: only the **Node** and **RBAC** authorizers (no ABAC, no `AlwaysAllow`), checked with `talosctl -n <control-plane-ip> read /system/config/kubernetes/kube-apiserver/authorization-config.yaml`, and the kubelet's anonymous access off with webhook authorization, checked on **each node** with `talosctl -n <node-ip> read /etc/kubernetes/kubelet.yaml` (must show `authentication.anonymous.enabled: false` and `authorization.mode: Webhook`) and an anonymous request, `curl -sk -o /dev/null -w '%{http_code}' https://<node-ip>:10250/pods` (must return `401`). Add a note in `wp-infra/envs/home` that the machine config must never override the authorization config. Run the first **Kubescape CLI** scan of the home cluster from the workstation (NSA-CISA and MITRE ATT&CK frameworks, plus RBAC analysis; nothing installed in the cluster), save the report and a short summary of accepted findings in `docs/security/`, and fill in the baseline in `docs/adr/0003-kubescape-cli-not-operator.md`.
 
-**Test:** vulnerability and compliance reports exist for the running workloads; compliance metrics appear in Prometheus and on the Compliance dashboard, and temporarily adding a non-compliant workload raises the failing-controls count and fires the alert; the hardening doc is reviewed, and the `talosctl read` check shows only `Node` and `RBAC`; on **all three nodes**, the kubelet config shows anonymous access off and webhook authorization, and the anonymous `curl` to port 10250 returns `401`; the Kubescape report is committed, and any high-risk RBAC findings (e.g. a service account that can read all Secrets cluster-wide) are fixed or explained.
+**Test:** vulnerability and compliance reports exist for the running workloads; compliance metrics appear in Prometheus and on the Compliance dashboard, and temporarily adding a non-compliant workload raises the failing-controls count and fires the alert; the hardening doc is reviewed, and the `talosctl read` check shows only `Node` and `RBAC`; on **all three nodes**, the kubelet config shows anonymous access off and webhook authorization, and the anonymous `curl` to port 10250 returns `401`; the Kubescape report is committed, and any high-risk RBAC findings (e.g. a service account that can read all Secrets cluster-wide) are fixed or explained; an **RBAC review** listing, per namespace, who can create pods, read Secrets or reach nodes is committed, with accepted findings in `docs/security/rbac-accepted.yaml` (repeated with each monthly scan; ADR 0036).
 
 ### Step 10.3: OpenCost
 **Do:** `platform/opencost/` using the existing Prometheus, with custom prices for the home hardware (electricity per node) and the Bedrock spend shown alongside. Then, as in `aws-wp.md` ([Cost monitoring and alerts](aws-wp.md#cost-monitoring-and-alerts)):
@@ -795,9 +799,9 @@ Record each drill's time in the decision log and compare it with the expected ti
 **Test:** the second service runs in production with its own SLOs, dashboard and alerts; it can't exceed its quota or deploy outside its namespace; OpenCost shows its cost separately; the onboarding time is recorded.
 
 ### Step 12.5: Threat model and control matrix
-**Do:** `docs/security/threat-model.md`: a **STRIDE** analysis of the whole system (trust boundaries, data flows, threats, mitigations), **organised by the 4 C's** (Cloud, Cluster, Container, Code), linked to the ADRs. `docs/security/controls-matrix.md`: every implemented control mapped to the **CIS Controls** (and SOC 2-style criteria), plus an **OWASP ASVS** mapping for the web application, each with its evidence (policy, configuration, report or test).
+**Do:** `docs/security/threat-model.md`: a **STRIDE** analysis of the whole system (trust boundaries, data flows, threats, mitigations), **organised by the 4 C's** (Cloud, Cluster, Container, Code), linked to the ADRs, building on the trust boundaries in `aws-wp.md`'s [Kubernetes threat model coverage](aws-wp.md#kubernetes-threat-model-coverage) and **cross-checked against the Kubernetes threat model's eight areas** (ADR 0036). `docs/security/controls-matrix.md`: every implemented control mapped to the **CIS Controls** (and SOC 2-style criteria), plus an **OWASP ASVS** mapping for the web application, each with its evidence (policy, configuration, report or test).
 
-**Test:** every trust boundary has its threats and mitigations listed; every control in the matrix links to evidence that exists.
+**Test:** every trust boundary has its threats and mitigations listed, and each of the eight threat areas maps to controls with evidence; every control in the matrix links to evidence that exists.
 
 ### Step 12.6: Chaos experiments and postmortems
 **Do:** `platform/chaos-mesh/` with scheduled experiments, each with a written hypothesis, expected outcome, blast radius and abort condition (kill the MariaDB primary; add latency to model calls (with a **Toxiproxy** sidecar in front of the LLM gateway's upstream calls, since Chaos Mesh's network rules can't reliably target AWS endpoints whose addresses change); kill a WordPress pod mid-canary; fill a node's disk; partition box 2), run in staging first, then in production at quiet times; results in `docs/chaos/`. A **blameless postmortem template** in `docs/postmortems/`, and postmortems for at least two real incidents or notable drills from the build. See `docs/adr/0025-reliability-practice.md`.
@@ -903,17 +907,17 @@ The home lab already builds most of what these need: the shared Terraform module
 | 2.0 AWS Organization and accounts (SRA) | Core | 6–10 | ☐ | | | | |
 | 2.0b Organisation security services | Core | 4–8 | ☐ | | | | |
 | 2.1 Terraform bootstrap | Core | 3–5 | ☐ | | | | |
-| 2.2 Talos cluster | Core | 11–17 | ☐ | | | | |
+| 2.2 Talos cluster | Core | 12–18 | ☐ | | | | |
 | 2.3 AWS + Cloudflare resources | Core | 7–10 | ☐ | | | | |
 | 2.4 `wp-infra` CI | Core | 4–6 | ☐ | | | | |
 | 2.5 Disaster recovery copies | Differentiator | 3–6 | ☐ | | | | |
-| 3.1 GitOps structure + Argo CD | Core | 5–9 | ☐ | | | | |
+| 3.1 GitOps structure + Argo CD | Core | 6–10 | ☐ | | | | |
 | 4.1 Storage | Core | 1–2 | ☐ | | | | |
 | 4.2 Secrets + internal certificates | Core | 4–6 | ☐ | | | | |
 | 4.3 Ingress + tunnel | Core | 3–6 | ☐ | | | | |
 | 4.4 Monitoring + Slack alerting | Core | 7–11 | ☐ | | | | |
 | 4.5 MariaDB + backups + Valkey | Core | 6–10 | ☐ | | | | |
-| 4.6 Logging (Loki + Alloy) | Core | 5–8 | ☐ | | | | |
+| 4.6 Logging (Loki + Alloy) | Core | 6–9 | ☐ | | | | |
 | 4.7 Cluster access (OIDC, roles, SSO) | Core | 6–10 | ☐ | | | | |
 | 5.1 WordPress image | Core | 14–22 | ☐ | | | | |
 | 5.2 WordPress deployment | Core | 9–15 | ☐ | | | | |
@@ -926,7 +930,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 5.9 Performance testing + regression gate | Differentiator | 5–8 | ☐ | | | | |
 | 5.10 Site design and brand (incl. logo) | Core | 6–12 | ☐ | | | | |
 | 5.11 Front-end quality gates | Differentiator | 4–6 | ☐ | | | | |
-| 6.1 Kyverno | Core | 11–15 | ☐ | | | | |
+| 6.1 Kyverno | Core | 13–18 | ☐ | | | | |
 | 6.2 Argo Rollouts | Differentiator | 4–7 | ☐ | | | | |
 | 6.3 CiliumNetworkPolicies | Core | 7–10 | ☐ | | | | |
 | 6.4 Service mesh ADR (+ optional Istio experiment) | Differentiator | 2–6 | ☐ | | | | |
@@ -948,7 +952,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 9.7 Feedback loop + DVC | Stretch | 6–10 | ☐ | | | | |
 | 9.8 Fine-tuned challenger | Stretch | 4–7 | ☐ | | | | |
 | 10.1 Falco | Differentiator | 3–6 | ☐ | | | | |
-| 10.2 Trivy Operator, Kubescape scan, Talos notes + component checks | Differentiator | 4–6 | ☐ | | | | |
+| 10.2 Trivy Operator, Kubescape scan, Talos notes + component checks | Differentiator | 5–7 | ☐ | | | | |
 | 10.3 OpenCost | Differentiator | 2–4 | ☐ | | | | |
 | 10.4 Tracing with Tempo (always on) | Differentiator | 3–6 | ☐ | | | | |
 | 10.5 AWS account posture (Prowler) | Differentiator | 2–4 | ☐ | | | | |
@@ -965,7 +969,7 @@ The home lab already builds most of what these need: the shared Terraform module
 | 12.2 DORA metrics | Staff | 6–10 | ☐ | | | | |
 | 12.3 Backstage and golden path | Staff | 15–25 | ☐ | | | | |
 | 12.4 Second service + multi-tenancy | Staff | 10–15 | ☐ | | | | |
-| 12.5 Threat model + control matrix | Staff | 9–13 | ☐ | | | | |
+| 12.5 Threat model + control matrix | Staff | 10–14 | ☐ | | | | |
 | 12.6 Chaos experiments + postmortems | Staff | 10–15 | ☐ | | | | |
 | 12.7 Strategy documents | Staff | 6–10 | ☐ | | | | |
 | 12.8 Fleet management (hub) | Staff | 6–10 | ☐ | | | | |

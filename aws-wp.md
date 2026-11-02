@@ -179,7 +179,7 @@ Cloud-native security is commonly described in four layers, the **4 C's**: **Clo
 | Layer | Controls |
 |---|---|
 | **Cloud** (providers, accounts, infrastructure) | **AWS:** SRA multi-account structure, SCPs, root access removed, Identity Center with MFA, GuardDuty, Security Hub, Config, organisation CloudTrail, Access Analyzer, KMS, Prowler, VPC design with private subnets, endpoints and flow logs, WAF, DNSSEC. **Other providers:** hardened GitHub, Cloudflare, Google Cloud, Slack and registrar accounts (below). **Home infrastructure:** lab VLAN, Talos (immutable, API-only), Secure Boot with TPM-sealed disk encryption, host firewall, BIOS passwords, Cloudflare Tunnel (no inbound ports). **IaC:** Checkov with custom policies, Access Analyzer policy checks, reviewed saved plans. |
-| **Cluster** (Kubernetes) | Node and RBAC authorization only; audit logging with alerts; Secrets encrypted at rest; per-namespace Pod Security Admission with Kyverno's restricted set; admission policies (signatures, provenance, registries, quotas); CiliumNetworkPolicies (default-deny, DNS-name egress, layer 7), WireGuard, Hubble; service-account tokens off by default; least-privilege RBAC; isolation by namespace, node taints and gVisor; kubelet hardening; etcd mutual TLS and encrypted snapshots; Kubescape, kube-bench, Trivy Operator. |
+| **Cluster** (Kubernetes) | Node and RBAC authorization only; audit logging with alerts; Secrets encrypted at rest; per-namespace Pod Security Admission with Kyverno's restricted set; admission policies (signatures, provenance, registries, quotas); CiliumNetworkPolicies (default-deny, DNS-name egress, layer 7), WireGuard, Hubble; service-account tokens off by default; least-privilege RBAC with risky permissions rejected; alerts for objects created outside GitOps; kubelet PID limits and eviction thresholds; isolation by namespace, node taints and gVisor; kubelet hardening; etcd mutual TLS and encrypted snapshots; Kubescape, kube-bench, Trivy Operator. |
 | **Container** (images and runtime) | Minimal, signed images with SBOM and SLSA provenance, verified at admission and pinned by digest; Trivy (vulnerabilities, secrets, misconfiguration) in CI and in the cluster; non-root, read-only root filesystem, all capabilities dropped, seccomp RuntimeDefault, **user namespaces** where supported; gVisor for CI runners; Falco process allow-lists and Tetragon (optional); Secrets as files, not environment variables. |
 | **Code** (application and dependencies) | Semgrep, PHPCS (WordPress security checks), PHPStan, ruff and mypy; dependency audits and hash-pinned lock files; WPScan; gitleaks and push protection; prompt-injection guardrails; Google sign-in, no passwords; XML-RPC off; **HTTP security headers**, **DAST** (ZAP), WordPress user-enumeration blocking, rotated keys and salts; an **OWASP ASVS** mapping in the control matrix. |
 
@@ -264,7 +264,9 @@ The project depends on more than AWS: **GitHub** (code, CI, packages, attestatio
 | Health probes | **Require Pod Probes** (`require-pod-probes`) | Readiness and liveness probes on every long-running workload; Argo Rollouts, the HPA and Kubernetes' own restarts depend on them |
 | No NodePorts | **Disallow NodePort** (`restrict-nodeport`), plus a rule blocking `LoadBalancer` Services | Nothing needs them: traffic arrives through the Cloudflare Tunnel at home and through the ALB (created from an Ingress, target type `ip`) on AWS |
 | Unique Ingress hosts | **Unique Ingress Host and Path** (`unique-ingress-host-and-path`), which looks up existing Ingresses before admitting a new one | Two Ingresses can't claim the same host and path (e.g. a staging or admin hostname colliding with production) |
-| Namespace quotas | A **generate** rule | Every application namespace (WordPress, summarizer, gateway, model server, staging, tenants) gets a **LimitRange** (default requests and memory limits) and a **ResourceQuota** (total CPU requests, memory and pod count), so a runaway HPA, KEDA scaling or misconfigured Deployment can't exhaust a node; HPAs and KEDA objects also set maximum replicas |
+| Namespace quotas | A **generate** rule | Every application namespace (WordPress, summarizer, gateway, model server, staging, tenants) gets a **LimitRange** (default requests and memory limits) and a **ResourceQuota** (total CPU requests, memory, **ephemeral storage** and pod count; the LimitRange also sets default ephemeral-storage requests and limits), so a runaway HPA, KEDA scaling or misconfigured Deployment can't exhaust a node; HPAs and KEDA objects also set maximum replicas |
+| No risky RBAC | A validate rule on Roles, ClusterRoles and bindings (ADR 0036) | Rejects `escalate`, `bind` and `impersonate`, access to `nodes/proxy`, wildcard verbs or resources, and bindings to `cluster-admin`, except a named allow-list (Kubernetes' own roles, Argo CD, `platform-admin`, and third-party components that need them, each with a reason) |
+| No long-lived token Secrets | A validate rule | Rejects Secrets of type `kubernetes.io/service-account-token`; pods get short-lived projected tokens only |
 | Default-deny networking | A **generate** rule | Every new application namespace gets the Cilium baseline allowances (see [Networking](#networking-cilium-and-hubble)) |
 
 **Where each policy applies strictly:** the project's own workloads (WordPress, the summarizer, the LiteLLM gateway, the staging and seed Jobs) must pass **all** of them. Third-party platform components get narrow **`PolicyException`** resources only where they genuinely need it, for example: Cilium, Falco, local-path-provisioner, the NVIDIA device plugin and (on EKS) the VPC CNI and EBS CSI node agents need privileged access; some upstream images can't run with a read-only filesystem or as non-root. Each exception names the exact namespace and workload and is reviewed like any other change.
@@ -304,7 +306,7 @@ Each Kubernetes component has explicit controls and a repeatable check, recorded
 - **Pod Security Admission labels on every namespace, on both clusters** (EKS doesn't enforce Pod Security by default): `restricted` for application namespaces (WordPress, summarizer, gateway, model server, staging, tenants), `baseline` for most platform services, `privileged` only for node agents (Cilium, Falco, Alloy, the storage provisioner, the NVIDIA device plugin), with the **PSA version pinned** (`enforce-version`) so Kubernetes upgrades don't silently change enforcement. Kyverno's **`restricted`** policy set enforces the same for application namespaces, so two independent controls apply.
 - **Service-account tokens off by default:** a Kyverno rule sets `automountServiceAccountToken: false` unless a workload needs the Kubernetes API (operators, Argo CD, KEDA, External Secrets).
 - **Encryption at rest:** Secrets in etcd (Talos's built-in encryption at home; **EKS envelope encryption with a customer-managed KMS key**); **Talos disk encryption** of the system-state and data partitions on every home node, **sealed to the TPM**; etcd snapshots stored only in the KMS-encrypted backup bucket, readable only by the backup role.
-- **kubelet:** `seccompDefault: true` (RuntimeDefault even for pods that don't ask), the read-only port off, certificate rotation.
+- **kubelet:** `seccompDefault: true` (RuntimeDefault even for pods that don't ask), the read-only port off, certificate rotation, a **per-pod PID limit** (`podPidsLimit`, so a fork bomb can't exhaust a node) and **hard eviction thresholds** for memory, disk and inodes, alongside `systemReserved` and `kubeReserved` (ADR 0036).
 - **Control-plane settings verified at home** (profiling off, local-only binding, NodeRestriction, per-controller service-account credentials) with `talosctl`, in `docs/talos-hardening.md`.
 - **Talos host firewall:** the Kubernetes API (6443) and Talos API (50000) reachable only from the LAN and the workstation.
 
@@ -314,6 +316,56 @@ How **people** sign in and what they may do, recorded in `docs/adr/0035-identity
 - **Human roles:** `platform-admin`, `operator` (deploy, restart, view logs; no RBAC or Secret changes) and `read-only` ClusterRoles bound to Dex groups or users. **No day-to-day cluster-admin**; Argo CD's service account is the identity that changes production.
 - **Break-glass:** the Talos-generated admin kubeconfig (a cluster-admin client certificate that can't be revoked) lives only in the break-glass kit; **`KubeBreakGlassAdminUsed`** alerts `#rl-security` and `#rl-critical` whenever it's used. Day-to-day Talos API access uses the read-only **`os:reader`** role.
 - **SSO inside the admin tools:** Argo CD, Grafana and Backstage sign in through Dex with roles mapped from groups, behind Cloudflare Access as well.
+
+### Kubernetes threat model coverage
+The design is checked against the common **Kubernetes threat model**, which groups threats into eight areas. Each area has named controls, a detection and a test; the gaps found in this check, and the controls added for them, are recorded in `docs/adr/0036-kubernetes-threat-model-coverage.md`. The full STRIDE threat model (home step 12.5) builds on this.
+
+**Trust boundaries and data flows** (both sites; the AWS names in brackets):
+
+```mermaid
+flowchart LR
+  V[Visitors] -->|HTTPS| E["Edge: Cloudflare WAF + Tunnel<br/>(CloudFront + AWS WAF + ALB)"]
+  P[People] -->|Google sign-in| A["Cloudflare Access / Dex<br/>(Identity Center)"]
+  G["GitHub: repos, Actions, GHCR"] -->|signed images, Git| AR[Argo CD]
+  subgraph C[Cluster]
+    I[Ingress] --> W[WordPress]
+    W --> D[("MariaDB, Valkey<br/>(RDS Proxy, ElastiCache)")]
+    W -->|queue| S[Summarizer] --> L[LLM gateway] --> M[llama.cpp]
+    K[Kubernetes API]
+    W -. kernel .- N[Nodes: Talos / EKS]
+  end
+  E --> I
+  AR --> K
+  A --> K
+  W & S & L -->|scoped keys / Pod Identity| AWS["AWS: S3, SQS, SES, Bedrock, Secrets Manager"]
+  C -->|write-only| LA["Log Archive + Backup accounts"]
+```
+
+| # | Trust boundary | What crosses it | Main controls |
+|---|---|---|---|
+| 1 | Internet → edge | Visitor HTTP requests | WAF, rate limits, `/xmlrpc.php` blocked, TLS |
+| 2 | Edge → cluster | Requests to the site and admin tools | Outbound-only tunnel (home), ALB accepting only CloudFront (AWS); Cloudflare Access or ALB OIDC for admin paths |
+| 3 | Pod → pod | Application traffic | Default-deny CiliumNetworkPolicies, layer-7 rules, WireGuard, internal TLS |
+| 4 | Pod → Kubernetes API | Service-account requests | No token by default, least-privilege RBAC, audit alerts |
+| 5 | Person → Kubernetes and Talos APIs | Admin actions | Dex OIDC, group roles, `os:reader`, break-glass alert, API restricted to the LAN (home IP on EKS) |
+| 6 | CI and Git → cluster | Images, charts, manifests | Signed images with SBOM and provenance, registry allow-list, required reviews, Argo CD as the only deployer |
+| 7 | Container → node | System calls, files | Non-root, read-only, no capabilities, seccomp, user namespaces, gVisor for CI runners, Falco |
+| 8 | Cluster → AWS | API calls with credentials | Scoped keys (home, until step 11.1) or Pod Identity, DNS-name egress rules, CloudTrail, GuardDuty |
+| 9 | Cluster → logs and backups | Audit logs, backups | Write-only roles into separate accounts, Object Lock |
+| 10 | Lab → home network | Any traffic | Lab VLAN; nodes can't reach household devices |
+
+**The eight threat areas:**
+
+| Threat area | Prevention | Detection | Test |
+|---|---|---|---|
+| **Trust boundaries and data flow** | The boundaries above, each with controls | — | Reviewed in the threat model (home step 12.5) |
+| **Persistence** (an attacker leaves something behind) | Talos nodes are read-only with no shell or SSH; Argo CD self-heal; Kyverno **blocks long-lived service-account token Secrets** | Argo CD **orphaned-resource warnings**; `KubeWorkloadCreatedOutsideArgoCD`, `KubeAdmissionWebhookChanged`, `KubeTokenSecretCreated`, `KubeRBACChangedOutsideArgoCD` | Create a CronJob and a webhook by hand: alerts fire, Argo CD flags them |
+| **Denial of service** | Edge rate limits; namespace quotas and LimitRanges (CPU, memory, **ephemeral storage**); memory limits; **kubelet PID limit** and **hard eviction thresholds**; reserved resources for the system; HPA and KEDA maximums; API Priority and Fairness | Node pressure alerts; `KubeAPIRequestsRejected`; quota usage | A fork bomb in a test pod stops at the PID limit and the node stays healthy |
+| **Malicious code execution** | Signed images with SBOM and provenance, registry allow-list, digests, read-only root filesystem, seccomp, gVisor (CI runners), `DISALLOW_FILE_MODS` | Falco process allow-lists and writes to code; Trivy Operator | An unsigned image is rejected; a shell in WordPress fires Falco |
+| **Compromised applications in containers** | Non-root, no capabilities, no privilege escalation, no service-account token, Pod Security `restricted`, default-deny networking | Falco; Hubble drops | From a WordPress pod: no token, no route to other namespaces, no unlisted egress |
+| **Attacker on the network** | CiliumNetworkPolicies (default-deny, DNS-name egress, layer 7), WireGuard, internal TLS (ADR 0030), lab VLAN, host firewall, API endpoints restricted | Hubble (`HubblePolicyDropsSpike`), CrowdSec, GuardDuty | MariaDB unreachable from other namespaces; ports 6443 and 50000 refused from outside the LAN |
+| **Access to sensitive data** | Secrets encrypted at rest, External Secrets, Secrets as files, roles without Secret access, encrypted backups, IMDSv2 with hop limit 1, egress limited by DNS name | `KubeUnexpectedSecretRead`; audit archive; CloudTrail | **Exfiltration test:** sending data from each application pod to an unlisted destination is blocked and shows in Hubble |
+| **Privilege escalation** | Pod Security, no privileged pods or host access, NodeRestriction, least-privilege human roles; a Kyverno policy **rejecting risky RBAC** (`escalate`, `bind`, `impersonate`, `nodes/proxy`, wildcards, `cluster-admin` bindings) outside an allow-list | `KubeRBACChangedOutsideArgoCD`; Kubescape RBAC checks in CI and monthly | A Role with `impersonate` is rejected; the RBAC review lists who can create pods or read Secrets |
 
 ### Intrusion detection and prevention
 Falco is one layer among several. The design combines **prevention** (stopping attacks) and **detection** (noticing them) at every layer, so no single tool has to catch everything. The reasoning is recorded in `docs/adr/0018-intrusion-detection-and-prevention.md`.
@@ -337,9 +389,12 @@ Falco is one layer among several. The design combines **prevention** (stopping a
 | `KubeUnexpectedSecretRead` | A Secret is read by an identity other than the workloads and controllers expected to read it |
 | `KubeRBACChangedOutsideArgoCD` | A Role, ClusterRole or binding is changed by anything other than Argo CD |
 | `KubeAnonymousOrForbiddenSpike` | A burst of anonymous or forbidden requests |
+| `KubeWorkloadCreatedOutsideArgoCD` | A Pod, Deployment, DaemonSet, StatefulSet, Job or CronJob is created in a production or platform namespace by anyone other than Argo CD and the expected controllers (persistence; ADR 0036) |
+| `KubeAdmissionWebhookChanged` | A validating or mutating webhook configuration is created, changed or deleted by anyone other than Argo CD and the components that manage their own webhooks (Kyverno, cert-manager's CA injector) |
+| `KubeTokenSecretCreated` | A long-lived service-account token Secret is created (Kyverno should already block it) |
 | `KubeAuditLogMissing` | No audit events have arrived for 15 minutes (the monitoring itself is broken) |
 
-- **EKS:** audit logs go to **CloudWatch** (already planned), and **GuardDuty's EKS audit-log monitoring** flags known attack patterns automatically.
+- **EKS:** audit logs go to **CloudWatch** (already planned), and **GuardDuty's EKS audit-log monitoring** flags known attack patterns automatically. **CloudWatch Logs metric filters** for the persistence alerts (`KubeWorkloadCreatedOutsideArgoCD`, `KubeAdmissionWebhookChanged`, `KubeTokenSecretCreated`) raise CloudWatch alarms to `#rl-security`, created and destroyed with the demo stack.
 
 **AWS account threat detection (always on, shared by both sites):**
 - **CloudTrail:** a single **organisation trail** (management events, all accounts and regions) delivered to the **Log Archive** account's Object Lock bucket, with log-file validation (proves logs weren't altered). The first trail's management events are free; storage costs pennies. See [AWS account structure](#aws-account-structure-and-best-practices-security-reference-architecture).
@@ -517,7 +572,7 @@ Whichever is chosen must also work with a **custom S3 endpoint**, so the ci test
 
 ### Delivery and operations
 - **Infrastructure as code** (Terraform or CDK) for the VPC, EKS, Karpenter, RDS, S3 and SQS.
-- **GitOps** (Argo CD) for what runs in the cluster, with **self-heal on by default** (manual sync only for Cilium and the staging Applications), **`ignoreDifferences`** for fields that controllers legitimately change (replica counts set by HPAs and KEDA), and an **`ArgoCDAppOutOfSync`** alert (Prometheus, from Argo CD's `argocd_app_info` metric) when an app stays out of sync or degraded for 15 minutes, which catches drift that self-heal can't fix.
+- **GitOps** (Argo CD) for what runs in the cluster, with **self-heal on by default** (manual sync only for Cilium and the staging Applications), **`ignoreDifferences`** for fields that controllers legitimately change (replica counts set by HPAs and KEDA), and an **`ArgoCDAppOutOfSync`** alert (Prometheus, from Argo CD's `argocd_app_info` metric) when an app stays out of sync or degraded for 15 minutes, which catches drift that self-heal can't fix. AppProjects **warn about orphaned resources** (objects in managed namespaces that Argo CD doesn't own), since self-heal only reverts what Argo CD manages (ADR 0036).
 - **Internal certificates** from **cert-manager** with an internal CA, and **trust-manager** distributing the CA bundle (MariaDB TLS and other internal endpoints); public certificates stay with Cloudflare and ACM. See `docs/adr/0030-internal-pki.md`.
 - **Node autoscaling** with **Karpenter** instead of fixed managed node groups. A small managed node group runs Karpenter itself; Karpenter then creates EC2 nodes directly from two **NodePools**:
   - a **general pool** (spot and on-demand, several instance types) for WordPress and platform services, with **consolidation** to remove idle or underused nodes
@@ -1657,6 +1712,7 @@ Together with the home lab (~$18–40/month always on), the total is about **$30
 - **Passwordless admin access:** Google sign-in (OIDC) for WordPress, an edge login layer (Cloudflare Access at home, ALB OIDC on AWS), application passwords kept only for the REST API, and break-glass recovery with `wp-cli`.
 - **Security organised by layer (the 4 C's):** cloud (AWS SRA plus hardened GitHub, Cloudflare, Google and registrar accounts, lab VLAN, Secure Boot), cluster, container (signed images and charts, mirrored dependencies, user namespaces) and code (SAST, DAST, security headers, ASVS mapping).
 - **Identity and access:** OIDC sign-in through Dex for kubectl and the admin tools, group-based human roles with no day-to-day cluster-admin, an alerted break-glass path, Talos read-only access by default, and a year of tamper-evident audit logs.
+- **Kubernetes threat model coverage:** trust boundaries and data flows drawn, and every one of the Kubernetes threat model's eight areas (persistence, denial of service, privilege escalation and the rest) mapped to prevention, detection and a test, including alerts for objects created outside GitOps, PID limits and a policy rejecting risky RBAC.
 - **Kubernetes component hardening:** per-namespace Pod Security Admission with Kyverno's `restricted` set, service-account tokens off by default, Secrets and disks encrypted at rest (TPM-sealed at home, customer-managed KMS on EKS), kubelet `seccompDefault`, a Talos host firewall, and verified control-plane settings.
 - **Layered intrusion detection and prevention:** WAFs and edge login, Cilium policies, Kyverno admission, runtime controls, plus detection at runtime (Falco), in the Kubernetes API (audit logs with alert rules) and in the AWS account (CloudTrail, GuardDuty), all reporting to Slack.
 - **Zero-trust networking with Cilium on both clusters:** WireGuard encryption between nodes, default-deny CiliumNetworkPolicies, outbound traffic allowed by DNS name, layer-7 rules where useful, and Hubble flow visibility with metrics, dashboards and alerts in the same Prometheus and Grafana.
@@ -1718,7 +1774,7 @@ The home Argo CD becomes the **hub**: `demo-up` registers the EKS cluster with i
 - **SLO-based paging** (above) and runbook standards: every page links a runbook. See `docs/adr/0025-reliability-practice.md`.
 
 ### Security architecture documents
-- **Threat model** (`docs/security/threat-model.md`): a **STRIDE** analysis of the whole system (trust boundaries, data flows, threats, mitigations), linked to the ADRs and controls.
+- **Threat model** (`docs/security/threat-model.md`): a **STRIDE** analysis of the whole system (trust boundaries, data flows, threats, mitigations), linked to the ADRs and controls, building on [Kubernetes threat model coverage](#kubernetes-threat-model-coverage) and cross-checked against its eight threat areas.
 - **Control matrix** (`docs/security/controls-matrix.md`): the implemented controls mapped to the **CIS Controls** (and SOC 2-style criteria), each with its evidence (policy, configuration, report or test).
 
 ### Strategy documents
@@ -1748,11 +1804,11 @@ The two build plans tier every step as **Core**, **Differentiator** or **Stretch
 
 | Plan | Core | Differentiator | Stretch | Staff | Total |
 |---|---|---|---|---|---|
-| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~157–258 | ~127–221 | ~14–25 | ~82–133 | ~380–637 |
-| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~72–120 | ~15–28 | ~22–38 | ~10–15 | ~119–201 |
-| **Whole project** | ~229–378 | ~142–249 | ~36–63 | ~92–148 | **~499–838** |
+| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~162–264 | ~128–222 | ~14–25 | ~83–134 | ~387–645 |
+| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~73–121 | ~15–28 | ~22–38 | ~10–15 | ~120–202 |
+| **Whole project** | ~235–385 | ~143–250 | ~36–63 | ~93–149 | **~507–847** |
 
-At about **20 hours a week**, the home lab's Core tier takes roughly **8–13 weeks**, everything except the Staff tier roughly **5–8 months**, and the whole project including it roughly **6–10 months** (about **12–19 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
+At about **20 hours a week**, the home lab's Core tier takes roughly **8–13 weeks**, everything except the Staff tier roughly **5–8 months**, and the whole project including it roughly **6–10 months** (about **12–20 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
 
 **Portfolio level:** the home lab's **Core tier on its own reads as strong intermediate work**; adding the **Differentiators**, especially the AI pipeline with its evaluation gate and **evidence of operating the system** (rollback, node-failure and disaster drills, a restore from the Backup account, a recorded AWS demo), is what makes it **senior-level**. For **MLOps** roles specifically, the inference-side work (evaluation gate, gateway, self-hosted model, monitoring) reads as strong intermediate (senior for LLMOps); **MLflow, guardrails and online evaluation** (Differentiators) make it senior for LLM-focused MLOps; the **fine-tuning pipeline, DVC and the feedback loop** (Stretch) complete the full lifecycle expected of senior MLOps generally. The **Staff** tier (SLOs and error budgets, DORA metrics, the developer platform proven with a second service, fleet management, chaos and postmortems, the threat model, strategy documents and public writing) shows **staff-level judgement**; staff roles also expect evidence of leading people and teams, which comes from your work history rather than the project. A finished subset is worth more than an unfinished whole: finish Core first.
 
@@ -1822,7 +1878,8 @@ wp-gitops/
                             #   0028-cpu-limits.md, 0029-cilium-cni.md, 0030-internal-pki.md,
                             #   0031-on-demand-staging.md, 0032-github-actions-ci.md,
                             #   0033-kubernetes-component-hardening.md, 0034-security-by-layer.md,
-                            #   0035-identity-and-access.md)
+                            #   0035-identity-and-access.md,
+                            #   0036-kubernetes-threat-model-coverage.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
