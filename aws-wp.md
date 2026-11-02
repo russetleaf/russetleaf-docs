@@ -164,6 +164,7 @@ Separate workload accounts limit how far a compromise can spread, and give each 
 ### Account- and resource-level best practices
 - **S3:** account-level Block Public Access; bucket policies **requiring TLS** (`aws:SecureTransport`); Object Ownership set to bucket-owner-enforced (no ACLs).
 - **Encryption:** EBS encryption by default; **KMS customer-managed keys** for the Log Archive and Backup buckets (about $1/key/month); block public access for EBS snapshots and AMIs.
+- **EKS API endpoint:** public but **restricted to the home network's address** from the start (private access also on, for the nodes); the AWS **demo workflows run on the home ARC runners**, so they come from that address too (ADR 0032).
 - **EKS nodes:** **IMDSv2 required** with a **hop limit of 1** in Karpenter's node class, so pods can't reach the node's instance credentials (they use Pod Identity instead).
 - **VPC (russetleaf-com):** **VPC endpoints** for S3, STS, SQS, Secrets Manager and Bedrock (private traffic, lower NAT costs); **VPC flow logs** to Log Archive during demos; default security groups with no rules; default VPCs removed.
 - **AWS Well-Architected review:** a review of the design with the free **Well-Architected Tool** (Security pillar first), with the report kept in `docs/` and revisited yearly.
@@ -183,6 +184,7 @@ Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-acc
 - **Application Load Balancer** through the AWS Load Balancer Controller, with **TLS certificates from ACM**. Its DNS name (`origin.russetleaf.com`) is managed by **ExternalDNS**.
 - **CloudFront** in front of both the site and the S3 media. In this project CloudFront is **always on** (it costs almost nothing idle), so it can show an offline page when the demo stack is down; see [russetleaf.com between demos](#russetleafcom-between-demos).
 - **The ALB accepts only CloudFront traffic:** its security group allows only AWS's CloudFront origin-facing IP list, and a listener rule requires a secret header that CloudFront adds to every request.
+- **DNSSEC** on both domains: Cloudflare's one-click DNSSEC for russetleaf.dev, and Route 53 DNSSEC signing (with a KMS key, about $1/month) for russetleaf.com, with the DS records added at each registrar.
 - **AWS WAF** on the ALB. A 24/7 production site would usually put WAF on CloudFront instead; here it sits on the ALB so it exists (and costs money) only during demos.
 
 ### Performance
@@ -215,7 +217,7 @@ Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-acc
 | Allowed registries | **Restrict Image Registries** (`restrict-image-registries`) | Every container (including init and ephemeral containers) comes from `ghcr.io/<you>/*` or an explicit list of upstream registries used by the platform charts (Cilium, Falco, Argo CD, MariaDB, ...); on EKS, also AWS's own add-on registries |
 | No `latest` tag | **Disallow Latest Tag** (`disallow-latest-tag`) | Every image has an explicit tag or digest |
 | Required labels | **Require Labels** (`require-labels`), plus a **mutate** rule | Workloads carry `app.kubernetes.io/name`, `app.kubernetes.io/part-of` and `env`; the mutate rule fills in `env` from the namespace, so the validate rule is only a backstop. These labels drive alert routing, OpenCost and policy selectors |
-| Requests and limits | **Require Requests and Limits** (`require-requests-limits`) | CPU and memory **requests** and a **memory limit** on every container. **CPU limits are deliberately not required**: they cause throttling (slowing WordPress and llama.cpp) without protecting anything; memory limits are what protect box 1 |
+| Requests and limits | **Require Requests and Limits** (`require-requests-limits`) | CPU and memory **requests** and a **memory limit** on every container. **CPU limits are deliberately not required by default** (they cause throttling even on idle nodes); they're used only where a neighbour needs protecting: llama.cpp and the CI runners on box 2 (to protect etcd) and k6 load generators. See `docs/adr/0028-cpu-limits.md` |
 | No privileged containers | **Disallow Privileged Containers** (`disallow-privileged-containers`), within Kyverno's **Pod Security Standards** `baseline` rule set | No privileged containers, host paths or host namespaces (network, PID, IPC). Talos already enforces Pod Security `baseline`; Kyverno adds reporting, CI tests and narrow exceptions |
 | Run as non-root | **Require Run As Non-Root** (`require-run-as-nonroot`), from the Pod Security `restricted` set | Containers run as a non-root user. The WordPress image runs Apache as `www-data` on port 8080 (non-root processes can't use port 80) |
 | seccomp profile | **Restrict Seccomp (Strict)** (`restrict-seccomp-strict`), from the Pod Security `restricted` set | Every container runs with `seccompProfile: RuntimeDefault`, which blocks dozens of rarely needed, risky system calls at no cost; see [Sandboxed runtimes](#sandboxed-runtimes-gvisor) |
@@ -224,6 +226,7 @@ Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-acc
 | Health probes | **Require Pod Probes** (`require-pod-probes`) | Readiness and liveness probes on every long-running workload; Argo Rollouts, the HPA and Kubernetes' own restarts depend on them |
 | No NodePorts | **Disallow NodePort** (`restrict-nodeport`), plus a rule blocking `LoadBalancer` Services | Nothing needs them: traffic arrives through the Cloudflare Tunnel at home and through the ALB (created from an Ingress, target type `ip`) on AWS |
 | Unique Ingress hosts | **Unique Ingress Host and Path** (`unique-ingress-host-and-path`), which looks up existing Ingresses before admitting a new one | Two Ingresses can't claim the same host and path (e.g. a staging or admin hostname colliding with production) |
+| Namespace quotas | A **generate** rule | Every application namespace (WordPress, summarizer, gateway, model server, staging, tenants) gets a **LimitRange** (default requests and memory limits) and a **ResourceQuota** (total CPU requests, memory and pod count), so a runaway HPA, KEDA scaling or misconfigured Deployment can't exhaust a node; HPAs and KEDA objects also set maximum replicas |
 | Default-deny networking | A **generate** rule | Every new application namespace gets the Cilium baseline allowances (see [Networking](#networking-cilium-and-hubble)) |
 
 **Where each policy applies strictly:** the project's own workloads (WordPress, the summarizer, the LiteLLM gateway, the staging and seed Jobs) must pass **all** of them. Third-party platform components get narrow **`PolicyException`** resources only where they genuinely need it, for example: Cilium, Falco, local-path-provisioner, the NVIDIA device plugin and (on EKS) the VPC CNI and EBS CSI node agents need privileged access; some upstream images can't run with a read-only filesystem or as non-root. Each exception names the exact namespace and workload and is reviewed like any other change.
@@ -331,7 +334,7 @@ The lists are kept in Git next to the rules, and **tested**: starting any unlist
 How it's run:
 - **Same version everywhere:** pinned in each repo's `.mise.toml` (installed with `uv`), so local runs and CI match.
 - **Fails the pull request** on any failed check that hasn't been explicitly skipped. Skips are written inline (`checkov:skip=<check ID>: <reason>`) or in the repo's `.checkov.yaml`, **always with a reason**, and reviewed like any other change.
-- **Results on GitHub:** findings are uploaded as **SARIF** to GitHub's **code scanning**, so they appear inline on pull requests and in each repo's Security tab. Code scanning is free for **public** repos; while the repos are private (without GitHub Advanced Security), Checkov's results show in the CI log and job summary instead, and SARIF upload is switched on when each repo goes public.
+- **Results on GitHub:** findings are uploaded as **SARIF** to GitHub's **code scanning**, so they appear inline on pull requests and in each repo's Security tab. Code scanning is free for **public** repos, and the repos are public from the start (ADR 0032), so SARIF upload is on from the first pipeline.
 - **Overlap with Kyverno is intended:** Checkov checks manifests *before* they're merged, using its own rule set; Kyverno enforces the project's policies *at admission* in the cluster (and its CLI tests the same policies in CI).
 
 
@@ -458,7 +461,8 @@ Whichever is chosen must also work with a **custom S3 endpoint**, so the ci test
 
 ### Delivery and operations
 - **Infrastructure as code** (Terraform or CDK) for the VPC, EKS, Karpenter, RDS, S3 and SQS.
-- **GitOps** (Argo CD) for what runs in the cluster.
+- **GitOps** (Argo CD) for what runs in the cluster, with **self-heal on by default** (manual sync only for Cilium and the staging Applications), **`ignoreDifferences`** for fields that controllers legitimately change (replica counts set by HPAs and KEDA), and an **`ArgoCDAppOutOfSync`** alert (Prometheus, from Argo CD's `argocd_app_info` metric) when an app stays out of sync or degraded for 15 minutes, which catches drift that self-heal can't fix.
+- **Internal certificates** from **cert-manager** with an internal CA, and **trust-manager** distributing the CA bundle (MariaDB TLS and other internal endpoints); public certificates stay with Cloudflare and ACM. See `docs/adr/0030-internal-pki.md`.
 - **Node autoscaling** with **Karpenter** instead of fixed managed node groups. A small managed node group runs Karpenter itself; Karpenter then creates EC2 nodes directly from two **NodePools**:
   - a **general pool** (spot and on-demand, several instance types) for WordPress and platform services, with **consolidation** to remove idle or underused nodes
   - a **GPU pool** for the self-hosted model, with the `workload=llm` label and `dedicated=llm:NoSchedule` taint, on spot
@@ -473,11 +477,13 @@ Whichever is chosen must also work with a **custom S3 endpoint**, so the ci test
 ### WordPress image and Helm chart
 The site uses a **custom image built on the official `wordpress` image** and a **small Helm chart of its own** (Deployment/Rollout, Service, Ingress, HPA, PDB, WP-Cron CronJob), both maintained in the `wp-image` repo and released together. The Bitnami WordPress chart isn't used: it only works with Bitnami-format images, and Bitnami cut back its free images in 2025. Owning the chart removes that dependency and keeps every setting visible.
 
+**Repos and packages are public early** (ADR 0032): the repos are made public in home step 1.1, after a secret scan, which gives free GitHub-hosted CI minutes, and the GHCR packages are made public at first push.
+
 **Where images and charts are hosted:** on **GitHub Container Registry (GHCR)** under the project's GitHub account: `ghcr.io/<github-user>/wp-image` and `ghcr.io/<github-user>/llm-summarizer`, each holding its image and its Helm chart (as an OCI artifact). Each package is linked to the repo whose CI publishes it. **GHCR packages have their own visibility setting, separate from the repo's:** a package stays **private** even after its repo is made public, until its visibility is changed in the package's settings. While packages are private, both clusters need credentials to pull them: an image pull secret for the kubelet, and OCI repository credentials for Argo CD (both from a GitHub token with `read:packages` only, kept in Secrets Manager and synced by External Secrets). Once the packages are public, both can be removed. While packages are private, GitHub's free-plan limits for private packages apply (roughly 500 MB of storage and limited transfer), so either make the packages public early or delete old untagged versions automatically. Why GHCR rather than ECR is recorded in `docs/adr/0004-ghcr-not-ecr.md`.
 
 ## Networking: Cilium and Hubble
 
-Both clusters run **Cilium**, so they share one networking story: the same policy types, the same network-flow visibility (**Hubble**), and the same Grafana dashboards and alerts.
+Both clusters run **Cilium** (the choice and its alternatives are recorded in `docs/adr/0029-cilium-cni.md`), so they share one networking story: the same policy types, the same network-flow visibility (**Hubble**), and the same Grafana dashboards and alerts.
 
 ### How Cilium runs on each cluster
 
@@ -1047,7 +1053,7 @@ AWS has no separate staging: russetleaf.com is already temporary, its Terraform 
 - **LocalStack note:** LocalStack's free-tier terms have changed over time. If its current terms don't suit, use **MinIO** (S3) and **ElasticMQ** (SQS) instead, with a plain Kubernetes Secret in place of Secrets Manager.
 
 ### staging: on-demand, scale-to-zero
-Staging exists **only while it's being tested** (scale-to-zero): it keeps the cluster lean and shows an on-demand environment pattern, even though the three-node cluster could now afford an always-on copy:
+Staging exists **only while it's being tested** (scale-to-zero): it keeps the cluster lean and shows an on-demand environment pattern, even though the three-node cluster could now afford an always-on copy (see `docs/adr/0031-on-demand-staging.md`):
 - **Staging Argo CD Applications** (WordPress, a small MariaDB, the summarizer) are in Git under `overlays/home-staging`, but with **auto-sync off**. When idle, nothing is deployed and staging uses no memory.
 - **The `staging-test` workflow** (in `wp-gitops`, on the in-cluster ARC runners, using an Argo CD account limited to the staging project) runs each time a staging version changes:
   1. Syncs the staging Applications and waits until they're healthy.
@@ -1149,7 +1155,7 @@ Every update, from a WordPress plugin to a Kubernetes version, arrives as a **pu
 | **Summarizer dependencies** (Python) | Renovate (lock file) | Unit and kind tests, the **evaluation gate**, staging, promotion | Weekly |
 | **Platform components** (Cilium, Argo CD, Kyverno, Falco, Loki, Tempo, etc.) | Renovate in `wp-gitops`, **grouped** into one pull request per component | **Patch versions:** auto-merge once CI passes. **Minor and major versions:** read the changelog, try on a **local Talos-in-Docker cluster** first, merge by hand. (Staging doesn't help here: platform components are shared by staging and prod.) | Weekly review; minors monthly |
 | **Talos and Kubernetes** (home) | Versions bumped in `wp-infra/envs/home` (Renovate tracks them with a custom version rule) | Take an **etcd snapshot** and an on-demand MariaDB backup; rehearse on a local Talos cluster; check Cilium and other components support the new Kubernetes version; upgrade **Talos one node at a time** (box 2, box 1, then box 3), checking etcd health between nodes, so the site stays up throughout, then Kubernetes (`talosctl upgrade-k8s`). Roll back with `talosctl rollback` | Talos patches monthly; Kubernetes minor versions within a few months of release, staying **within the supported window** |
-| **EKS** | Versions bumped in `wp-infra/envs/aws`: cluster version, add-ons, **pinned AMI version** in Karpenter's node class (Renovate-tracked), RDS and ElastiCache engine versions | The stack is rebuilt every demo, so there are no in-place upgrades; `demo-up` uses the new versions. RDS's MariaDB version is kept **matched to the home MariaDB**, so backups restore cleanly | Before each demo; always in EKS **standard support** |
+| **EKS** | Versions bumped in `wp-infra/envs/aws`: cluster version, **pinned EKS add-on versions** (VPC CNI, CoreDNS, kube-proxy, EBS CSI, Pod Identity agent; Renovate can't track these, so the monthly version-age workflow checks `aws eks describe-addon-versions` for the cluster version and opens a pull request when newer compatible versions exist), **pinned AMI version** in Karpenter's node class (Renovate-tracked), RDS and ElastiCache engine versions | The stack is rebuilt every demo, so there are no in-place upgrades; `demo-up` uses the new versions. RDS's MariaDB version is kept **matched to the home MariaDB**, so backups restore cleanly | Before each demo; always in EKS **standard support** |
 | **Terraform providers and modules** | Renovate (with the lock file) | CI plan, Checkov, `terraform test` | Monthly |
 | **CLI tools and GitHub Actions** | Renovate (`.mise.toml`; actions pinned to commit hashes) | CI | Monthly; patches auto-merge |
 | **Models** (Bedrock models, llama.cpp, the local model file) | AWS's **Bedrock model deprecation notices**; llama.cpp image via Renovate | **Evaluation gate** first, then a gateway **canary split**, then a routing change citing the evaluation report | When a new version appears or a deprecation date nears |
@@ -1624,6 +1630,7 @@ These practices move the project from "a well-built system" towards **staff-leve
 | AI summaries | Daily online-evaluation pass rate (quality) | 95% |
 | Kubernetes API (home) | Successful API requests | 99.9% |
 
+- **Where the SLIs are measured:** availability and latency are measured at the **ingress inside the cluster**, so a home internet outage (which the cluster can't fix) doesn't burn the error budget; the external uptime check still alerts on such outages. **Documented external incidents** (e.g. an ISP or Bedrock outage) can be excluded from the budget through the policy's exclusion process (an annotation with a link to the incident record).
 - **Sloth** generates the Prometheus recording rules and **multi-window, multi-burn-rate alerts** from short SLO definitions in Git; these replace many of the earlier threshold alerts (page on fast burn to `#rl-critical`, ticket on slow burn to the site channel).
 - **An error-budget policy, enforced in automation:** when an SLO's budget for the window is exhausted, the `promote-to-prod` workflow **blocks promotions** except changes labelled `fix` or `reliability`, until the budget recovers; the policy document explains the rule and its exceptions. See `docs/adr/0023-slos-and-error-budgets.md`.
 - **Grafana SLO dashboards** show each objective, the remaining budget and the burn rate.
@@ -1662,17 +1669,25 @@ A series of **articles on russetleaf.dev** explaining the design decisions (the 
 ### Cost and memory
 Backstage (~1–1.5 GB with its database), Chaos Mesh and Sloth's rules fit on the three-node cluster (mostly box 3); the EKS load tests add a few demo hours. About **$0 always on**, plus a few dollars of demo time.
 
+## Operations budget
+
+Running this many systems is a lot for one person, so operations have a deliberate budget:
+- **Automate first:** Renovate auto-merges patches; scans, reports, version-age checks, cost reports and backups run on schedules and post results to Slack; drills are scripted where possible. Most weeks need no manual work beyond reading Slack.
+- **Minimum cadence** (when time is short): **one monthly maintenance window of 2–4 hours**: review Renovate pull requests and Security Hub, read the automated reports, run one drill (alternating restore, rollback, node failure), and apply Talos patches. Security releases (48 hours) and real alerts are always handled.
+- **Full cadence** (when time allows): everything in the plans' ongoing-operations tables (weekly reviews, monthly and quarterly drills, demos).
+- **Measure it:** record actual operations time each month in the decision log; if the minimum cadence regularly takes more than 4 hours, automate or remove something, and record the decision.
+
 ## Build plans, priorities and effort
 
 The two build plans tier every step as **Core**, **Differentiator** or **Stretch**, with hour estimates (focused hours with Claude's help; expect ±50%):
 
 | Plan | Core | Differentiator | Stretch | Staff | Total |
 |---|---|---|---|---|---|
-| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~126–220 | ~120–209 | ~19–35 | ~81–132 | ~346–596 |
-| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~67–115 | ~14–27 | ~22–38 | ~10–15 | ~113–195 |
-| **Whole project** | ~193–335 | ~134–236 | ~41–73 | ~91–147 | **~459–791** |
+| [`homelab-plan.md`](homelab-plan.md#priorities-and-time-estimates) (russetleaf.dev) | ~132–227 | ~120–209 | ~19–35 | ~81–132 | ~352–603 |
+| [`aws-eks-plan.md`](aws-eks-plan.md#priorities-and-time-estimates) (russetleaf.com) | ~69–117 | ~14–27 | ~22–38 | ~10–15 | ~115–197 |
+| **Whole project** | ~201–344 | ~134–236 | ~41–73 | ~91–147 | **~467–800** |
 
-At about **20 hours a week**, the home lab's Core tier takes roughly **6–11 weeks**, everything except the Staff tier roughly **4–7 months**, and the whole project including it roughly **5–9 months** (about **11–18 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
+At about **20 hours a week**, the home lab's Core tier takes roughly **7–11 weeks**, everything except the Staff tier roughly **4–8 months**, and the whole project including it roughly **5–9 months** (about **11–18 months** at 10 hours a week). Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar.
 
 **Portfolio level:** the home lab's **Core tier on its own reads as strong intermediate work**; adding the **Differentiators**, especially the AI pipeline with its evaluation gate and **evidence of operating the system** (rollback, node-failure and disaster drills, a restore from the Backup account, a recorded AWS demo), is what makes it **senior-level**. For **MLOps** roles specifically, the inference-side work (evaluation gate, gateway, self-hosted model, monitoring) reads as strong intermediate (senior for LLMOps); **MLflow, guardrails and online evaluation** (Differentiators) make it senior for LLM-focused MLOps; the **fine-tuning pipeline, DVC and the feedback loop** (Stretch) complete the full lifecycle expected of senior MLOps generally. The **Staff** tier (SLOs and error budgets, DORA metrics, the developer platform proven with a second service, fleet management, chaos and postmortems, the threat model, strategy documents and public writing) shows **staff-level judgement**; staff roles also expect evidence of leading people and teams, which comes from your work history rather than the project. A finished subset is worth more than an unfinished whole: finish Core first.
 
@@ -1738,7 +1753,9 @@ wp-gitops/
                             #   0020-aws-multi-account-sra.md, 0021-three-node-ha-home-cluster.md,
                             #   0022-mlops-lifecycle.md, 0023-slos-and-error-budgets.md,
                             #   0024-internal-developer-platform.md, 0025-reliability-practice.md,
-                            #   0026-performance-and-stress-testing.md, 0027-site-design-in-git.md)
+                            #   0026-performance-and-stress-testing.md, 0027-site-design-in-git.md,
+                            #   0028-cpu-limits.md, 0029-cilium-cni.md, 0030-internal-pki.md,
+                            #   0031-on-demand-staging.md, 0032-github-actions-ci.md)
                             # + diagrams, cost breakdown, Grafana screenshots, security/ (kube-bench, Kubescape
                             #   and Prowler reports, accepted-findings files),
                             #   Talos hardening notes, demo recordings
@@ -1766,6 +1783,7 @@ wp-gitops/
     external-dns/           # ExternalDNS, manages origin.russetleaf.com in Route 53 (aws only)
     cloudflared/            # Cloudflare Tunnel connector (home only)
     storage/                # home: local-path-provisioner; aws: EBS CSI StorageClass
+    cert-manager/           # cert-manager + trust-manager, internal CA ClusterIssuer, expiry alerts
     cilium/                 # Cilium + Hubble (home: full CNI; aws: chaining with the VPC CNI), cluster-wide
                             #   default-deny CiliumClusterwideNetworkPolicy, Cilium/Hubble ServiceMonitors,
                             #   dashboards and alert rules
@@ -1850,7 +1868,7 @@ wp-infra/
     dr/                     # Backup account (ALWAYS ON, shared): Object Lock buckets in us-west-2, replication
                             #   roles, write-only repo-mirror role; plus replication rules on the source buckets
                             #   in russetleaf-home, russetleaf-com and russetleaf-infra
-    aws-edge/               # russetleaf.com, ALWAYS ON (~$1/month): Route 53 hosted zone, ACM certificates
+    aws-edge/               # russetleaf.com, ALWAYS ON (~$1/month): Route 53 hosted zone (DNSSEC signing with a KMS key), ACM certificates
                             #   (us-east-1 for CloudFront; the ALB's region for origin.russetleaf.com), CloudFront
                             #   distribution with the offline-page fallback, offline-page bucket, media bucket,
                             #   model mirror bucket, SES domain identity,

@@ -1,15 +1,17 @@
 # ADR 0004: GitHub Container Registry (GHCR) instead of Amazon ECR
 
-- **Status:** Accepted
+- **Status:** Accepted; updated by ADR 0032
 - **Date:** 2026-11-01
 - **Applies to:** both sites
 
+
+> **Update (ADR 0032):** The repos are now made **public early** (ADR 0032), so the GHCR packages are made public at first push: no private-package storage limit and no pull secrets are needed. The private-package mitigations below apply only if a repo has to stay private.
 ## Context
 The project builds two images, each with a Helm chart published as an OCI artifact: the WordPress image (`wp-image`) and the post-summarizer (`llm-summarizer`). Both sites must pull them:
 - **russetleaf.dev** runs 24/7 on a home Talos cluster, **outside AWS**.
 - **russetleaf.com** runs on EKS only during demos.
 
-Images are built and signed (cosign keyless) in GitHub Actions, and Kyverno only admits images signed by those workflows and pulled from allowed registries. The repos are private while being built and become public later (home plan step 11.2).
+Images are built and signed (cosign keyless) in GitHub Actions, and Kyverno only admits images signed by those workflows and pulled from allowed registries. ~~The repos are private while being built and become public later (home plan step 11.2).~~ **Superseded by ADR 0032:** the repos are made public early (step 1.1).
 
 ## Decision
 Use **GHCR** for all project images and charts: `ghcr.io/<github-user>/wp-image` and `ghcr.io/<github-user>/llm-summarizer`. Both sites pull from GHCR. On AWS, an **ECR pull-through cache** in front of GHCR is optional.

@@ -24,11 +24,11 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the summarizer, the demo workflows, one rehearsed and **recorded demo**, and the docs. | 0.1–2.4, 3.1, 3.2, 4.1, 6.1, 6.2, 6.3 | **~67–115** |
+| **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the summarizer, the demo workflows, one rehearsed and **recorded demo**, and the docs. | 0.1–2.4, 3.1, 3.2, 4.1, 6.1, 6.2, 6.3 | **~69–117** |
 | **Differentiator** | kube-bench and Kubescape on EKS, the GPU model server, evaluation and tracing on AWS, the security and cost reviews, and the EKS rollback drill. | 2.5, 4.2, 4.3, 4.4, 5.1, 5.2, 6.1b | **~14–27** |
 | **Stretch** | The fine-tuning (distillation) pipeline on the GPU (valuable for MLOps roles specifically), and the Istio ambient and Tetragon experiments. | 4.5, 5.3, 5.4 | **~22–38** |
 | **Staff** | Load, stress, spike and AI burst tests for the capacity plan, and management from the home Argo CD hub. | 6.4, 6.5 | **~10–15** |
-| **Total** | | | **~113–195** |
+| **Total** | | | **~115–197** |
 
 **Calendar time:** about **5–9 weeks at ~20 hours a week** for the whole AWS plan, after the home lab's Core tier is done (this plan depends on it). Allow for waiting: the **GPU quota** request (days; submit it in step 0.1 well ahead), **SES production access**, and **Bedrock model access** in the new account.
 
@@ -92,7 +92,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 1.2: Always-on edge (`envs/aws-edge`)
 **Do:**
-- Route 53 hosted zone for russetleaf.com (point the registrar's name servers at it if needed).
+- Route 53 hosted zone for russetleaf.com (point the registrar's name servers at it if needed), with **DNSSEC signing** (an asymmetric KMS key in us-east-1, about $1/month) and the **DS record** added at the registrar.
 - ACM certificates: `russetleaf.com` + `www` in us-east-1 (CloudFront), and `origin.russetleaf.com` in the ALB's region (the same region if you chose us-east-1).
 - S3 offline-page bucket with the offline page ("The AWS demo is offline. Visit russetleaf.dev."), the russetleaf.com **media bucket**, a **model mirror bucket** (the self-hosted model's file, so demo startup doesn't depend on Hugging Face), a **Loki log bucket** (14-day lifecycle) and a **Tempo trace bucket** (7-day lifecycle), both kept in the always-on stack so demo logs and traces can be reviewed after teardown. Origin Access Control on all of them.
 - CloudFront distribution: default behavior → `origin.russetleaf.com` (all methods, HTTPS only, the `X-Origin-Verify` secret header, Host not forwarded); `/wp-content/uploads/*` → media bucket; `/offline/*` → offline bucket; custom error responses 502/503/504 → `/offline/index.html` with status 503; 10-second error caching; origin timeout 2 s, 1 attempt.
@@ -115,6 +115,8 @@ Record each answer in the [decision log](#decision-log).
 - Add-ons: VPC CNI (with its own network policy enforcement **off**, since Cilium enforces policies), CoreDNS, kube-proxy, **EBS CSI driver**, **Pod Identity agent**.
 - **Cilium in chaining mode**, installed by Terraform's Helm provider right after the cluster and managed node group exist: `cni.chainingMode: aws-cni`, `cni.exclusive: false`, `enableIPv4Masquerade: false`, `routingMode: native`; Hubble and Hubble Relay on; **WireGuard transparent encryption** on, **if** the Cilium version you install supports it in chaining mode with the VPC CNI (check Cilium's documentation; if it doesn't, leave it off and record that in the open items of `docs/adr/0001-no-service-mesh.md`, relying on the TLS already on every sensitive connection); ServiceMonitors **off** until monitoring exists (step 2.4); `lifecycle { ignore_changes }` so Argo CD manages it afterwards from `platform/cilium/overlays/aws`. Restart any pods that started before Cilium (e.g. CoreDNS) so Cilium manages them.
 - A Kubernetes version within **standard support**. EKS charges about six times more per hour for clusters on versions in extended support.
+- **API endpoint:** public but **restricted to the home network's address** (private access also on, for the nodes). The demo workflows run on the **home ARC runners** (step 6.1), so they reach it from that address; your workstation does too (ADR 0032).
+- **Add-on versions pinned** in Terraform; the monthly version-age workflow (home plan step 10.6) checks `aws eks describe-addon-versions` and opens a pull request when newer compatible versions exist.
 - Access entries: your admin role, and the CI apply role.
 - Control plane logging: audit logs only, short retention (they're the useful ones and cost little). **GuardDuty's EKS audit-log monitoring** (turned on account-wide in home plan step 2.1) starts watching the cluster automatically.
 
@@ -192,6 +194,7 @@ Record each answer in the [decision log](#decision-log).
 - **Tracing:** `platform/tracing/overlays/aws`: Tempo (S3 via a Pod Identity role on the trace bucket, 7-day retention), **always on**; Alloy's OTLP receiver forwards to it; tracing turned on in the WordPress, summarizer and gateway values with **100% sampling**.
 - Falco: modern eBPF on AL2023, same custom rules (including the **process allow-lists**); Falcosidekick to `#rl-security`; the same health alerts as home (`FalcoNotRunning`, `FalcosidekickOutputErrors`, `FalcoEventsDropped`). On EKS, `FalcoNotRunning` also catches a new Karpenter node where Falco hasn't started.
 - Kyverno's Policy Reporter and Argo Rollouts notifications: same Slack setup as home, prefixed `[com]`.
+- cert-manager and trust-manager with the internal CA (as at home, ADR 0030); namespace LimitRanges and ResourceQuotas from the Kyverno generate rule; the `ArgoCDAppOutOfSync` alert.
 - Trivy Operator, OpenCost (with AWS on-demand/spot pricing), and the AWS overlay's OpenCost alert **`GPUNodeRunningLong`** (to `#rl-costs`), an early warning before the demo safety net.
 
 **Test:** each component is healthy; russetleaf.com's logs are searchable in Grafana and remain in the log bucket after `demo-down`; the home lab's Kyverno rejection tests (unsigned image, unlisted registry, `:latest`, missing labels or memory limit, privileged, root, writable root filesystem, no probes, NodePort/LoadBalancer Service, duplicate Ingress host) all still fail on EKS; OpenCost shows EC2 costs for the nodes.
@@ -281,7 +284,7 @@ Record each answer in the [decision log](#decision-log).
 ## Phase 6: Demo operations
 
 ### Step 6.1: Demo workflows
-**Do:** GitHub Actions in `wp-infra`, started by hand (`workflow_dispatch`):
+**Do:** GitHub Actions in `wp-infra`, started by hand (`workflow_dispatch`), running on the **home ARC runners** (home plan step 5.5), so the restricted EKS API endpoint accepts them:
 - **`demo-up`:** `terraform apply` in `envs/aws`; wait for Argo CD to sync; wait until russetleaf.com returns 200; resume the russetleaf.com heartbeat check; **run the kube-bench Jobs** (one per node pool), wait for them to finish, collect their JSON and text output as workflow artifacts, compare with `docs/security/kube-bench-accepted.yaml`, commit the summary to `docs/security/` (through a pull request on `wp-gitops`), and post pass/fail/warn counts to `#rl-security`, flagging new failures; post the start time (e.g. as a tag on the VPC) and "russetleaf.com demo started" to `#rl-com-alerts`.
 - **`demo-down`:** take a **logical dump** of the RDS database (a one-off Job through RDS Proxy) into the russetleaf.com backup bucket, which replicates to the backup account (see `docs/disaster-recovery.md`); create an Alertmanager **silence** for `site=com` and pause the russetleaf.com heartbeat check; suspend Argo CD auto-sync; delete the Applications in reverse order; wait until the ALB, the `origin` record and the Karpenter nodes are gone (with timeouts); `terraform destroy` in `envs/aws`; confirm russetleaf.com returns the 503 offline page and no tagged demo resources remain; post "russetleaf.com demo stopped" (with the run time) to `#rl-com-alerts`.
 - **Safety net:** a scheduled workflow (hourly) that alerts `#rl-costs` and `#rl-critical` (and optionally runs `demo-down`) if the demo stack has been up longer than a set limit (e.g. 6 hours).
@@ -340,9 +343,9 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 | 0.1 GPU quota, DNS, guardrails | Core | 2–3 | ☐ | | | | |
 | 0.2 Decisions | Core | 1–2 | ☐ | | | | |
 | 1.1 CI roles | Core | 2–3 | ☐ | | | | |
-| 1.2 Always-on edge | Core | 5–8 | ☐ | | | | |
+| 1.2 Always-on edge | Core | 6–9 | ☐ | | | | |
 | 1.3 Network | Core | 3–5 | ☐ | | | | |
-| 1.4 EKS cluster | Core | 4–8 | ☐ | | | | |
+| 1.4 EKS cluster | Core | 5–9 | ☐ | | | | |
 | 1.5 Karpenter infrastructure | Core | 3–5 | ☐ | | | | |
 | 1.6 RDS for MariaDB + Valkey | Core | 6–10 | ☐ | | | | |
 | 1.7 App resources + permissions | Core | 4–7 | ☐ | | | | |
