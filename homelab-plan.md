@@ -83,7 +83,8 @@ Tools to pin (check each name with `mise registry | grep <tool>`; pin `kubectl` 
 | `k6` | Load tests (e.g. WordPress with and without gVisor, step 6.5) |
 | `cilium`, `hubble` | Cilium status and connectivity tests; Hubble flow queries |
 | `kyverno` | Policy tests |
-| `cosign`, `syft`, `trivy` | Image signing, SBOMs, scanning |
+| `cosign`, `syft`, `trivy`, `rekor-cli` | Image signing, SBOMs, scanning, transparency-log lookups |
+| `hadolint`, `container-structure-test`, `zizmor` | Dockerfile linting, built-image checks, GitHub Actions workflow security |
 | `kubescape` | On-demand cluster posture scans (NSA-CISA, MITRE ATT&CK, RBAC) |
 | `prowler` (installed with `uv`) | AWS account posture scans (CIS AWS Foundations); also runs in CI |
 | `gh` | GitHub CLI |
@@ -96,10 +97,14 @@ Python-based tools, installed with uv:
 ```bash
 uv tool install pre-commit
 uv tool install checkov
+uv tool install semgrep
+uv tool install zizmor        # if not installed with mise
+uv tool install ruff
+uv tool install pip-audit
 uv tool install localstack      # optional: LocalStack CLI (LocalStack itself runs in Docker)
 ```
 
-PHP and Composer aren't needed locally: the WordPress image installs plugins inside its Docker build.
+PHP and Composer aren't needed locally: the WordPress image installs plugins inside its Docker build, and the PHP linters (PHP_CodeSniffer with the WordPress Coding Standards, PHPStan) run in a container, locally and in CI.
 
 ### 4. Configuration
 
@@ -162,8 +167,9 @@ Record each answer in the [decision log](#decision-log).
 **Do:**
 - Rename this repo to **`wp-gitops`**. Create **`wp-infra`**, **`wp-image`** and **`llm-summarizer`**.
 - In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a `LICENSE` if public, branch protection on `main` (pull requests and passing checks required).
-- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) and `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2); move them with the other docs.
+- In `wp-gitops`: a `docs/adr/` folder for **architecture decision records**, with a short template (context, decision, alternatives, consequences, when to revisit). Record the big step 0.2 decisions there as ADRs, and link them from the decision log. The template (`0000-template.md`) and three ADRs already exist as drafts in this repo's `docs/adr/`: `0001-no-service-mesh.md` (finish in step 6.4), `0002-s3-media-not-efs.md` (finish in step 5.1) and `0003-kubescape-cli-not-operator.md` (finish in step 10.2) and `0004-ghcr-not-ecr.md` (finish in step 5.1) `0005-loki-alloy-for-logs.md` (finish in step 4.6) and `0006-tempo-tracing.md` (finish in step 10.4) and `0007-prowler-not-threatmapper.md` (finish in step 10.5) and `0008-google-sign-in-for-admins.md` (finish in step 5.8) and `0009-gvisor-sandboxing.md` (finish in step 6.5) and `0010-local-storage-no-ceph.md` (finish in step 4.5) `0011-update-strategy.md` (finish in steps 1.1, 5.1 and 10.6) `0012-kube-bench-eks-only.md` (finish in home step 10.2 and AWS step 2.5) `0013-opencost-and-aws-billing.md` (finish in home steps 2.1 and 10.3 and AWS step 5.2) and `0014-image-supply-chain.md` (finish in steps 5.1, 6.1 and 7.4); move them with the other docs.
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo.
+- Add **OpenSSF Scorecard** (weekly scheduled workflow) and **zizmor** (on workflow changes) to every repo, and GitHub's **dependency-review action** to the repos with dependencies (`wp-image`, `llm-summarizer`).
 - Add **Checkov** to every repo's CI from the start, scanning the **GitHub Actions workflows** (unpinned actions, over-broad `permissions`, script injection), with a `.checkov.yaml` per repo. Later steps add each repo's other targets (Terraform, manifests, Dockerfiles, charts). Skips must carry a reason. See [Infrastructure and configuration scanning](aws-wp.md#infrastructure-and-configuration-scanning-checkov).
 - Add **Renovate** to every repo (Helm charts, Terraform providers, base images, GitHub Actions, `.mise.toml`, and later Composer and Python lock files), with a shared configuration following `aws-wp.md`'s [Update strategy](aws-wp.md#update-strategy): a weekly schedule (security updates immediately), grouping per platform component, **auto-merge for patch updates** of platform charts, CLI tools and GitHub Actions once CI passes, the **Dependency Dashboard**, and custom version rules for Talos and Kubernetes versions in Terraform.
 - In `wp-gitops`: move `aws-wp.md` and this file to `docs/`, and write the hub README (what the project is, links to all four repos).
@@ -304,12 +310,12 @@ Check `kubectl top nodes` after each step.
 - The **summary-queue must-use plugin**: on publish or update, send `{"post_id": ...}` to SQS, adding the current trace context (W3C `traceparent`) as a **message attribute** when tracing is on (AWS SDK for PHP, installed with Composer at build time).
 - `tests/`: a smoke test (Docker Compose with MariaDB: the container starts, plugins are active, health check passes).
 - `chart/`: the WordPress Helm chart (see step 5.2 for what it deploys), versioned with the image.
-- CI: **Checkov on the Dockerfile and the chart**, build, SBOM (Syft), scan (Trivy, failing on critical vulnerabilities), sign (cosign keyless), **attach the SBOM as a signed attestation** (`cosign attest`, SPDX JSON), push the image and the chart (OCI) to GHCR with an immutable version.
+- CI, following `aws-wp.md`'s [Image build pipeline](aws-wp.md#image-build-pipeline-wp-image-llm-summarizer): **pull requests:** gitleaks, **hadolint**, **PHP_CodeSniffer with the WordPress Coding Standards** and **PHPStan** (for the must-use plugins and `db.php`), **Semgrep**, `composer audit`, dependency review, **Checkov** (Dockerfile, chart), **zizmor**, `helm lint` / `ct lint`, build, **container-structure-test** (non-root, port 8080, expected files), **Trivy** (vulnerability, secret and misconfiguration scanners; failing on critical vulnerabilities and any secret; `.trivyignore` with reasons and expiry dates); **release:** push the image and chart (OCI) to GHCR **by digest** with an immutable version, sign (cosign keyless), **attach the SBOM as a signed attestation** (`cosign attest`, SPDX JSON), add **SLSA build provenance** (`actions/attest-build-provenance`), **verify** all three on the pushed digest (`cosign verify`, `cosign verify-attestation`, `gh attestation verify`), and write release notes with the digests and **Rekor** log links.
 
 - **Pulling private packages:** GHCR packages start **private** (even in a public repo), so until they're made public (step 11.2), the cluster needs credentials. Create a GitHub token with **`read:packages` only**, store it in Secrets Manager, and sync it with External Secrets into an **image pull secret** for the WordPress namespace (and, from step 7.4, the summarizer's), and into Argo CD's **OCI repository credentials** so it can pull the charts.
 - **Watch the private-package storage limit:** GitHub's free plan allows roughly 500 MB for private packages (check current figures), which a few WordPress image versions can exceed. Either **make the GHCR packages public at first push** (they contain no secrets, even while the repos are private; this also removes the need for the pull secret above), or add a **retention step** to the release workflow that deletes old untagged versions and keeps tagged releases. Record the choice in `docs/adr/0004-ghcr-not-ecr.md`.
 
-**Test:** the smoke test passes locally and in CI; `cosign verify` succeeds for the pushed image, and `cosign verify-attestation --type spdxjson` returns its SBOM; the cluster can pull the image and Argo CD can pull the chart (with credentials if the packages are private); the package's storage use is well under the free limit, or old untagged versions are being deleted; publishing a post in the local Compose setup sends a message to the real SQS queue.
+**Test:** the smoke test passes locally and in CI; `cosign verify` succeeds for the pushed image, and `cosign verify-attestation --type spdxjson` returns its SBOM; `gh attestation verify` confirms its provenance; the release notes link to the Rekor entries (check one with `rekor-cli`); a deliberately vulnerable PHP snippet (e.g. unescaped output) fails PHPCS or Semgrep; a secret written into an image layer fails Trivy; the cluster can pull the image and Argo CD can pull the chart (with credentials if the packages are private); the package's storage use is well under the free limit, or old untagged versions are being deleted; publishing a post in the local Compose setup sends a message to the real SQS queue.
 
 ### Step 5.2: WordPress chart and deployment (`wp-gitops/apps/wordpress/`)
 **Do:**
@@ -379,6 +385,7 @@ Check `kubectl top nodes` after each step.
 **Do:** `platform/kyverno/`: Kyverno plus the policy set from `aws-wp.md` ([Supply chain and policy](aws-wp.md#supply-chain-and-policy)), all in **audit mode** first:
 - **Signed images** (`verifyImages`): images signed by the `wp-image` and `llm-summarizer` release workflows (cosign keyless, GitHub OIDC issuer, subject matching each repo's workflow), with **`mutateDigest`** so tags are pinned to digests at admission
 - **SBOM attestations:** the project's own images must also carry a signed SBOM attestation from the same workflow
+- **Build provenance:** they must also carry the **SLSA provenance** attestation from GitHub's attestation action, issued to the same release workflow (confirm Kyverno's support for GitHub attestation bundles; start in audit mode)
 - **Signed upstream images:** for each third-party publisher that signs its images with cosign (check Kyverno, Cilium and the others in the stack; record which do in the decision log), verify the signature against **that publisher's** release identity. Start each in audit mode. **Exclude Kyverno's own namespace** from image verification so Kyverno can always start.
 - **Restrict Image Registries:** `ghcr.io/<you>/*` plus an explicit list of the upstream registries the platform charts use (include init and ephemeral containers)
 - **Disallow Latest Tag**
@@ -398,7 +405,7 @@ Check `kubectl top nodes` after each step.
 
 Review the policy reports, fix violations, then switch to **enforce**.
 
-**Test:** in enforce mode, each of these is rejected: an unsigned image, a project image that's signed but has **no SBOM attestation**, an image from a verified upstream registry that **isn't signed by that publisher** (e.g. a different project's image under the same registry), an image from an unlisted registry, a `:latest` image, a pod without the required labels (where the mutate rule can't fill them), a container without a memory limit, a privileged pod, a root container, a writable root filesystem, a Deployment without probes, a NodePort Service, and an Ingress reusing an existing host and path. Running pods show image digests rather than tags. The existing workloads keep running; Policy Reporter shows no unexplained violations; a pull request that violates a policy fails CI.
+**Test:** in enforce mode, each of these is rejected: an unsigned image, a project image that's signed but has **no SBOM attestation** or **no provenance attestation**, an image from a verified upstream registry that **isn't signed by that publisher** (e.g. a different project's image under the same registry), an image from an unlisted registry, a `:latest` image, a pod without the required labels (where the mutate rule can't fill them), a container without a memory limit, a privileged pod, a root container, a writable root filesystem, a Deployment without probes, a NodePort Service, and an Ingress reusing an existing host and path. Running pods show image digests rather than tags. The existing workloads keep running; Policy Reporter shows no unexplained violations; a pull request that violates a policy fails CI.
 
 ### Step 6.2: Argo Rollouts
 **Do:** `platform/argo-rollouts/`; convert WordPress to a `Rollout` with canary steps (e.g. 20% → 50% → 100%) and an `AnalysisTemplate` that queries Prometheus (ingress-nginx error rate and latency for the WordPress service). Argo Rollouts notifications post canary steps, aborts and rollbacks to `#rl-deploys`.
@@ -456,9 +463,10 @@ Review the policy reports, fix violations, then switch to **enforce**.
 ### Step 7.4: Summarizer chart, release and deployment
 **Do:**
 - `chart/`: Deployment (Rollout later), KEDA `ScaledObject` on the SQS queue (0–N), daily sweep CronJob, ServiceAccount, resources.
+- **Code and image checks** (as for `wp-image`, see step 5.1): **ruff**, **mypy**, **Semgrep**, **pip-audit**, dependency review, hadolint, Checkov, zizmor, `helm lint` / `ct lint`, container-structure-test, Trivy (vulnerability, secret and misconfiguration scanners).
 - `ci/`: kind end-to-end tests on GitHub-hosted runners, with the AWS stand-ins (SQS) and a **mock LLM** (LiteLLM with mock responses): a queued post gets a summary written back to a test WordPress; a failing message reaches the dead-letter queue.
 - **Checkov on the summarizer's Dockerfile and chart** in pull request CI.
-- Release workflow: build, SBOM, scan, sign, attach the SBOM as a signed attestation, push the image and the chart (OCI) to GHCR, open a chart-bump pull request on `wp-gitops` for **`overlays/home-staging`** (promoted to prod by the step 5.7 pipeline).
+- Release workflow: build, SBOM, scan, push by digest, sign, attach the SBOM as a signed attestation, add **SLSA build provenance**, verify all three, write release notes with digests and Rekor links, push the image and the chart (OCI) to GHCR, open a chart-bump pull request on `wp-gitops` for **`overlays/home-staging`** (promoted to prod by the step 5.7 pipeline).
 - `wp-gitops/apps/post-summarizer/overlays/home` and `overlays/home-staging`: queue URL, gateway URL (staging uses its own LiteLLM key and budget), WordPress URL, credentials from External Secrets.
 - Turn on the summarizer check in the staging smoke tests (step 5.6).
 
@@ -549,7 +557,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Test:** each pod works with no AWS key in its Secrets; the old keys are deleted from IAM.
 
 ### Step 11.2: Documentation and polish
-**Do:** hub README with the russetleaf.dev architecture diagram and links to all repos; screenshots of Grafana (site, LLM, cost), Argo CD and an evaluation report; update `aws-wp.md` wherever the build differed from the design; check every repo with `gitleaks`, then make them public; **also make each GHCR package public** in its package settings (a repo going public doesn't change its packages), then remove the image pull secrets and Argo CD's GHCR credentials and confirm everything still pulls; and switch on **SARIF upload** of Checkov's results to GitHub code scanning in each (free for public repos), so findings appear on pull requests and in the Security tab.
+**Do:** hub README with the russetleaf.dev architecture diagram and links to all repos; screenshots of Grafana (site, LLM, cost), Argo CD and an evaluation report; update `aws-wp.md` wherever the build differed from the design; check every repo with `gitleaks`, then make them public; **also make each GHCR package public** in its package settings (a repo going public doesn't change its packages), then remove the image pull secrets and Argo CD's GHCR credentials and confirm everything still pulls; add each repo's **OpenSSF Scorecard** badge to its README (record the scores in the decision log), and switch on **SARIF upload** of Checkov's results to GitHub code scanning in each (free for public repos), so findings appear on pull requests and in the Security tab.
 
 **Test:** someone unfamiliar with the project can follow the README to understand it in five minutes.
 
