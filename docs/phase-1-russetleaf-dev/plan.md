@@ -7,6 +7,8 @@ Each step is sized for one or a few Claude sessions, and ends with a **test** th
 ## How to use this plan with Claude
 
 - **Start each session** with something like: *"Read `docs/overview.md`, the Phase 1 design and the Phase 1 plan. We're working on step 4.3. Here's where I left off: ..."*. Claude has no memory of earlier sessions, so these files are the shared context.
+- **Track the work on GitHub.** Each step is a GitHub issue in a milestone from the [roadmap](roadmap.md) (created in step 1.1 by `tools/plan_to_issues.py`); move it across the Projects board as you work, and update the roadmap's **Actual** columns when a milestone closes.
+- **Start each step with a spec.** Ask Claude to write the step's spec from [`docs/specs/TEMPLATE.md`](../specs/TEMPLATE.md) (goal, context, scope, approach, tasks of 1–3 hours, acceptance criteria from the step's test, risks), save it as `docs/specs/phase-1/<step>-<name>.md`, review it, then build against it. The pull request links the issue and the spec, and the spec's **Outcome** records actual hours and what changed.
 - **One step at a time.** Build it, run the step's test, fix, commit. Don't start the next step until the test passes.
 - **Core first.** Each step has a tier (Core, Differentiator, Stretch) and an hour estimate; see [Priorities and time estimates](#priorities-and-time-estimates). Record actual hours in the checklist.
 - **Keep the plan current.** Tick the [progress checklist](#progress-checklist) and add to the [decision log](#decision-log) whenever something is decided or differs from the Phase 1 design. Ask Claude to update this file at the end of each session.
@@ -259,7 +261,9 @@ Record each answer in the [decision log](#decision-log).
 - Add **Renovate** to every repo (Helm charts, Terraform providers, base images, GitHub Actions, `.mise.toml`, and later Composer and Python lock files), with a shared configuration following the Phase 1 design's [Update strategy](design.md#update-strategy): a weekly schedule (security updates immediately), grouping per platform component, **auto-merge for patch updates** of platform charts, CLI tools and GitHub Actions once CI passes, the **Dependency Dashboard**, and custom version rules for Talos and Kubernetes versions in Terraform.
 - In `wp-gitops`: move the `docs/` tree (overview, the phase folders and the ADRs) into `wp-gitops/docs/`, and write the hub README (what the project is, links to all four repos).
 
-**Test:** each repo is public with a clean `gitleaks` history scan and push protection on; each repo has protected `main`, the secret scan and Checkov run on a test pull request (a workflow with `permissions: write-all` fails Checkov), and Renovate opens its onboarding pull request.
+- **Track the plan on GitHub:** once this repo is `wp-gitops`, run `tools/plan_to_issues.py --phase-dir docs/phase-1-russetleaf-dev --repo <you>/wp-gitops` (a dry run), check its output, then run it again with `--apply` to create the roadmap's milestones, the labels and one issue per step. Create a public **GitHub Projects** board with the issues, a **Roadmap** view grouped by milestone, and fields for estimate and actual hours.
+
+**Test:** each repo is public with a clean `gitleaks` history scan and push protection on; each repo has protected `main`, the secret scan and Checkov run on a test pull request (a workflow with `permissions: write-all` fails Checkov), and Renovate opens its onboarding pull request. The Projects board shows one issue per step in the roadmap's milestones, and running the script again creates nothing new.
 
 ## Stage 2: Infrastructure (`wp-infra`)
 

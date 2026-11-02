@@ -14,7 +14,8 @@ The reasoning for this split is in ADR 1037.
 
 ## How the documents are organised
 - **This overview:** what's shared by all phases: how the two sites compare, security by layer, the threat model, platform security, compliance, portfolio highlights, the operations budget, effort and timelines, the repositories, and the index of all decisions.
-- **Each phase folder:** `design.md` (what's built and why), `plan.md` (the steps to build it, with a progress checklist) and `adr/` (the decisions first made in that phase).
+- **Each phase folder:** `design.md` (what's built and why), `plan.md` (the steps to build it, with a progress checklist), `roadmap.md` (milestones with target and actual dates; Phase 1's [roadmap](phase-1-russetleaf-dev/roadmap.md)) and `adr/` (the decisions first made in that phase).
+- **Tracking and step specs:** each step becomes a GitHub issue in its roadmap milestone (created by `tools/plan_to_issues.py`), and each step starts with a short spec written from [`specs/TEMPLATE.md`](specs/TEMPLATE.md) and kept in `docs/specs/`, linked from the issue and its pull request. Together with the plans' estimate-vs-actual columns and milestone retros, they show the work was planned, measured and adjusted.
 - **ADR numbers start with their phase:** 1001 upwards for Phase 1, 2001 upwards for Phase 2, 3001 upwards for Phase 3. They're unique across the project and don't change once used; the [index](#architecture-decision-records) lists them all. The template is [`adr/0000-template.md`](adr/0000-template.md).
 - **Phase 1** also has the [disaster recovery plan](phase-1-russetleaf-dev/disaster-recovery.md).
 
@@ -276,12 +277,14 @@ llm-summarizer ─── eval gate ─► build, scan, sign ─► image + chart
 ```
 wp-gitops/
   README.md                 # project hub: architecture diagram, links to all four repos, quick start
+  tools/plan_to_issues.py   # creates GitHub milestones, labels and one issue per step from a phase's plan and roadmap
   docs/
     overview.md             # this document: phases, shared design, effort, repos, ADR index
     adr/0000-template.md    # ADR template (numbers: 1001+ Phase 1, 2001+ Phase 2, 3001+ Phase 3)
-    phase-1-russetleaf-dev/ # design.md, plan.md, disaster-recovery.md, adr/
+    phase-1-russetleaf-dev/ # design.md, plan.md, roadmap.md, disaster-recovery.md, adr/
     phase-2-ai-mlops/       # design.md, plan.md, adr/
     phase-3-russetleaf-com/ # design.md, plan.md, adr/
+    specs/                  # one short spec per step (TEMPLATE.md; phase-1/, phase-2/, phase-3/)
     runbooks/               # one page per alert (what it means, how to check, how to fix), plus
                             #   rollback-<layer>.md runbooks
     slos/                   # SLO definitions (Sloth) and the error-budget policy

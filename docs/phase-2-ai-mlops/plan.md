@@ -2,7 +2,7 @@
 
 This is the step-by-step plan for **Phase 2**, described in the [Phase 2 design](design.md): AI-generated post summaries on russetleaf.dev, with an LLM gateway, a self-hosted model on box 2, and an MLOps lifecycle. It needs **Phase 1's Core tier** finished (the cluster, GitOps, platform services, WordPress, ci, staging and promotion, Kyverno and network policies). Fine-tuning and deploying a fine-tuned challenger need a GPU, so they're in [Phase 3](../phase-3-russetleaf-com/plan.md) (steps 4.5 and 4.6).
 
-Each step is sized for one or a few Claude sessions and ends with a **test** that must pass before moving on. Work the same way as in Phase 1 (see its [How to use this plan with Claude](../phase-1-russetleaf-dev/plan.md#how-to-use-this-plan-with-claude)): start each session by pointing Claude at this plan, the Phase 2 design and the overview; one step at a time; record actual hours; keep the plan and decision log current.
+Each step is sized for one or a few Claude sessions and ends with a **test** that must pass before moving on. Work the same way as in Phase 1 (see its [How to use this plan with Claude](../phase-1-russetleaf-dev/plan.md#how-to-use-this-plan-with-claude)): start each session by pointing Claude at this plan, the Phase 2 design and the overview; one step at a time; record actual hours; keep the plan and decision log current. Before starting, write this phase's `roadmap.md` (milestones and dates, in the format of Phase 1's [roadmap](../phase-1-russetleaf-dev/roadmap.md)), create its issues with `tools/plan_to_issues.py`, and write a spec per step from [`docs/specs/TEMPLATE.md`](../specs/TEMPLATE.md).
 
 ## Priorities and time estimates
 
