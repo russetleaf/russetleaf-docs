@@ -223,7 +223,7 @@ What each phase builds and shows. Phase 1 on its own is a complete project; Phas
 - **Terraform for both sides, in one repo (`russetleaf-infra`):** shared modules, plus separate root modules for russetleaf.com's always-on edge, its demo stack (including Karpenter and its NodePools), and the russetleaf.dev home lab (Talos provider `siderolabs/talos` for all three nodes' machine configs, Cloudflare provider for the tunnel, DNS and WAF rules, and the AWS pieces used from home). *(Completed by Phase 3.)*
 - **CI on GitHub in every repo:** Terraform checks and plans in `russetleaf-infra`; manifest validation and Kyverno policy tests in `russetleaf-gitops`; image builds with SBOMs, scans and signing in `russetleaf-wordpress` and `russetleaf-llm-summarizer`; and the prompt evaluation gate in `russetleaf-llm-summarizer`. Reviewers see all of it without the AWS stack running.
 - **A highly available home cluster:** three Talos control-plane nodes with a virtual IP, replicated MariaDB with automatic failover, workloads spread across nodes, rolling upgrades without downtime, and recorded node-failure drills (unplug a node, the site stays up).
-- **An AWS Security Reference Architecture foundation:** separate management, security tooling, log archive, backup, infrastructure and workload accounts; SCP guardrails; centralized root access management; Identity Center with MFA; organization-wide Security Hub, GuardDuty, Config, Access Analyzer and CloudTrail, all in Terraform; and a Well-Architected review.
+- **An AWS Security Reference Architecture foundation:** separate management, security tooling, log archive, backup, infrastructure and workload accounts; SCP guardrails and RCPs forming a data perimeter; centralized root access management; Identity Center with MFA; organization-wide Security Hub, GuardDuty, Config, Access Analyzer and CloudTrail, all in Terraform; and a Well-Architected review.
 - **Disaster recovery beyond a single account:** immutable, cross-account and cross-region copies (S3 Object Lock), daily repo mirrors, a break-glass kit, a written plan with scenarios and a bootstrap order, and a yearly full-rebuild drill.
 - **A defined rollback strategy:** decision rules (roll back first), Git revert as the default, automatic canary rollback, backups before database schema changes, recovery paths for Cilium, Kyverno and Argo CD, `prevent_destroy` on stateful infrastructure, re-summarizing bad AI output, and regular rollback drills.
 - **A defined update strategy:** every update is a Renovate pull request, risk-tiered (patches auto-merge; minors and majors rehearsed; applications through staging and canaries), with WPScan for WordPress plugin vulnerabilities, 48-hour security releases, and a monthly end-of-life report.
@@ -430,8 +430,9 @@ russetleaf-infra/
                             #   read-only audit role for Prowler
   envs/github/               # GitHub organization and repo settings (GitHub provider): branch protection,
                             #   default read-only workflow token, allowed Actions, environments, push protection
-  envs/org/                 # management account: Organization, OUs, accounts, SCPs, IAM Identity Center permission
-                            #   sets, tag policies, centralized root access management, alternate contacts,
+  envs/org/                 # management account: Organization, OUs (incl. Policy Staging, Suspended), accounts,
+                            #   SCPs, RCPs, declarative policies, IAM Identity Center permission sets, tag
+                            #   policies, centralized root access management, alternate contacts,
                             #   delegated administrators, budgets, cost allocation tag activation
   envs/security/            # Security Tooling + Log Archive: organization CloudTrail trail, GuardDuty (with EKS
                             #   audit-log monitoring), Security Hub (FSBP + CIS), Config (focused recording,

@@ -84,8 +84,10 @@ The AWS side follows the **AWS Security Reference Architecture (SRA)**: separate
 | **russetleaf-infra** | Infrastructure | **Terraform state** and the CI deployment entry points (the GitHub OIDC provider and roles); nothing else runs here |
 | **russetleaf-home** | Workloads | The AWS resources russetleaf.dev uses (S3, Secrets Manager, SES; SQS and Bedrock from Phase 2); this is the **existing account**, which joins the Organization |
 | **russetleaf-com** | Workloads | russetleaf.com: the always-on edge (`envs/aws-edge`) and the demo stack (`envs/aws`). **Created in Phase 3.** |
+| **Policy test** | Policy Staging | An empty account where new SCPs and RCPs are attached and tested before they reach the real OUs |
+| *(none)* | Suspended | Normally empty; a **deny-all SCP**. Moving a compromised account here is the first containment step |
 
-Separate workload accounts limit how far a compromise can spread, and give each site its own costs, quotas and limits. Accounts are free. All of it is managed by Terraform in `russetleaf-infra/envs/org/` (Organization, OUs, accounts, SCPs, Identity Center, tag policies) and `russetleaf-infra/envs/security/` (the security services), applied from the workstation with management-account and Security Tooling access.
+Separate workload accounts limit how far a compromise can spread, and give each site its own costs, quotas and limits. Accounts are free. All of it is managed by Terraform in `russetleaf-infra/envs/org/` (Organization, OUs, accounts, SCPs, RCPs, declarative policies, Identity Center, tag policies) and `russetleaf-infra/envs/security/` (the security services), applied from the workstation with management-account and Security Tooling access.
 
 **Cross-account access the design needs** (each a narrow, explicit grant): the russetleaf.com seed Job reads russetleaf.dev's backup and media buckets (bucket policies in `russetleaf-home`); every account's backup-bound buckets replicate into the Backup account; CI roles in each account read and write Terraform state in `russetleaf-infra`.
 
@@ -98,6 +100,14 @@ Separate workload accounts limit how far a compromise can spread, and give each 
     - deny actions by member accounts' root users
     - deny creating IAM users and access keys, with a narrow, named exception in `russetleaf-home` for the home cluster's scoped keys until keyless OIDC access (Phase 1 step 9.1, [ADR 1033](adr/1033-identity-and-access.md)) removes them
     - deny deleting or weakening the Log Archive and Backup buckets (and their Object Lock settings)
+- **Resource control policies (RCPs)** on the OUs, the other half of a **data perimeter**: SCPs limit what the Organization's identities can do; RCPs limit **who can reach its resources**, whatever a bucket, key or secret policy says:
+    - S3, KMS, SQS and Secrets Manager resources can be accessed only by identities in the Organization (`aws:PrincipalOrgID`)
+    - AWS service principals (CloudFront serving media, S3 replication, CloudTrail and Config delivery) only when acting for the Organization (`aws:SourceOrgID`), preventing confused-deputy access
+    - TLS required for every request to those services (`aws:SecureTransport`)
+    - STS: roles can be assumed only by the Organization's identities or the federation the design uses (the GitHub OIDC provider, IAM Identity Center, and from step 9.1 the home cluster's OIDC issuer)
+- Every cross-account access the design needs stays inside the Organization, so the RCPs block nothing intended. SCPs and RCPs do not apply to the management account, which is why it runs nothing.
+- **Declarative policies** for EC2: public access to AMIs and EBS snapshots blocked and IMDSv2 required by default across the Organization, even if an account's own settings are changed.
+- **Policy rollout:** every new or changed SCP or RCP is attached to the **Policy Staging** OU first and tested there, then to the real OUs.
 - **Centralized root access management:** root credentials are **removed from member accounts**, so only the management account's root login needs to be in the break-glass kit.
 - **IAM Identity Center** for all human access: permission sets for **admin**, **read-only** and **break-glass**, with MFA required; no IAM users for people.
 - **Tag policies** enforcing `Project`, `Site`, `Env` and `ManagedBy` values.
@@ -124,7 +134,7 @@ Separate workload accounts limit how far a compromise can spread, and give each 
 
 ### Cost
 
-Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-access findings are free. **Security Hub, Config and KMS** add roughly **$5–15/month**, depending mostly on how many resources Config records (focused recording keeps the demo stack's churn in check). That brought the always-on total to about $15–35/month; with `rl-home-cp03`'s electricity ([ADR 1020](adr/1020-three-node-ha-home-cluster.md)) it is now about **$18–40/month**. That figure is the **whole** always-on cost (the security services are already included in it, not added on top). With about 20 demo hours a month (~$20), the total is **$30–60/month**; keeping demos to about 10 hours keeps it **under $50**.
+Accounts, SCPs, RCPs, declarative policies, Identity Center, tag policies and Access Analyzer's external-access findings are free. **Security Hub, Config and KMS** add roughly **$5–15/month**, depending mostly on how many resources Config records (focused recording keeps the demo stack's churn in check). That brought the always-on total to about $15–35/month; with `rl-home-cp03`'s electricity ([ADR 1020](adr/1020-three-node-ha-home-cluster.md)) it is now about **$18–40/month**. That figure is the **whole** always-on cost (the security services are already included in it, not added on top). With about 20 demo hours a month (~$20), the total is **$30–60/month**; keeping demos to about 10 hours keeps it **under $50**.
 
 ## Security foundations
 
