@@ -31,7 +31,9 @@ Falco provides runtime detection inside containers, but on its own it is not an 
 
 - **Falco's Kubernetes audit plugin** instead of Loki alert rules: richer rule language, but needs the API server to send audit events to a webhook (more Talos configuration) and more memory; Loki already holds the logs and runs alert rules.
 - **Suricata or Zeek in the cluster:** heavy on CPU and memory, and most traffic is either TLS terminated (and inspected) at the WAFs, or covered by Cilium policies and Hubble.
-- **GuardDuty Runtime Monitoring** (an AWS agent on EKS nodes): overlaps with Falco, adds cost per node, and does not cover the home cluster.
+- **GuardDuty Runtime Monitoring** (an AWS agent on EKS nodes): overlaps with Falco, adds cost per node (roughly $10–20 a month on EKS), and does not cover the home cluster; Falco runs the same rules on both. For **EC2**, it could also watch Phase 2's rented GPU training instance, where Falco does not run, but that instance lives an hour or two with outbound-only networking and a narrow role, and GuardDuty's standard detections already cover its API calls and network traffic ([ADR 2005](../../phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md)).
+- **AWS Shield Advanced:** DDoS response team access, cost protection against attack-driven scaling, and advanced detection, for about $3,000 a month with a one-year commitment; far out of proportion for a portfolio site that is an offline page most of the time. **Shield Standard** (free, automatic on CloudFront, Route 53 and the ALB), the CloudFront flat-rate plan's DDoS protection and the edge rate limits ([ADR 3009](../../phase-3-russetleaf-com/adr/3009-edge-waf-on-cloudfront-free-plan.md)) cover this project; the Business flat-rate plan's anti-DDoS rule group is the cheaper next step if one is ever needed. At home, Cloudflare provides DDoS protection.
+- **GuardDuty Malware Protection for S3:** scans new objects in a bucket (here, the media buckets) for malware; low value while only signed-in admins can upload, and billed per GB scanned; worth adding if visitors could ever upload files.
 - ~~**AWS Security Hub:** aggregates findings and runs posture checks continuously, but costs per check; Prowler ([ADR 1007](1007-prowler-not-threatmapper.md)) and GuardDuty cover the needs here.~~ **Superseded by [ADR 1019](1019-aws-multi-account-sra.md):** Security Hub is now used.
 - **Cloudflare Pro** (paid WAF rule sets): more rules, but the free managed rule set plus rate limiting and XML-RPC blocking covers the WordPress basics at no cost.
 
@@ -44,7 +46,7 @@ Falco provides runtime detection inside containers, but on its own it is not an 
 
 ## When to revisit
 
-- russetleaf.com becomes always-on or holds personal data: consider GuardDuty Runtime Monitoring and Cloudflare Pro or AWS WAF Bot Control.
+- russetleaf.com becomes always-on or holds personal data: consider GuardDuty Runtime Monitoring, Shield Advanced (if outages carry real cost) and Cloudflare Pro or AWS WAF Bot Control.
 - More memory at home: Falco's audit plugin (CrowdSec and Tetragon are already realistic since [ADR 1020](1020-three-node-ha-home-cluster.md)).
 - A home-network IDS (router-level) becomes part of the lab.
 

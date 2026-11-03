@@ -25,6 +25,7 @@
 - **A hosted notebook (Google Colab, SageMaker Studio Lab):** cheaper or free, but manual and outside infrastructure as code.
 - **Amazon SageMaker training jobs:** managed and capable, but a separate platform from the home registry, at more cost and setup than one instance.
 - **Fine-tuning on CPU at home:** impractically slow for a 3B model on these CPUs.
+- **GuardDuty Runtime Monitoring on the training instance:** possible, since Falco does not run there, but not worth it for an instance that lives an hour or two with outbound-only networking and a narrow role ([ADR 1017](../../phase-1-russetleaf-dev/adr/1017-intrusion-detection-and-prevention.md)).
 - **Fully automatic retraining on drift:** the textbook end state, but it spends money and changes production without review; a pull request keeps a person in the loop.
 
 ## Consequences

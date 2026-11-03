@@ -41,6 +41,7 @@ Requests blocked by WAF do not count toward the allowance; exceeding it never ad
 - **The Pro plan ($15/month):** the WordPress, PHP and SQL rules, WAF logs and more cache behaviors at the edge, but about $13 a month more around the clock for a site that is mostly an offline page; rejected for now.
 - **No WAF at the edge (the previous design):** cheapest, but the always-on distribution is unprotected between demos.
 - **On-demand WAF on CloudFront:** about $15 a month always on, with no bundled benefits.
+- **AWS Shield Advanced:** see [ADR 1017](../../phase-1-russetleaf-dev/adr/1017-intrusion-detection-and-prevention.md); Shield Standard and the plan's DDoS protection are enough here.
 - **Moving all rules to the edge and removing the ALB web ACL:** not possible on the Free plan (five rules, no WordPress, PHP or SQL protections).
 
 ## Consequences
