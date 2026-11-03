@@ -1,8 +1,8 @@
 # ADR 2001: Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback
 
-- **Status:** Accepted; fine-tuning split out to [ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)
+- **Status:** Accepted; fine-tuning covered by [ADR 2005](2005-fine-tuning-on-a-rented-gpu.md) (earlier [ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md), superseded)
 - **Date:** 2026-11-01
-- **Applies to:** `russetleaf-llm-summarizer`, the LLM gateway and the self-hosted model, on both sites
+- **Applies to:** `russetleaf-llm-summarizer`, the LLM gateway and the self-hosted model, on russetleaf.dev
 - **Phase:** 2, including fine-tuning ([ADR 2005](2005-fine-tuning-on-a-rented-gpu.md)).
 
 > **Update ([ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)):** the project is now built in three phases ([ADR 1037](../../phase-1-russetleaf-dev/adr/1037-project-phases.md)). This ADR is Phase 2's. **Fine-tuning** (the distillation pipeline and deploying a fine-tuned challenger) needs a GPU, so it moved to Phase 3 and is recorded in [ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md); the rest of the lifecycle below runs at home in Phase 2.
@@ -26,7 +26,7 @@ The summary pipeline already had strong **inference-side** practices (often call
 - **Guardrails** in the summarizer: injection-resistant prompting, output validation, personal-data redaction before calls leave the cluster, adversarial evaluation cases, and guardrail metrics and alerts.
 - **Online evaluation and drift monitoring:** a daily sampled scoring job (Argo Workflows) logging to MLflow and Prometheus, with `SummaryQualityDegraded` and `InputDriftDetected` alerts.
 - **Argo Workflows** as the workflow engine for the in-cluster pipelines: the **daily online evaluation** (sample summaries → score them → Evidently drift report → log to MLflow and Prometheus → open a retraining pull request when needed), the **nightly feedback export** into DVC, and the **retraining proposals**. Each step runs as a pod (using the cluster's scheduling, policies and monitoring), with artifacts passed between steps, retries per step and a visible history of every run; workflows are YAML in Git, synced by Argo CD; it is light (a controller and a server, about 0.2–0.3 GB) and part of the Argo family the project already uses. Fine-tuning itself runs outside the cluster on a rented GPU, started by a GitHub Actions workflow ([ADR 2005](2005-fine-tuning-on-a-rented-gpu.md)).
-- ~~A fine-tuning (distillation) pipeline on the EKS GPU node pool~~: moved to [ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md) (Phase 3).
+- **Fine-tuning** (the distillation pipeline, the challenger and drift-triggered retraining): [ADR 2005](2005-fine-tuning-on-a-rented-gpu.md), on a rented spot GPU (an earlier plan for the EKS GPU node pool, [ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md), is superseded).
 - **DVC** for the evaluation, adversarial and training datasets (S3 remote), recorded in every MLflow run.
 - **An editor feedback loop** in WordPress, exported nightly into the datasets.
 
@@ -39,7 +39,7 @@ The summary pipeline already had strong **inference-side** practices (often call
 - **Argo Events** (event-driven triggers, usually starting Argo Workflows through an event bus): not used. Every trigger in this project already has a simpler mechanism: GitHub events start GitHub Actions, schedules use workflow schedules or CronJobs, alerts reach Alertmanager webhooks, and the summary queue scales through KEDA. Argo Events would add an event bus (e.g. NATS), more components and memory, and a second way of doing the same things; worth revisiting only if many event sources had to start in-cluster workflows.
 - **Amazon SageMaker** (training jobs, model registry, pipelines): AWS-native and capable, but does not cover the home site and would split the lifecycle across two platforms.
 - **Weights & Biases or other hosted tracking:** polished, but a third-party service and account; MLflow is open source and self-hosted.
-- **No fine-tuning (inference only):** simpler, but leaves out the training half of the lifecycle; fine-tuning is kept, in Phase 3 ([ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)).
+- **No fine-tuning (inference only):** simpler, but leaves out the training half of the lifecycle; fine-tuning is kept ([ADR 2005](2005-fine-tuning-on-a-rented-gpu.md)).
 - **A heavyweight guardrail service** (e.g. Presidio, Llama Guard): more thorough, but adds memory and latency; rule-based guardrails plus adversarial evaluation cover this pipeline, with these as later options.
 
 ## Consequences
@@ -47,7 +47,7 @@ The summary pipeline already had strong **inference-side** practices (often call
 - Every result is traceable: which data, prompt, model and code produced it, and which version is in production.
 - Quality is checked before release **and** monitored after it, with alerts on degradation.
 - The pipeline resists injected instructions in posts and does not send personal data to external models.
-- The self-hosted model's registry, canary and online evaluation are ready for a fine-tuned challenger from Phase 3 ([ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)).
+- The self-hosted model's registry, canary and online evaluation are ready for a fine-tuned challenger ([ADR 2005](2005-fine-tuning-on-a-rented-gpu.md)).
 - More components (MLflow, Argo Workflows, the online-evaluation job) and about 45–75 hours of work.
 
 ## When to revisit
@@ -55,7 +55,7 @@ The summary pipeline already had strong **inference-side** practices (often call
 - The online evaluation shrinks to a single step: replace Argo Workflows with CronJobs.
 - Many more models or teams: consider Kubeflow or a managed platform.
 - Guardrail failures in practice: add Presidio or a guard model.
-- A GPU at home: see [ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md).
+- A GPU at home: see [ADR 2005](2005-fine-tuning-on-a-rented-gpu.md).
 
 ## Open items
 

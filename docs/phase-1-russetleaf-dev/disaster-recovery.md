@@ -11,6 +11,7 @@ This plan covers recovering from losses bigger than a single bad change or faile
 | Infrastructure | `russetleaf-infra` (GitHub) | Repo mirror in the backup account | 90 days of daily bundles | Yes, from Terraform |
 | Deployed configuration | `russetleaf-gitops` (GitHub) | Repo mirror in the backup account | 90 days | Yes, from GitOps |
 | Application code | `russetleaf-wordpress` (and `russetleaf-llm-summarizer` from Phase 2) (GitHub) | Repo mirrors in the backup account | 90 days | Yes |
+| Documentation and planning | `russetleaf-docs` (GitHub; issues and the Projects board stay on GitHub) | Repo mirror in the backup account | 90 days | The documents, yes; issues only from GitHub |
 | Images and charts | GHCR | None needed | — | Yes, rebuilt from the mirrored source |
 | Terraform state | S3 state bucket (us-east-1, **russetleaf-infra** account) | **Replicated** to the backup account (us-west-2, Object Lock) | 30-day lock, versions kept 90 days | Partly (state can be re-imported, but slowly) |
 | russetleaf.dev database | MariaDB backups in S3 (us-east-1), every 6 hours | **Replicated** to the backup account (Object Lock) | 30-day lock | No |
@@ -35,7 +36,7 @@ This plan covers recovering from losses bigger than a single bad change or faile
 
 ## Repo mirrors
 
-A scheduled GitHub Actions workflow (daily) creates a `git bundle` of each of the four repos and uploads it to a bucket in the backup account, using an OIDC role that can only **write** new objects. Images and charts are not copied: they are rebuilt from the mirrored source.
+A scheduled GitHub Actions workflow (daily) creates a `git bundle` of each of the five repos (including `russetleaf-docs`) and uploads it to a bucket in the backup account, using an OIDC role that can only **write** new objects. Images and charts are not copied: they are rebuilt from the mirrored source.
 
 ## Break-glass kit
 
@@ -56,14 +57,14 @@ Kept in the password manager, with a **printed copy** of the starred items store
 
 | Scenario | Data lost (at most) | Time to recover | Procedure |
 |---|---|---|---|
-| **Any one box fails** (disk or hardware) | Seconds of database changes (replication lag) | About a minute for the site (failover); hours to replace the box | Nothing urgent: etcd keeps quorum, the virtual IP moves, MariaDB fails over to its replica, and WordPress, ingress and cloudflared keep running on the other nodes. If it was `rl-home-cp02`, the gateway falls back to Bedrock. Repair or replace the box, re-apply `russetleaf-infra/envs/home` for it, and let it rejoin; MariaDB rebuilds its replica. |
-| **Two boxes fail at once** | Up to 6 hours of database changes, if the remaining box does not hold a current database copy | Hours to a day | etcd loses quorum, so the cluster stops. Repair one box to restore quorum (or, if two are lost for good, recover etcd from the latest snapshot with `talosctl` on the remaining node, then rejoin new boxes); restore MariaDB from replication or the latest S3 backup. |
+| **Any one node fails** (disk or hardware) | Seconds of database changes (replication lag) | About a minute for the site (failover); hours to replace the node | Nothing urgent: etcd keeps quorum, the virtual IP moves, MariaDB fails over to its replica, and WordPress, ingress and cloudflared keep running on the other nodes. If it was `rl-home-cp02` (with Phase 2), the LLM gateway falls back to Bedrock. Repair or replace the node, re-apply `russetleaf-infra/envs/home` for it, and let it rejoin; MariaDB rebuilds its replica. |
+| **Two nodes fail at once** | Up to 6 hours of database changes, if the remaining node does not hold a current database copy | Hours to a day | etcd loses quorum, so the cluster stops. Repair one node to restore quorum (or, if two are lost for good, recover etcd from the latest snapshot with `talosctl` on the remaining node, then rejoin new nodes); restore MariaDB from replication or the latest S3 backup. |
 | **Whole home lab destroyed** (fire, theft, flood) | 6 hours of database changes | 1–2 days (new hardware) | Using only the break-glass kit and the backups: get new hardware; follow the **bootstrap order** below. In Phase 3, russetleaf.com can be brought up as a temporary replacement in the meantime (`demo-up` and seed from the latest russetleaf.dev backup). |
 | **Workstation lost** | None | Hours | Set up a new workstation ([workstation setup](plan.md#local-workstation-setup-ubuntu-2404)); restore talosconfig, kubeconfig and logins from the break-glass kit; rotate anything that was stored only on the old machine. |
 | **A workload account compromised** (russetleaf-home or russetleaf-com) | Up to the last replicated copy | 1–3 days | From the management and Security Tooling accounts: move the account into the **Suspended OU** (a deny-all SCP), revoke its sessions and keys, review the organization CloudTrail (Log Archive) and GuardDuty/Security Hub findings. If data was deleted or encrypted, restore from the **Backup** account. Rotate every secret and key; re-create Secrets Manager entries; re-apply Terraform. The logs, backups and security tooling are in other accounts, so they are intact. |
 | **A workload account lost** (closed, locked) | Up to the last replicated copy | Days | Create a replacement account in the Organization (`envs/org`); re-apply `bootstrap/` and the environment; restore data from the Backup account; regenerate secrets. |
 | **Management account compromised or lost** | Up to the last replicated copy | Days | The worst case: recover access through AWS Support using the break-glass kit; the member accounts, logs and backups keep running meanwhile. If the Organization cannot be recovered, create a new management account and move the member accounts into a new Organization. |
-| **AWS region outage** (us-east-1) | None, or up to the last replicated copy | Hours to wait, or a day to move | Usually wait it out (russetleaf.dev keeps running at home, though S3 media, SQS and Bedrock calls fail). For a long outage, re-point the home site's buckets and queue to us-west-2 using the replicated copies. |
+| **AWS region outage** (us-east-1) | None, or up to the last replicated copy | Hours to wait, or a day to move | Usually wait it out (russetleaf.dev keeps running at home, though S3 media calls fail, and with Phase 2 also SQS and Bedrock). For a long outage, re-point the home site's buckets and queue to us-west-2 using the replicated copies. |
 | **GitHub account or repos lost** | Commits since the last daily mirror | Hours | Restore the repos from the bundles in the backup account to a new GitHub account (or another Git host); update Argo CD's repo URLs, the OIDC trust (new repo identities) and Kyverno's signing identities; rebuild and re-sign images. |
 | **Cloudflare account lost** | None | Hours | New account; re-apply the Cloudflare parts of `envs/home` (tunnel, DNS, Access, rules); move russetleaf.dev's name servers. |
 | **Domain lost or expired** | None | Days (registrar process) | Recover through the registrar; keep auto-renew on and the registrar login in the break-glass kit to prevent this. |
@@ -72,12 +73,12 @@ Kept in the password manager, with a **printed copy** of the starred items store
 ## Bootstrap order from zero
 
 1. **Access:** password manager → break-glass kit → AWS (management account, then IAM Identity Center into the others), GitHub, Cloudflare, Google, registrar.
-2. **Code:** restore the four repos (from GitHub, or the mirrors in the backup account).
+2. **Code:** restore the five repos (including `russetleaf-docs`) (from GitHub, or the mirrors in the backup account).
 3. **Terraform state:** use the russetleaf-infra state bucket, or copy it back from the Backup account.
 4. **Account foundations:** apply `russetleaf-infra/envs/org/` (Organization, accounts, SCPs, Identity Center) and `envs/security/` (CloudTrail, GuardDuty, Security Hub, Config), then `bootstrap/` (state bucket, CI roles).
-5. **Home infrastructure:** restore the lab router's configuration (or redo step 0.3), connect over WireGuard, then apply `russetleaf-infra/envs/home` (Talos on all three boxes, Cloudflare, the AWS resources used from home).
+5. **Home infrastructure:** restore the lab router's configuration (or redo step 0.3), connect over WireGuard, then apply `russetleaf-infra/envs/home` with **`bootstrap_inline_manifests = true`** (Talos on all three nodes with Cilium, Argo CD and the root Application as inline manifests, Cloudflare, the AWS resources used from home; [ADR 1039](adr/1039-bootstrap-through-talos-inline-manifests.md)).
 6. **Secrets:** create or regenerate the entries in Secrets Manager; create the External Secrets bootstrap credential.
-7. **GitOps:** install Argo CD and apply `russetleaf-gitops/bootstrap/home`; let the platform come up in sync-wave order.
+7. **GitOps:** Argo CD is already running from the inline manifests and syncs `russetleaf-gitops/bootstrap/home`; let the platform come up in sync-wave order. Once Argo CD has adopted Cilium and itself, set `bootstrap_inline_manifests` back to `false` and apply again.
 8. **Data:** restore MariaDB from the latest backup (from russetleaf-home or the Backup account); confirm media is present (or copy it back).
 9. **Images:** if GHCR is unavailable, rebuild and re-sign the images from source, and update the version pins.
 10. **Checks:** site, admin sign-in, the summarizer (Phase 2), monitoring and alerts, backups running again.
@@ -89,7 +90,7 @@ Kept in the password manager, with a **printed copy** of the starred items store
 |---|---|---|
 | Restore a MariaDB backup into a scratch instance | Monthly | Backups are usable |
 | Restore a MariaDB backup **from the backup account's copy** | Quarterly | The off-account copies are usable and access works |
-| **Full "home lab destroyed" rebuild**, using only the break-glass kit and the backups (on a local Talos-in-Docker cluster, or the real boxes during a maintenance window) | Yearly | The whole plan works; record the actual time |
+| **Full "home lab destroyed" rebuild**, using only the break-glass kit and the backups (on a local Talos-in-Docker cluster, or the real nodes during a maintenance window) | Yearly | The whole plan works; record the actual time |
 | *(Phase 3)* Restore russetleaf.com's database from the latest logical dump in the backup account | Once (then yearly) | The AWS-side copy works |
 | Check the break-glass kit (logins work, recovery codes valid, printed copy current) | Every 6 months | Access can be recovered |
 

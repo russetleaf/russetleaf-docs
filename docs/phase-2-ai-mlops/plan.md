@@ -25,7 +25,7 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | **Advanced** | The feedback loop and data versioning (DVC); fine-tuning on a rented GPU, the fine-tuned challenger, and drift-triggered retraining; the AI operations assistant (kagent), and AI diagnosis with remediation proposed as pull requests. | 4.7–4.10, 5.2b, 5.2c | **~64–104** |
 | **Total** | | | **~146–243** |
 
-**Calendar time:** about **7–12 weeks at ~20 hours a week** (2–3.5 months at ~10), after Phase 1's Core tier. Allow a few days for Bedrock model access.
+**Calendar time:** about **7–12 weeks at ~20 hours a week** (about 3.5–5.5 months at ~10), after Phase 1's Core tier. Allow a few days for Bedrock model access.
 
 **Recommended order:** Stage 1, then the Core steps of Stages 2 and 4 (a working, evaluated pipeline), then 5.1 and 5.3; add the Extended steps after that. The fine-tuning steps (4.8–4.10) come last; request the GPU quota early (step 1.2), since approval can take days.
 
@@ -37,7 +37,7 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | **Models** | **Claude Haiku** (default) and **Amazon Nova Lite** on Bedrock, plus a 4-bit **3B model** (e.g. Qwen2.5-3B or Llama 3.2 3B) on `rl-home-cp02` with llama.cpp. | Sets the budgets, the evaluation set and `rl-home-cp02`'s memory use. |
 | **AWS access for the AI components** | Pod roles through the cluster's OIDC provider if Phase 1 step 9.1 (keyless AWS access) is done; otherwise scoped IAM keys, like the rest of Phase 1. | Avoids adding new static keys if they can be avoided. |
 
-ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture) and 2003 (self-hosted model on `rl-home-cp02`), in `adr/` (see the [overview's index](../overview.md#architecture-decision-records)).
+ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture), 2003 (self-hosted model on `rl-home-cp02`), 2004 (agentic AI delivery), 2005 (fine-tuning on a rented GPU), 2006 (AI operations assistant) and 2007 (AI diagnosis and remediation proposals), in `adr/` (see the [overview's index](../overview.md#architecture-decision-records)).
 
 ## Stage 1: Foundations
 
@@ -71,7 +71,7 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 **Do:** in `russetleaf-infra/envs/home`, label `rl-home-cp02` `workload=llm` and taint it `dedicated=llm:NoSchedule`; give the ARC runners a matching toleration so they keep running there, next to the model; move anything else that ran on `rl-home-cp02` in Phase 1 (e.g. Backstage overflow) back to `rl-home-cp01` and `rl-home-cp03`; recheck the kubelet PID limit against llama.cpp's process count. Update the memory budget in the Phase 2 design.
 
-**Test:** `kubectl describe node <box2>` shows the label and taint; only the runners and node agents run on `rl-home-cp02`; every node stays under its memory budget.
+**Test:** `kubectl describe node rl-home-cp02` shows the label and taint; only the runners and node agents run on `rl-home-cp02`; every node stays under its memory budget.
 
 ### Step 1.4: WordPress side of the pipeline (`russetleaf-wordpress`)
 
@@ -280,7 +280,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 5.3: Documentation
 
-**Do:** finish ADRs [2001](adr/2001-mlops-lifecycle.md), [2002](adr/2002-summary-pipeline-architecture.md), [2003](adr/2003-self-hosted-model-on-cp02.md), [2004](adr/2004-agentic-ai-delivery.md), [2005](adr/2005-fine-tuning-on-a-rented-gpu.md) , [2006](adr/2006-ai-operations-assistant.md) and [2007](adr/2007-ai-diagnosis-and-remediation-proposals.md) (resolve their open items); update the Phase 2 design wherever the build differed; add the LLM dashboard, an evaluation report and an MLflow run to the hub README's screenshots; add the AI pipeline to the hub README's architecture diagram; optionally an article on evaluation gates for LLMs.
+**Do:** finish ADRs [2001](adr/2001-mlops-lifecycle.md), [2002](adr/2002-summary-pipeline-architecture.md), [2003](adr/2003-self-hosted-model-on-cp02.md), [2004](adr/2004-agentic-ai-delivery.md), [2005](adr/2005-fine-tuning-on-a-rented-gpu.md), [2006](adr/2006-ai-operations-assistant.md) and [2007](adr/2007-ai-diagnosis-and-remediation-proposals.md) (resolve their open items); update the Phase 2 design wherever the build differed; add the LLM dashboard, an evaluation report and an MLflow run to the hub README's screenshots; add the AI pipeline to the hub README's architecture diagram; optionally an article on evaluation gates for LLMs.
 
 Also write **an account of building Phase 2 with agents** (`docs/agentic-delivery-phase-2.md` in `russetleaf-docs`, and optionally an article): what agents did, the guardrails, the review findings, and actual hours compared with the estimates and with similar Phase 1 work, using the checklist's **Done by** and **Review findings** columns ([ADR 2004](adr/2004-agentic-ai-delivery.md)).
 

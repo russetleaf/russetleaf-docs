@@ -45,7 +45,7 @@ flowchart LR
 4. Failed messages are retried and, after several attempts, moved to an **SQS dead-letter queue**, which has an alert on it.
 5. A daily **CronJob sweep** re-queues any posts still missing a summary, as a backstop.
 
-The summarizer authenticates to WordPress with an **application password** stored in **Secrets Manager** and synced by External Secrets. It reaches SQS through **EKS Pod Identity** (scoped IAM keys at home). **Bedrock model access** must be enabled for each chosen model in the region.
+The summarizer authenticates to WordPress with an **application password** stored in **Secrets Manager** and synced by External Secrets. It reaches SQS with a scoped IAM key, or an IAM role once Phase 1 step 9.1 (keyless AWS access) is done. **Bedrock model access** must be enabled for each chosen model in the region.
 
 ### LLM gateway and model serving
 
@@ -59,9 +59,9 @@ The summarizer authenticates to WordPress with an **application password** store
     - **canary splits** for model changes (e.g. send 10% of requests to a new model, then compare quality scores and cost before switching)
     - **rate limits and spending budgets** per app
 - The self-hosted model runs on a **dedicated LLM node**, `rl-home-cp02`:
-    - The nodes carry the label `workload=llm` and the taint `dedicated=llm:NoSchedule`, so only the model server (plus cluster-wide agents such as node-exporter) runs there.
+    - The node carries the label `workload=llm` and the taint `dedicated=llm:NoSchedule`, so only the model server (plus cluster-wide agents such as node-exporter) runs there.
     - The model server Deployment has a matching **toleration** and **node selector**.
-    - Model files are downloaded once by an init container from each site's **model mirror bucket** in S3 (so rebuilds do not depend on Hugging Face) into a volume on the node.
+    - Model files are downloaded once by an init container from the **model mirror bucket** in S3 (so rebuilds do not depend on Hugging Face) into a volume on the node.
     - The model **stays loaded**, since the node is dedicated to it; KEDA scales only the summarizer.
 
 ### Prompt versioning and evaluation in CI
@@ -150,7 +150,7 @@ Post content is untrusted input, so the summarizer treats it as data:
 
 ### Cost
 
-MLflow, Argo Workflows and the online-evaluation job run on the home cluster (`rl-home-cp03` has the memory); the extra Bedrock calls for daily judging cost cents a month; each fine-tuning run costs **a few dollars** of spot GPU time on EKS. Each fine-tuning run costs a few dollars of spot GPU time.
+MLflow, Argo Workflows and the online-evaluation job run on the home cluster (`rl-home-cp03` has the memory); the extra Bedrock calls for daily judging cost cents a month; each fine-tuning run costs **a few dollars** of time on a rented spot GPU instance.
 
 ### Rolling back bad AI summaries
 
@@ -168,8 +168,8 @@ russetleaf-llm-summarizer/
   prompts/                  # versioned prompts + model settings (the version is recorded with each summary)
   guardrails/               # input delimiting, personal-data redaction, output validation
   data/                     # DVC-tracked datasets (evaluation, adversarial cases, training, feedback exports)
-  training/                 # fine-tuning (LoRA distillation) container: data → train → evaluate → register; runs on a rented spot GPU
-                            #   vs base → GGUF → register in MLflow
+  training/                 # fine-tuning (LoRA distillation) container, run on a rented spot GPU: data → train →
+                            #   evaluate vs base → GGUF → register in MLflow
   online-eval/              # daily sampled scoring of production summaries + input-drift checks
   evals/
     dataset/                # 20–30 sample posts + reference notes
@@ -253,7 +253,7 @@ These parts of Phase 1's shared platform sections exist only once the AI pipelin
 
 ### Runtime security and compliance scanning
 
-    - **unexpected outbound connections** from the LLM nodes, which should only download model files (the CiliumNetworkPolicies also block these; Falco detects any attempt)
+- **Falco:** a rule for **unexpected outbound connections** from the LLM node (`rl-home-cp02`), which should only download model files (the CiliumNetworkPolicies also block these; Falco detects any attempt)
 
 ### Network policies
 
@@ -261,7 +261,7 @@ These parts of Phase 1's shared platform sections exist only once the AI pipelin
 |---|---|---|
 | Summarizer | Prometheus | WordPress REST API (layer 7: `GET`/`POST` on `/wp-json/*` only), the LiteLLM gateway, `sqs.<region>.amazonaws.com` |
 | LiteLLM gateway | Summarizer, staging summarizer, ARC runners (evaluation), Prometheus | llama.cpp, `bedrock-runtime.<region>.amazonaws.com` |
-| llama.cpp (LLM nodes) | LiteLLM gateway, Prometheus | The model mirror bucket's S3 endpoint only (init container); nothing else |
+| llama.cpp (the LLM node) | LiteLLM gateway, Prometheus | The model mirror bucket's S3 endpoint only (init container); nothing else |
 
 ### Site design
 
@@ -299,7 +299,7 @@ One trace then shows: a post is published → queued → picked up by the summar
 
 ### ci tests
 
-    - Summarizer: a queued post gets a (mock) summary written back to WordPress; a failing message ends up in the dead-letter queue
+- **Summarizer:** a queued post gets a (mock) summary written back to WordPress; a failing message ends up in the dead-letter queue
 
 ### Performance tests
 

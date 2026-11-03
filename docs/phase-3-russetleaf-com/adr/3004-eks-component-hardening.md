@@ -22,7 +22,7 @@
 
 - **AWS-owned keys for envelope encryption:** the default and free, but the SRA prefers customer-managed keys for control and audit.
 - **A private-only API endpoint:** stronger, but needs a VPN or bastion for the workstation and the home runners; the home-address restriction is enough for a demo cluster.
-- **Bottlerocket nodes:** a hardened, minimal OS like Talos; a good option, but AL2023 is simpler with Karpenter and the NVIDIA AMI.
+- **Bottlerocket nodes:** a hardened, minimal OS like Talos; a good option, but AL2023 is simpler to configure with Karpenter and the managed node group.
 
 ## Consequences
 

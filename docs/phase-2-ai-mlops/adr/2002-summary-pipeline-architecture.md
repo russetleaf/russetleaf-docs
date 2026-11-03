@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-02
-- **Applies to:** `russetleaf-llm-summarizer`, `russetleaf-wordpress`'s summary-queue plugin, the LLM gateway, on both sites
+- **Applies to:** `russetleaf-llm-summarizer`, `russetleaf-wordpress`'s summary-queue plugin, the LLM gateway, on russetleaf.dev
 - **Phase:** 2 (russetleaf.dev only)
 
 ## Context

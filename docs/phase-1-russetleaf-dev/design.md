@@ -44,7 +44,7 @@ flowchart TB
     tunnel["Tunnel (outbound-only from home)"]
   end
   subgraph lab["Lab network 10.10.0.0/24 behind the ER605 router: Talos cluster, three control-plane nodes"]
-    cfd["cloudflared"] --> ingress["ingress-nginx"]
+    cfd["cloudflared"] --> ingress["Cilium Gateway<br/>(Gateway API)"]
     ingress --> wp["WordPress pods<br/>(rl-home-cp03 and rl-home-cp01, Argo Rollouts canaries)"]
     wp --> db[("MariaDB<br/>primary rl-home-cp03, replica rl-home-cp01")]
     wp --> cache[("Valkey")]
@@ -129,12 +129,12 @@ Separate workload accounts limit how far a compromise can spread, and give each 
 - **Encryption:** EBS encryption by default; **KMS customer-managed keys** for the Log Archive and Backup buckets (about $1/key/month); block public access for EBS snapshots and AMIs.
 - **EKS API endpoint (Phase 3):** public but **restricted to the home network's address** from the start (private access also on, for the nodes); the AWS **demo workflows run on the home ARC runners**, so they come from that address too ([ADR 1030](adr/1030-github-actions-ci.md)).
 - **EKS nodes (Phase 3):** **IMDSv2 required** with a **hop limit of 1** in Karpenter's node class, so pods cannot reach the node's instance credentials (they use Pod Identity instead).
-- **VPC (russetleaf-com, Phase 3):** **VPC endpoints** for S3, STS, SQS, Secrets Manager and Bedrock (private traffic, lower NAT costs); **VPC flow logs** to Log Archive during demos; default security groups with no rules; default VPCs removed.
+- **VPC (russetleaf-com, Phase 3):** **VPC endpoints** for S3, STS, SQS (Karpenter's interruption queue) and Secrets Manager (private traffic, lower NAT costs); **VPC flow logs** to Log Archive during demos; default security groups with no rules; default VPCs removed.
 - **AWS Well-Architected review:** a review of the design with the free **Well-Architected Tool** (Security pillar first), with the report kept in `docs/` and revisited yearly.
 
 ### Cost
 
-Accounts, SCPs, RCPs, declarative policies, Identity Center, tag policies and Access Analyzer's external-access findings are free. **Security Hub, Config and KMS** add roughly **$5–15/month**, depending mostly on how many resources Config records (focused recording keeps the demo stack's churn in check). That brought the always-on total to about $15–35/month; with `rl-home-cp03`'s electricity ([ADR 1020](adr/1020-three-node-ha-home-cluster.md)) it is now about **$18–40/month**. That figure is the **whole** always-on cost (the security services are already included in it, not added on top). With about 20 demo hours a month (~$20), the total is **$30–60/month**; keeping demos to about 10 hours keeps it **under $50**.
+Accounts, SCPs, RCPs, declarative policies, Identity Center, tag policies and Access Analyzer's external-access findings are free. **Security Hub, Config and KMS** add roughly **$5–15/month**, depending mostly on how many resources Config records (focused recording keeps the demo stack's churn in check). With `rl-home-cp03`'s electricity ([ADR 1020](adr/1020-three-node-ha-home-cluster.md)), the whole always-on cost is about **$14–33/month** (the security services are included in it, not added on top; see [Home component mapping and costs](#home-component-mapping-and-costs)). With Phase 3 and about 20 demo hours a month (~$14), the total is about **$30–50/month**.
 
 ## Security foundations
 
@@ -209,13 +209,13 @@ The project depends on more than AWS: **GitHub** (code, CI, packages, attestatio
 | Read-only root filesystem | **Require Read-Only Root Filesystem** (`require-ro-rootfs`) | Containers cannot write to their own filesystem. WordPress gets small writable `emptyDir` volumes for `/tmp`, Apache's run and lock directories, PHP sessions and, only if the chosen offload plugin writes uploads locally first, the uploads directory. Backs up the Falco rule on writes to `/var/www/html` |
 | Health probes | **Require Pod Probes** (`require-pod-probes`) | Readiness and liveness probes on every long-running workload; Argo Rollouts, the HPA and Kubernetes' own restarts depend on them |
 | No NodePorts | **Disallow NodePort** (`restrict-nodeport`), plus a rule blocking `LoadBalancer` Services | Nothing needs them: traffic arrives through the Cloudflare Tunnel at home and through the ALB (created from an Ingress, target type `ip`) on AWS |
-| Unique Ingress hosts | **Unique Ingress Host and Path** (`unique-ingress-host-and-path`), which looks up existing Ingresses before admitting a new one | Two Ingresses cannot claim the same host and path (e.g. a staging or admin hostname colliding with production) |
+| Unique Ingress hosts | **Unique Ingress Host and Path** (`unique-ingress-host-and-path`), which looks up existing Ingresses before admitting a new one | Two Ingresses (or, at home, two HTTPRoutes, through a matching rule) cannot claim the same host and path (e.g. a staging or admin hostname colliding with production) |
 | Namespace quotas | A **generate** rule | Every application namespace (WordPress, staging, tenants; the summarizer, gateway and model server from Phase 2) gets a **LimitRange** (default requests and memory limits) and a **ResourceQuota** (total CPU requests, memory, **ephemeral storage** and pod count; the LimitRange also sets default ephemeral-storage requests and limits), so a runaway HPA, KEDA scaling or misconfigured Deployment cannot exhaust a node; HPAs and KEDA objects also set maximum replicas |
 | No risky RBAC | A validate rule on Roles, ClusterRoles and bindings ([ADR 1034](adr/1034-kubernetes-threat-model-coverage.md)) | Rejects `escalate`, `bind` and `impersonate`, access to `nodes/proxy`, wildcard verbs or resources, and bindings to `cluster-admin`, except a named allow-list (Kubernetes' own roles, Argo CD, `platform-admin`, and third-party components that need them, each with a reason) |
 | No long-lived token Secrets | A validate rule | Rejects Secrets of type `kubernetes.io/service-account-token`; pods get short-lived projected tokens only |
 | Default-deny networking | A **generate** rule | Every new application namespace gets the Cilium baseline allowances (see [Networking](#networking-cilium-and-hubble)) |
 
-**Where each policy applies strictly:** the project's own workloads (WordPress and the staging Jobs; the summarizer and gateway from Phase 2; the seed Job in Phase 3) must pass **all** of them. Third-party platform components get narrow **`PolicyException`** resources only where they genuinely need it, for example: Cilium, Falco, local-path-provisioner, the NVIDIA device plugin and (on EKS) the VPC CNI and EBS CSI node agents need privileged access; some upstream images cannot run with a read-only filesystem or as non-root. Each exception names the exact namespace and workload and is reviewed like any other change.
+**Where each policy applies strictly:** the project's own workloads (WordPress and the staging Jobs; the summarizer and gateway from Phase 2; the seed Job in Phase 3) must pass **all** of them. Third-party platform components get narrow **`PolicyException`** resources only where they genuinely need it, for example: Cilium, Falco, local-path-provisioner and (on EKS) the VPC CNI and EBS CSI node agents need privileged access; some upstream images cannot run with a read-only filesystem or as non-root. Each exception names the exact namespace and workload and is reviewed like any other change.
 
 **Rollout:** every policy starts in **audit mode**; Policy Reporter's findings go to `#rl-security`; fix or add a justified exception for each; then switch to **enforce**.
 
@@ -250,7 +250,7 @@ The reasoning is recorded in [ADR 1009](adr/1009-gvisor-sandboxing.md).
 
 Each Kubernetes component has explicit controls and a repeatable check, recorded in [ADR 1031](adr/1031-kubernetes-component-hardening.md) (which has the full table). The additions beyond the sections above:
 
-- **Pod Security Admission labels on every namespace, on both clusters** (EKS does not enforce Pod Security by default): `restricted` for application namespaces (WordPress, staging, tenants; the AI namespaces from Phase 2), `baseline` for most platform services, `privileged` only for node agents (Cilium, Falco, Alloy, the storage provisioner, the NVIDIA device plugin), with the **PSA version pinned** (`enforce-version`) so Kubernetes upgrades do not silently change enforcement. Kyverno's **`restricted`** policy set enforces the same for application namespaces, so two independent controls apply.
+- **Pod Security Admission labels on every namespace, on both clusters** (EKS does not enforce Pod Security by default): `restricted` for application namespaces (WordPress, staging, tenants; the AI namespaces from Phase 2), `baseline` for most platform services, `privileged` only for node agents (Cilium, Falco, Alloy, the storage provisioner), with the **PSA version pinned** (`enforce-version`) so Kubernetes upgrades do not silently change enforcement. Kyverno's **`restricted`** policy set enforces the same for application namespaces, so two independent controls apply.
 - **Service-account tokens off by default:** a Kyverno rule sets `automountServiceAccountToken: false` unless a workload needs the Kubernetes API (operators, Argo CD, KEDA, External Secrets).
 - **Encryption at rest:** Secrets in etcd (Talos's built-in encryption at home; **EKS envelope encryption with a customer-managed KMS key**); **Talos disk encryption** of the system-state and data partitions on every home node, **sealed to the TPM**; etcd snapshots stored only in the KMS-encrypted backup bucket, readable only by the backup role.
 - **kubelet:** `seccompDefault: true` (RuntimeDefault even for pods that do not ask), the read-only port off, certificate rotation, **serving certificates signed by the cluster CA** (so metrics-server and Prometheus verify TLS; [ADR 1035](adr/1035-platform-security.md)), a **per-pod PID limit** (`podPidsLimit`, so a fork bomb cannot exhaust a node) and **hard eviction thresholds** for memory, disk and inodes, alongside `systemReserved` and `kubeReserved` ([ADR 1034](adr/1034-kubernetes-threat-model-coverage.md)).
@@ -301,7 +301,7 @@ Falco is one layer among several. The design combines **prevention** (stopping a
 - **GuardDuty** (organization-wide, administered from the **Security Tooling** account): detects compromised credentials, unusual API calls, crypto-mining, and contact with known-malicious addresses, plus EKS audit-log monitoring whenever the demo cluster exists. About **$1–5/month** for an account this size after the 30-day free trial (check current pricing).
 - **Findings to Slack:** GuardDuty findings (medium severity and above) and **Security Hub** critical and high findings go through **EventBridge → SNS → Amazon Q Developer** (in Security Tooling) to `#rl-security` (high or critical severity also to `#rl-critical`).
 
-**Optional: CrowdSec.** CrowdSec analyses the ingress logs and **bans abusive IP addresses** through a Cloudflare "bouncer" (a modern, shared-intelligence fail2ban). With the three-node cluster's extra memory it is now realistic at home (about 100–200 MB of memory).
+**Optional: CrowdSec.** CrowdSec analyses WordPress's and the gateway's access logs and **bans abusive IP addresses** through a Cloudflare "bouncer" (a modern, shared-intelligence fail2ban). With the three-node cluster's extra memory it is now realistic at home (about 100–200 MB of memory).
 
 **Deliberately not used: a network IDS** (Suricata or Zeek) inside the cluster. It needs a lot of CPU and memory, and the traffic it would inspect is already covered: TLS ends at Cloudflare and the ALB, where the WAFs inspect it, and Cilium and Hubble cover traffic inside the cluster. A home-network IDS on the router (e.g. OPNsense with Suricata) is worthwhile but outside this project.
 
@@ -355,7 +355,7 @@ All Terraform runs through **GitHub Actions** (apart from the first local applie
 | Formatting | `terraform fmt -check` | Fails on unformatted code |
 | Validation | `terraform validate` | Syntax and internal consistency |
 | Linting | **tflint** with the **`tflint-ruleset-aws`** plugin | Catches mistakes and AWS-specific errors (invalid instance types, deprecated settings) before AWS rejects them |
-| Static security analysis | **Checkov**, including **custom policies** | Insecure settings in the source and the plan (SARIF to GitHub code scanning), plus project rules: every resource tagged `Project`/`Site`/`Env`, only `us-east-1`, only approved instance families, Block Public Access on every S3 bucket. Custom policies keep one policy tool for Terraform, as Kyverno is for Kubernetes (no OPA/Conftest) |
+| Static security analysis | **Checkov**, including **custom policies** | Insecure settings in the source and the plan (SARIF to GitHub code scanning), plus project rules: every resource tagged `Project`/`Site`/`Env`, only `us-east-1` (plus `us-west-2` for the Backup account's `envs/dr`, matching the SCPs), only approved instance families, Block Public Access on every S3 bucket. Custom policies keep one policy tool for Terraform, as Kyverno is for Kubernetes (no OPA/Conftest) |
 | Module tests | **`terraform test`** | Tests the shared modules, with mocked providers where possible |
 | Secret scanning | **gitleaks**, plus **GitHub secret scanning with push protection** (free on public repos) | Push protection blocks a commit containing a recognized secret before it is pushed |
 | Plan | `terraform plan -out` | The plan is **saved** as a short-lived, private workflow artifact (plan files can contain secret values) and posted as a pull-request comment |
@@ -435,7 +435,7 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
 
 ### Media storage: S3, not EFS (by decision)
 
-Many WordPress-on-AWS guides, including AWS's own reference architecture, put `wp-content` on **EFS**, a shared network filesystem mounted by every server. This project deliberately does not. Media goes to **S3**, and WordPress's code (core, plugins, themes) is **built into the container image**. The reasoning is recorded as an ADR, [ADR 1002](adr/1002-s3-media-not-efs.md) in `russetleaf-gitops`.
+Many WordPress-on-AWS guides, including AWS's own reference architecture, put `wp-content` on **EFS**, a shared network filesystem mounted by every server. This project deliberately does not. Media goes to **S3**, and WordPress's code (core, plugins, themes) is **built into the container image**. The reasoning is recorded as an ADR, [ADR 1002](adr/1002-s3-media-not-efs.md).
 
 **Two production patterns, for two kinds of site:**
 
@@ -465,7 +465,7 @@ Whichever is chosen must also work with a **custom S3 endpoint**, so the ci test
 
 ### Backup and recovery
 
-- Daily **logical backups** of the russetleaf.dev database to S3; see [russetleaf.dev database backups](#russetleafdev-database-backups).
+- **Logical backups** of the russetleaf.dev database to S3 every 6 hours; see [russetleaf.dev database backups](#russetleafdev-database-backups).
 - **S3 versioning**, plus cross-region replication for disaster recovery.
 - A **restore that has actually been tested**.
 
@@ -475,7 +475,7 @@ Whichever is chosen must also work with a **custom S3 endpoint**, so the ci test
 - **GitOps** (Argo CD) for what runs in the cluster, with **self-heal on by default** (manual sync only for Cilium and the staging Applications), **`ignoreDifferences`** for fields that controllers legitimately change (replica counts set by HPAs and KEDA), and an **`ArgoCDAppOutOfSync`** alert (Prometheus, from Argo CD's `argocd_app_info` metric) when an app stays out of sync or degraded for 15 minutes, which catches drift that self-heal cannot fix. AppProjects **warn about orphaned resources** (objects in managed namespaces that Argo CD does not own), since self-heal only reverts what Argo CD manages ([ADR 1034](adr/1034-kubernetes-threat-model-coverage.md)).
 - **Internal certificates** from **cert-manager** with an internal CA, and **trust-manager** distributing the CA bundle (MariaDB TLS and other internal endpoints); public certificates stay with Cloudflare and ACM. See [ADR 1028](adr/1028-internal-pki.md).
 - **Cost visibility** with **OpenCost** (cost per namespace, workload and node; Phase 2 adds cost per summary and Bedrock spend), and **AWS billing** for actual costs, with cost alerts and reports in `#rl-costs`; see [Cost monitoring and alerts](#cost-monitoring-and-alerts).
-- **Progressive delivery** with **Argo Rollouts**: new WordPress versions (and, from Phase 2, summarizer versions) go out as canaries (e.g. 10% → 50% → 100%). An analysis step checks Prometheus metrics (error rate, latency) at each stage and **rolls back automatically** if they get worse. The metrics come from **CloudWatch** on AWS (ALB 5xx rate and response time, through Argo Rollouts' CloudWatch provider) and from **ingress-nginx's Prometheus metrics** at home.
+- **Progressive delivery** with **Argo Rollouts**: new WordPress versions (and, from Phase 2, summarizer versions) go out as canaries (e.g. 10% → 50% → 100%). An analysis step checks Prometheus metrics (error rate, latency) at each stage and **rolls back automatically** if they get worse. The metrics come from **CloudWatch** on AWS (ALB 5xx rate and response time, through Argo Rollouts' CloudWatch provider) and from the **Cilium Gateway's request metrics** in Prometheus at home, with the Argo Rollouts Gateway API plugin shifting traffic between versions ([ADR 1044](adr/1044-cilium-gateway-api.md)).
 - **Metrics, logs and alerts**: Prometheus, **Loki** (logs, collected by Grafana Alloy; see [Logging](#logging-loki--alloy)), Grafana and Alertmanager, with every alert routed to **Slack** by site and topic; see [Alerting and notifications](#alerting-and-notifications-slack).
 - **Deployment notifications**: Argo CD and Argo Rollouts post syncs, failures, canary steps and rollbacks to `#rl-deploys`.
 - **AWS Budgets alerts** (Phase 2 adds one on Bedrock spending, in case a bug calls the model in a loop).
@@ -483,7 +483,7 @@ Whichever is chosen must also work with a **custom S3 endpoint**, so the ci test
 
 ### WordPress image and Helm chart
 
-The site uses a **custom image built on the official `wordpress` image** and a **small Helm chart of its own** (Deployment/Rollout, Service, Ingress, HPA, PDB, WP-Cron CronJob), both maintained in the `russetleaf-wordpress` repo and released together. The Bitnami WordPress chart is not used: it only works with Bitnami-format images, and Bitnami cut back its free images in 2025. Owning the chart removes that dependency and keeps every setting visible.
+The site uses a **custom image built on the official `wordpress` image** and a **small Helm chart of its own** (Deployment/Rollout, Service, an HTTPRoute at home or an Ingress on AWS, HPA, PDB, WP-Cron CronJob), both maintained in the `russetleaf-wordpress` repo and released together. The Bitnami WordPress chart is not used: it only works with Bitnami-format images, and Bitnami cut back its free images in 2025. Owning the chart removes that dependency and keeps every setting visible.
 
 **Repos and packages are public early** ([ADR 1030](adr/1030-github-actions-ci.md)): the repos are made public in Phase 1 step 1.1, after a secret scan, which gives free GitHub-hosted CI minutes, and the GHCR packages are made public at first push.
 
@@ -516,12 +516,12 @@ Each component's policies live in its `base/` (shared by both sites), with per-s
 
 | Workload | Allowed inbound | Allowed outbound |
 |---|---|---|
-| WordPress | From the ingress (ingress-nginx at home; the ALB on AWS), Prometheus | Database (MariaDB in-cluster / RDS Proxy endpoint), Valkey / ElastiCache, and by DNS name only: `*.s3.<region>.amazonaws.com`, `sqs.<region>.amazonaws.com`, `email-smtp.<region>.amazonaws.com`, `sts.<region>.amazonaws.com`, and Google's login endpoints (`accounts.google.com`, `oauth2.googleapis.com`, `www.googleapis.com`) |
+| WordPress | From the ingress (the Cilium Gateway at home; the ALB on AWS), Prometheus | Database (MariaDB in-cluster / RDS Proxy endpoint), Valkey / ElastiCache, and by DNS name only: `*.s3.<region>.amazonaws.com`, `sqs.<region>.amazonaws.com`, `email-smtp.<region>.amazonaws.com`, `sts.<region>.amazonaws.com`, and Google's login endpoints (`accounts.google.com`, `oauth2.googleapis.com`, `www.googleapis.com`) |
 | MariaDB (home) | WordPress, the backup Job, Prometheus | `*.s3.<region>.amazonaws.com` (backups) |
 | Argo CD | Ingress (UI and API, behind Cloudflare Access), Prometheus | GitHub and GHCR (by DNS name), the API servers it manages, Dex |
 | External Secrets | Prometheus | `secretsmanager.<region>.amazonaws.com`, `sts.<region>.amazonaws.com`, the API server |
 | cert-manager, Kyverno, KEDA and other operators | The API server (webhooks), Prometheus | The API server (plus specific external endpoints where needed, e.g. KEDA → SQS) |
-| cloudflared (home) | — | Cloudflare's tunnel endpoints (by DNS name), ingress-nginx |
+| cloudflared (home) | — | Cloudflare's tunnel endpoints (by DNS name), the Cilium Gateway |
 
 Example (WordPress outbound, simplified):
 
@@ -571,13 +571,13 @@ encryption:
 
 ### Service mesh (Istio): not used, by decision
 
-The project deliberately has **no service mesh**. The reasoning is recorded as an **architecture decision record (ADR)**, [ADR 1001](adr/1001-no-service-mesh.md) in `russetleaf-gitops`:
+The project deliberately has **no service mesh**. The reasoning is recorded as an **architecture decision record (ADR)**, [ADR 1001](adr/1001-no-service-mesh.md):
 
 | What a mesh like Istio would add | How this design already covers it |
 |---|---|
 | mTLS between services | Cilium WireGuard encryption between nodes, plus TLS on every sensitive connection; per-connection service *identity* checks are the one thing not covered |
 | Layer-7 authorization | CiliumNetworkPolicies with layer-7 rules |
-| Traffic shifting for canaries | Argo Rollouts (through ingress-nginx and the ALB) for code; the LiteLLM gateway for models |
+| Traffic shifting for canaries | Argo Rollouts (through the Cilium Gateway and the ALB) for code; the LiteLLM gateway for models |
 | Retries, timeouts, circuit breaking | The SQS queue with retries and a dead-letter queue; LiteLLM's retries and fallbacks |
 | Per-service request metrics | Hubble HTTP metrics, ingress/ALB metrics, and the apps' own OpenTelemetry metrics |
 
@@ -741,7 +741,7 @@ Prometheus **scrapes** (pulls) metrics from HTTP endpoints; nothing pushes to it
 
 | Layer | What it shows | russetleaf.dev (home) | russetleaf.com (AWS, Phase 3) |
 |---|---|---|---|
-| Requests (rate, errors, latency) | Is the site healthy for visitors? | ingress-nginx metrics | ALB metrics from CloudWatch |
+| Requests (rate, errors, latency) | Is the site healthy for visitors? | Cilium Gateway (Envoy) metrics | ALB metrics from CloudWatch |
 | Web server / PHP | Busy vs idle Apache workers, saturation | **apache_exporter** sidecar reading Apache's `mod_status` page (localhost only) | Same |
 | Database | Connections, slow queries, errors | **MariaDB Operator's built-in metrics** (mysqld-exporter sidecar) | RDS and RDS Proxy metrics from CloudWatch |
 | Object cache | Hit ratio, memory, evictions | **redis_exporter** (works with Valkey) | ElastiCache metrics from CloudWatch |
@@ -867,7 +867,7 @@ Every message carries a **`site=dev` or `site=com` label** (or a `[dev]` / `[com
 
 ### How alerts are routed
 
-- **Site and environment labels:** each cluster's Prometheus adds `site` (`dev` or `com`) and `cluster` (`rl-home` or `eks`) to everything it sends, as external labels. Workloads carry an `env` label (`staging` or `prod`), which alerts inherit.
+- **Site and environment labels:** each cluster's Prometheus adds `site` (`dev` or `com`) and `cluster` (`rl-home` or `rl-use1`) to everything it sends, as external labels. Workloads carry an `env` label (`staging` or `prod`), which alerts inherit.
 - **Alertmanager routing:**
     - `severity=critical` → `#rl-critical` **and** the site's channel
     - `severity=warning` → the site's channel
@@ -1014,7 +1014,7 @@ The OpenCost alerts are `PrometheusRule`s in `platform/opencost/`, labeled `team
 
 ### Cost allocation tags must be activated
 
-AWS only lets Budgets and Cost Explorer filter by custom tags (`Project`, `Site`, `Env`, `Stack`, `ManagedBy`) after they are **activated as cost allocation tags** in the Billing console, or with Terraform (`aws_ce_cost_allocation_tag`, in `russetleaf-infra/bootstrap/`). A tag can only be activated after it has appeared on at least one resource, activation can take up to a day to show, and costs are only tagged from activation onwards, so activate them early.
+AWS only lets Budgets and Cost Explorer filter by custom tags (`Project`, `Site`, `Env`, `Stack`, `ManagedBy`) after they are **activated as cost allocation tags** in the Billing console, or with Terraform (`aws_ce_cost_allocation_tag`, in `russetleaf-infra/envs/org/`, applied in the management account in Phase 1 step 2.0). A tag can only be activated after it has appeared on at least one resource, activation can take up to a day to show, and costs are only tagged from activation onwards, so activate them early.
 
 ## Update strategy
 
@@ -1069,7 +1069,7 @@ A **monthly scheduled workflow** in `russetleaf-gitops` checks running versions 
 Recovering from losses bigger than a bad change (a destroyed home lab, a compromised or lost AWS account, a regional outage, a lost GitHub or Cloudflare account) is covered by **the [disaster recovery plan](disaster-recovery.md)**: an inventory of every asset and where its copy is, scenarios with data-loss and recovery-time targets and procedures, the bootstrap order from zero, and drills. The decisions are recorded in [ADR 1018](adr/1018-disaster-recovery.md). In short:
 
 - **Rebuild from code** wherever possible (Terraform, GitOps, image builds).
-- **Copy what cannot be rebuilt outside the workload accounts and region:** the **Backup** account (Security OU) holds **S3 Object Lock** buckets in **us-west-2** (30-day retention) receiving **replicated** copies of the database backups, Terraform state and media (CloudTrail logs already live in the **Log Archive** account's locked buckets); russetleaf.com's database is dumped at every `demo-down` and replicated the same way; the four repos are **mirrored daily** as `git bundle`s.
+- **Copy what cannot be rebuilt outside the workload accounts and region:** the **Backup** account (Security OU) holds **S3 Object Lock** buckets in **us-west-2** (30-day retention) receiving **replicated** copies of the database backups, Terraform state and media (CloudTrail logs already live in the **Log Archive** account's locked buckets); russetleaf.com's database is dumped at every `demo-down` and replicated the same way; all five repos (including `russetleaf-docs`) are **mirrored daily** as `git bundle`s.
 - **Regenerate secrets** rather than copy them, except account access and the Talos secrets bundle, which live in a **break-glass kit** (password manager plus a printed copy of the essentials).
 - **Drills:** monthly restores, quarterly restores from the backup account, and a **yearly full "home lab destroyed" rebuild** using only the break-glass kit and the backups.
 - **Cost:** a few cents a month.
@@ -1142,7 +1142,7 @@ The three nodes are small-form-factor business PCs with 35 W Intel "T" processor
 
 | Hostname | Model | CPU | RAM (max) | Disk | Network | Address | Role |
 |---|---|---|---|---|---|---|---|
-| `rl-home-cp01` | Lenovo ThinkCentre M710q Tiny | Intel Core i5-6400T, 4 cores, 2.2 GHz | 8 GB DDR4 (32 GB) | 256 GB SSD | 1 GbE, Intel | `10.10.0.11` | Control plane + **secondary workloads**: a WordPress replica, the **MariaDB replica**, second ingress-nginx and cloudflared replicas |
+| `rl-home-cp01` | Lenovo ThinkCentre M710q Tiny | Intel Core i5-6400T, 4 cores, 2.2 GHz | 8 GB DDR4 (32 GB) | 256 GB SSD | 1 GbE, Intel | `10.10.0.11` | Control plane + **secondary workloads**: a WordPress replica, the **MariaDB replica**, the second cloudflared replica |
 | `rl-home-cp02` | Dell OptiPlex 3040 Micro | Intel Core i5-6500T, 4 cores, 2.5 GHz | 8 GB DDR4 (16 GB) | 256 GB SSD | 1 GbE, Intel | `10.10.0.12` | Control plane + general workloads: the CI runners and staging runs. In Phase 2 it becomes the **dedicated LLM node** (it has the faster of the two 4-core CPUs) |
 | `rl-home-cp03` | Dell OptiPlex 3060 Micro | Intel Core i5-8500T, 6 cores, 2.1 GHz | 16 GB DDR4 (32 GB) | 256 GB NVMe SSD | 1 GbE, Intel | `10.10.0.13` | Control plane + **main workloads**: Argo CD, monitoring, Loki, Tempo, platform services, a WordPress replica, the **MariaDB primary** |
 | (virtual IP) | — | — | — | — | — | `10.10.0.10` | The Kubernetes API, held by one healthy node at a time |
@@ -1168,7 +1168,7 @@ All three nodes are **control-plane nodes** that also run workloads, so etcd kee
 | Node | Main memory users | Estimated use |
 |---|---|---|
 | `rl-home-cp03` (16 GB) | Talos control plane and etcd (~1.5 GB), Prometheus/Grafana/Alertmanager (~2 GB), Argo CD (~0.7 GB), Loki and Tempo (~0.8 GB), platform services (Kyverno, External Secrets, Trivy Operator, OpenCost, Argo Rollouts: ~2 GB), node agents (Cilium, Falco, Alloy: ~0.7 GB), MariaDB primary and a WordPress replica (~1.3 GB), Backstage with PostgreSQL (~1.2 GB), Chaos Mesh, CrowdSec and Tetragon (~0.6 GB) | **~11–14 GB** |
-| `rl-home-cp01` (8 GB) | Talos control plane and etcd (~1.5 GB), node agents (~0.7 GB), a WordPress replica, the MariaDB replica, ingress-nginx and cloudflared replicas (~1.5 GB), staging runs while they exist (~1 GB) | **~4.5–5 GB** |
+| `rl-home-cp01` (8 GB) | Talos control plane and etcd (~1.5 GB), node agents (~0.7 GB), a WordPress replica, the MariaDB replica, a cloudflared replica (~1.5 GB), staging runs while they exist (~1 GB) | **~4.5–5 GB** |
 | `rl-home-cp02` (8 GB) | Talos control plane and etcd (~1.5 GB), node agents (~0.7 GB), CI runners while running (~0.5–1 GB), and overflow from `rl-home-cp03` (e.g. Backstage) if needed | **~3–5 GB** (Phase 2 adds the model: ~6.5–7 GB) |
 
 **Rule:** if `rl-home-cp03` passes about **85%** memory use, move Backstage (or, in Phase 2, MLflow) to `rl-home-cp01` or `rl-home-cp02` (which has the headroom), or upgrade `rl-home-cp03` to 32 GB (its maximum). The plan checks memory at the steps that add large components.
@@ -1177,7 +1177,7 @@ All three nodes are **control-plane nodes** that also run workloads, so etcd kee
 
 **BIOS settings on every node:** power on after AC loss (so nodes restart by themselves after a power cut), virtualization enabled, current BIOS.
 
-**Availability:** the cluster survives the loss of any one node: the database fails over to its replica, WordPress, ingress-nginx and cloudflared run on more than one node, and Talos and Kubernetes upgrades roll through the nodes without downtime. It is **not** protected against a home power or internet outage; a **UPS** is recommended. Recovery targets are in [ADR 1014](adr/1014-availability-levels.md).
+**Availability:** the cluster survives the loss of any one node: the database fails over to its replica, WordPress and cloudflared run on more than one node, Cilium's gateway runs on every node, and Talos and Kubernetes upgrades roll through the nodes without downtime. It is **not** protected against a home power or internet outage; a **UPS** is recommended. Recovery targets are in [ADR 1014](adr/1014-availability-levels.md).
 
 Two parts of the AWS design deliberately do not run at home:
 
@@ -1242,7 +1242,7 @@ The cost column is what russetleaf.dev costs to run 24/7 in Phase 1. The russetl
 |---|---|---|---|
 | Kubernetes | Talos: three control-plane nodes (`rl-home-cp03`: i5-8500T, 16 GB; `rl-home-cp01`: i5-6400T, 8 GB; `rl-home-cp02`: i5-6500T, 8 GB) with a virtual IP | EKS: a Karpenter general NodePool | ~$3–5 (electricity for `rl-home-cp03`) |
 | Node autoscaling | None (fixed hardware) | Karpenter | $0 |
-| Ingress / edge | Cloudflare Tunnel + Cloudflare WAF (free plan) → ingress-nginx | CloudFront (always on) → ALB + AWS WAF | $0 |
+| Ingress / edge | Cloudflare Tunnel + Cloudflare WAF (free plan) → Cilium Gateway (Gateway API) | CloudFront (always on) → ALB + AWS WAF | $0 |
 | DNS | Cloudflare (russetleaf.dev) | Route 53 (russetleaf.com) + ExternalDNS | $0 |
 | Offline page | n/a | S3 + CloudFront error fallback, pointing to russetleaf.dev | (in the edge row below) |
 | Database | MariaDB in-cluster (MariaDB Operator), primary–replica replication with automatic failover, operator-generated passwords, TLS | RDS for MariaDB Multi-AZ behind RDS Proxy (IAM auth), restored from snapshot | $0 |
@@ -1279,7 +1279,7 @@ These practices go beyond building the system: running the platform as a product
 
 | Service | SLI | SLO (28-day window) |
 |---|---|---|
-| russetleaf.dev site | Successful requests (non-5xx) at ingress-nginx | 99.5% |
+| russetleaf.dev site | Successful requests (non-5xx) at the Cilium Gateway | 99.5% |
 | russetleaf.dev site | Page requests served under 1 second | 95% |
 | Kubernetes API (home) | Successful API requests | 99.9% |
 

@@ -20,7 +20,7 @@ The design could already rebuild most things from code (Terraform, GitOps, image
 
 - **A separate backup AWS account** (in an AWS Organization), holding **S3 Object Lock** buckets in **us-west-2** (30-day retention; governance mode first, compliance mode once proven), receiving **S3 replication** from the main account's backup, Terraform state, media and CloudTrail buckets through a write-only replication role. Access through a separate login kept in the break-glass kit.
 - **russetleaf.com's database:** a logical dump at every `demo-down`, stored in its backup bucket and replicated (instead of cross-account snapshot copies, which would need KMS key sharing).
-- **Daily repo mirrors** (`git bundle`) of the four repos into the backup account, through a write-only OIDC role. Images and charts are rebuilt rather than copied.
+- **Daily repo mirrors** (`git bundle`) of every repo (the four code repos and `russetleaf-docs`) into the backup account, through a write-only OIDC role. Images and charts are rebuilt rather than copied.
 - **Regenerate secrets rather than copy them**, except those that cannot be regenerated (account access, the Talos secrets bundle), which go in the **break-glass kit**: the password manager plus a printed copy of the essentials.
 - **A written plan** (the [disaster recovery plan](../disaster-recovery.md)): an asset inventory, scenarios with data-loss and recovery-time targets and procedures, and the bootstrap order from zero.
 - **Drills:** monthly restore; quarterly restore from the backup account; a yearly full "home lab destroyed" rebuild using only the kit and backups; a once-then-yearly russetleaf.com restore; a 6-monthly break-glass kit check.

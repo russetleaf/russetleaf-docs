@@ -41,4 +41,4 @@ On the home cluster, etcd runs on all three nodes ([ADR 1020](1020-three-node-ha
 
 ## Open items
 
-- Phase 1 step 4.4 (etcd alerts), 5.5 (runner limits) and 8.1 (llama.cpp limit).
+- Phase 1 steps 4.4 (etcd alerts) and 5.5 (runner limits); Phase 2 step 3.1 (llama.cpp limit).

@@ -27,7 +27,7 @@ This phase is built with **AI coding agents** under [ADR 2004](../phase-2-ai-mlo
 
 Use the same Ubuntu 24.04 setup as the home lab ([Local workstation setup](../phase-1-russetleaf-dev/plan.md#local-workstation-setup-ubuntu-2404)). Additions for AWS:
 
-- An AWS SSO profile for the demo account (or the same account), and `aws eks update-kubeconfig --name <cluster> --alias rl-use1 --profile <profile>` after each `demo-up`, so the kubeconfig context is clearly named.
+- An AWS SSO profile for the russetleaf-com account, and `aws eks update-kubeconfig --name <cluster> --alias rl-use1 --profile <profile>` after each `demo-up`, so the kubeconfig context is clearly named.
 - Nothing else to install: `terraform`, `kubectl`, `helm`, `argocd` and the AWS CLI from the home lab setup cover EKS. Pin the `kubectl` version in `russetleaf-infra`'s `.mise.toml` within one minor version of the EKS version.
 
 ## Priorities and time estimates
@@ -76,7 +76,7 @@ These steps must be done first, because this plan builds on them:
 - **russetleaf.com DNS:** if the domain is registered outside Route 53, plan to move its name servers to Route 53 in step 1.2.
 - **Budget guardrails:** the **russetleaf-com** account's budget (from `envs/org`, e.g. alerts at $20 and $40 per month), and a **Cost Anomaly Detection** monitor. Send both to an **SNS topic** connected to Slack `#rl-costs` through **Amazon Q Developer in chat applications** (formerly AWS Chatbot), as well as by email. (Created by hand here; Terraform's `alerting` module takes over in step 1.7.)
 
-**Test:** the quota request is submitted; a test budget notification arrives by email and in `#rl-costs`.
+**Test:** the russetleaf-com account exists in the Workloads OU; a test budget notification arrives by email and in `#rl-costs`.
 
 ### Step 0.2: Decisions to make before writing code
 
@@ -84,13 +84,13 @@ Record each answer in the [decision log](#decision-log).
 
 | Decision | Recommendation | Why it matters |
 |---|---|---|
-| **Region** | **us-east-1** for everything. | CloudFront certificates must be in us-east-1 anyway; one region keeps Terraform simple. G6 spot availability is good there. |
+| **Region** | **us-east-1** for everything. | CloudFront certificates must be in us-east-1 anyway; one region keeps Terraform simple. |
 | **Pod AWS access** | **EKS Pod Identity** (the newer, simpler option) instead of IRSA, unless a component only supports IRSA. | Decides how every service account gets AWS permissions. Both avoid stored keys. |
 | **Image registry** | Keep **GHCR** for both sites (one registry, one Kyverno policy). Optional: an ECR pull-through cache for GHCR, so EKS pulls stay inside AWS. If the GHCR packages are still **private** (their visibility is separate from the repos'), EKS also needs the image pull secret and Argo CD GHCR credentials described in Phase 1 step 5.1. | One registry for both sites; see [ADR 1004](../phase-1-russetleaf-dev/adr/1004-ghcr-not-ecr.md) (record the pull-through cache decision there). |
-| **NAT Gateways** | **One** NAT Gateway for demos (saves about $65/month-equivalent while running), documented as "three in production". | Cost while the demo runs vs showing full AZ redundancy. One of the two deliberate demo cuts to high availability recorded in [ADR 1014](../phase-1-russetleaf-dev/adr/1014-availability-levels.md). |
+| **NAT Gateways** | **One** NAT Gateway for demos (saves about $65/month-equivalent while running), documented as "three in production". | Cost while the demo runs vs showing full AZ redundancy. The one deliberate demo cut to high availability recorded in [ADR 1014](../phase-1-russetleaf-dev/adr/1014-availability-levels.md). |
 | **Networking** | **Decided: Cilium in chaining mode** with the Amazon VPC CNI (the VPC CNI assigns pod IPs; Cilium enforces **CiliumNetworkPolicies** and provides Hubble), matching the home lab's Cilium. | Same policies, dashboards and alerts on both clusters; staying on the VPC CNI for IP addressing keeps EKS close to its defaults. |
 | **Node OS** | **Amazon Linux 2023** EKS AMIs. | Falco's modern eBPF driver and Karpenter both support it. |
-| **Monitoring on AWS** | The same **kube-prometheus-stack** as the home lab, plus **CloudWatch** for things Prometheus cannot see (ALB, RDS, ElastiCache metrics, via the CloudWatch exporter or Grafana's CloudWatch data source). Skip Container Insights for demos. | The Argo Rollouts analysis needs request metrics, which come from the ALB (CloudWatch) on AWS, not from ingress-nginx. |
+| **Monitoring on AWS** | The same **kube-prometheus-stack** as the home lab, plus **CloudWatch** for things Prometheus cannot see (ALB, RDS, ElastiCache metrics, via the CloudWatch exporter or Grafana's CloudWatch data source). Skip Container Insights for demos. | The Argo Rollouts analysis needs request metrics, which come from the ALB (CloudWatch) on AWS, not from the home Cilium Gateway. |
 | **Tagging** | Every resource gets `Project=russetleaf`, `Site=com`, `Stack=edge|demo`, `ManagedBy=terraform`. Set as provider `default_tags`. | Makes leftover checks and cost reports possible. |
 
 ### Step 0.3: Agent workspace and AWS access
@@ -143,7 +143,7 @@ Record each answer in the [decision log](#decision-log).
 - **API endpoint:** public but **restricted to the home network's address** (private access also on, for the nodes). The demo workflows run on the **home ARC runners** (step 5.1), so they reach it from that address; the workstation does too ([ADR 1030](../phase-1-russetleaf-dev/adr/1030-github-actions-ci.md)).
 - **Add-on versions pinned** in Terraform; the monthly version-age workflow (Phase 1 step 7.6) checks `aws eks describe-addon-versions` and opens a pull request when newer compatible versions exist.
 - **Access entries ([ADR 1033](../phase-1-russetleaf-dev/adr/1033-identity-and-access.md)):** IAM Identity Center permission-set roles mapped with EKS access policies: **view** (`AmazonEKSViewPolicy`) for day-to-day, **edit** (`AmazonEKSEditPolicy`) for operating, **cluster-admin** (`AmazonEKSClusterAdminPolicy`) only through a separate permission set; plus the CI apply role. Authentication mode **API only** (no `aws-auth` ConfigMap), and the cluster creator's automatic admin access turned off.
-- Control plane logging: audit logs only, short CloudWatch retention (they are the useful ones and cost little), with a **subscription filter → Firehose → the Log Archive account's Object Lock bucket**, kept **1 year** ([ADR 1033](../phase-1-russetleaf-dev/adr/1033-identity-and-access.md)). **CloudWatch Logs metric filters** on the audit log for the persistence alerts (`KubeWorkloadCreatedOutsideArgoCD`, `KubeAdmissionWebhookChanged`, `KubeTokenSecretCreated`; [ADR 1034](../phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md)) feed CloudWatch alarms to `#rl-security` through the `alerting` module's SNS topic, created and destroyed with the demo stack. **GuardDuty's EKS audit-log monitoring** (turned on account-wide in Phase 1 step 2.1) starts watching the cluster automatically.
+- Control plane logging: audit logs only, short CloudWatch retention (they are the useful ones and cost little), with a **subscription filter → Firehose → the Log Archive account's Object Lock bucket**, kept **1 year** ([ADR 1033](../phase-1-russetleaf-dev/adr/1033-identity-and-access.md)). **CloudWatch Logs metric filters** on the audit log for the persistence alerts (`KubeWorkloadCreatedOutsideArgoCD`, `KubeAdmissionWebhookChanged`, `KubeTokenSecretCreated`; [ADR 1034](../phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md)) feed CloudWatch alarms to `#rl-security` through the `alerting` module's SNS topic, created and destroyed with the demo stack. **GuardDuty's EKS audit-log monitoring** (turned on organization-wide in Phase 1 step 2.0b) starts watching the cluster automatically.
 
 **Test:** `kubectl get nodes` shows the managed nodes; `cilium status` is green and `cilium connectivity test` passes; if WireGuard is on, `cilium encrypt status` lists the other nodes as peers; a gp3 PersistentVolumeClaim binds; signing in with the view permission set can list pods but not read Secrets or delete anything; audit-log objects appear in the Log Archive bucket; tear down.
 
@@ -184,19 +184,19 @@ Record each answer in the [decision log](#decision-log).
 
 **Do:** Terraform installs Argo CD with Helm and applies the root Application pointing at `russetleaf-gitops/bootstrap/aws`. (In the Advanced tier, step 5.5 replaces this with management from the home Argo CD hub; this per-cluster setup stays as the fallback.) Argo CD's UI is reached by `kubectl port-forward` only (no public endpoint for demos). **Argo CD Notifications** post to `#rl-deploys`, prefixed `[com]`.
 
-**Test:** Argo CD lists the AWS root app (it will show missing components until Phase 2), and its first sync appears in `#rl-deploys`.
+**Test:** Argo CD lists the AWS root app (it will show missing components until Stage 2), and its first sync appears in `#rl-deploys`.
 
 ### Step 1.9: `russetleaf-infra` CI for AWS
 
 **Do:** extend the home lab's Terraform pipeline (Phase 1 step 2.4) to `envs/aws-edge` and `envs/aws`: tflint with the AWS ruleset, **Checkov** with the custom policies on the source and saved plans (results in GitHub code scanning), **Infracost** comments (especially useful here: they show the monthly cost of the always-on edge and of the demo stack if left running), and **`terraform test`** (with mocked providers where possible) for the AWS-specific modules (`alerting`, the CloudFront edge, RDS restore logic). `envs/aws-edge` applies go through the `apply` GitHub Environment after merge, like `envs/home`. `envs/aws` applies are done only by the demo workflows (Stage 5), which also require approval in the `apply` environment, never automatically on merge, so merging never starts a paid stack.
 
-**Test:** a pull request shows plans and Infracost comments for all three environments; `terraform test` passes (and fails on a deliberately broken module input); a resource outside `us-east-1` or using an unapproved instance family fails the custom Checkov policies.
+**Test:** a pull request shows plans and Infracost comments for all three environments; `terraform test` passes (and fails on a deliberately broken module input); a resource outside `us-east-1` (`us-west-2` is allowed only in `envs/dr`) or using an unapproved instance family fails the custom Checkov policies.
 
 ## Stage 2: AWS platform (`russetleaf-gitops`)
 
 ### Step 2.1: AWS root app and sync waves
 
-**Do:** `bootstrap/aws/` root app with sync waves: Karpenter NodePools and storage first; then External Secrets, Load Balancer Controller, ExternalDNS, Kyverno; then monitoring and Argo Rollouts; then WordPress. Exclude home-only components (cloudflared, ingress-nginx, local-path, MariaDB, Valkey, ARC).
+**Do:** `bootstrap/aws/` root app with sync waves: Karpenter NodePools and storage first; then External Secrets, Load Balancer Controller, ExternalDNS, Kyverno; then monitoring and Argo Rollouts; then WordPress. Exclude home-only components (cloudflared, the Cilium Gateway and its routes, local-path, MariaDB, Valkey, ARC).
 
 **Test:** Argo CD syncs the root app; the order of creation matches the waves.
 
@@ -226,8 +226,8 @@ Record each answer in the [decision log](#decision-log).
 - **Cilium and Hubble metrics:** the same `platform/cilium/` monitoring values as home (ServiceMonitors, Hubble metric set, dashboards, alert rules), now that the Prometheus Operator exists; Hubble UI by `kubectl port-forward`.
 - The same **Secrets Not From Env Vars**, user-namespace (if supported) and **mirrored-image** settings as home: EKS pulls the critical third-party images from the GHCR mirror.
 - **Pod Security Admission labels** on every namespace, as at home (EKS does not enforce Pod Security by default), plus Kyverno's `restricted` set for application namespaces and the service-account token default.
-- Kyverno: the same policy set as home, including SBOM and **SLSA provenance** attestations, upstream signature checks and **seccomp `RuntimeDefault`** (but not the gVisor rule: gVisor is home-only, so the WordPress AWS overlay leaves `runtimeClassName` unset; see [ADR 1009](../phase-1-russetleaf-dev/adr/1009-gvisor-sandboxing.md)) (AWS's own add-on images are not signed with cosign, so they stay covered by the registry allow-list and digest pinning); add AWS's add-on registries (the EKS add-on ECR registries and `public.ecr.aws`) to the **Restrict Image Registries** allow-list, and narrow **`PolicyException`s** for AWS-managed `kube-system` components that need privileged or host access or do not meet the label, probe, non-root or read-only rules (the VPC CNI's `aws-node`, `kube-proxy`, the EBS CSI node agent, the Pod Identity agent), plus Cilium, Falco and the NVIDIA device plugin. The project's own workloads get no exceptions.
-- Argo Rollouts: an `AnalysisTemplate` variant using **CloudWatch** (ALB 5xx rate and target response time) instead of ingress-nginx metrics.
+- Kyverno: the same policy set as home, including SBOM and **SLSA provenance** attestations, upstream signature checks and **seccomp `RuntimeDefault`** (but not the gVisor rule: gVisor is home-only, so the WordPress AWS overlay leaves `runtimeClassName` unset; see [ADR 1009](../phase-1-russetleaf-dev/adr/1009-gvisor-sandboxing.md)) (AWS's own add-on images are not signed with cosign, so they stay covered by the registry allow-list and digest pinning); add AWS's add-on registries (the EKS add-on ECR registries and `public.ecr.aws`) to the **Restrict Image Registries** allow-list, and narrow **`PolicyException`s** for AWS-managed `kube-system` components that need privileged or host access or do not meet the label, probe, non-root or read-only rules (the VPC CNI's `aws-node`, `kube-proxy`, the EBS CSI node agent, the Pod Identity agent), plus Cilium and Falco. The project's own workloads get no exceptions.
+- Argo Rollouts: an `AnalysisTemplate` variant using **CloudWatch** (ALB 5xx rate and target response time) instead of the home Cilium Gateway's metrics.
 - **Logging:** `platform/logging/overlays/aws`: Loki (S3 via a Pod Identity role on the russetleaf.com log bucket, 14-day retention) and Alloy with `site=com`; no Talos log receiver; the EKS control-plane audit logs stay in CloudWatch. Alloy gets the same narrow Kyverno exception as at home.
 - **Tracing:** `platform/tracing/overlays/aws`: Tempo (S3 via a Pod Identity role on the trace bucket, 7-day retention), **always on**; Alloy's OTLP receiver forwards to it; tracing turned on in the WordPress values with **100% sampling**.
 - Falco: modern eBPF on AL2023, same custom rules (including the **process allow-lists**); Falcosidekick to `#rl-security`; the same health alerts as home (`FalcoNotRunning`, `FalcosidekickOutputErrors`, `FalcoEventsDropped`). On EKS, `FalcoNotRunning` also catches a new Karpenter node where Falco has not started.
@@ -258,12 +258,12 @@ Record each answer in the [decision log](#decision-log).
 - `WP_HOME`/`WP_SITEURL` = `https://russetleaf.com`; the HTTPS-behind-proxy setting.
 - 3 replicas, HPA (3–10), PDB, **topology spread** across AZs.
 - **`database.auth: iam`** with the **RDS Proxy endpoint**, region and the RDS CA bundle (no database password Secret at all); Valkey endpoint (TLS);
-- `apps/db-setup/`: an idempotent **PreSync Job** that reads the master and `wordpress` secrets and runs `CREATE USER IF NOT EXISTS` / `GRANT` for the `wordpress` user (real work only on the first demo; the user survives in the final snapshot); russetleaf.com media bucket with the **CloudFront domain** as the media URL in the offload plugin, SQS queue URL, SES for email.
+- `apps/db-setup/`: an idempotent **PreSync Job** that reads the master and `wordpress` secrets and runs `CREATE USER IF NOT EXISTS` / `GRANT` for the `wordpress` user (real work only on the first demo; the user survives in the final snapshot); russetleaf.com media bucket with the **CloudFront domain** as the media URL in the offload plugin, SES for email.
 - Ingress for the ALB: `origin.russetleaf.com`, the ACM certificate, the WAF ACL, a listener rule requiring the `X-Origin-Verify` header (requests without it get 403), and a security group allowing only the CloudFront origin-facing prefix list.
 - **Admin sign-in:** the same Google OIDC plugin configuration as home, with russetleaf.com's client; a **second Ingress in the same ALB group** for `/wp-admin/*` and `/wp-login.php` with the ALB's **OIDC authentication** (Google) in front; CloudFront behaviors for those paths and the OIDC callback that are **uncached** and forward cookies and query strings (update `envs/aws-edge`).
 - The Rollout using the CloudWatch analysis template.
 
-**Test:** after sync, russetleaf.com switches from the offline page to the live site on its own; WordPress's custom metrics and apache_exporter are scraped, and the metrics port is **not** reachable through CloudFront or the ALB; the WordPress pods have **no database password** in their environment or Secrets; a forced Multi-AZ failover (`aws rds reboot-db-instance --force-failover`) causes only a few seconds of errors, and terminating a WordPress node lets Karpenter replace it with the site staying up (record both recovery times in [ADR 1014](../phase-1-russetleaf-dev/adr/1014-availability-levels.md)); requesting the ALB directly (without CloudFront) returns 403; media loads from CloudFront; a test SQL-injection request is blocked by WAF; the password-reset email arrives (SES sandbox: send to a verified address, or request production access). `/wp-admin` requires a Google login at the ALB, then signs in to WordPress with Google and no password; a password login attempt is rejected; the summarizer's application password still works.
+**Test:** after sync, russetleaf.com switches from the offline page to the live site on its own; WordPress's custom metrics and apache_exporter are scraped, and the metrics port is **not** reachable through CloudFront or the ALB; the WordPress pods have **no database password** in their environment or Secrets; a forced Multi-AZ failover (`aws rds reboot-db-instance --force-failover`) causes only a few seconds of errors, and terminating a WordPress node lets Karpenter replace it with the site staying up (record both recovery times in [ADR 1014](../phase-1-russetleaf-dev/adr/1014-availability-levels.md)); requesting the ALB directly (without CloudFront) returns 403; media loads from CloudFront; a test SQL-injection request is blocked by WAF; the password-reset email arrives (SES sandbox: send to a verified address, or request production access). `/wp-admin` requires a Google login at the ALB, then signs in to WordPress with Google and no password; a password login attempt is rejected; a REST API request with an application password still works.
 
 ### Step 3.2: Content
 
@@ -284,7 +284,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 4.2: Cost review
 
-**Do:** a **daily scheduled workflow** in `russetleaf-infra` (Cost Explorer data lags about 24 hours) that checks for recent demo usage, queries **Cost Explorer** grouped by the `Site` and `Stack` tags (the cost allocation tags activated in Phase 1 step 2.1), and posts "Last demo: $X for Y hours ($Z/hour)" to `#rl-costs`, compared with the ~$1/hour estimate. After the first full demo, also compare it with OpenCost's estimate for the same demo (captured before `demo-down`), and record both in [ADR 1012](../phase-1-russetleaf-dev/adr/1012-opencost-and-aws-billing.md).
+**Do:** a **daily scheduled workflow** in `russetleaf-infra` (Cost Explorer data lags about 24 hours) that checks for recent demo usage, queries **Cost Explorer** grouped by the `Site` and `Stack` tags (the cost allocation tags activated in Phase 1 step 2.0), and posts "Last demo: $X for Y hours ($Z/hour)" to `#rl-costs`, compared with the ~$0.70/hour estimate. After the first full demo, also compare it with OpenCost's estimate for the same demo (captured before `demo-down`), and record both in [ADR 1012](../phase-1-russetleaf-dev/adr/1012-opencost-and-aws-billing.md).
 
 **Test:** the day after a demo, the cost report appears in `#rl-costs` with the right hours; actual cost per demo hour is recorded in the decision log, and the Phase 3 design is updated if the estimates were off.
 
@@ -336,7 +336,7 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 
 **Do:** during a demo, using the k6 Operator on EKS (the same `russetleaf-gitops/perf/` scripts as home), run a **load** test, a **stress / breakpoint** test (ramp until failure, and check it recovers on its own), a **spike** test (about 10× suddenly, to time HPA and Karpenter scale-up); for edge tests through CloudFront, apply a temporary AWS WAF allow rule for the test source through Terraform and remove it afterwards. Run the tests at increasing traffic levels; record how the HPA and Karpenter respond (scale-up time, nodes added), where latency or errors start to rise, the bottleneck (PHP workers, RDS Proxy connections, Valkey, CloudFront cache hit rate), and the cost per hour at each level. These numbers feed the capacity and cost plan (Phase 1 step 8.7).
 
-**Test:** results for at least three traffic levels, the breaking point and recovery, spike scale-up times and the burst's drain time and cost are recorded in `docs/performance/`, with the bottleneck identified, **cost per 1,000 visitors** calculated, and the temporary WAF rule removed.
+**Test:** results for at least three traffic levels, the breaking point and recovery, spike scale-up times and cost per hour are recorded in `docs/performance/`, with the bottleneck identified, **cost per 1,000 visitors** calculated, and the temporary WAF rule removed.
 
 ### Step 5.5: Register EKS with the home Argo CD hub
 
@@ -359,7 +359,7 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 | Prowler AWS scan with the stack up | Once per demo | Trigger the `russetleaf-infra` Prowler workflow during the demo; review findings for the demo resources |
 | kube-bench scan | Every demo (automatic, in `demo-up`) | Review the summary pull request and any new failures flagged in `#rl-security`; fix in Terraform or the node class, or add to the accepted-findings file with a reason |
 | Kubescape posture scan | Once per demo | Run the Kubescape CLI against EKS during the demo; save the report in `docs/security/` |
-| Review the per-demo cost report | The day after each demo (automatic) | Check the `#rl-costs` report; investigate if cost per hour is well above the ~$1 estimate |
+| Review the per-demo cost report | The day after each demo (automatic) | Check the `#rl-costs` report; investigate if cost per hour is well above the ~$0.70 estimate |
 | Review costs | After each demo | Cost Explorer filtered by `Site=com`, compared with the demo hours recorded |
 
 ## Progress checklist

@@ -2,7 +2,7 @@
 
 - **Status:** Accepted; updated by [ADR 1020](1020-three-node-ha-home-cluster.md)
 - **Date:** 2026-11-01
-- **Applies to:** both sites (always on for russetleaf.com demos; on demand for russetleaf.dev)
+- **Applies to:** both sites (on for every russetleaf.com demo; always on, sampled, for russetleaf.dev)
 - **Phase:** 1 (page traces, always on at home). Later: Phase 2 traces the summary pipeline end to end (100% of summary jobs); Phase 3 runs Tempo on every demo.
 
 > **Update ([ADR 1020](1020-three-node-ha-home-cluster.md)):** The home cluster now has three nodes (`rl-home-cp03`: i5-8500T, 16 GB), so **Tempo runs always on at home** (sampled, 3-day retention), not on demand.
@@ -22,7 +22,7 @@ Constraints: `rl-home-cp01` of the home lab has 8 GB of RAM and is close to its 
     - The LiteLLM gateway: its built-in OpenTelemetry support.
 - **Grafana Alloy** (already deployed for logs) receives traces over OTLP and forwards them to **Grafana Tempo** (single-binary mode, S3 storage).
 - **russetleaf.com:** tracing **on for every demo**, 100% sampling, 7-day retention in a bucket that survives teardown.
-- **russetleaf.dev:** tracing **on demand**, ~10% sampling of page requests and 100% of summary jobs, 3-day retention; Tempo removed when not needed if memory is tight.
+- **russetleaf.dev:** tracing **always on** (since [ADR 1020](1020-three-node-ha-home-cluster.md)), ~10% sampling of page requests and 100% of summary jobs (Phase 2), 3-day retention.
 - **Spans hold metadata only**: no post content, prompts or summaries.
 
 ## Alternatives considered
@@ -38,11 +38,11 @@ Constraints: `rl-home-cp01` of the home lab has 8 GB of RAM and is close to its 
 - One trace shows a post's whole journey, including which model answered and how long each step took: useful for debugging and a strong demo.
 - Trace IDs in logs link traces and logs in Grafana; exemplars link latency metrics to example traces.
 - The summarizer and summary-queue plugin carry a little extra code for propagating trace context through SQS.
-- Home tracing is not continuous, so intermittent problems there may need tracing turned on and the issue reproduced.
+- Home tracing is sampled, so a rare slow request may need the sampling rate raised for a while to capture it.
 
 ## When to revisit
 
-- More memory on `rl-home-cp01`: keep Tempo on permanently at home.
+- Tempo's memory on `rl-home-cp03` grows too large: lower the sampling rate or retention.
 - Trace volume growing beyond what single-binary Tempo handles: move to its scalable deployment mode.
 - A move fully into AWS: reconsider X-Ray or AWS's managed options.
 

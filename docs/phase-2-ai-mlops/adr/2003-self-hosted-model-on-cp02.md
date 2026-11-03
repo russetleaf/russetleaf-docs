@@ -32,7 +32,7 @@ The gateway ([ADR 2002](2002-summary-pipeline-architecture.md)) needs a fallback
 
 ## When to revisit
 
-- A GPU at home: move the model to it, and run fine-tuning locally ([ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)).
+- A GPU at home: move the model to it, and run fine-tuning locally ([ADR 2005](2005-fine-tuning-on-a-rented-gpu.md)).
 - etcd latency alerts while summaries run: lower llama.cpp's CPU limit or move the model off a control-plane node.
 
 ## Open items

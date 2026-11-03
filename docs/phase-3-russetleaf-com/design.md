@@ -126,7 +126,7 @@ The WordPress Rollout, Service, HPA and the rest of the base are the same for bo
 
 ## Example Helm values (outline)
 
-These are illustrative russetleaf.com (AWS overlay) values for the project's own WordPress chart; the exact keys are defined when the chart is written. The russetleaf.dev overlay differs only in the site-specific settings: its domain, the in-cluster MariaDB and Valkey hosts, ingress-nginx instead of the ALB, its own bucket, queue and email settings, scoped keys instead of Pod Identity, and the Prometheus-based canary analysis.
+These are illustrative russetleaf.com (AWS overlay) values for the project's own WordPress chart; the exact keys are defined when the chart is written. The russetleaf.dev overlay differs only in the site-specific settings: its domain, the in-cluster MariaDB and Valkey hosts, an HTTPRoute on the Cilium Gateway instead of the ALB Ingress, its own bucket and email settings, scoped keys instead of Pod Identity, and the Prometheus-based canary analysis.
 
 ```yaml
 image:
@@ -168,7 +168,7 @@ email:
   smtpSecret: ses-smtp             # Amazon SES SMTP credentials
 
 serviceAccount:
-  create: true                     # AWS access (S3, SQS, SES) via EKS Pod Identity; no annotation needed
+  create: true                     # AWS access (S3, SES) via EKS Pod Identity; no annotation needed
 
 resources:                         # requests + memory limit required by Kyverno (no CPU limit, by design)
   requests:
@@ -193,7 +193,7 @@ ingress:
 
 rollout:
   canarySteps: [20, 50, 100]
-  analysisTemplate: cloudwatch-alb # home overlay: prometheus-ingress-nginx
+  analysisTemplate: cloudwatch-alb # home overlay: prometheus-cilium-gateway
 
 extraConfig: |
   define('DISALLOW_FILE_MODS', true);
@@ -233,9 +233,11 @@ These are approximate prices for **us-east-1**, on demand unless noted, for a sm
 | CloudTrail + GuardDuty | Organization trail (management events); GuardDuty incl. EKS audit-log monitoring | ~$1–5 |
 | Security Hub + Config + KMS | Organization-wide standards; focused Config recording; KMS keys for logs and backups | ~$5–15 |
 | Alerting (SNS, Amazon Q Developer in chat applications, Slack free plan) | CloudWatch alarms and budget alerts to Slack | $0 |
-| **Total** | | **~$505–$555 / month** |
+| **Total** | | **~$520–$580 / month** |
 
-GuardDuty EKS Runtime Monitoring, if used instead of Falco, is billed per vCPU monitored and would add roughly $10–$20/month at this size. New AWS accounts usually have a **GPU instance quota of 0**, so request a quota increase for G-family instances (both on-demand and spot) before the first deploy.
+The last two rows (CloudTrail and GuardDuty; Security Hub, Config and KMS) are organization-wide services, already counted in the home lab's always-on cost; without them, the demo stack alone is about **$515–$560 / month** if left running.
+
+GuardDuty EKS Runtime Monitoring, if used instead of Falco, is billed per vCPU monitored and would add roughly $10–$20/month at this size.
 
 ## russetleaf.com between demos
 
@@ -347,7 +349,7 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 
 ### Node autoscaling (Karpenter)
 
-- **Node autoscaling** with **Karpenter** instead of fixed managed node groups. A small managed node group runs Karpenter itself; Karpenter then creates EC2 nodes directly from two **NodePools**:
+- **Node autoscaling** with **Karpenter** instead of fixed managed node groups. A small managed node group runs Karpenter itself; Karpenter then creates EC2 nodes directly from a **NodePool**:
     - a **general pool** (spot and on-demand, several instance types) for WordPress and platform services, with **consolidation** to remove idle or underused nodes
     - **spot interruption handling** through an SQS queue fed by EventBridge, so pods move before AWS reclaims a spot node
 
@@ -373,7 +375,7 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 
 ### Uptime checks
 
-    - russetleaf.com must return **either** the live site (200) **or** the offline page (503 with its known text). Either is fine; anything else means the always-on edge is broken.
+- russetleaf.com must return **either** the live site (200) **or** the offline page (503 with its known text). Either is fine; anything else means the always-on edge is broken.
 
 ### Environments
 
@@ -393,7 +395,7 @@ AWS has no separate staging: russetleaf.com is already temporary, its Terraform 
 
 | Report | How | Where |
 |---|---|---|
-| **Per-demo actual cost** (AWS) | A **daily** scheduled workflow in `russetleaf-infra` (Cost Explorer data lags ~24 hours) checks for recent demo usage, queries **Cost Explorer** grouped by the `Site` and `Stack` tags, and compares the result with the hours the demo ran and the ~$1/hour estimate | "Last demo: $X for Y hours ($Z/hour)" posted to `#rl-costs`, and recorded in the AWS plan's decision log |
+| **Per-demo actual cost** (AWS) | A **daily** scheduled workflow in `russetleaf-infra` (Cost Explorer data lags ~24 hours) checks for recent demo usage, queries **Cost Explorer** grouped by the `Site` and `Stack` tags, and compares the result with the hours the demo ran and the ~$0.70/hour estimate | "Last demo: $X for Y hours ($Z/hour)" posted to `#rl-costs`, and recorded in the AWS plan's decision log |
 
 ### Updates
 

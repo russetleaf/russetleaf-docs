@@ -7,7 +7,7 @@
 
 ## Context
 
-The documentation (overview, phase designs, plans and roadmaps, 48 ADRs, step specs) describes the whole system across four code repos and three phases, and is published as evidence of planning and engineering practice. It was going to move into `russetleaf-gitops`, which would make one code repo the owner of documents about all of them, mix documentation commits with deployment config, and leave reviewers to find the design among Kubernetes manifests. Planning issues and milestones also span all repos. The repo holding the documents (`private-test-wordpress`) no longer held anything else.
+The documentation (overview, phase designs, plans and roadmaps, the ADRs, step specs) describes the whole system across four code repos and three phases, and is published as evidence of planning and engineering practice. It was going to move into `russetleaf-gitops`, which would make one code repo the owner of documents about all of them, mix documentation commits with deployment config, and leave reviewers to find the design among Kubernetes manifests. Planning issues and milestones also span all repos. The repo holding the documents (`private-test-wordpress`) no longer held anything else.
 
 ## Decision
 

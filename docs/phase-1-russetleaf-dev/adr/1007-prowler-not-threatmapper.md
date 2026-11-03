@@ -2,7 +2,7 @@
 
 - **Status:** Accepted; updated by [ADR 1019](1019-aws-multi-account-sra.md)
 - **Date:** 2026-11-01
-- **Applies to:** both sites (the AWS account is shared by the home lab's AWS resources and russetleaf.com)
+- **Applies to:** every AWS account in the Organization ([ADR 1019](1019-aws-multi-account-sra.md))
 - **Phase:** 1. Later: Phase 3 adds a Prowler run per demo with the stack up.
 
 > **Update ([ADR 1019](1019-aws-multi-account-sra.md)):** The project now follows the AWS Security Reference Architecture, with **Security Hub** (AWS Foundational Security Best Practices and CIS standards) as the **continuous** posture check across all accounts. Prowler remains as a free monthly **second opinion**, now run against every account. The "AWS Security Hub" alternative below was rejected on cost at the time; [ADR 1019](1019-aws-multi-account-sra.md) accepts that cost (about $5–15/month with Config and KMS).

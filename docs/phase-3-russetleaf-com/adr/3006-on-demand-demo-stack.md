@@ -7,7 +7,7 @@
 
 ## Context
 
-The full AWS design (EKS, RDS Multi-AZ with RDS Proxy, ElastiCache, NAT Gateways, ALB, WAF) costs roughly $505–555 a month if left running: far too much for a portfolio site. But russetleaf.com should still answer when the stack is down, and bringing it up should be one command, not an afternoon.
+The full AWS design (EKS, RDS Multi-AZ with RDS Proxy, ElastiCache, NAT Gateways, ALB, WAF) costs roughly $520–580 a month if left running: far too much for a portfolio site. But russetleaf.com should still answer when the stack is down, and bringing it up should be one command, not an afternoon.
 
 ## Decision
 
@@ -19,7 +19,7 @@ The full AWS design (EKS, RDS Multi-AZ with RDS Proxy, ElastiCache, NAT Gateways
 
 ## Alternatives considered
 
-- **Always on:** the real production pattern, but about $505–555 a month.
+- **Always on:** the real production pattern, but about $520–580 a month.
 - **Route 53 failover routing** to the offline page: works, but needs health checks and DNS TTL waits; CloudFront's error fallback is instant and free.
 - **No AWS site; Terraform only (plan, Checkov and Infracost in CI, never applied):** costs nothing and still shows the design as reviewed code, but no live demo; a good interim step if Phase 3 is postponed.
 - **A smaller always-on AWS stack** (e.g. a single small EKS node and no RDS): cheaper, but no longer the production design it is meant to show.

@@ -65,4 +65,4 @@ Four had gaps:
 - Phase 1 step 6.1: RBAC policy, token-Secret block, ephemeral-storage defaults, Kubescape RBAC check in CI.
 - Phase 1 steps 6.3 and 7.2: exfiltration test; RBAC review and accepted findings.
 - Phase 1 step 8.5: map the threat model to the eight areas.
-- Phase 3 steps 1.4 and 2.3: kubelet limits on EKS nodes; the persistence alerts from the EKS audit log; step 5.1 checks.
+- Phase 3 steps 1.4 and 2.3: kubelet limits on EKS nodes; the persistence alerts from the EKS audit log; step 4.1: the checks in the security review.

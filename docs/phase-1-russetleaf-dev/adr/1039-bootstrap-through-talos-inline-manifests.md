@@ -16,6 +16,7 @@ Talos images cannot contain Kubernetes applications: Image Factory only adds sys
 - **Terraform renders** the Cilium chart, the Argo CD chart, a root **Application** pointing at `russetleaf-gitops/bootstrap/home`, and the kubelet serving-certificate approver ([ADR 1035](1035-platform-security.md)) into the machine config's **`cluster.inlineManifests`**, with pinned chart versions and the values Talos documents for Cilium.
 - **Talos applies them during bootstrap**, so the cluster comes up with networking, GitOps and its root Application already running.
 - **Hand-off:** Phase 1 step 3.1 adds `platform/cilium/` and `platform/argocd/` with the same versions and values, so Argo CD adopts both without changing them; then the Cilium and Argo CD inline manifests are **removed** from the machine config, so later `talosctl upgrade-k8s` runs never roll back versions Argo CD has upgraded. (Before relying on it, confirm in a local Talos-in-Docker cluster that removing an inline manifest leaves its resources in place.)
+- **Fresh bootstraps after the hand-off:** a Terraform variable in `envs/home` (`bootstrap_inline_manifests`, default `false` once the hand-off is done) puts the inline manifests back for any new cluster: a rebuild, the yearly disaster drill or a local rehearsal. Without it, a rebuilt cluster would come up with no network plugin. After Argo CD has adopted Cilium and itself again, the variable is set back to `false`. (Joining a replacement node to the existing cluster does not need it.)
 - The Cilium Application stays on **manual sync**, with the `helm rollback` recovery runbook ([ADR 1016](1016-rollback-strategy.md)).
 
 ## Alternatives considered
@@ -27,7 +28,7 @@ Talos images cannot contain Kubernetes applications: Image Factory only adds sys
 
 ## Consequences
 
-- One `terraform apply` produces a cluster that is already running Argo CD and syncing from Git.
+- One `terraform apply` produces a cluster that is already running Argo CD and syncing from Git, including after a rebuild (with `bootstrap_inline_manifests = true`).
 - A short, deliberate hand-off in step 3.1, with a check that nothing changes during it.
 - The machine config temporarily holds large rendered manifests; they are removed after the hand-off.
 

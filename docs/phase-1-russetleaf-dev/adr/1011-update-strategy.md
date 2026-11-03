@@ -16,7 +16,7 @@ The project has many layers that need regular updates: WordPress core, plugins a
     - **Patch** updates to platform charts, CLI tools and GitHub Actions **auto-merge** once CI passes.
     - **Minor and major** platform updates are reviewed by hand and rehearsed on a **local Talos-in-Docker cluster** first.
     - **Application** updates (WordPress image, summarizer) go through **ci → staging → promotion → canary**.
-    - **Talos and Kubernetes** upgrades follow a fixed procedure (backups, local rehearsal, `rl-home-cp02` then `rl-home-cp01`, rollback with `talosctl rollback`).
+    - **Talos and Kubernetes** upgrades follow a fixed procedure (backups, local rehearsal, one node at a time: `rl-home-cp02`, `rl-home-cp01`, then `rl-home-cp03`; rollback with `talosctl rollback`).
     - **EKS** versions are bumped before demos, since the stack is rebuilt each time; RDS's MariaDB version stays matched to the home MariaDB.
     - **Models** change only after the evaluation gate and a gateway canary.
 - **Security updates** skip the weekly schedule and are released within **48 hours**, triggered by **WPScan** (WordPress plugins and themes, weekly and in CI), Trivy Operator (running images) and Renovate's security alerts.

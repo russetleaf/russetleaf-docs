@@ -21,11 +21,11 @@ The design used OpenCost on both clusters (with Kubecost as an optional alternat
 - **Alerts to `#rl-costs`:**
     - AWS Budgets, Cost Anomaly Detection and the Bedrock budget, through SNS and Amazon Q Developer
     - the demo safety-net workflow (also `#rl-critical`)
-    - OpenCost-based Prometheus alerts, routed by Alertmanager like all other alerts: `GPUNodeRunningLong` (EKS) and `NamespaceDailyCostSpike` (both)
+    - OpenCost-based Prometheus alerts, routed by Alertmanager like all other alerts: `NamespaceDailyCostSpike` (both sites)
 - **Reports:**
     - a **weekly OpenCost allocation summary** for the home cluster, from a scheduled workflow on the in-cluster runners
-    - a **per-demo actual-cost report** from **Cost Explorer** (grouped by `Site` and `Stack`), run daily because of Cost Explorer's ~24-hour lag, comparing actual cost per demo hour with the ~$1/hour estimate
-- **Activate the cost allocation tags** with Terraform (`aws_ce_cost_allocation_tag`) in `russetleaf-infra/bootstrap/`.
+    - a **per-demo actual-cost report** from **Cost Explorer** (grouped by `Site` and `Stack`), run daily because of Cost Explorer's ~24-hour lag, comparing actual cost per demo hour with the ~$0.70/hour estimate
+- **Activate the cost allocation tags** with Terraform (`aws_ce_cost_allocation_tag`) in `russetleaf-infra/envs/org/`, in the management account (where they apply organization-wide).
 
 ## Alternatives considered
 
@@ -49,6 +49,6 @@ The design used OpenCost on both clusters (with Kubecost as an optional alternat
 
 ## Open items
 
-- Phase 1 step 2.1: activate the cost allocation tags (they must already exist on a resource).
+- Phase 1 step 2.0: activate the cost allocation tags (they must already exist on a resource).
 - Phase 1 step 7.3: OpenCost alerts and the weekly summary workflow.
 - Phase 3 step 4.2: the per-demo Cost Explorer report; record actual cost per demo hour.

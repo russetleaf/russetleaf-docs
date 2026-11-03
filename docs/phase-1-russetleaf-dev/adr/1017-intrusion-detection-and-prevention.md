@@ -22,7 +22,7 @@ Falco provides runtime detection inside containers, but on its own it is not an 
 - **Kubernetes API audit monitoring:**
     - home: Talos API server audit logging with a focused policy, collected into Loki, with Loki alert rules (`KubeExecIntoProdPod`, `KubeUnexpectedSecretRead`, `KubeRBACChangedOutsideArgoCD`, `KubeAnonymousOrForbiddenSpike`, `KubeAuditLogMissing`) to `#rl-security`
     - EKS: audit logs in CloudWatch, plus GuardDuty's EKS audit-log monitoring
-- **AWS account:** a multi-region **CloudTrail** trail (management events, log-file validation, own S3 bucket with `prevent_destroy`) and **GuardDuty**, with findings sent through EventBridge, SNS and Amazon Q Developer to `#rl-security` (high severity also to `#rl-critical`).
+- **AWS account:** ~~a multi-region **CloudTrail** trail in the workload account~~ an **organization CloudTrail trail** delivering to the Log Archive account ([ADR 1019](1019-aws-multi-account-sra.md)), with log-file validation, and **GuardDuty** (organization-wide), with findings sent through EventBridge, SNS and Amazon Q Developer to `#rl-security` (high severity also to `#rl-critical`).
 - **Home edge:** Cloudflare's free managed rule set, a rate-limiting rule on `/wp-login.php`, `/xmlrpc.php` blocked at the edge, and XML-RPC disabled inside WordPress (both sites).
 - **Optional:** CrowdSec with a Cloudflare bouncer to ban abusive IPs automatically; Tetragon enforcement ([ADR 1015](1015-process-allow-listing.md)).
 - **Not used:** an in-cluster network IDS (Suricata or Zeek).
@@ -32,7 +32,7 @@ Falco provides runtime detection inside containers, but on its own it is not an 
 - **Falco's Kubernetes audit plugin** instead of Loki alert rules: richer rule language, but needs the API server to send audit events to a webhook (more Talos configuration) and more memory; Loki already holds the logs and runs alert rules.
 - **Suricata or Zeek in the cluster:** heavy on CPU and memory, and most traffic is either TLS terminated (and inspected) at the WAFs, or covered by Cilium policies and Hubble.
 - **GuardDuty Runtime Monitoring** (an AWS agent on EKS nodes): overlaps with Falco, adds cost per node, and does not cover the home cluster.
-- **AWS Security Hub:** aggregates findings and runs posture checks continuously, but costs per check; Prowler ([ADR 1007](1007-prowler-not-threatmapper.md)) and GuardDuty cover the needs here.
+- ~~**AWS Security Hub:** aggregates findings and runs posture checks continuously, but costs per check; Prowler ([ADR 1007](1007-prowler-not-threatmapper.md)) and GuardDuty cover the needs here.~~ **Superseded by [ADR 1019](1019-aws-multi-account-sra.md):** Security Hub is now used.
 - **Cloudflare Pro** (paid WAF rule sets): more rules, but the free managed rule set plus rate limiting and XML-RPC blocking covers the WordPress basics at no cost.
 
 ## Consequences
@@ -44,13 +44,13 @@ Falco provides runtime detection inside containers, but on its own it is not an 
 
 ## When to revisit
 
-- russetleaf.com becomes always-on or holds personal data: consider GuardDuty Runtime Monitoring, Security Hub, and Cloudflare Pro or AWS WAF Bot Control.
-- More memory at home: CrowdSec, Falco's audit plugin, or Tetragon enforcement.
+- russetleaf.com becomes always-on or holds personal data: consider GuardDuty Runtime Monitoring and Cloudflare Pro or AWS WAF Bot Control.
+- More memory at home: Falco's audit plugin (CrowdSec and Tetragon are already realistic since [ADR 1020](1020-three-node-ha-home-cluster.md)).
 - A home-network IDS (router-level) becomes part of the lab.
 
 ## Open items
 
-- Phase 1 step 2.1: CloudTrail, GuardDuty and the Slack routing; test with GuardDuty sample findings.
+- Phase 1 step 2.0b: the organization CloudTrail trail, GuardDuty and the Slack routing; test with GuardDuty sample findings.
 - Phase 1 steps 2.2 and 4.6: the Talos audit policy, collection into Loki, and the audit alert rules.
 - Phase 1 step 2.3: Cloudflare managed rules, rate limiting and XML-RPC blocking.
 - Phase 1 step 7.9 (optional): CrowdSec.

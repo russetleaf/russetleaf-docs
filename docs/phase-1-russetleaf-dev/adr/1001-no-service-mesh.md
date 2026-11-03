@@ -19,7 +19,7 @@ Do not run a service mesh. Cover a mesh's benefits with tools already in the des
 |---|---|
 | mTLS between services | Cilium **WireGuard** transparent encryption for pod traffic between nodes, plus TLS on every sensitive connection (WordPress → database, everything → AWS APIs, CloudFront → ALB) |
 | Layer-7 authorization | **CiliumNetworkPolicies** with layer-7 rules (e.g. the summarizer may only call WordPress's REST API) |
-| Traffic shifting for canaries | **Argo Rollouts** through ingress-nginx and the ALB for code; the **LiteLLM gateway's** canary split for models |
+| Traffic shifting for canaries | **Argo Rollouts** through the Cilium Gateway ([ADR 1044](1044-cilium-gateway-api.md)) and the ALB for code; the **LiteLLM gateway's** canary split for models |
 | Retries, timeouts, circuit breaking | The **SQS** queue with retries and a dead-letter queue; LiteLLM's retries and fallbacks |
 | Per-service request metrics | **Hubble** HTTP metrics, ingress and ALB metrics, and the apps' own **OpenTelemetry** metrics |
 

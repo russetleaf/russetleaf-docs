@@ -11,7 +11,7 @@
 
 High availability (HA) means a site keeps working when a single component (a node, a disk, a zone, a database instance) fails. It usually means running more than one of everything, which costs money and hardware. The two sites differ:
 
-*[The table below describes the **original two-node** home lab. Current state ([ADR 1020](1020-three-node-ha-home-cluster.md)): three control-plane nodes with a virtual IP, MariaDB primary–replica replication with automatic failover, and WordPress, ingress-nginx and cloudflared spread across nodes; the home lab now survives any single node failure, with power and internet still single points of failure.]*
+*[The table below describes the **original two-node** home lab. Current state ([ADR 1020](1020-three-node-ha-home-cluster.md)): three control-plane nodes with a virtual IP, MariaDB primary–replica replication with automatic failover, and WordPress, the ingress and cloudflared spread across nodes; the home lab now survives any single node failure, with power and internet still single points of failure.]*
 
 | | russetleaf.dev (Talos, home) | russetleaf.com (EKS, AWS) |
 |---|---|---|
@@ -27,7 +27,7 @@ High availability (HA) means a site keeps working when a single component (a nod
 
 ## Decision
 
-- **russetleaf.dev: no high availability.** Single points of failure are accepted because the hardware (two 8 GB nodes) and the budget do not allow redundancy. Protection comes from **recovery**, not redundancy: everything is rebuilt from Git (Terraform, Argo CD), and the database is restored from S3 backups.
+- ~~**russetleaf.dev: no high availability.**~~ **Superseded by [ADR 1020](1020-three-node-ha-home-cluster.md)** (highly available for a single node failure; the rest of this bullet describes the original lab). Single points of failure were accepted because the hardware (two 8 GB nodes) and the budget do not allow redundancy. Protection comes from **recovery**, not redundancy: everything is rebuilt from Git (Terraform, Argo CD), and the database is restored from S3 backups.
 - **russetleaf.com: a highly available design, run in demo mode.** It is HA *within one region while running* (EKS control plane, nodes across zones, RDS Multi-AZ, ElastiCache replica, multi-zone ALB, CloudFront), with one deliberate demo cut (one NAT Gateway), and it is not always running.
 - **Recovery targets** (recovery point = how much data can be lost; recovery time = how long until the site is back):
 
@@ -54,19 +54,19 @@ High availability (HA) means a site keeps working when a single component (a nod
 **AWS (russetleaf.com):**
 
 1. **Three NAT Gateways** (one per zone): about **+$65/month** if running 24/7.
-2. **Always-on operation:** the full **~$505–555/month** in the Phase 3 design's cost table.
+2. **Always-on operation:** the full **~$520–580/month** in the Phase 3 design's cost table.
 3. **Multi-region disaster recovery:** cross-region copies of RDS snapshots and S3 data (backup-and-restore costs little more than storage), or a warm standby in a second region with **Route 53 failover** (roughly doubles the cost).
 
 ## Alternatives considered
 
 - **Building HA at home now:** needs a third node, more memory and replicated storage; not affordable with the current hardware, and recovery from Git plus backups is adequate for a portfolio site.
-- **Running russetleaf.com always-on with full HA:** about $505–555/month, far over the $30–50/month budget.
+- **Running russetleaf.com always-on with full HA:** about $520–580/month, far over the $30–50/month budget.
 - **Removing the demo cut (three NAT Gateways) during demos:** adds cost for every demo hour, for resilience that a demo rarely needs; documented as "production would use three" instead.
 
 ## Consequences
 
 - Both sites' limits are explicit, with numbers, rather than implied.
-- russetleaf.dev will have outages when `rl-home-cp01`, its disk, the home power or the internet fails; the uptime check and dead man's switch alert on them.
+- russetleaf.dev will have outages when the home power or the internet fails (since [ADR 1020](1020-three-node-ha-home-cluster.md), not when a single node or disk fails); the uptime check and dead man's switch alert on them.
 - russetleaf.com demonstrates an HA design without paying for it around the clock.
 - Recovery depends on the backups, Terraform and GitOps working, which makes the monthly restore test and occasional rebuild rehearsal important.
 
