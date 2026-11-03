@@ -7,7 +7,7 @@ RussetLeaf is a portfolio project: a production-grade WordPress platform built t
 | Phase | What it builds | Needs | Design | Plan | Decisions |
 |---|---|---|---|---|---|
 | **1. russetleaf.dev** | WordPress on a three-node, highly available Talos cluster at home, running 24/7: GitOps, platform services, security, observability, staging and promotion, disaster recovery, and the AWS Organization it uses | — | [design](phase-1-russetleaf-dev/design.md) | [plan](phase-1-russetleaf-dev/plan.md) | [ADRs](#architecture-decision-records) |
-| **2. AI summaries and MLOps** | AI-generated post summaries on russetleaf.dev: an event-driven summarizer, an LLM gateway (Bedrock plus a self-hosted model on `rl-home-cp02`), an evaluation gate, MLflow, guardrails, online evaluation and drift monitoring, feedback and data versioning, fine-tuning on a rented GPU with drift-triggered retraining, and a read-only AI operations assistant (kagent) | Phase 1 | [design](phase-2-ai-mlops/design.md) | [plan](phase-2-ai-mlops/plan.md) | [ADRs](#architecture-decision-records) |
+| **2. AI summaries and MLOps** | AI-generated post summaries on russetleaf.dev: an event-driven summarizer, an LLM gateway (Bedrock plus a self-hosted model on `rl-home-cp02`), an evaluation gate, MLflow, guardrails, online evaluation and drift monitoring, feedback and data versioning, fine-tuning on a rented GPU with drift-triggered retraining, and an AI operations assistant (kagent) that diagnoses with the project's own documentation and proposes fixes as pull requests | Phase 1 | [design](phase-2-ai-mlops/design.md) | [plan](phase-2-ai-mlops/plan.md) | [ADRs](#architecture-decision-records) |
 | **3. russetleaf.com** | The same site on the full AWS production design (EKS, Karpenter, RDS with RDS Proxy, ElastiCache, CloudFront, ALB, AWS WAF), brought up only for demos, with an always-on offline page | Phase 1 | [design](phase-3-russetleaf-com/design.md) | [plan](phase-3-russetleaf-com/plan.md) | [ADRs](#architecture-decision-records) |
 
 The reasoning for this split is in [ADR 1037](phase-1-russetleaf-dev/adr/1037-project-phases.md).
@@ -235,7 +235,7 @@ What each phase builds and shows. Phase 1 on its own is a complete project; Phas
 
 ### Phase 2: AI summaries and MLOps
 
-- **Agentic AI in operations, with guardrails:** kagent in the cluster triages alerts with read-only tools, through the same LLM gateway and budgets as the summarizer, and its diagnoses are evaluated against incident scenarios ([ADR 2006](phase-2-ai-mlops/adr/2006-ai-operations-assistant.md)).
+- **Agentic AI in operations, with guardrails:** kagent in the cluster triages alerts with read-only tools, through the same LLM gateway and budgets as the summarizer, and its diagnoses cite the project's own runbooks and decisions (a pgvector knowledge base), and fixes arrive as `ai-proposed` pull requests for review, all evaluated against incident and chaos scenarios ([ADR 2006](phase-2-ai-mlops/adr/2006-ai-operations-assistant.md), [ADR 2007](phase-2-ai-mlops/adr/2007-ai-diagnosis-and-remediation-proposals.md)).
 - **Built with AI coding agents, measured:** least-privilege agent identities, sandbox-first iteration, `AGENTS.md` instructions in every repo, pull-request review, and per-step records of what agents did and what review caught, compared with the agent-free Phase 1 baseline ([ADR 2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md)).
 
 - **Generative AI run like production software:** Bedrock integration with least-privilege IAM, event-driven scaling to zero, a dead-letter queue, and cost controls, with the same code running on both clusters.
@@ -267,9 +267,9 @@ Each phase's plan tiers every step as **Core** (a complete, working, secure plat
 | Plan | Core | Extended | Advanced | Total |
 |---|---|---|---|---|
 | [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~169–275 | ~72–127 | ~89–144 | **~330–546** |
-| [Phase 2: AI summaries and MLOps](phase-2-ai-mlops/plan.md#priorities-and-time-estimates) (optional) | ~50–86 | ~32–53 | ~39–64 | **~121–203** |
+| [Phase 2: AI summaries and MLOps](phase-2-ai-mlops/plan.md#priorities-and-time-estimates) (optional) | ~50–86 | ~32–53 | ~64–104 | **~146–243** |
 | [Phase 3: russetleaf.com](phase-3-russetleaf-com/plan.md#priorities-and-time-estimates) (optional) | ~73–121 | ~10–16 | ~16–25 | **~99–162** |
-| **Whole project** | ~292–482 | ~114–196 | ~144–233 | **~550–911** |
+| **Whole project** | ~292–482 | ~114–196 | ~169–273 | **~575–951** |
 
 **Calendar time at about 20 hours a week:**
 
@@ -277,8 +277,8 @@ Each phase's plan tiers every step as **Core** (a complete, working, secure plat
 |---|---|---|
 | Phase 1, Core tier | ~169–275 | 9–14 weeks |
 | Phase 1, everything | ~330–546 | 17–27 weeks (4–6.5 months) |
-| Phases 1 and 2 | ~451–749 | 23–37 weeks (5–9 months) |
-| All three phases | ~550–911 | 28–46 weeks (6–11 months; 13–21 months at 10 hours a week) |
+| Phases 1 and 2 | ~476–789 | 24–39 weeks (6–9 months) |
+| All three phases | ~575–951 | 29–48 weeks (7–11 months; 13–22 months at 10 hours a week) |
 
 Phase 1 is built with AI assistance in conversation; Phases 2 and 3 are built with AI coding agents under [ADR 2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md), with Phase 1's actual hours as the baseline for measuring the difference. Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar. A finished Phase 1 is worth more than three unfinished phases.
 
@@ -662,6 +662,7 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md) | Agentic AI delivery, with least-privilege access and measured results | 2 |
 | [2005](phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md) | Fine-tuning on a rented spot GPU, with drift-triggered retraining | 2 |
 | [2006](phase-2-ai-mlops/adr/2006-ai-operations-assistant.md) | A read-only AI operations assistant with kagent | 2 |
+| [2007](phase-2-ai-mlops/adr/2007-ai-diagnosis-and-remediation-proposals.md) | AI diagnosis with a project knowledge base, and remediation proposed as pull requests | 2 |
 | [3001](phase-3-russetleaf-com/adr/3001-kube-bench-eks-only.md) | kube-bench on EKS only; Talos checked with its own hardening checks and Trivy Operator | 3 |
 | [3002](phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md) | Fine-tuning on the EKS GPU node pool, with the challenger served at home | 3 |
 | [3003](phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md) | Cilium on EKS in chaining mode with the VPC CNI | 3 |

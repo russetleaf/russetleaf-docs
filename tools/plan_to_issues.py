@@ -35,7 +35,7 @@ def slug(heading):
 def parse_plan(text):
     """Return steps in plan order: number, title, anchor, do, test, tier, estimate."""
     steps = []
-    for m in re.finditer(r'^### (Step (\d+\.\d+b?)(?: \(optional\))?: (.+))$', text, re.M):
+    for m in re.finditer(r'^### (Step (\d+\.\d+[a-z]?)(?: \(optional\))?: (.+))$', text, re.M):
         start = m.end()
         nxt = re.search(r'^#{2,3} ', text[start:], re.M)
         body = text[start:start + nxt.start()] if nxt else text[start:]
@@ -46,7 +46,7 @@ def parse_plan(text):
                       'test': test.group(1).strip() if test else ''})
     checklist = text.split('## Progress checklist', 1)[1] if '## Progress checklist' in text else ''
     rows = {m.group(1): (m.group(2), m.group(3)) for m in
-            re.finditer(r'^\| (\d+\.\d+b?) [^|]*\| (\w+) \| (\d+–\d+) \|', checklist, re.M)}
+            re.finditer(r'^\| (\d+\.\d+[a-z]?) [^|]*\| (\w+) \| (\d+–\d+) \|', checklist, re.M)}
     for s in steps:
         s['tier'], s['estimate'] = rows.get(s['num'], ('Unknown', '?'))
     return steps

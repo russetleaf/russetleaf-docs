@@ -22,10 +22,10 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 |---|---|---|---|
 | **Core** | A working, evaluated and secured summary pipeline: the repo, the agents' workspace and guardrails, AWS resources, `rl-home-cp02` as the LLM node, the WordPress side, KEDA, the gateway, the summarizer, its release and monitoring, the evaluation set, runners and gate, security for the new components, and the docs. | 1.1–1.4, 2.1–2.5, 4.1–4.3, 5.1, 5.3 | **~50–86** |
 | **Extended** | The full MLOps lifecycle: the AI burst test, the self-hosted model and gateway routing, MLflow tracking and registry, guardrails, online evaluation and drift, and observability and operations for the AI components. | 2.6, 3.1, 3.2, 4.4–4.6, 5.2 | **~32–53** |
-| **Advanced** | The feedback loop and data versioning (DVC); fine-tuning on a rented GPU, the fine-tuned challenger, and drift-triggered retraining; the AI operations assistant (kagent). | 4.7–4.10, 5.2b | **~39–64** |
-| **Total** | | | **~121–203** |
+| **Advanced** | The feedback loop and data versioning (DVC); fine-tuning on a rented GPU, the fine-tuned challenger, and drift-triggered retraining; the AI operations assistant (kagent), and AI diagnosis with remediation proposed as pull requests. | 4.7–4.10, 5.2b, 5.2c | **~64–104** |
+| **Total** | | | **~146–243** |
 
-**Calendar time:** about **6–10 weeks at ~20 hours a week** (2–3.5 months at ~10), after Phase 1's Core tier. Allow a few days for Bedrock model access.
+**Calendar time:** about **7–12 weeks at ~20 hours a week** (2–3.5 months at ~10), after Phase 1's Core tier. Allow a few days for Bedrock model access.
 
 **Recommended order:** Stage 1, then the Core steps of Stages 2 and 4 (a working, evaluated pipeline), then 5.1 and 5.3; add the Extended steps after that. The fine-tuning steps (4.8–4.10) come last; request the GPU quota early (step 1.2), since approval can take days.
 
@@ -267,9 +267,20 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 **Test:** each incident scenario produces a triage note in Slack; at least four of the five diagnoses are correct or partly correct; the assistant's service account cannot read a Secret or change any resource (checked with `kubectl auth can-i`); its requests appear in the audit log; its spend shows on the LLM dashboard and stops at the budget.
 
+### Step 5.2c: AI diagnosis and remediation proposals
+
+**Do** ([ADR 2007](adr/2007-ai-diagnosis-and-remediation-proposals.md)):
+
+- **Knowledge base:** PostgreSQL with **pgvector** (CloudNativePG, on `rl-home-cp01`; reuse the operator from Phase 1 step 8.3 if it exists); an Argo Workflows job that chunks and embeds the `russetleaf-docs` repo, the runbooks, the postmortems and the repos' code and Helm values (embeddings through the gateway, with its own budget), nightly and after merges to `main`; a small MCP server for search that returns passages with source links.
+- **Agents** (kagent): a **diagnosis agent** (read-only tools plus knowledge-base search) that writes a diagnosis citing its sources; a **remediation agent** that, when the runbook's fix is a Git change, opens an `ai-proposed` pull request in `russetleaf-gitops` with the evidence, the cited runbook, the expected effect and how to undo it; a **verification agent** that comments on the pull request after merge with whether the alert cleared and the SLIs recovered.
+- **Limits:** a GitHub App for the agents limited to branches and pull requests in `russetleaf-gitops` (no merge, no settings); a CI check that **rejects `ai-proposed` pull requests touching protected paths** (RBAC, Kyverno and network policies, secrets, Argo CD and Cilium configuration); one open proposal per incident and a daily limit; a kill switch.
+- **Evaluation:** run the incident scenarios and selected chaos experiments in staging; score each run (correct diagnosis, correct runbook cited, a proposal the operator would merge, any harmful proposal) and log the results to MLflow.
+
+**Test:** for each scenario, the diagnosis cites the right runbook; at least three of five proposals are pull requests the operator would merge as written; no proposal touches a protected path (and a test pull request that does is rejected by CI); with the kill switch on, no pull requests are opened; after a merged proposal, the verification comment reports the alert cleared.
+
 ### Step 5.3: Documentation
 
-**Do:** finish ADRs [2001](adr/2001-mlops-lifecycle.md), [2002](adr/2002-summary-pipeline-architecture.md), [2003](adr/2003-self-hosted-model-on-cp02.md), [2004](adr/2004-agentic-ai-delivery.md), [2005](adr/2005-fine-tuning-on-a-rented-gpu.md) and [2006](adr/2006-ai-operations-assistant.md) (resolve their open items); update the Phase 2 design wherever the build differed; add the LLM dashboard, an evaluation report and an MLflow run to the hub README's screenshots; add the AI pipeline to the hub README's architecture diagram; optionally an article on evaluation gates for LLMs.
+**Do:** finish ADRs [2001](adr/2001-mlops-lifecycle.md), [2002](adr/2002-summary-pipeline-architecture.md), [2003](adr/2003-self-hosted-model-on-cp02.md), [2004](adr/2004-agentic-ai-delivery.md), [2005](adr/2005-fine-tuning-on-a-rented-gpu.md) , [2006](adr/2006-ai-operations-assistant.md) and [2007](adr/2007-ai-diagnosis-and-remediation-proposals.md) (resolve their open items); update the Phase 2 design wherever the build differed; add the LLM dashboard, an evaluation report and an MLflow run to the hub README's screenshots; add the AI pipeline to the hub README's architecture diagram; optionally an article on evaluation gates for LLMs.
 
 Also write **an account of building Phase 2 with agents** (`docs/agentic-delivery-phase-2.md` in `russetleaf-docs`, and optionally an article): what agents did, the guardrails, the review findings, and actual hours compared with the estimates and with similar Phase 1 work, using the checklist's **Done by** and **Review findings** columns ([ADR 2004](adr/2004-agentic-ai-delivery.md)).
 
@@ -314,6 +325,7 @@ Also write **an account of building Phase 2 with agents** (`docs/agentic-deliver
 | 5.1 Security for the AI components | Core | 4–7 | ☐ | | | | | | |
 | 5.2 Observability and operations for AI | Extended | 5–8 | ☐ | | | | | | |
 | 5.2b AI operations assistant (kagent) | Advanced | 8–12 | ☐ | | | | | | |
+| 5.2c AI diagnosis and remediation proposals | Advanced | 25–40 | ☐ | | | | | | |
 | 5.3 Documentation | Core | 2–4 | ☐ | | | | | | |
 
 ## Decision log

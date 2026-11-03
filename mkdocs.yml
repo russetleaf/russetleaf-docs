@@ -123,6 +123,7 @@ nav:
           - "2004 Agentic AI delivery, with least-privilege access and measured results": phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md
           - "2005 Fine-tuning on a rented spot GPU, with drift-triggered retraining": phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md
           - "2006 A read-only AI operations assistant with kagent": phase-2-ai-mlops/adr/2006-ai-operations-assistant.md
+          - "2007 AI diagnosis with a project knowledge base, and remediation proposed as pull requests": phase-2-ai-mlops/adr/2007-ai-diagnosis-and-remediation-proposals.md
   - "Phase 3: russetleaf.com":
       - Design: phase-3-russetleaf-com/design.md
       - Plan: phase-3-russetleaf-com/plan.md

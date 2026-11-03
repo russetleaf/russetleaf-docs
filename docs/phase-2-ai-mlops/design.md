@@ -224,6 +224,8 @@ Alongside the agents that help build the project ([ADR 2004](adr/2004-agentic-ai
 - Its model calls go through the **LiteLLM gateway**, with its own key, budget and rate limits, so its cost appears on the LLM dashboards.
 - When an important alert fires, it investigates and posts a **triage note** in the alert's Slack thread: likely cause, evidence and suggested next steps from the runbook. It never changes anything; the operator decides.
 - Its diagnoses are checked against a small set of **incident scenarios** in staging, like the summarizer's evaluation gate.
+- **Diagnosis with the project's own knowledge** ([ADR 2007](adr/2007-ai-diagnosis-and-remediation-proposals.md)): the docs, runbooks, postmortems and code are indexed (pgvector) so a diagnosis agent can cite the runbook and decisions behind its reasoning.
+- **Fixes as pull requests:** when the runbook's fix is a Git change, a remediation agent opens an `ai-proposed` pull request with the evidence and how to undo it; the operator reviews and merges, Argo CD applies it, and a verification agent confirms the alert cleared. A CI check stops these pull requests from touching sensitive paths (RBAC, policies, secrets). Direct actions after approval in Slack are a possible later extension, not part of this design.
 
 ## AI components in the shared platform
 

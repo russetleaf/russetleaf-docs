@@ -883,6 +883,7 @@ A cluster cannot report that it is completely down, so two outside checks back u
 
 - Alert rules are `PrometheusRule` resources in Git (in each component's `base/`, plus the summarizer's chart), tested in CI with **`promtool test rules`**.
 - Every alert has `severity`, `summary`, `description` and a **`runbook_url`** pointing to `docs/runbooks/<alert>.md` in `russetleaf-gitops`: what it means, how to check, how to fix.
+- **Runbook structure:** every runbook follows `docs/runbooks/TEMPLATE.md` in `russetleaf-gitops`: a short header (alert name, severity, components, related ADRs), then **Summary**, **Symptoms**, **Impact**, **Checks** (the exact commands and queries), **Likely causes**, **Fixes** (each with its risk, whether it is reversible, and whether it is a Git change or a command), **Escalation** and **Related** (dashboards, postmortems). The consistent structure makes runbooks quick to follow under pressure, and lets Phase 2's AI assistant find and cite the right fix ([ADR 2007](../phase-2-ai-mlops/adr/2007-ai-diagnosis-and-remediation-proposals.md)).
 - **Every alert must be actionable.** If nobody would act on it, it is a dashboard panel, not an alert. A monthly review removes or tunes noisy alerts.
 - Alertmanager's routing config lives in `platform/monitoring/` (with `overlays/home` and `overlays/aws` setting the site-specific receivers).
 

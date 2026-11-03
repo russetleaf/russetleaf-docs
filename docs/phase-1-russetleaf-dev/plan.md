@@ -266,6 +266,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 | [2004 Agentic AI delivery](../phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md) | — | 1.1b, 5.3 | 0.3 |
 | [2005 Fine-tuning on a rented GPU](../phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md) | — | 1.2, 4.6, 4.8–4.10 | — |
 | [2006 AI operations assistant](../phase-2-ai-mlops/adr/2006-ai-operations-assistant.md) | — | 5.2b | — |
+| [2007 AI diagnosis and remediation proposals](../phase-2-ai-mlops/adr/2007-ai-diagnosis-and-remediation-proposals.md) | 4.4 | 5.2c | — |
 | [3001 kube-bench on EKS only](../phase-3-russetleaf-com/adr/3001-kube-bench-eks-only.md) | 7.2 | — | 2.5 |
 | [3002 Fine-tuning on the EKS GPU pool (superseded by 2005)](../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md) | — | — | — |
 | [3003 Cilium chaining on EKS](../phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md) | — | — | 1.4 |
@@ -449,7 +450,8 @@ Check `kubectl top nodes` after each step.
 - **Dead man's switch:** route the always-firing `Watchdog` alert to the heartbeat service's URL; the heartbeat service alerts `#rl-critical` if pings stop.
 - **blackbox_exporter** (in `platform/monitoring/`) with probes for key URLs inside the cluster; start with a test target, then add `/`, `/wp-login.php` and `/wp-json/` once WordPress exists (step 5.2).
 - **External uptime check** for `https://russetleaf.dev` (Phase 3 adds russetleaf.com, expecting 200 or the 503 offline page).
-- **Alerts as code:** a starter set of `PrometheusRule`s (site down, pod crash-looping, node memory high, disk filling, certificate/tunnel down, and **`KubeAPIRequestsRejected`** when the API server's Priority and Fairness rejects requests; [ADR 1034](adr/1034-kubernetes-threat-model-coverage.md)), each with `severity`, `summary`, `description` and `runbook_url`; a runbook for each in `docs/runbooks/`; `promtool test rules` in `russetleaf-gitops` CI.
+- **Alerts as code:** a starter set of `PrometheusRule`s (site down, pod crash-looping, node memory high, disk filling, certificate/tunnel down, and **`KubeAPIRequestsRejected`** when the API server's Priority and Fairness rejects requests; [ADR 1034](adr/1034-kubernetes-threat-model-coverage.md)), each with `severity`, `summary`, `description` and `runbook_url`; a runbook for each in `docs/runbooks/`, written from `docs/runbooks/TEMPLATE.md`; `promtool test rules` in `russetleaf-gitops` CI.
+- **Runbook structure:** every runbook follows `docs/runbooks/TEMPLATE.md` in `russetleaf-gitops`: a short header (alert name, severity, components, related ADRs), then **Summary**, **Symptoms**, **Impact**, **Checks** (the exact commands and queries), **Likely causes**, **Fixes** (each with its risk, whether it is reversible, and whether it is a Git change or a command), **Escalation** and **Related** (dashboards, postmortems). The consistent structure makes runbooks quick to follow under pressure, and lets Phase 2's AI assistant find and cite the right fix ([ADR 2007](../phase-2-ai-mlops/adr/2007-ai-diagnosis-and-remediation-proposals.md)).
 
 **Test:** Grafana shows node and pod dashboards for all three nodes, plus the Cilium and Hubble dashboards with live data; Prometheus' targets page lists the Cilium agent, operator and Hubble endpoints as up; a test critical alert appears in both `#rl-critical` and `#rl-dev-alerts` with a working runbook link; stopping Alertmanager for longer than the heartbeat period makes the heartbeat service post to `#rl-critical`; a broken alert rule fails `promtool` in CI.
 

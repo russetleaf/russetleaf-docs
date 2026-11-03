@@ -1,9 +1,11 @@
 # ADR 2006: A read-only AI operations assistant with kagent
 
-- **Status:** Accepted
+- **Status:** Accepted; extended by [ADR 2007](2007-ai-diagnosis-and-remediation-proposals.md)
 - **Date:** 2026-11-02
 - **Applies to:** the home cluster's operations: alert triage and troubleshooting
 - **Phase:** 2
+
+> **Update ([ADR 2007](2007-ai-diagnosis-and-remediation-proposals.md)):** the assistant gains a knowledge base of the project's documentation and can propose fixes as pull requests for the operator to review; it still makes no direct changes.
 
 ## Context
 
