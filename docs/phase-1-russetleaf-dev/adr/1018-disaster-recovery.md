@@ -1,6 +1,6 @@
 # ADR 1018: Disaster recovery with off-account immutable copies and a break-glass kit
 
-- **Status:** Accepted; updated by [ADR 1019](1019-aws-multi-account-sra.md)
+- **Status:** Accepted; updated by [ADR 1019](1019-aws-multi-account-sra.md); Kubernetes backup approach recorded 2026-11-03
 - **Date:** 2026-11-01
 - **Applies to:** both sites, the AWS accounts, and the supporting services (GitHub, Cloudflare, Google, domain registrars)
 - **Phase:** 1. Later: Phase 3 adds russetleaf.com's logical dump at `demo-down` and its restore drill.
@@ -22,6 +22,7 @@ The design could already rebuild most things from code (Terraform, GitOps, image
 - **russetleaf.com's database:** a logical dump at every `demo-down`, stored in its backup bucket and replicated (instead of cross-account snapshot copies, which would need KMS key sharing).
 - **Daily repo mirrors** (`git bundle`) of every repo (the four code repos and `russetleaf-docs`) into the backup account, through a write-only OIDC role. Images and charts are rebuilt rather than copied.
 - **A copy outside AWS:** a daily job on the home cluster encrypts the latest MariaDB dump and etcd snapshot with **`age`** (the cluster holds only the public key; the private key is in the break-glass kit) and uploads them with `rclone` to a **Cloudflare R2** bucket with a **bucket lock** rule of 30 days (objects deleted after 35). It covers the worst case, losing or compromising the AWS management account and with it the whole Organization. The project already has a Cloudflare account, R2 has no download charges, and data this small fits its free tier (check current terms); the bucket and its lock rule are managed with Terraform's Cloudflare provider where supported. The R2 token is limited to that bucket and kept in Secrets Manager.
+- **No cluster-level backup tool:** Kubernetes objects are restored by **Argo CD from Git**, and data from **its own application-consistent backups** (MariaDB logical dumps, S3 versions and replicas). The weekly **etcd snapshots** are only for losing the control plane: restoring one rewinds the whole cluster, so they are never used to recover a single namespace or resource. Every stateful component is listed in the [disaster recovery plan](../disaster-recovery.md) as either backed up or rebuildable, and recovering deleted resources has its own runbook (`restore-deleted-resources.md`).
 - **Regenerate secrets rather than copy them**, except those that cannot be regenerated (account access, the Talos secrets bundle), which go in the **break-glass kit**: the password manager plus a printed copy of the essentials.
 - **A written plan** (the [disaster recovery plan](../disaster-recovery.md)): an asset inventory, scenarios with data-loss and recovery-time targets and procedures, and the bootstrap order from zero.
 - **Drills:** monthly restore; quarterly restore from the backup account; a yearly full "home lab destroyed" rebuild using only the kit and backups; a once-then-yearly russetleaf.com restore; a 6-monthly break-glass kit check.
@@ -33,6 +34,8 @@ The design could already rebuild most things from code (Terraform, GitOps, image
 - **Other providers for the off-AWS copy** (Backblaze B2 with Object Lock, Google Cloud Storage or Azure Blob with retention locks): equally suitable; R2 was chosen because the Cloudflare account already exists.
 - **AWS DataSync to Azure or Google Cloud Storage:** supports those destinations, but is built for large migrations, charges per GB and, for some locations, needs an agent instance; heavy machinery for a few MB of dumps, and it runs inside the AWS account whose loss the copy is meant to survive.
 - **Copying every secret:** simpler restores, but spreads secrets across more places; regenerating is safer and the plan lists what to regenerate.
+- **Velero** (backs up Kubernetes objects, and volumes through CSI snapshots or file-level copies with Kopia, to S3): the usual tool for cluster backups and namespace-level restores, but most of what it captures is already in Git (and restoring it can conflict with Argo CD); local-path-provisioner has no snapshot support, so volume backups would be file copies of a running database, which are not consistent without freeze hooks, whereas the logical dumps are; and it adds a server, a per-node agent (roughly 100–300 MB per node) and a second backup system to monitor and drill. Worth adopting if stateful workloads without their own backup tools appear, or if the cluster moves to storage with snapshots.
+- **Kasten K10** (Veeam): application-aware backups with a policy UI; free for small clusters, but heavier than Velero, with the same overlap with GitOps and the database dumps.
 - **Mirroring images to a second registry:** unnecessary, since images are reproducible from the mirrored source and re-signed on rebuild.
 
 ## Consequences
@@ -57,3 +60,5 @@ The design could already rebuild most things from code (Terraform, GitOps, image
 - Phase 1 step 2.5: the encrypted R2 copy and its restore test; a quarterly restore from R2.
 - Phase 1 step 7.10: the first full disaster drill; record the time in the [disaster recovery plan](../disaster-recovery.md).
 - Phase 3 step 5.1: the logical dump at `demo-down`; restore it once from the backup account.
+- Phase 1 step 7.8: `restore-deleted-resources.md` and its drill (a deleted staging namespace recovered from Git and backups).
+- Phase 2 step 4.4: backups for MLflow's database (the model registry).

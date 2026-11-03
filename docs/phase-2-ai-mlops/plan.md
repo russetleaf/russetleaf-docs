@@ -21,9 +21,9 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
 | **Core** | A working, evaluated and secured summary pipeline: the repo, the agents' workspace and guardrails, AWS resources, `rl-home-cp02` as the LLM node, the WordPress side, KEDA, the gateway, the summarizer, its release and monitoring, the evaluation set, runners and gate, security for the new components, and the docs. | 1.1–1.4, 2.1–2.5, 4.1–4.3, 5.1, 5.3 | **~50–86** |
-| **Extended** | The full MLOps lifecycle: the AI burst test, the self-hosted model and gateway routing, MLflow tracking and registry, guardrails, online evaluation and drift, and observability and operations for the AI components. | 2.6, 3.1, 3.2, 4.4–4.6, 5.2 | **~32–53** |
+| **Extended** | The full MLOps lifecycle: the AI burst test, the self-hosted model and gateway routing, MLflow tracking and registry, guardrails, online evaluation and drift, and observability and operations for the AI components. | 2.6, 3.1, 3.2, 4.4–4.6, 5.2 | **~33–54** |
 | **Advanced** | The feedback loop and data versioning (DVC); fine-tuning on a rented GPU, the fine-tuned challenger, and drift-triggered retraining; the AI operations assistant (kagent), and AI diagnosis with remediation proposed as pull requests. | 4.7–4.10, 5.2b, 5.2c | **~64–104** |
-| **Total** | | | **~146–243** |
+| **Total** | | | **~147–244** |
 
 **Calendar time:** about **7–12 weeks at ~20 hours a week** (about 3.5–5.5 months at ~10), after Phase 1's Core tier. Allow a few days for Bedrock model access.
 
@@ -183,9 +183,9 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 4.4: Experiment tracking and model registry (MLflow)
 
-**Do:** `platform/mlflow/` (placed on `rl-home-cp03`): the MLflow tracking server with MariaDB for metadata (TLS required by the server, per [ADR 1043](../phase-1-russetleaf-dev/adr/1043-database-encryption.md)) and an S3 artifact bucket (`s3-mlops` module in `russetleaf-infra`; versioned, old versions deleted after 30 days per [ADR 1042](../phase-1-russetleaf-dev/adr/1042-s3-versioning-lifecycle-and-storage-classes.md), scoped access through External Secrets), behind Cloudflare Access. Change the evaluation gate (step 4.3) to log every run to MLflow (Git commit, prompt version, model, dataset version, scores, latency, cost). Register `summarizer-config` and `local-summarizer` (the current 3B model file) with `champion` aliases, feed the model mirror bucket from the registry, and make routing changes in `russetleaf-gitops` reference registry versions. **Check `rl-home-cp03`'s memory** afterwards against the budget in the Phase 2 design; if it passes about 85%, place MLflow on `rl-home-cp01`. See the Phase 2 design's [MLOps lifecycle](design.md#mlops-lifecycle).
+**Do:** `platform/mlflow/` (placed on `rl-home-cp03`): the MLflow tracking server with MariaDB for metadata (TLS required by the server, per [ADR 1043](../phase-1-russetleaf-dev/adr/1043-database-encryption.md)) and an S3 artifact bucket (`s3-mlops` module in `russetleaf-infra`; versioned, old versions deleted after 30 days per [ADR 1042](../phase-1-russetleaf-dev/adr/1042-s3-versioning-lifecycle-and-storage-classes.md), scoped access through External Secrets), behind Cloudflare Access. Change the evaluation gate (step 4.3) to log every run to MLflow (Git commit, prompt version, model, dataset version, scores, latency, cost). Register `summarizer-config` and `local-summarizer` (the current 3B model file) with `champion` aliases, feed the model mirror bucket from the registry, and make routing changes in `russetleaf-gitops` reference registry versions. **Back up MLflow's database** like WordPress's: a MariaDB Operator `Backup` to the backup bucket every 6 hours (replicated to the Backup account), with the same backup-age alert, and add it to the [disaster recovery plan](../phase-1-russetleaf-dev/disaster-recovery.md) ([ADR 1018](../phase-1-russetleaf-dev/adr/1018-disaster-recovery.md)); the model registry records which versions were approved, and cannot be rebuilt. **Check `rl-home-cp03`'s memory** afterwards against the budget in the Phase 2 design; if it passes about 85%, place MLflow on `rl-home-cp01`. See the Phase 2 design's [MLOps lifecycle](design.md#mlops-lifecycle).
 
-**Test:** `rl-home-cp03`'s memory stays under about 85%; an evaluation run appears in MLflow with its parameters, metrics and report; the registry shows both models with lineage to their runs; the gateway's routing points at a registered version.
+**Test:** `rl-home-cp03`'s memory stays under about 85%; an evaluation run appears in MLflow with its parameters, metrics and report; the registry shows both models with lineage to their runs; the gateway's routing points at a registered version; a backup restored into a scratch MariaDB instance shows the same registered versions and aliases.
 
 ### Step 4.5: Guardrails
 
@@ -271,7 +271,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 **Do** ([ADR 2007](adr/2007-ai-diagnosis-and-remediation-proposals.md)):
 
-- **Knowledge base:** PostgreSQL with **pgvector** (CloudNativePG, on `rl-home-cp01`; reuse the operator from Phase 1 step 8.3 if it exists); an Argo Workflows job that chunks and embeds the `russetleaf-docs` repo, the runbooks, the postmortems and the repos' code and Helm values (embeddings through the gateway, with its own budget), nightly and after merges to `main`; a small MCP server for search that returns passages with source links.
+- **Knowledge base:** PostgreSQL with **pgvector** (CloudNativePG, on `rl-home-cp01`; reuse the operator from Phase 1 step 8.3 if it exists; **no backup**, since re-running the embedding job rebuilds it, as recorded in the [disaster recovery plan](../phase-1-russetleaf-dev/disaster-recovery.md)); an Argo Workflows job that chunks and embeds the `russetleaf-docs` repo, the runbooks, the postmortems and the repos' code and Helm values (embeddings through the gateway, with its own budget), nightly and after merges to `main`; a small MCP server for search that returns passages with source links.
 - **Agents** (kagent): a **diagnosis agent** (read-only tools plus knowledge-base search) that writes a diagnosis citing its sources; a **remediation agent** that, when the runbook's fix is a Git change, opens an `ai-proposed` pull request in `russetleaf-gitops` with the evidence, the cited runbook, the expected effect and how to undo it; a **verification agent** that comments on the pull request after merge with whether the alert cleared and the SLIs recovered.
 - **Limits:** a GitHub App for the agents limited to branches and pull requests in `russetleaf-gitops` (no merge, no settings); a CI check that **rejects `ai-proposed` pull requests touching protected paths** (RBAC, Kyverno and network policies, secrets, Argo CD and Cilium configuration); one open proposal per incident and a daily limit; a kill switch.
 - **Evaluation:** run the incident scenarios and selected chaos experiments in staging; score each run (correct diagnosis, correct runbook cited, a proposal the operator would merge, any harmful proposal) and log the results to MLflow.
@@ -315,7 +315,7 @@ Also write **an account of building Phase 2 with agents** (`docs/agentic-deliver
 | 4.1 Evaluation set | Core | 5–8 | ☐ | | | | | | |
 | 4.2 Runners for `russetleaf-llm-summarizer` | Core | 1–2 | ☐ | | | | | | |
 | 4.3 Evaluation gate + releases | Core | 4–7 | ☐ | | | | | | |
-| 4.4 MLflow tracking + registry | Extended | 6–10 | ☐ | | | | | | |
+| 4.4 MLflow tracking + registry | Extended | 7–11 | ☐ | | | | | | |
 | 4.5 Guardrails | Extended | 6–10 | ☐ | | | | | | |
 | 4.6 Online evaluation + drift | Extended | 6–10 | ☐ | | | | | | |
 | 4.7 Feedback loop + DVC | Advanced | 6–10 | ☐ | | | | | | |

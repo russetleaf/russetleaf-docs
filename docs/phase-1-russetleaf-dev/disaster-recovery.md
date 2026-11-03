@@ -23,6 +23,11 @@ This plan covers recovering from losses bigger than a single bad change or faile
 | Secrets in Secrets Manager | The workload accounts (russetleaf-home; russetleaf-com in Phase 3) | Most are **regenerated** rather than copied (see below) | — | Mostly yes |
 | Account access (root logins, MFA recovery codes) | Password manager | Break-glass kit, including a printed copy | Until changed | No |
 | Logs and traces (Loki, Tempo) | S3 | None (short-lived operational data) | — | Not needed |
+| Kubernetes objects (everything Argo CD deploys) | The cluster | `russetleaf-gitops` and its mirror (above) | 90 days | **Yes**, re-synced by Argo CD; no cluster-level backup tool ([ADR 1018](adr/1018-disaster-recovery.md)) |
+| Metrics (Prometheus, 15 days) | Local volume on `rl-home-cp03` | None | — | Not needed (history is lost on a rebuild) |
+| Backstage database *(step 8.3)* | CloudNativePG PostgreSQL | None | — | **Yes**: the catalog is read again from Git and TechDocs are rebuilt; only template run history and user preferences are lost |
+| MLflow metadata and model registry *(Phase 2)* | MariaDB (MariaDB Operator) | Backups to the backup bucket, **replicated** to the Backup account (Object Lock) | 30-day lock | **No**: it records which model versions were approved and the evaluations behind them (artifacts are in their own versioned S3 bucket) |
+| AI knowledge base *(Phase 2)* | PostgreSQL with pgvector (CloudNativePG) | None | — | **Yes**: re-run the embedding job (costs its embedding budget) |
 
 **Secrets that are regenerated, not copied:** database passwords (MariaDB Operator generates new ones; RDS manages its own), the Cloudflare tunnel token, the Slack bot token, Google OAuth client secrets, scoped IAM keys, the WordPress application passwords. The break-glass kit holds only what cannot be regenerated (account access and the Talos secrets bundle).
 
@@ -72,6 +77,7 @@ The step-by-step runbooks for these scenarios (etcd recovery, node replacement, 
 | **GitHub account or repos lost** | Commits since the last daily mirror | Hours | Restore the repos from the bundles in the backup account to a new GitHub account (or another Git host); update Argo CD's repo URLs, the OIDC trust (new repo identities) and Kyverno's signing identities; rebuild and re-sign images. |
 | **Cloudflare account lost** | None | Hours | New account; re-apply the Cloudflare parts of `envs/home` (tunnel, DNS, Access, rules); move russetleaf.dev's name servers. |
 | **Domain lost or expired** | None | Days (registrar process) | Recover through the registrar; keep auto-renew on and the registrar login in the break-glass kit to prevent this. |
+| **A namespace, volume or resource deleted by mistake** | Up to 6 hours of database changes, if a database volume was deleted | Minutes (objects); up to an hour (data) | Let Argo CD recreate the objects from Git; restore any lost data from its backup; **do not** restore an etcd snapshot, which would rewind the whole cluster. Follow `restore-deleted-resources.md`. |
 | **Ransomware or malicious deletion of backups** | Up to the last locked copy | 1–2 days | The Object Lock copies cannot be deleted or overwritten for 30 days; restore from them. |
 
 ## Bootstrap order from zero
@@ -97,6 +103,7 @@ The step-by-step runbooks for these scenarios (etcd recovery, node replacement, 
 | Restore a MariaDB backup **from the encrypted Cloudflare R2 copy**, using the `age` key from the break-glass kit | Quarterly | The copy outside AWS is usable without any AWS access |
 | **Full "home lab destroyed" rebuild**, using only the break-glass kit and the backups (on a local Talos-in-Docker cluster, or the real nodes during a maintenance window) | Yearly | The whole plan works; record the actual time |
 | *(Phase 3)* Restore russetleaf.com's database from the latest logical dump in the backup account | Once (then yearly) | The AWS-side copy works |
+| Recover a deleted staging namespace from Git and backups (`restore-deleted-resources.md`) | Quarterly, with the rollback drills | A deletion is recoverable without a cluster backup tool |
 | Check the break-glass kit (logins work, recovery codes valid, printed copy current) | Every 6 months | Access can be recovered |
 
 Each drill's result and time are recorded in the decision log; this document is updated whenever a drill finds something wrong.

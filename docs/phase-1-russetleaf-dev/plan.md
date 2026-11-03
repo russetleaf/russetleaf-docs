@@ -25,9 +25,9 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
 | **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting with an incident process, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, privacy basics (GDPR), and the docs. Finished on its own, this is a complete platform. | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 5.12, 6.1, 6.3, 9.2 | **~176–287** |
-| **Extended** | Hardening, operations and evidence: progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure, cold-start, disaster, forensics and incident drills, with their runbooks). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.14, 9.1 | **~88–154** |
+| **Extended** | Hardening, operations and evidence: progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure, cold-start, disaster, forensics and incident drills, with their runbooks). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.14, 9.1 | **~89–156** |
 | **Advanced** | Reliability and platform practices: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management with a local spoke cluster, chaos experiments and postmortems, a threat model and control matrix, strategy documents, public writing, and a custom seccomp profile for WordPress. | 7.7, 8.1–8.9 | **~89–144** |
-| **Total** | | | **~353–585** |
+| **Total** | | | **~354–587** |
 
 **Calendar time** (Phase 1 only):
 
@@ -37,7 +37,7 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | ~20 | 9–14 weeks | 13–22 weeks | 18–29 weeks |
 | ~40 | 4–7 weeks | 7–11 weeks | 9–15 weeks |
 
-The optional later phases add about **146–243 hours** (Phase 2) and **104–170 hours** (Phase 3); see the [overview](../overview.md#build-plans-priorities-and-effort).
+The optional later phases add about **147–244 hours** (Phase 2) and **104–170 hours** (Phase 3); see the [overview](../overview.md#build-plans-priorities-and-effort).
 
 **Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to explain its trade-offs**.
 
@@ -813,7 +813,9 @@ Record each drill's time in the decision log and compare it with the expected ti
 
 Also write `docs/runbooks/upgrade-talos-kubernetes.md` ([ADR 1046](adr/1046-incident-response-and-runbook-index.md)) from the procedure in [Ongoing operations](#ongoing-operations-after-the-build): backups first (etcd snapshot, on-demand MariaDB backup), the local rehearsal, one node at a time in the set order, the health checks between nodes (etcd members, the virtual IP, Cilium, MariaDB replication, the site), then `talosctl upgrade-k8s`, and the **stop conditions** that switch to the rollback runbooks. Add all of this step's runbooks to the [runbook index](../runbooks.md).
 
-**Test:** every runbook has been followed at least once in a drill; each rollback restored a working state within its expected time (or the runbook was corrected); the first Talos patch upgrade after this step is done by following the upgrade runbook, and anything it missed is added.
+And write **`docs/runbooks/restore-deleted-resources.md`** ([ADR 1018](adr/1018-disaster-recovery.md)): a namespace, PersistentVolumeClaim or resource deleted by mistake. Check what was lost (Argo CD's app tree, the audit log for who deleted what); let Argo CD recreate the objects (a sync, or a hard refresh if the Application itself was deleted); restore any lost data with `rollback-data.md`; regenerated Secrets come back by themselves (the rotation job from [ADR 1047](adr/1047-in-cluster-credentials-and-rotation.md) re-creates `wordpress-db-active`). **Never** restore an etcd snapshot for this: it rewinds the whole cluster.
+
+**Test:** every runbook has been followed at least once in a drill; each rollback restored a working state within its expected time (or the runbook was corrected); the first Talos patch upgrade after this step is done by following the upgrade runbook, and anything it missed is added; deleting the whole staging namespace (with staging deployed) is recovered by following `restore-deleted-resources.md`, with its MariaDB data restored and the smoke tests passing, and the time recorded.
 
 ### Step 7.9: CrowdSec
 
@@ -889,7 +891,7 @@ These steps are most of the **Advanced** tier; see the Phase 1 design's [Enginee
 
 ### Step 8.3: Developer portal and golden path (Backstage)
 
-**Do:** `platform/backstage/` (on `rl-home-cp03`, PostgreSQL by the CloudNativePG operator, behind Cloudflare Access with Google sign-in): a **catalog** of every component with owners, links to dashboards, runbooks and SLOs; **TechDocs** from the repos' documentation; and a **software template** that creates a complete new service: repo with the full CI and supply-chain pipeline, a Kyverno-compliant chart, CiliumNetworkPolicies, SLO definitions, a dashboard and alerts, a runbook stub, and Argo CD registration through an **ApplicationSet**. See [ADR 1022](adr/1022-internal-developer-platform.md).
+**Do:** `platform/backstage/` (on `rl-home-cp03`, PostgreSQL by the CloudNativePG operator, behind Cloudflare Access with Google sign-in): a **catalog** of every component with owners, links to dashboards, runbooks and SLOs; **TechDocs** from the repos' documentation; and a **software template** that creates a complete new service: repo with the full CI and supply-chain pipeline, a Kyverno-compliant chart, CiliumNetworkPolicies, SLO definitions, a dashboard and alerts, a runbook stub, and Argo CD registration through an **ApplicationSet**. See [ADR 1022](adr/1022-internal-developer-platform.md). Backstage's database needs **no backup**: the catalog is read again from Git and TechDocs are rebuilt, as recorded in the [disaster recovery plan](disaster-recovery.md).
 
 **Test:** `rl-home-cp03`'s memory stays under about 85% (otherwise move Backstage and its database to `rl-home-cp01`, or upgrade `rl-home-cp03` to 32 GB); the catalog lists every component with its owner and links; the template produces a repo whose CI passes on the first run and whose manifests pass the Kyverno CLI tests.
 
@@ -1047,7 +1049,7 @@ Phase 1 builds most of what these need: the shared Terraform modules, the base m
 | 7.5 AWS account posture (Prowler) | Extended | 2–4 | ☐ | | | | |
 | 7.6 Version-age report | Extended | 2–3 | ☐ | | | | |
 | 7.7 Custom seccomp profile (optional) | Advanced | 3–6 | ☐ | | | | |
-| 7.8 Rollback runbooks and drills | Extended | 6–10 | ☐ | | | | |
+| 7.8 Rollback runbooks and drills | Extended | 7–12 | ☐ | | | | |
 | 7.9 CrowdSec | Extended | 3–5 | ☐ | | | | |
 | 7.10 First full disaster drill + etcd recovery | Extended | 8–13 | ☐ | | | | |
 | 7.11 Node-failure, replacement + cold-start drills | Extended | 5–10 | ☐ | | | | |
