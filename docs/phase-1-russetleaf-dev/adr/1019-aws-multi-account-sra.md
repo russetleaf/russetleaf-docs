@@ -31,6 +31,8 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 - **Single account (the previous design):** simplest and cheapest, but a compromise or mistake can reach everything; no separation of security tooling and logs from workloads; does not match the SRA.
 - **AWS Control Tower:** sets up a similar landing zone automatically, with guardrails and account vending, but adds managed resources and costs, and hides much of what this project wants to show in Terraform. A good choice for a team; Terraform-managed Organizations shows the same structure explicitly.
 - **The lean option** (account structure and free guardrails only, without Security Hub and Config): saves about $5–15/month, but loses continuous posture checks and the central findings view the SRA is built around.
+- **Amazon Macie** (discovers sensitive data in S3 and flags bucket exposure): the only sensitive data is already known and located (commenters' emails and password hashes in the database dumps), and is protected by a customer-managed key, lifecycle limits, Object Lock and CloudTrail data events ([ADR 1043](1043-database-encryption.md), [ADR 1042](1042-s3-versioning-lifecycle-and-storage-classes.md)); Macie would mostly confirm the record of processing, at a per-GB scanning cost. Added if russetleaf.com becomes always-on or holds user data (below).
+- **AWS Security Lake** (collects CloudTrail, VPC flow logs, Route 53 resolver logs, Security Hub findings and EKS audit logs from every account into one S3 data lake in the OCSF format, for Athena or a SIEM): the important logs are already centralized (the organization trail, Config history, flow logs and EKS audit logs in Log Archive; findings in Security Hub; Kubernetes events in Loki), and nothing in the design consumes OCSF; it would add per-GB ingestion and normalization costs and a second copy of the same data.
 - **A shared-services account for everything non-workload** (state, logs and backups together): fewer accounts, but mixes concerns the SRA deliberately separates.
 
 ## Consequences
@@ -47,6 +49,7 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 - The project becomes a team effort: consider Control Tower for account vending and drift detection.
 - Config costs grow with the demo stack despite daily recording: narrow recording further, or record only during demos.
 - russetleaf.com becomes always-on or holds user data: add Macie, Detective and Inspector, and consider a separate network account.
+- A SIEM is connected (e.g. Splunk or OpenSearch Security Analytics), or log volume makes querying the raw Log Archive painful: adopt Security Lake.
 
 ## Open items
 
