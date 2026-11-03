@@ -120,7 +120,7 @@ Separate workload accounts limit how far a compromise can spread, and give each 
 - **AWS Config** with **focused recording** (key resource types such as IAM, S3, security groups, KMS, EKS, RDS, rather than everything, to keep costs down, since the demo stack creates many short-lived resources), **daily recording** (rather than every change) for the high-churn resource types in russetleaf-com (EC2 instances, network interfaces, security groups, volumes), since each demo creates and deletes many of them, while IAM, S3 and KMS stay on continuous recording in every account (confirm the daily recording option when building), and a **conformance pack** (e.g. Operational Best Practices for CIS), aggregated in Security Tooling.
 - **IAM Access Analyzer:** organization-wide **external-access** findings (free), plus **policy checks in the Terraform pipeline** (`validate-policy` and its custom checks that flag new public or cross-account access) before anything is applied.
 - **GuardDuty** at organization level, with EKS audit-log monitoring (auto-enabled for new accounts).
-- **CloudTrail** as a single **organization trail** delivering to Log Archive, with log-file validation.
+- **CloudTrail** as a single **organization trail** delivering to Log Archive, with log-file validation, management events, and **S3 data events** (object reads and writes) for the **Terraform state bucket** and the **backup buckets** (the database, etcd and Backup account buckets, and russetleaf.com's dump bucket in Phase 3) only, through advanced event selectors, since state can hold secrets and the dumps hold personal data; their traffic is low, so the cost is pennies.
 - **Optional:** **Inspector** for the EKS nodes during demos (images are on GHCR, so its registry scanning matters less). **Macie** and **Detective** are not used (little sensitive data; extra cost).
 
 ### Account- and resource-level best practices
@@ -297,7 +297,7 @@ Falco is one layer among several. The design combines **prevention** (stopping a
 
 **AWS account threat detection (always on, shared by both sites):**
 
-- **CloudTrail:** a single **organization trail** (management events, all accounts and regions) delivered to the **Log Archive** account's Object Lock bucket, with log-file validation (proves logs were not altered). The first trail's management events are free; storage costs pennies. See [AWS account structure](#aws-account-structure-and-best-practices-security-reference-architecture).
+- **CloudTrail:** a single **organization trail** (management events, all accounts and regions, plus S3 data events for the state and backup buckets) delivered to the **Log Archive** account's Object Lock bucket, with log-file validation (proves logs were not altered). The first trail's management events are free; storage costs pennies. See [AWS account structure](#aws-account-structure-and-best-practices-security-reference-architecture).
 - **GuardDuty** (organization-wide, administered from the **Security Tooling** account): detects compromised credentials, unusual API calls, crypto-mining, and contact with known-malicious addresses, plus EKS audit-log monitoring whenever the demo cluster exists. About **$1–5/month** for an account this size after the 30-day free trial (check current pricing).
 - **Findings to Slack:** GuardDuty findings (medium severity and above) and **Security Hub** critical and high findings go through **EventBridge → SNS → Amazon Q Developer** (in Security Tooling) to `#rl-security` (high or critical severity also to `#rl-critical`).
 
