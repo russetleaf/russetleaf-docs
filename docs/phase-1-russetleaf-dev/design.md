@@ -87,7 +87,7 @@ The AWS side follows the **AWS Security Reference Architecture (SRA)**: separate
 | **Policy test** | Policy Staging | An empty account where new SCPs and RCPs are attached and tested before they reach the real OUs |
 | *(none)* | Suspended | Normally empty; a **deny-all SCP**. Moving a compromised account here is the first containment step |
 
-Separate workload accounts limit how far a compromise can spread, and give each site its own costs, quotas and limits. Accounts are free. All of it is managed by Terraform in `russetleaf-infra/envs/org/` (Organization, OUs, accounts, SCPs, RCPs, declarative policies, Identity Center, tag policies) and `russetleaf-infra/envs/security/` (the security services), applied from the workstation with management-account and Security Tooling access.
+Separate workload accounts limit how far a compromise can spread, and give each site its own costs, quotas and limits. Accounts are free. All of it is managed by Terraform in `russetleaf-infra/envs/org/` (Organization, OUs, accounts, SCPs, RCPs, declarative policies, Identity Center, tag, AI services opt-out and chat applications policies) and `russetleaf-infra/envs/security/` (the security services), applied from the workstation with management-account and Security Tooling access.
 
 **Cross-account access the design needs** (each a narrow, explicit grant): the russetleaf.com seed Job reads russetleaf.dev's backup and media buckets (bucket policies in `russetleaf-home`); every account's backup-bound buckets replicate into the Backup account; CI roles in each account read and write Terraform state in `russetleaf-infra`.
 
@@ -111,6 +111,8 @@ Separate workload accounts limit how far a compromise can spread, and give each 
 - **Centralized root access management:** root credentials are **removed from member accounts**, so only the management account's root login needs to be in the break-glass kit.
 - **IAM Identity Center** for all human access: permission sets for **admin**, **read-only** and **break-glass**, with MFA required; no IAM users for people.
 - **Tag policies** enforcing `Project`, `Site`, `Env` and `ManagedBy` values.
+- **AI services opt-out policy:** AWS AI services may not store or use the Organization's content to improve their models (relevant once Phase 2 uses Bedrock and other AI services).
+- **Chat applications policy:** Amazon Q Developer in chat applications may connect only to the project's **Slack workspace**, with other chat platforms blocked, so a compromised account cannot route alerts or commands elsewhere.
 - **Alternate security contacts** set on every account (security, billing, operations).
 - **Budgets** on each account plus a consolidated budget in the management account; **cost allocation tags** activated in the management account (they apply organization-wide).
 
