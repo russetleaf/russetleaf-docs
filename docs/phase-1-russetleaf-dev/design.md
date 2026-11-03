@@ -43,7 +43,7 @@ flowchart TB
     dns["DNS, CDN, WAF, TLS"] --> access["Access (admin paths, tools)"]
     tunnel["Tunnel (outbound-only from home)"]
   end
-  subgraph lab["Home lab VLAN: Talos cluster, three control-plane nodes"]
+  subgraph lab["Lab network 10.10.0.0/24 behind the ER605 router: Talos cluster, three control-plane nodes"]
     cfd["cloudflared"] --> ingress["ingress-nginx"]
     ingress --> wp["WordPress pods<br/>(boxes 3 and 1, Argo Rollouts canaries)"]
     wp --> db[("MariaDB<br/>primary box 3, replica box 1")]
@@ -141,7 +141,7 @@ The project depends on more than AWS: **GitHub** (code, CI, packages, attestatio
 
 ### Home network and boot
 
-- **A lab VLAN** (or a separate router subnet): the cluster can reach the internet (for Cloudflare, AWS, GitHub) and your workstation can reach the cluster, but the cluster **can't reach household devices** and nothing comes in from outside (the Cloudflare Tunnel is outbound-only).
+- **A separate lab network** behind its own router (a TP-Link ER605) on `10.10.0.0/24`: the cluster can reach the internet (for Cloudflare, AWS, GitHub) but **can't reach household devices**, household devices can't reach the cluster, and nothing comes in from outside (the Cloudflare Tunnel is outbound-only). The workstation stays on the household Wi-Fi and reaches the cluster's APIs over a **WireGuard** tunnel to the router ([ADR 1040](adr/1040-lab-network-and-wireguard.md)).
 - **Secure Boot** with Talos's Secure Boot images, so only signed Talos boot components run; combined with the **TPM-sealed disk encryption** ([ADR 1031](adr/1031-kubernetes-component-hardening.md)), disks only unlock on the expected, untampered system.
 - **BIOS passwords** on all three nodes.
 
@@ -245,7 +245,7 @@ Each Kubernetes component has explicit controls and a repeatable check, recorded
 - **Encryption at rest:** Secrets in etcd (Talos's built-in encryption at home; **EKS envelope encryption with a customer-managed KMS key**); **Talos disk encryption** of the system-state and data partitions on every home node, **sealed to the TPM**; etcd snapshots stored only in the KMS-encrypted backup bucket, readable only by the backup role.
 - **kubelet:** `seccompDefault: true` (RuntimeDefault even for pods that don't ask), the read-only port off, certificate rotation, **serving certificates signed by the cluster CA** (so metrics-server and Prometheus verify TLS; [ADR 1035](adr/1035-platform-security.md)), a **per-pod PID limit** (`podPidsLimit`, so a fork bomb can't exhaust a node) and **hard eviction thresholds** for memory, disk and inodes, alongside `systemReserved` and `kubeReserved` ([ADR 1034](adr/1034-kubernetes-threat-model-coverage.md)).
 - **Control-plane settings verified at home** (profiling off, local-only binding, NodeRestriction, per-controller service-account credentials) with `talosctl`, in `docs/talos-hardening.md`.
-- **Talos host firewall:** the Kubernetes API (6443) and Talos API (50000) reachable only from the LAN and the workstation.
+- **Talos host firewall:** the Kubernetes API (6443) and Talos API (50000) reachable only from the lab subnet and WireGuard clients.
 
 ### Identity and access to the clusters
 
@@ -489,10 +489,10 @@ Both clusters run **Cilium** (the choice and its alternatives are recorded in [A
 |---|---|---|
 | Mode | **Full CNI**: replaces Talos's default Flannel **and kube-proxy** | **Chaining mode** with the Amazon VPC CNI: the VPC CNI still gives pods their VPC IP addresses; Cilium adds policy enforcement and Hubble on top |
 | Key settings | Talos machine config `cluster.network.cni.name: none` and `cluster.proxy.disabled: true`; Cilium `kubeProxyReplacement: true`, `k8sServiceHost: localhost`, `k8sServicePort: 7445` (Talos's KubePrism API endpoint), plus Talos's documented cgroup and capability settings | `cni.chainingMode: aws-cni`, `cni.exclusive: false`, `enableIPv4Masquerade: false`, `routingMode: native`; the VPC CNI's own network policy enforcement stays **off**, so only one component enforces policies |
-| Installed by | Terraform (Helm provider) right after the cluster bootstraps, because nothing (including Argo CD) can run without a CNI; Argo CD then manages it from `platform/cilium/` | Terraform (Helm provider) right after the cluster and its managed node group are created; Argo CD then manages it |
+| Installed by | Talos, as an inline manifest in the machine config rendered by Terraform, so the cluster comes up with networking (nothing, including Argo CD, can run without a CNI); Argo CD then adopts it from `platform/cilium/` and the inline manifest is removed ([ADR 1039](adr/1039-bootstrap-through-talos-inline-manifests.md)) | Terraform (Helm provider) right after the cluster and its managed node group are created; Argo CD then manages it |
 | New nodes | Fixed hardware | Karpenter NodePools add the startup taint `node.cilium.io/agent-not-ready=true:NoExecute`, so no pod lands on a new node before Cilium is ready on it |
 
-Terraform installs Cilium only once (later changes are ignored by Terraform, using `lifecycle { ignore_changes }`); from then on, the values in `russetleaf-gitops/platform/cilium/` (with `overlays/home` and `overlays/aws`) are the source of truth, and Cilium upgrades go through Git like everything else.
+Cilium is installed only once by the bootstrap mechanism (Talos's inline manifests at home; Terraform's Helm provider on EKS, with `lifecycle { ignore_changes }`); from then on, the values in `russetleaf-gitops/platform/cilium/` (with `overlays/home` and `overlays/aws`) are the source of truth, and Cilium upgrades go through Git like everything else.
 
 ### Policies: CiliumNetworkPolicies, not plain NetworkPolicies
 

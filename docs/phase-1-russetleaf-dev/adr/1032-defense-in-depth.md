@@ -5,6 +5,8 @@
 - **Applies to:** both sites, the AWS accounts and the supporting SaaS accounts
 - **Phase:** 1 (most controls). Later: Phase 2 adds prompt-injection guardrails; Phase 3 adds the AWS edge and VPC controls.
 
+> **Update ([ADR 1040](1040-lab-network-and-wireguard.md)):** the lab network is a separate subnet behind a TP-Link ER605 router (the household router can't do VLANs), and the workstation reaches the cluster over WireGuard.
+
 ## Context
 
 Defense in depth means layering controls so a failure at one layer is caught at another. For a Kubernetes platform, the layers are commonly named after Kubernetes' security documentation (the "4 C's"): **Cloud** (the provider and infrastructure), **Cluster** (Kubernetes), **Container** (images and runtime) and **Code** (the application and its dependencies); each depends on the one outside it. A review against those layers, and against cloud provider, infrastructure, isolation, artifact, image, workload and application-code security, found the design strong in depth but with gaps:
@@ -50,7 +52,7 @@ Defense in depth means layering controls so a failure at one layer is caught at 
 ## When to revisit
 
 - User namespaces aren't supported yet: re-check after Talos and Kubernetes upgrades.
-- The router can't do VLANs: use a separate router or firewall for the lab.
+- ~~The router can't do VLANs: use a separate router or firewall for the lab.~~ Done: [ADR 1040](1040-lab-network-and-wireguard.md).
 
 ## Open items
 

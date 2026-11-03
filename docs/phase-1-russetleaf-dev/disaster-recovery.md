@@ -47,6 +47,7 @@ Kept in your password manager, with a **printed copy** of the starred items stor
 - ★ Google: account recovery (for the Google Cloud project and Google sign-in)
 - ★ Domain registrar logins for russetleaf.com and russetleaf.dev
 - ★ Password manager's own emergency kit
+- The **lab router** (ER605) admin login, its configuration backup, and the WireGuard client profile
 - Talos secrets bundle (`secrets.yaml`), the `os:admin` talosconfig, and the Talos-generated **break-glass admin kubeconfig** (use of it raises an alert)
 - Where every backup is (this document's table), and the order of recovery (below)
 - Slack workspace owner login
@@ -74,7 +75,7 @@ Kept in your password manager, with a **printed copy** of the starred items stor
 2. **Code:** restore the four repos (from GitHub, or the mirrors in the backup account).
 3. **Terraform state:** use the russetleaf-infra state bucket, or copy it back from the Backup account.
 4. **Account foundations:** apply `russetleaf-infra/envs/org/` (Organization, accounts, SCPs, Identity Center) and `envs/security/` (CloudTrail, GuardDuty, Security Hub, Config), then `bootstrap/` (state bucket, CI roles).
-5. **Home infrastructure:** apply `russetleaf-infra/envs/home` (Talos on all three boxes, Cloudflare, the AWS resources used from home).
+5. **Home infrastructure:** restore the lab router's configuration (or redo step 0.3), connect over WireGuard, then apply `russetleaf-infra/envs/home` (Talos on all three boxes, Cloudflare, the AWS resources used from home).
 6. **Secrets:** create or regenerate the entries in Secrets Manager; create the External Secrets bootstrap credential.
 7. **GitOps:** install Argo CD and apply `russetleaf-gitops/bootstrap/home`; let the platform come up in sync-wave order.
 8. **Data:** restore MariaDB from the latest backup (from russetleaf-home or the Backup account); confirm media is present (or copy it back).

@@ -110,6 +110,8 @@ nav:
           - "1036 Compliance frameworks and privacy": phase-1-russetleaf-dev/adr/1036-compliance-frameworks-and-privacy.md
           - "1037 Build the project in three phases": phase-1-russetleaf-dev/adr/1037-project-phases.md
           - "1038 Separate documentation repo, published as a docs site": phase-1-russetleaf-dev/adr/1038-documentation-repo-and-site.md
+          - "1039 Bootstrap Cilium and Argo CD through Talos inline manifests, then hand off to Argo CD": phase-1-russetleaf-dev/adr/1039-bootstrap-through-talos-inline-manifests.md
+          - "1040 Lab network behind its own router, reached over WireGuard": phase-1-russetleaf-dev/adr/1040-lab-network-and-wireguard.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md

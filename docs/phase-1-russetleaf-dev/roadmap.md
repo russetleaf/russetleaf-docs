@@ -4,30 +4,41 @@ The milestones for building [Phase 1](plan.md), with target dates, and the actua
 
 ## Assumptions (baseline of 2026-11-02)
 
-- **Start:** Monday, November 2, 2026.
+- **Start:** planning on Monday, November 2, 2026; building from **Tuesday, November 3**.
 - **Pace:** about **60 hours a week**, worked as **10 hours a day, six days a week**, with **Saturdays off**.
-- **Order:** the Core tier first (in plan order), then the Extended steps, then the Advanced steps, as the plan recommends.
+- **Fixed dates:** box 3 (the 16 GB server) and the ER605 lab router arrive by November 4, so **November 3–4** are for the preliminaries the servers need (accounts and tools, decisions, the lab network, the repos, the AWS accounts and the Terraform state bucket), and **November 5–6** are for the servers: the cluster up on the 5th, hardening and tests on the 6th.
+- **Time-boxing M1:** its steps are estimated at 20–36 hours against 20 available, so only what the servers need is done on November 3–4; the rest (the repos' full CI guardrails, from step 1.1) is finished after November 6 and counted in M3's dates.
+- **Order after that:** the Core tier first (in plan order), then the Extended steps, then the Advanced steps, as the plan recommends.
 - **Estimates:** the plan's focused-hour ranges (expect ±50%). **Target** is the date at the midpoint of the estimates; **latest** is the date at the high end.
-- **Not included:** holidays (Thanksgiving, late December), days lost to waiting (box 3's delivery, AWS approvals, DNS), and the drop in pace that long stretches of 10-hour days usually bring. Plan around the **latest** dates.
+- **Not included:** holidays (Thanksgiving, late December), days lost to waiting (AWS approvals, DNS), and the drop in pace that long stretches of 10-hour days usually bring. Plan around the **latest** dates.
 
 ## Milestones
 
 | Milestone | Steps | Est. hours | Target | Latest | Actual | Actual hours |
 |---|---|---|---|---|---|---|
-| **M1 Foundations** | 0.1–1.1 | 11–21 | Tue, Nov 3, 2026 | Wed, Nov 4, 2026 | | |
-| **M2 Cluster and AWS foundations** | 2.0–2.4 | 36–57 | Mon, Nov 9, 2026 | Tue, Nov 10, 2026 | | |
-| **M3 GitOps and platform services** | 3.1–4.7 | 41–67 | Sun, Nov 15, 2026 | Wed, Nov 18, 2026 | | |
-| **M4 WordPress live with staging and promotion** | 5.1–5.7, 5.10, 5.12 | 54–91 | Mon, Nov 23, 2026 | Sun, Nov 29, 2026 | | |
-| **M5 Core tier complete and published** | 6.1, 6.3, 9.2 | 27–39 | Fri, Nov 27, 2026 | Thu, Dec 3, 2026 | | |
-| **M6 Production hardening and operations** | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.12, 9.1 | 72–127 | Wed, Dec 9, 2026 | Fri, Dec 18, 2026 | | |
-| **M7 Advanced practices; Phase 1 complete** | 7.7, 8.1–8.9 | 89–144 | Tue, Dec 22, 2026 | Mon, Jan 4, 2027 | | |
+| **M1 Foundations** | 0.1–0.3, 1.1, 2.0, 2.1 | 20–36 | Wed, Nov 4, 2026 | Wed, Nov 4, 2026 | | |
+| **M2 Cluster up** | 2.2 | 13–19 | Fri, Nov 6, 2026 | Fri, Nov 6, 2026 | | |
+| **M3 AWS, GitOps and platform services** | 2.0b, 2.3, 2.4, 3.1, 4.1–4.7 | 55–90 | Mon, Nov 16, 2026 | Thu, Nov 19, 2026 | | |
+| **M4 WordPress live with staging and promotion** | 5.1–5.7, 5.10, 5.12 | 54–91 | Wed, Nov 25, 2026 | Mon, Nov 30, 2026 | | |
+| **M5 Core tier complete and published** | 6.1, 6.3, 9.2 | 27–39 | Sun, Nov 29, 2026 | Fri, Dec 4, 2026 | | |
+| **M6 Production hardening and operations** | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.12, 9.1 | 72–127 | Thu, Dec 10, 2026 | Sun, Dec 20, 2026 | | |
+| **M7 Advanced practices; Phase 1 complete** | 7.7, 8.1–8.9 | 89–144 | Thu, Dec 24, 2026 | Tue, Jan 5, 2027 | | |
 | **Total** | | **330–546** | | | | |
+
+**The first four days:**
+
+| Day | Work |
+|---|---|
+| **Tue, Nov 3** | Step 0.1 (accounts, tools, budget alert, the break-glass kit started), 0.2 (decisions), and the ER605 set up (0.3: lab subnet, firewall rule, WireGuard to the workstation) |
+| **Wed, Nov 4** | Step 1.1 (repos created with branch protection; full CI guardrails later), 2.0 (AWS Organization and accounts) and 2.1 (Terraform state bucket and CI roles); box 3 arrives: BIOS, TPM and Secure Boot settings on all three boxes; check their network cards and build the Talos image schematic |
+| **Thu, Nov 5** | Step 2.2, day 1: Talos on all three boxes, etcd healthy, the virtual IP, Cilium and Argo CD from the inline manifests |
+| **Fri, Nov 6** | Step 2.2, day 2: Secure Boot and disk-encryption checks, firewall, kubelet settings, the remaining tests, and the rebuild from scratch |
 
 What each milestone shows when it's done:
 
-- **M1:** accounts, tools, budget alert, network segmentation, decisions recorded, the repos public with their CI guardrails.
-- **M2:** the AWS Organization with its security services, the three-node Talos cluster with Cilium, the home AWS and Cloudflare resources, and the Terraform pipeline.
-- **M3:** Argo CD managing everything; storage, secrets and certificates, ingress through the tunnel, monitoring and alerting, MariaDB and Valkey, logging, and OIDC sign-in.
+- **M1:** accounts, tools, budget alert, the lab network with WireGuard access, decisions recorded, the repos, the AWS Organization and accounts, and the Terraform state bucket.
+- **M2:** the three-node, highly available Talos cluster with Cilium and Argo CD, hardened and tested.
+- **M3:** the organization's security services, the home AWS and Cloudflare resources, the Terraform pipeline, the repos' CI guardrails, Argo CD managing everything; storage, secrets and certificates, ingress through the tunnel, monitoring and alerting, MariaDB and Valkey, logging, and OIDC sign-in.
 - **M4:** russetleaf.dev live on the custom image and theme, with ci tests, on-demand staging, promotion and the privacy basics.
 - **M5:** Kyverno and network policies enforced, the docs polished, and the project published as a finished Core tier. **First portfolio milestone.**
 - **M6:** progressive delivery, sandboxing, runtime security, cost and tracing, keyless AWS access, and the rollback, node-failure and disaster drills.

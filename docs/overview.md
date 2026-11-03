@@ -144,7 +144,7 @@ flowchart LR
 | 7 | Container → node | System calls, files | Non-root, read-only, no capabilities, seccomp, user namespaces, gVisor for CI runners, Falco |
 | 8 | Cluster → AWS | API calls with credentials | Scoped keys (home, until Phase 1 step 9.1) or Pod Identity, DNS-name egress rules, CloudTrail, GuardDuty |
 | 9 | Cluster → logs and backups | Audit logs, backups | Write-only roles into separate accounts, Object Lock |
-| 10 | Lab → home network | Any traffic | Lab VLAN; nodes can't reach household devices |
+| 10 | Lab → home network | Any traffic | A separate lab network behind its own router; nodes can't reach household devices; the workstation reaches the APIs over WireGuard |
 
 **The eight threat areas:**
 
@@ -155,7 +155,7 @@ flowchart LR
 | **Denial of service** | Edge rate limits; namespace quotas and LimitRanges (CPU, memory, **ephemeral storage**); memory limits; **kubelet PID limit** and **hard eviction thresholds**; reserved resources for the system; HPA and KEDA maximums; API Priority and Fairness | Node pressure alerts; `KubeAPIRequestsRejected`; quota usage | A fork bomb in a test pod stops at the PID limit and the node stays healthy |
 | **Malicious code execution** | Signed images with SBOM and provenance, registry allow-list, digests, read-only root filesystem, seccomp, gVisor (CI runners), `DISALLOW_FILE_MODS` | Falco process allow-lists and writes to code; Trivy Operator | An unsigned image is rejected; a shell in WordPress fires Falco |
 | **Compromised applications in containers** | Non-root, no capabilities, no privilege escalation, no service-account token, Pod Security `restricted`, default-deny networking | Falco; Hubble drops | From a WordPress pod: no token, no route to other namespaces, no unlisted egress |
-| **Attacker on the network** | CiliumNetworkPolicies (default-deny, DNS-name egress, layer 7), WireGuard, internal TLS ([ADR 1028](phase-1-russetleaf-dev/adr/1028-internal-pki.md)), lab VLAN, host firewall, API endpoints restricted | Hubble (`HubblePolicyDropsSpike`), CrowdSec, GuardDuty | MariaDB unreachable from other namespaces; ports 6443 and 50000 refused from outside the LAN |
+| **Attacker on the network** | CiliumNetworkPolicies (default-deny, DNS-name egress, layer 7), WireGuard, internal TLS ([ADR 1028](phase-1-russetleaf-dev/adr/1028-internal-pki.md)), a separate lab network with WireGuard access, host firewall, API endpoints restricted | Hubble (`HubblePolicyDropsSpike`), CrowdSec, GuardDuty | MariaDB unreachable from other namespaces; ports 6443 and 50000 refused from outside the LAN |
 | **Access to sensitive data** | Secrets encrypted at rest, External Secrets, Secrets as files, roles without Secret access, encrypted backups, IMDSv2 with hop limit 1, egress limited by DNS name | `KubeUnexpectedSecretRead`; audit archive; CloudTrail | **Exfiltration test:** sending data from each application pod to an unlisted destination is blocked and shows in Hubble |
 | **Privilege escalation** | Pod Security, no privileged pods or host access, NodeRestriction, least-privilege human roles; a Kyverno policy **rejecting risky RBAC** (`escalate`, `bind`, `impersonate`, `nodes/proxy`, wildcards, `cluster-admin` bindings) outside an allow-list | `KubeRBACChangedOutsideArgoCD`; Kubescape RBAC checks in CI and monthly | A Role with `impersonate` is rejected; the RBAC review lists who can create pods or read Secrets |
 
@@ -202,7 +202,7 @@ What each phase builds and shows. Phase 1 on its own is a complete project; Phas
 - **Defense in depth for containers:** seccomp `RuntimeDefault` everywhere, Falco process allow-lists per workload (with Tetragon enforcement as an optional extra), and gVisor sandboxing for the self-hosted CI runners that run pull-request code (with a measured trial for WordPress), backed by an ADR comparing gVisor and Kata Containers.
 - **A custom, tested front end:** an AI-assisted block theme and SVG logo kept in Git (Site Editor locked in production), with visual regression, accessibility and Lighthouse checks in CI and staging.
 - **Passwordless admin access:** Google sign-in (OIDC) for WordPress, an edge login layer (Cloudflare Access at home, ALB OIDC on AWS), application passwords kept only for the REST API, and break-glass recovery with `wp-cli`.
-- **Defense in depth:** cloud (AWS SRA plus hardened GitHub, Cloudflare, Google and registrar accounts, lab VLAN, Secure Boot), cluster, container (signed images and charts, mirrored dependencies, user namespaces) and code (SAST, DAST, security headers, ASVS mapping).
+- **Defense in depth:** cloud (AWS SRA plus hardened GitHub, Cloudflare, Google and registrar accounts, a separate lab network, Secure Boot), cluster, container (signed images and charts, mirrored dependencies, user namespaces) and code (SAST, DAST, security headers, ASVS mapping).
 - **Identity and access:** OIDC sign-in through Dex for kubectl and the admin tools, group-based human roles with no day-to-day cluster-admin, an alerted break-glass path, Talos read-only access by default, and a year of tamper-evident audit logs.
 - **Kubernetes threat model coverage:** trust boundaries and data flows drawn, and every one of the Kubernetes threat model's eight areas (persistence, denial of service, privilege escalation and the rest) mapped to prevention, detection and a test, including alerts for objects created outside GitOps, PID limits and a policy rejecting risky RBAC.
 - **Platform security:** fail-closed, highly available admission with built-in backstop policies, CA-signed kubelet certificates and a rehearsed CA rotation, a registry cleanup that protects rollback images, security logs visible only to admins, and signed VEX statements for accepted vulnerabilities.
@@ -556,8 +556,8 @@ Work **infrastructure first, then code, then config**, so nothing is deployed be
 **russetleaf.dev home lab (once):**
 
 1. `russetleaf-infra/bootstrap`: apply locally to create the Terraform state bucket and the GitHub OIDC roles.
-2. `russetleaf-infra/envs/home`: apply locally to create the Talos cluster on all three boxes, the Cloudflare tunnel and DNS for russetleaf.dev, and the AWS resources used from home. Save the kubeconfig and talosconfig it produces somewhere safe (not in Git).
-3. Install Argo CD once with Helm, then apply `russetleaf-gitops/bootstrap/home`. From then on, Argo CD manages everything else, including itself if you add Argo CD to `platform/`.
+2. `russetleaf-infra/envs/home`: apply locally (over WireGuard to the lab network) to create the Talos cluster on all three boxes, the Cloudflare tunnel and DNS for russetleaf.dev, and the AWS resources used from home. Save the kubeconfig and talosconfig it produces somewhere safe (not in Git).
+3. Cilium, Argo CD and the root Application come up with the cluster (Talos inline manifests). Add `platform/cilium/` and `platform/argocd/` so Argo CD adopts them, then remove them from the inline manifests. From then on, Argo CD manages everything else, including itself.
 4. Add the secrets the cluster needs to AWS Secrets Manager (WordPress admin and application passwords; **not** the database passwords, which MariaDB Operator generates; Cloudflare tunnel token, scoped IAM keys for home until keyless OIDC access, Phase 1 step 9.1, is done); External Secrets syncs them in.
 
 **russetleaf.com always-on edge (once):**
@@ -646,6 +646,8 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [1036](phase-1-russetleaf-dev/adr/1036-compliance-frameworks-and-privacy.md) | Compliance frameworks and privacy | 1 |
 | [1037](phase-1-russetleaf-dev/adr/1037-project-phases.md) | Build the project in three phases | 1 |
 | [1038](phase-1-russetleaf-dev/adr/1038-documentation-repo-and-site.md) | Separate documentation repo, published as a docs site | 1 |
+| [1039](phase-1-russetleaf-dev/adr/1039-bootstrap-through-talos-inline-manifests.md) | Bootstrap Cilium and Argo CD through Talos inline manifests, then hand off to Argo CD | 1 |
+| [1040](phase-1-russetleaf-dev/adr/1040-lab-network-and-wireguard.md) | Lab network behind its own router, reached over WireGuard | 1 |
 | [2001](phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback | 2 |
 | [2002](phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
 | [2003](phase-2-ai-mlops/adr/2003-self-hosted-model-on-box-2.md) | Self-hosted model on box 2 (CPU llama.cpp), dedicated by taint | 2 |

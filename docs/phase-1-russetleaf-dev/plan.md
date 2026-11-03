@@ -42,14 +42,6 @@ The optional later phases add about **85–144 hours** (Phase 2) and **125–210
 
 **Recommended order:** finish **all Core steps first** (in plan order), and publish them; then add the Extended steps, starting with the drills (7.8, 7.10, 7.11), which show the system being operated; leave the Advanced steps until Core and Extended are done. A finished subset is worth more than an unfinished whole. Start Phase 2 or Phase 3 only once Phase 1's Core tier is published.
 
-## Starting point (as of 2026-10-31)
-
-- One Talos node (box 1, `192.168.1.6`, Talos v1.14.4, Kubernetes v1.37.1), control plane, no taints.
-- Argo CD installed in the `argocd` namespace.
-- An Argo CD Application, `private-test-wordpress`, deploys the Bitnami WordPress chart into `wordpress-test` from this repo's old test files (since removed; the repo was renamed `russetleaf-docs` on 2026-11-02 and now holds only documentation), so it shows sync errors. It goes away when box 1 is reinstalled in step 2.2; until then it's harmless (or delete it with `argocd app delete private-test-wordpress`).
-- russetleaf.dev is a Cloudflare zone.
-- Box 2 (Intel i3, 8 GB) is available, and **box 3 (Intel i5-8500T, 6 cores, 16 GB, NVMe SSD)** is being added, giving a **three-node, highly available cluster** (see [ADR 1020](adr/1020-three-node-ha-home-cluster.md)). Before installing Talos on box 3: update its BIOS, turn on **power on after AC loss** and virtualization, and set Secure Boot to match the Talos image. Do the same on boxes 1 and 2, and **check their disks: all three nodes need an SSD or NVMe drive** (etcd runs on every node); replace any spinning disk with an inexpensive SATA SSD before step 2.2.
-
 ## Local workstation setup (Ubuntu 24.04)
 
 Everything is built and tested from your Ubuntu 24.04 machine, which is also the **local** environment (see [Environments and promotion](design.md#environments-and-promotion)). Do this before step 0.1's test.
@@ -61,7 +53,7 @@ Everything is built and tested from your Ubuntu 24.04 machine, which is also the
 ```bash
 sudo apt update
 sudo apt install -y git curl wget unzip jq make ca-certificates gnupg lsb-release \
-  python3 python3-venv shellcheck direnv
+  python3 python3-venv shellcheck direnv wireguard-tools
 ```
 
 ### 2. Docker Engine (from Docker's own repository, not the snap)
@@ -139,6 +131,7 @@ PHP and Composer aren't needed locally: the WordPress image installs plugins ins
 - **Git:** set your name and email; authenticate with `gh auth login` (SSH); turn on **commit signing** with your SSH key (`git config --global gpg.format ssh` and `user.signingkey`), and upload the key to GitHub as a signing key.
 - **AWS:** after step 2.0, sign in through **IAM Identity Center (SSO)**, with one profile per account and permission set (e.g. `rl-mgmt-admin`, `rl-security-admin`, `rl-home-admin`, `rl-com-admin`, `rl-infra-admin`, and read-only variants), created with `aws configure sso`; sign in with `aws sso login --sso-session russetleaf`. Until then, use the existing account's admin login. Keep **no long-lived AWS access keys** on the workstation.
 - **Cloudflare and Slack tokens:** don't put them in `~/.bashrc`. Use per-repo **direnv** files (`.envrc`, listed in `.gitignore`) that load them from a password manager CLI or from AWS Secrets Manager when you enter the repo folder.
+- **WireGuard to the lab** (after step 0.3): import the client profile exported from the ER605 into NetworkManager (`nmcli connection import type wireguard file rl-lab.conf`, or Settings → Network → VPN), with **AllowedIPs `10.10.0.0/24`** only, so just lab traffic goes through the tunnel and your normal internet use doesn't. Bring it up with `nmcli connection up rl-lab` when you work on the cluster; `kubectl` and `talosctl` reach the cluster's virtual IP (`10.10.0.10`) through it.
 - **Cluster access files:** keep kubeconfig contexts named clearly (`talos-home`, `kind-ci`, `talos-local`) and talosconfig at `~/.talos/config`, both with `chmod 600`. Back them up in your password manager. (If they're lost, they can be regenerated from the Talos machine secrets in Terraform state.)
 - **Pre-commit hooks:** run `pre-commit install` in each repo after cloning (secret scan, YAML checks; in `russetleaf-infra`, the **pre-commit-terraform** hooks: fmt, validate, tflint, terraform-docs, Checkov).
 - **Editor (optional):** VS Code with the HashiCorp Terraform, YAML (Red Hat), Kubernetes and Docker extensions.
@@ -195,9 +188,23 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 0.3: Home network segmentation
 
-**Do:** put the three nodes on a **lab VLAN** (or a separate subnet on a second router) with firewall rules: the lab can reach the internet and your workstation can reach the lab (Kubernetes API, Talos API, SSH-free management), but the lab **can't reach household devices**, and nothing is allowed in from the internet (the Cloudflare Tunnel is outbound-only). Give the nodes fixed addresses there. Set **BIOS passwords** on all three nodes. See the overview's [Defense in depth](../overview.md#defense-in-depth).
+**Do:** a separate lab network behind its own router, a **TP-Link ER605 (v2)**, reached from the workstation over **WireGuard** ([ADR 1040](adr/1040-lab-network-and-wireguard.md)):
 
-**Test:** from a test pod, a household device's address is unreachable while the internet is reachable; from the workstation, the Talos and Kubernetes APIs are reachable; from another household device, they aren't.
+```
+Workstation (Wi-Fi, 192.168.1.x) ──WireGuard──┐
+                                              ▼
+Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LAN (10.10.0.1) ── switch ── boxes 1–3
+```
+
+- **Wiring:** the ER605's WAN port to the mesh extender, its LAN port to the switch; the three boxes stay on the switch.
+- **ER605 setup** (standalone mode, its own web interface; no Omada controller): update to the latest **v2 firmware** (WireGuard needs it); change the admin password; set the LAN to `10.10.0.0/24`; give the ER605 a **DHCP reservation on the Spectrum router** so its WAN address (the WireGuard endpoint) doesn't change.
+- **Addresses:** lab subnet `10.10.0.0/24` (gateway `10.10.0.1`), cluster virtual IP `10.10.0.10`, box 1 `10.10.0.11`, box 2 `10.10.0.12`, box 3 `10.10.0.13`, WireGuard clients `10.10.99.0/24`; reserve the boxes' addresses on the ER605 (or set them statically in step 2.2) and keep `.10` free for the virtual IP.
+- **Firewall (access control rules):** the lab may reach the internet and the ER605; it **may not** reach `192.168.1.0/24` (household devices); nothing comes in from outside (the Cloudflare Tunnel is outbound-only, so no port forwards anywhere). Household devices can't reach the lab, because the ER605's NAT blocks unrequested inbound traffic.
+- **WireGuard server** on the ER605: clients `10.10.99.0/24`, one peer for the workstation; export its profile and import it on the workstation ([Local workstation setup](#4-configuration)). The tunnel listens on the ER605's WAN address on the household network, so it works from anywhere in the house without port forwarding on the Spectrum router.
+- **Back up** the ER605's configuration and keep its admin login in the break-glass kit.
+- Set **BIOS passwords** on all three boxes. See the overview's [Defense in depth](../overview.md#defense-in-depth).
+
+**Test:** from a laptop plugged into the lab switch, the internet works and a household device (e.g. the Spectrum router's admin page at `192.168.1.1`) is unreachable; from the workstation with WireGuard up, `10.10.0.1` answers, and with it down, the lab isn't reachable; from another household device, the lab isn't reachable. (Step 2.2 repeats these checks from a pod.)
 
 ## Stage 1: Repositories
 
@@ -207,7 +214,7 @@ Record each answer in the [decision log](#decision-log).
 
 - Create **`russetleaf-gitops`**, **`russetleaf-infra`** and **`russetleaf-wordpress`** (`russetleaf-llm-summarizer` is created in Phase 2). The project documentation stays in this repo, **`russetleaf-docs`** ([ADR 1038](adr/1038-documentation-repo-and-site.md)).
 - In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a `LICENSE` if public, branch protection on `main` (pull requests and passing checks required).
-- In `russetleaf-docs`: the design, plans, roadmap, ADRs and spec template already exist (ADR template in the [ADR template](../adr/0000-template.md)). Record the big step 0.2 decisions as ADRs (the next number in the phase, e.g. 1039) and link them from the decision log. Operational docs (runbooks, SLO definitions, performance and security reports, Talos hardening notes) go in `docs/` of the repo that produces or uses them, mostly `russetleaf-gitops`. Each ADR's **Open items** are finished in these steps:
+- In `russetleaf-docs`: the design, plans, roadmap, ADRs and spec template already exist (ADR template in the [ADR template](../adr/0000-template.md)). Record the big step 0.2 decisions as ADRs (the next number in the phase, e.g. 1041) and link them from the decision log. Operational docs (runbooks, SLO definitions, performance and security reports, Talos hardening notes) go in `docs/` of the repo that produces or uses them, mostly `russetleaf-gitops`. Each ADR's **Open items** are finished in these steps:
 
 | ADR | Phase 1 steps | Phase 2 steps | Phase 3 steps |
 |---|---|---|---|
@@ -248,6 +255,9 @@ Record each answer in the [decision log](#decision-log).
 | [1035 Platform security](adr/1035-platform-security.md) | 2.2, 4.4, 4.6, 5.1, 6.1, 7.2 | — | 5.1 |
 | [1036 Compliance frameworks and privacy](adr/1036-compliance-frameworks-and-privacy.md) | 5.1, 5.12, 7.1, 8.5 | 4.5 | 5.1 |
 | [1037 Project phases](adr/1037-project-phases.md) | 1.1 | — | — |
+| [1038 Separate documentation repo and docs site](adr/1038-documentation-repo-and-site.md) | 1.1 | — | — |
+| [1039 Bootstrap through Talos inline manifests](adr/1039-bootstrap-through-talos-inline-manifests.md) | 2.2, 3.1 | — | — |
+| [1040 Lab network and WireGuard](adr/1040-lab-network-and-wireguard.md) | 0.3, 2.2 | — | — |
 | [2001 MLOps lifecycle](../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | — | 4.4–4.7 | 4.5, 4.6 |
 | [2002 Summary pipeline architecture](../phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | — | 2.1–2.5 | 4.1 |
 | [2003 Self-hosted model on box 2](../phase-2-ai-mlops/adr/2003-self-hosted-model-on-box-2.md) | — | 1.3, 3.1, 3.2 | 4.2 |
@@ -259,7 +269,6 @@ Record each answer in the [decision log](#decision-log).
 | [3006 On-demand demo stack and always-on edge](../phase-3-russetleaf-com/adr/3006-on-demand-demo-stack.md) | — | — | 1.2, 6.1 |
 | [3007 RDS for MariaDB behind RDS Proxy](../phase-3-russetleaf-com/adr/3007-rds-mariadb-with-rds-proxy.md) | — | — | 1.6, 3.1 |
 | [3008 Karpenter node pools](../phase-3-russetleaf-com/adr/3008-karpenter-node-pools.md) | — | — | 1.5, 2.3 |
-| [1038 Separate documentation repo and docs site](adr/1038-documentation-repo-and-site.md) | 1.1 | — | — |
 
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo, scan each repo's **full history**, and then **make the repos public** ([ADR 1030](adr/1030-github-actions-ci.md)); turn on **secret scanning with push protection**.
 - **GitHub organization settings** in `russetleaf-infra/envs/github/` (Terraform's GitHub provider): default workflow token **read-only**, only verified or allow-listed Actions, branch protection and required reviews, environments, secret scanning with push protection.
@@ -290,6 +299,8 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 2.0b: Organization security services
 
+*Can follow step 2.2: the cluster doesn't depend on it ([roadmap](roadmap.md)).*
+
 **Do** (`russetleaf-infra/envs/security/`, applied with Security Tooling and Log Archive access):
 
 - **Log Archive:** S3 Object Lock buckets with **KMS customer-managed keys** for the **organization CloudTrail trail** (management events, all accounts and regions, log-file validation), Config history and (later) VPC flow logs.
@@ -310,26 +321,32 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 2.2: Talos cluster (three control-plane nodes)
 
-**Do** (`russetleaf-infra/envs/home/`, applied locally; uses the `siderolabs/talos` provider):
+**Schedule:** the [roadmap](roadmap.md) splits this step over two days: **getting the cluster up** (Talos on all three boxes, etcd, the virtual IP, Cilium and Argo CD) on the first, and **hardening and testing** on the second.
 
-- Generate machine secrets; machine configs for **three control-plane nodes**, all schedulable: **box 3** (main workloads), **box 1** (secondary workloads) and **box 2** (general workloads and CI runners; it becomes the LLM node in Phase 2). Give each a fixed IP (DHCP reservations or static addresses).
-- **Shared virtual IP** for the Kubernetes API (Talos's `vip` setting on the nodes' network interface), on a free address in your LAN; kubeconfig and Talos endpoints point at it.
+**Before you start (hardware):** on each box, update the BIOS; turn on **power on after AC loss**, virtualization and **TPM 2.0**; put Secure Boot into **setup mode** so the Talos keys can be enrolled; and confirm the disk is an **SSD or NVMe** drive (etcd runs on every node). Check which **network card** each box has (`talosctl get pcidevices` on box 1's current install, or the model's spec sheet): Realtek cards need the firmware extension below. Box 1's current single-node Talos install (and the old test Argo CD Application on it) is wiped and replaced.
+
+**Do** (`russetleaf-infra/envs/home/`, applied locally over WireGuard; uses the `siderolabs/talos` provider):
+
+- **Talos image:** one Image Factory **schematic**, managed in Terraform (`talos_image_factory_schematic`) and used for all three boxes, with the system extensions **`siderolabs/gvisor`** (sandboxed runners, step 6.5), **`siderolabs/intel-ucode`** (CPU microcode security fixes) and, only if the boxes have Realtek network cards, **`siderolabs/realtek-firmware`**. Install from the schematic's **Secure Boot** ISO, and use its installer image for upgrades, with the Talos version pinned. (Kubernetes applications such as Cilium and Argo CD can't go in the image; they come from the machine config below.)
+- **Network:** the addresses from step 0.3 (box 1 `10.10.0.11`, box 2 `.12`, box 3 `.13`, gateway and DNS `10.10.0.1`), set statically in the machine config or reserved on the ER605.
+
+- Generate machine secrets; machine configs for **three control-plane nodes**, all schedulable: **box 3** (main workloads), **box 1** (secondary workloads) and **box 2** (general workloads and CI runners; it becomes the LLM node in Phase 2). Each gets its fixed address from step 0.3.
+- **Shared virtual IP** for the Kubernetes API (Talos's `vip` setting on the nodes' network interface), on **`10.10.0.10`**; kubeconfig and Talos endpoints point at it.
 - **Reservations on every node** (kubelet `systemReserved` and `kubeReserved` for CPU and memory), so workloads can't starve etcd, the API server or the kubelet; plus a **per-pod PID limit** (`podPidsLimit`, e.g. 4096; check WordPress's process counts first; Phase 2 rechecks it for llama.cpp) and **hard eviction thresholds** for memory, disk and inodes ([ADR 1034](adr/1034-kubernetes-threat-model-coverage.md)).
 - **Secure Boot:** install Talos from its **Secure Boot images** (Image Factory), with the keys enrolled in each node's firmware, so the TPM-sealed disk encryption only unlocks on an untampered boot chain ([ADR 1032](adr/1032-defense-in-depth.md)).
 - **User namespaces:** confirm the Kubernetes and Talos versions support pods with `hostUsers: false`; record the result (step 6.1 enforces it if so).
-- **Hardening** ([ADR 1031](adr/1031-kubernetes-component-hardening.md)): **disk encryption** of the system-state and data partitions, **sealed to the TPM** (check each box has TPM 2.0 enabled in the BIOS; otherwise use Talos's static-key option and record it); a **host firewall** (Talos ingress rules) allowing ports 6443 and 50000 only from the LAN and your workstation; kubelet **`seccompDefault: true`**; the API server's **Pod Security Admission defaults** (`baseline` enforced cluster-wide, `restricted` for warn and audit), with per-namespace labels set in step 6.1.
+- **Hardening** ([ADR 1031](adr/1031-kubernetes-component-hardening.md)): **disk encryption** of the system-state and data partitions, **sealed to the TPM** (check each box has TPM 2.0 enabled in the BIOS; otherwise use Talos's static-key option and record it); a **host firewall** (Talos ingress rules) allowing ports 6443 and 50000 only from the lab subnet (`10.10.0.0/24`) and WireGuard clients (`10.10.99.0/24`); kubelet **`seccompDefault: true`**; the API server's **Pod Security Admission defaults** (`baseline` enforced cluster-wide, `restricted` for warn and audit), with per-namespace labels set in step 6.1.
 - Box 3 and box 1: labels for the workload roles (e.g. `role=main`, `role=secondary`), used for placement (e.g. the MariaDB primary on box 3).
-- All nodes: the Talos image includes the **gVisor system extension** (built through Talos's Image Factory and referenced in the machine config), used in step 6.5.
 - All nodes: kubelet extra mount for `/var/local-path-provisioner` (needed in step 4.1).
 - **API server audit logging:** a focused Talos audit policy (metadata for most requests; request details for Secrets, RBAC, `exec` and `attach`), writing to the audit log on each control-plane node (collected in step 4.6).
-- **Cilium:** in the machine config, set `cluster.network.cni.name: none` and `cluster.proxy.disabled: true` (Cilium replaces kube-proxy). Install Cilium with Terraform's Helm provider right after bootstrap (nothing else can run without a CNI), using Talos's documented Cilium values: `kubeProxyReplacement: true`, `k8sServiceHost: localhost`, `k8sServicePort: 7445` (KubePrism), and the cgroup and capability settings Talos requires. Turn on Hubble and Hubble Relay, and **WireGuard transparent encryption** (`encryption.enabled: true`, `encryption.type: wireguard`). Keep Cilium's ServiceMonitors **off** here (the Prometheus Operator doesn't exist yet; step 4.4 turns them on). Use `lifecycle { ignore_changes }` so Terraform installs Cilium once and Argo CD manages it afterwards (step 3.1).
+- **Cilium and Argo CD at bootstrap** ([ADR 1039](adr/1039-bootstrap-through-talos-inline-manifests.md)): in the machine config, set `cluster.network.cni.name: none` and `cluster.proxy.disabled: true` (Cilium replaces kube-proxy). Terraform renders the **Cilium** chart (pinned version; Talos's documented values: `kubeProxyReplacement: true`, `k8sServiceHost: localhost`, `k8sServicePort: 7445` (KubePrism), and the cgroup and capability settings Talos requires; Hubble and Hubble Relay on; **WireGuard transparent encryption** on; ServiceMonitors **off** until step 4.4), the **Argo CD** chart, a root **Application** pointing at `russetleaf-gitops/bootstrap/home`, and the kubelet serving-certificate approver (below) with its Helm provider's template function, and puts them in the machine config's **`cluster.inlineManifests`**. Talos applies them while bootstrapping, so the cluster comes up with networking and GitOps already running. Step 3.1 hands Cilium and Argo CD over to Argo CD and removes them from the inline manifests.
 - Apply configs, bootstrap etcd, output kubeconfig and talosconfig (save them outside Git).
-- **kubelet serving certificates ([ADR 1035](adr/1035-platform-security.md)):** set the kubelet's `rotate-server-certificates` option in the machine config and install a CSR approver for kubelet serving certificates (Talos's documented approach), so each kubelet's certificate is signed by the cluster CA.
+- **kubelet serving certificates ([ADR 1035](adr/1035-platform-security.md)):** set the kubelet's `rotate-server-certificates` option in the machine config and install a CSR approver for kubelet serving certificates (Talos's documented approach; one of the inline manifests above), so each kubelet's certificate is signed by the cluster CA.
 - Install **metrics-server** here or in step 4.1, so `kubectl top` works, **without** `--kubelet-insecure-tls`.
 
 The cluster is **highly available for a single node failure** (three etcd members, the virtual IP); see [ADR 1020](adr/1020-three-node-ha-home-cluster.md) and [ADR 1014](adr/1014-availability-levels.md).
 
-**Test:** `kubectl get nodes` shows all three nodes `Ready`; `talosctl health` passes; each kubelet's serving certificate is issued by the cluster CA (`openssl s_client -connect <node-ip>:10250`) and `kubectl top nodes` works with metrics-server verifying TLS; a fork bomb in a throwaway pod stops at the PID limit while the node stays `Ready`; the partitions show as encrypted; ports 6443 and 50000 are refused from a device outside the allowed range; `cilium status` is all green and `cilium connectivity test` passes; `etcd` has **three healthy members** (`talosctl etcd members`); the API answers on the virtual IP, and still answers after shutting down whichever node holds it; `cilium encrypt status` shows WireGuard on with the other two nodes as peers on each node; there's no kube-proxy DaemonSet. Rebuild once from scratch to prove it's reproducible, and **record how long the rebuild took** as the recovery time in [ADR 1014](adr/1014-availability-levels.md).
+**Test:** from the workstation over WireGuard, `kubectl get nodes` shows all three nodes `Ready` and `talosctl health` passes; the Argo CD pods are running and the root Application exists; `talosctl get extensions` on each node lists gVisor and the Intel microcode; each kubelet's serving certificate is issued by the cluster CA (`openssl s_client -connect <node-ip>:10250`) and `kubectl top nodes` works with metrics-server verifying TLS; a fork bomb in a throwaway pod stops at the PID limit while the node stays `Ready`; the partitions show as encrypted; ports 6443 and 50000 are refused from a household device without the VPN; a test pod can reach the internet but not `192.168.1.0/24`; `cilium status` is all green and `cilium connectivity test` passes; `etcd` has **three healthy members** (`talosctl etcd members`); the API answers on the virtual IP, and still answers after shutting down whichever node holds it; `cilium encrypt status` shows WireGuard on with the other two nodes as peers on each node; there's no kube-proxy DaemonSet. Rebuild once from scratch to prove it's reproducible, and **record how long the rebuild took** as the recovery time in [ADR 1014](adr/1014-availability-levels.md).
 
 ### Step 2.3: AWS and Cloudflare resources for the home lab
 
@@ -377,14 +394,14 @@ The cluster is **highly available for a single node failure** (three etcd member
 **Do:**
 
 - Create the layout from the Phase 1 design: `bootstrap/home/`, `apps/`, `platform/`, each component with `base/` and `overlays/home/`.
-- Install Argo CD with Helm on the new cluster, then add Argo CD itself to `platform/argocd/` so it manages its own upgrades. Applications use **auto-sync with self-heal** by default (Cilium and staging excepted), with **`ignoreDifferences`** for replica counts set by HPAs and KEDA. Add **`platform/cilium/`** with the **same values** Terraform used, so Argo CD adopts Cilium without changing it. Set the Cilium Application to **manual sync** (a broken networking upgrade would stop Argo CD from syncing a revert), and write `docs/runbooks/rollback-cilium.md`: recover with `helm rollback cilium` from the workstation (the API server runs on the host network, so it stays reachable), then revert in Git. Test the procedure on a local kind or Talos-in-Docker cluster.
+- **Hand over from Talos to Argo CD** ([ADR 1039](adr/1039-bootstrap-through-talos-inline-manifests.md)): Argo CD is already running from step 2.2's inline manifests. Add **`platform/argocd/`** with the **same chart version and values**, so Argo CD adopts itself and manages its own upgrades. Applications use **auto-sync with self-heal** by default (Cilium and staging excepted), with **`ignoreDifferences`** for replica counts set by HPAs and KEDA. Add **`platform/cilium/`** with the **same values** as the inline manifest, so Argo CD adopts Cilium without changing it. Once both show `Synced` with no changes, **remove the Cilium and Argo CD inline manifests** from the machine config in `russetleaf-infra` (check first, in a local Talos-in-Docker cluster, that removing an inline manifest leaves its resources in place), so Talos's Kubernetes upgrades never roll them back. Set the Cilium Application to **manual sync** (a broken networking upgrade would stop Argo CD from syncing a revert), and write `docs/runbooks/rollback-cilium.md`: recover with `helm rollback cilium` from the workstation (the API server runs on the host network, so it stays reachable), then revert in Git. Test the procedure on a local kind or Talos-in-Docker cluster.
 - `bootstrap/home/`: the root "app of apps" that creates one Argo CD Application per component, with **sync waves** (Cilium and the `prometheus-operator-crds` chart, from the prometheus-community Helm repository, first, then storage and secrets, then ingress, monitoring, operators, then apps).
 - Expose the Argo CD UI only through Cloudflare Access (after step 4.3), or use `kubectl port-forward` until then.
 - **Argo CD Notifications** to `#rl-deploys` (sync succeeded, sync failed, app degraded), using the Slack bot token. Until External Secrets exists (step 4.2), create the token Secret by hand; switch it to an `ExternalSecret` afterwards.
 - **AppProjects** (platform, apps, staging) restricting each to its repos, namespaces and resource kinds, with **orphaned-resource warnings** on, so objects Argo CD doesn't own are flagged ([ADR 1034](adr/1034-kubernetes-threat-model-coverage.md)); Argo CD Notifications sends them to `#rl-security` once that channel's routing exists.
 - CI: render every component's home overlay (Helm/Kustomize), validate with `kubeconform`, and run **Checkov on the rendered manifests** (what Argo CD would actually apply).
 
-**Test:** apply the root app; Argo CD shows it `Synced`/`Healthy` with a trivial test component; a sync posts to `#rl-deploys`; a ConfigMap created by hand in a managed namespace shows as orphaned; a pull request that breaks a manifest fails CI.
+**Test:** after removing the inline manifests, Cilium and Argo CD are unchanged and still `Synced`, and `talosctl upgrade-k8s --dry-run` plans no changes to them; Argo CD shows the root app `Synced`/`Healthy` with a trivial test component; a sync posts to `#rl-deploys`; a ConfigMap created by hand in a managed namespace shows as orphaned; a pull request that breaks a manifest fails CI.
 
 ## Stage 4: Platform services (`russetleaf-gitops/platform/`)
 
