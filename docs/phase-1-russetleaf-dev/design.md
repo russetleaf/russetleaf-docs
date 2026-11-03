@@ -131,7 +131,7 @@ Separate workload accounts limit how far a compromise can spread, and give each 
 - **Encryption:** EBS encryption by default; **KMS customer-managed keys** for the Log Archive and Backup buckets (about $1/key/month); block public access for EBS snapshots and AMIs.
 - **EKS API endpoint (Phase 3):** public but **restricted to the home network's address** from the start (private access also on, for the nodes); the AWS **demo workflows run on the home ARC runners**, so they come from that address too ([ADR 1030](adr/1030-github-actions-ci.md)).
 - **EKS nodes (Phase 3):** **IMDSv2 required** with a **hop limit of 1** in Karpenter's node class, so pods cannot reach the node's instance credentials (they use Pod Identity instead).
-- **VPC (russetleaf-com, Phase 3):** **VPC endpoints** for S3, STS, SQS (Karpenter's interruption queue) and Secrets Manager (private traffic, lower NAT costs); **VPC flow logs** to Log Archive during demos; **Route 53 Resolver DNS Firewall** with an allow-list of domains for the whole VPC (nodes included, which Cilium's pod policies do not cover); default security groups with no rules; default VPCs removed.
+- **VPC (russetleaf-com, Phase 3):** **VPC endpoints** for S3, STS, SQS (Karpenter's interruption queue) and Secrets Manager (private traffic, lower NAT costs); **VPC flow logs** to Log Archive during demos; **Route 53 Resolver DNS Firewall** with an allow-list of domains for the whole VPC (nodes included, which Cilium's pod policies do not cover), and **Resolver query logs** to Log Archive for forensics; default security groups with no rules; default VPCs removed.
 - **AWS Well-Architected review:** a review of the design with the free **Well-Architected Tool** (Security pillar first), with the report kept in `docs/` and revisited yearly.
 
 ### Cost
@@ -649,6 +649,8 @@ What else is needed for this to work:
 | `HubblePolicyDropsSpike` | `hubble_drop_total{reason="POLICY_DENIED"}` rises sharply for a workload (a new policy blocking real traffic, or something probing) | `#rl-security` |
 | `CiliumEndpointRegenerationFailing` | Policy updates fail to apply to pods | Site channel |
 | `HubbleDNSErrors` | DNS errors (e.g. `NXDOMAIN`, `SERVFAIL`) rise, which often breaks FQDN rules | Site channel |
+
+**DNS records for forensics:** Hubble's **flow exporter** writes DNS events (which pod looked up which name, and the answer) to a log file on each node, which Alloy ships to Loki's **`security`** tenant (7 days, visible only to platform admins). Detection stays with Falco, the FQDN policies and `HubblePolicyDropsSpike`; these records reconstruct what happened afterwards. On AWS, Route 53 Resolver query logs in Log Archive do the same for the demo VPC.
 
 **Memory:** the Cilium agent uses roughly 150–300 MB per node, the operator, Hubble Relay and Hubble UI about 200 MB together. On Talos this partly replaces Flannel and kube-proxy. Hubble UI can be scaled to zero when not in use.
 

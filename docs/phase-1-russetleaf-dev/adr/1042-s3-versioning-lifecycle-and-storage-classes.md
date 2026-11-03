@@ -20,7 +20,7 @@ The buckets had versioning where it mattered and lifecycle rules that delete sho
 | Media (both sites) | Kept | Deleted after **90 days** | Standard |
 | Database backups | Deleted after 30 days | Deleted after 30 days | Standard |
 | Backup account copies (Object Lock, 30 days) | Deleted after **35 days** (after the lock ends) | Deleted after 1 day, once unlocked | Standard |
-| Log Archive (CloudTrail, Config, Kubernetes audit logs; Object Lock) | **Glacier Instant Retrieval after 30 days**; deleted after **1 year** (CloudTrail kept longer only if a requirement appears) | Deleted after 1 day, once unlocked | Standard, then **Glacier Instant Retrieval** |
+| Log Archive (CloudTrail, Config, Kubernetes audit logs, VPC flow logs, Route 53 Resolver query logs; Object Lock) | **Glacier Instant Retrieval after 30 days**; deleted after **1 year** (CloudTrail kept longer only if a requirement appears) | Deleted after 1 day, once unlocked | Standard, then **Glacier Instant Retrieval** |
 | MLflow artifacts and DVC data | Kept | Deleted after 30 days | Standard |
 | Loki and Tempo | Deleted when their retention ends (3–14 days) | n/a | Standard |
 

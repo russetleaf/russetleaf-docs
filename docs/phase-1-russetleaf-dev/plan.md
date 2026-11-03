@@ -715,8 +715,9 @@ Review the policy reports, fix violations, then switch to **enforce**.
 - **Platform namespaces too ([ADR 1033](adr/1033-identity-and-access.md)):** default-deny for `argocd`, `external-secrets`, `kyverno`, `monitoring`, `dex` and the operators, with least-privilege egress: Argo CD → GitHub and GHCR plus the API server; External Secrets → Secrets Manager and STS; operators → the API server only.
 - CI: validate the policies against the Cilium CRD schemas, and exercise them in the ci kind cluster (install Cilium there too).
 - Roll out one namespace at a time, watching `hubble observe --verdict DROPPED` for anything legitimate being blocked.
+- **DNS records for forensics:** turn on Hubble's **flow exporter** for DNS events only (pod, name, answer, verdict), written to a log file on each node; Alloy ships it to Loki's **`security`** tenant (7 days).
 
-**Test:** from a test pod in another namespace, MariaDB is unreachable; from a WordPress pod, `curl https://example.com` is **blocked** while uploads to S3 still work; an **exfiltration test** (posting a file from each application pod to an unlisted destination) is blocked and shows in `hubble observe --verdict DROPPED`; from a pod in `argocd`, a request to an unlisted site is blocked while syncs still work; a burst of blocked requests triggers `HubblePolicyDropsSpike` in `#rl-security`; the site, backups and monitoring all still work.
+**Test:** from a test pod in another namespace, MariaDB is unreachable; a test pod's lookup of `example.com` appears in Loki's `security` tenant with the pod's name, and is not visible to the operator role; from a WordPress pod, `curl https://example.com` is **blocked** while uploads to S3 still work; an **exfiltration test** (posting a file from each application pod to an unlisted destination) is blocked and shows in `hubble observe --verdict DROPPED`; from a pod in `argocd`, a request to an unlisted site is blocked while syncs still work; a burst of blocked requests triggers `HubblePolicyDropsSpike` in `#rl-security`; the site, backups and monitoring all still work.
 
 ### Step 6.4: Service mesh decision (ADR) and optional Istio experiment
 
