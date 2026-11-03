@@ -46,4 +46,4 @@ Do not run a service mesh. Cover a mesh's benefits with tools already in the des
 ## Open items
 
 - **EKS WireGuard support:** confirm whether Cilium's WireGuard encryption is supported in chaining mode with the VPC CNI for the Cilium version installed (Phase 3 step 1.4). If not, record it here; application-level TLS then covers encryption in transit on EKS.
-- **Optional Istio ambient experiments:** if run, add the findings (memory used, latency added, setup issues with Cilium, what it added) from the local kind experiment (Phase 1 step 6.4) and the EKS experiment (Phase 3 step 5.3).
+- **Optional Istio ambient experiments:** if run, add the findings (memory used, latency added, setup issues with Cilium, what it added) from the local kind experiment (Phase 1 step 6.4) and the EKS experiment (Phase 3 step 4.3).

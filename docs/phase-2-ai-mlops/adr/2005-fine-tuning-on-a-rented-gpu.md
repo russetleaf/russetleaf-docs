@@ -3,7 +3,7 @@
 - **Status:** Accepted; supersedes [ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)
 - **Date:** 2026-11-02
 - **Applies to:** `russetleaf-llm-summarizer/training/`, the russetleaf-home AWS account, the home MLflow registry and llama.cpp
-- **Phase:** 2. Phase 3 can run the same training on the EKS GPU node pool instead.
+- **Phase:** 2. Training is entirely within Phase 2; Phase 3 does not depend on it.
 
 ## Context
 
@@ -12,7 +12,7 @@
 ## Decision
 
 - **Fine-tuning moves into Phase 2**, run on **one rented spot GPU instance** in the russetleaf-home account (e.g. a g6.xlarge), created for a training run and destroyed afterwards.
-- **How a run works:** a `train` workflow in `russetleaf-llm-summarizer` (on the home runners) assumes a narrow **training-launcher role** and starts an instance from a Terraform-managed **launch template** (a GPU-ready image, an instance profile limited to reading the DVC training data and writing to the MLflow artifact bucket, outbound-only networking, a maximum run time). The instance runs the **same training container** the pipeline uses everywhere: fetch the DVC-versioned dataset, **LoRA** fine-tune the 3B base model, **evaluate against the base** (including the adversarial cases), convert to GGUF, and **register** the result in the home MLflow as a `local-summarizer` version with its scores and lineage. It then **terminates itself**; the workflow checks it is gone.
+- **How a run works:** a `train` workflow in `russetleaf-llm-summarizer` (on the home runners) assumes a narrow **training-launcher role** and starts an instance from a Terraform-managed **launch template** (a GPU-ready image, an instance profile limited to reading the DVC training data and writing to the MLflow artifact bucket, outbound-only networking, a maximum run time). The instance runs the **training container**: fetch the DVC-versioned dataset, **LoRA** fine-tune the 3B base model, **evaluate against the base** (including the adversarial cases), convert to GGUF, and **register** the result in the home MLflow as a `local-summarizer` version with its scores and lineage. It then **terminates itself**; the workflow checks it is gone.
 - **The challenger at home:** a version that beats the base becomes the **challenger** on `rl-home-cp02`, gets a canary share through the gateway, and is promoted only if online evaluation holds up for a week ([ADR 2003](2003-self-hosted-model-on-cp02.md)).
 - **Drift-triggered retraining:** a sustained `InputDriftDetected` or `SummaryQualityDegraded`, or enough new feedback, **opens a retraining pull request** with the drift report and the proposed dataset version; merging it starts a training run. A person decides; nothing retrains on its own.
 - **Drift reports with Evidently:** the online evaluation's drift checks use **Evidently**, a widely used open-source drift tool, rather than custom code.
@@ -21,7 +21,7 @@
 
 ## Alternatives considered
 
-- **Fine-tuning on the EKS GPU node pool** ([ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)): runs inside a cluster with its policies and monitoring, but only exists if Phase 3 is built; kept as an option for Phase 3.
+- **Fine-tuning on the EKS GPU node pool** ([ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)): runs inside a cluster with its policies and monitoring, but only exists if Phase 3 is built, which would tie the phases together.
 - **A hosted notebook (Google Colab, SageMaker Studio Lab):** cheaper or free, but manual and outside infrastructure as code.
 - **Amazon SageMaker training jobs:** managed and capable, but a separate platform from the home registry, at more cost and setup than one instance.
 - **Fine-tuning on CPU at home:** impractically slow for a 3B model on these CPUs.
@@ -36,7 +36,6 @@
 ## When to revisit
 
 - A GPU at home: run the same container locally and drop the rented instance.
-- Phase 3 is built: run the training on the EKS GPU node pool if that is cheaper or simpler at the time.
 
 ## Open items
 

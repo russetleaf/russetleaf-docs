@@ -49,5 +49,5 @@ Constraints: `rl-home-cp01` of the home lab has 8 GB of RAM and is close to its 
 ## Open items
 
 - Phase 1 step 7.4: record Tempo's memory use and the sampling rates that work.
-- Phase 3 step 4.4: confirm the end-to-end trace (publish → summary saved) in a demo and add a screenshot to the docs.
+- Phase 3 step 2.4: Tempo on EKS, on for every demo; confirm a page request's trace and add a screenshot to the docs.
 - Confirm the current OpenTelemetry PHP package names for WordPress, database and HTTP auto-instrumentation when building the image.

@@ -59,4 +59,4 @@ The design was checked against common compliance frameworks: MITRE ATT&CK, GDPR,
 - Phase 1 step 5.1: CIS Docker Benchmark check.
 - Phase 1 step 7.1: ATT&CK detection map and Grafana panel.
 - Phase 1 step 8.5: NIST CSF 2.0 organization, SP 800-190 and SSDF checklists, CIS evidence links.
-- Phase 3 step 5.1: GuardDuty's EKS findings in the ATT&CK map; the privacy notice and cookie check on russetleaf.com.
+- Phase 3 step 4.1: GuardDuty's EKS findings in the ATT&CK map; the privacy notice and cookie check on russetleaf.com.

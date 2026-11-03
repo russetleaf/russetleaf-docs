@@ -52,4 +52,4 @@ The design could already rebuild most things from code (Terraform, GitOps, image
 - Phase 1 steps 2.0 and 2.5: create the Organization and accounts, including the Backup account (2.0); create the locked buckets, replication and repo mirrors (2.5); test a restore from the backup account.
 - Phase 1 step 0.1: assemble the break-glass kit.
 - Phase 1 step 7.10: the first full disaster drill; record the time in the [disaster recovery plan](../disaster-recovery.md).
-- Phase 3 step 6.1: the logical dump at `demo-down`; restore it once from the backup account.
+- Phase 3 step 5.1: the logical dump at `demo-down`; restore it once from the backup account.

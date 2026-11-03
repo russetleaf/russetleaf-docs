@@ -219,58 +219,58 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 
 | ADR | Phase 1 steps | Phase 2 steps | Phase 3 steps |
 |---|---|---|---|
-| [1001 No service mesh](adr/1001-no-service-mesh.md) | 6.4 | — | 1.4, 5.3 |
+| [1001 No service mesh](adr/1001-no-service-mesh.md) | 6.4 | — | 1.4, 4.3 |
 | [1002 S3 media, not EFS](adr/1002-s3-media-not-efs.md) | 5.1 | — | — |
 | [1003 Kubescape CLI, not operator](adr/1003-kubescape-cli-not-operator.md) | 7.2 | — | 2.5 |
 | [1004 GHCR, not ECR](adr/1004-ghcr-not-ecr.md) | 5.1 | — | 0.2 |
 | [1005 Loki and Alloy](adr/1005-loki-alloy-for-logs.md) | 4.6 | — | — |
-| [1006 Tempo tracing](adr/1006-tempo-tracing.md) | 7.4 | 5.2 | 4.4 |
-| [1007 Prowler, not ThreatMapper](adr/1007-prowler-not-threatmapper.md) | 7.5 | — | 5.1 |
+| [1006 Tempo tracing](adr/1006-tempo-tracing.md) | 7.4 | 5.2 | 2.4 |
+| [1007 Prowler, not ThreatMapper](adr/1007-prowler-not-threatmapper.md) | 7.5 | — | 4.1 |
 | [1008 Google sign-in for admins](adr/1008-google-sign-in-for-admins.md) | 5.8 | — | 3.1 |
 | [1009 gVisor sandboxing](adr/1009-gvisor-sandboxing.md) | 6.5, 7.1 | 4.2 | — |
 | [1010 Local storage, no Ceph](adr/1010-local-storage-no-ceph.md) | 4.1, 4.5 | — | — |
 | [1011 Update strategy](adr/1011-update-strategy.md) | 1.1, 5.1, 7.6 | — | — |
-| [1012 OpenCost and AWS billing](adr/1012-opencost-and-aws-billing.md) | 2.0, 7.3 | 5.2 | 5.2 |
+| [1012 OpenCost and AWS billing](adr/1012-opencost-and-aws-billing.md) | 2.0, 7.3 | 5.2 | 4.2 |
 | [1013 Image supply chain](adr/1013-image-supply-chain.md) | 5.1, 6.1 | 2.4 | — |
 | [1014 Availability levels](adr/1014-availability-levels.md) | 2.2, 4.5, 7.11 | — | 3.1 |
-| [1015 Process allow-listing](adr/1015-process-allow-listing.md) | 7.1, 7.7 | 5.1 | 5.4 |
+| [1015 Process allow-listing](adr/1015-process-allow-listing.md) | 7.1, 7.7 | 5.1 | 4.4 |
 | [1016 Rollback strategy](adr/1016-rollback-strategy.md) | 3.1, 5.7, 6.1, 7.8 | 2.4, 5.2 | — |
 | [1017 Intrusion detection and prevention](adr/1017-intrusion-detection-and-prevention.md) | 2.0b, 2.2, 2.3, 4.6, 7.9 | — | — |
-| [1018 Disaster recovery](adr/1018-disaster-recovery.md) | 0.1, 2.0, 2.5, 7.10 | — | 6.1 |
+| [1018 Disaster recovery](adr/1018-disaster-recovery.md) | 0.1, 2.0, 2.5, 7.10 | — | 5.1 |
 | [1019 AWS multi-account (SRA)](adr/1019-aws-multi-account-sra.md) | 2.0, 2.0b, 2.4 | — | 0.1 |
 | [1020 Three-node HA home cluster](adr/1020-three-node-ha-home-cluster.md) | 2.2, 4.5, 7.11 | — | — |
 | [1021 SLOs and error budgets](adr/1021-slos-and-error-budgets.md) | 8.1, 8.2 | 5.2 | — |
-| [1022 Internal developer platform](adr/1022-internal-developer-platform.md) | 8.3, 8.4, 8.8 | — | 6.5 |
+| [1022 Internal developer platform](adr/1022-internal-developer-platform.md) | 8.3, 8.4, 8.8 | — | 5.5 |
 | [1023 Reliability practice](adr/1023-reliability-practice.md) | 8.6 | 5.2 | — |
-| [1024 Performance and stress testing](adr/1024-performance-and-stress-testing.md) | 5.9, 7.12 | 2.6 | 6.4 |
+| [1024 Performance and stress testing](adr/1024-performance-and-stress-testing.md) | 5.9, 7.12 | 2.6 | 5.4 |
 | [1025 Site design in Git](adr/1025-site-design-in-git.md) | 5.10, 5.11 | — | — |
 | [1026 CPU limits](adr/1026-cpu-limits.md) | 4.4, 5.5 | 3.1 | — |
 | [1027 Cilium as the CNI](adr/1027-cilium-cni.md) | 2.2 | — | 1.4 |
 | [1028 Internal PKI (cert-manager)](adr/1028-internal-pki.md) | 4.2 | — | — |
 | [1029 On-demand staging](adr/1029-on-demand-staging.md) | 5.6, 5.7 | — | — |
-| [1030 GitHub Actions and public repos](adr/1030-github-actions-ci.md) | 1.1, 5.5 | — | 1.4, 6.1 |
-| [1031 Kubernetes component hardening](adr/1031-kubernetes-component-hardening.md) | 2.2, 6.1, 7.2 | — | 1.4, 5.1 |
-| [1032 Defense in depth](adr/1032-defense-in-depth.md) | 0.1, 0.3, 1.1, 2.2, 2.3, 5.1, 5.2, 5.6, 5.7, 6.1, 8.5 | 2.4, 5.1 | 1.2, 2.4, 5.1 |
+| [1030 GitHub Actions and public repos](adr/1030-github-actions-ci.md) | 1.1, 5.5 | — | 1.4, 5.1 |
+| [1031 Kubernetes component hardening](adr/1031-kubernetes-component-hardening.md) | 2.2, 6.1, 7.2 | — | 1.4, 4.1 |
+| [1032 Defense in depth](adr/1032-defense-in-depth.md) | 0.1, 0.3, 1.1, 2.2, 2.3, 5.1, 5.2, 5.6, 5.7, 6.1, 8.5 | 2.4, 5.1 | 1.2, 2.4, 4.1 |
 | [1033 Identity and access](adr/1033-identity-and-access.md) | 4.6, 4.7, 6.1, 6.3, 9.1 | — | 1.4, 1.7 |
-| [1034 Kubernetes threat model coverage](adr/1034-kubernetes-threat-model-coverage.md) | 2.2, 3.1, 4.4, 4.6, 6.1, 6.3, 7.2, 8.5 | 5.1 | 1.4, 2.3, 5.1 |
-| [1035 Platform security](adr/1035-platform-security.md) | 2.2, 4.4, 4.6, 5.1, 6.1, 7.2 | — | 5.1 |
-| [1036 Compliance frameworks and privacy](adr/1036-compliance-frameworks-and-privacy.md) | 5.1, 5.12, 7.1, 8.5 | 4.5 | 5.1 |
+| [1034 Kubernetes threat model coverage](adr/1034-kubernetes-threat-model-coverage.md) | 2.2, 3.1, 4.4, 4.6, 6.1, 6.3, 7.2, 8.5 | 5.1 | 1.4, 2.3, 4.1 |
+| [1035 Platform security](adr/1035-platform-security.md) | 2.2, 4.4, 4.6, 5.1, 6.1, 7.2 | — | 4.1 |
+| [1036 Compliance frameworks and privacy](adr/1036-compliance-frameworks-and-privacy.md) | 5.1, 5.12, 7.1, 8.5 | 4.5 | 4.1 |
 | [1037 Project phases](adr/1037-project-phases.md) | 1.1 | — | — |
 | [1038 Separate documentation repo and docs site](adr/1038-documentation-repo-and-site.md) | 1.1 | — | — |
 | [1039 Bootstrap through Talos inline manifests](adr/1039-bootstrap-through-talos-inline-manifests.md) | 2.2, 3.1 | — | — |
 | [1040 Lab network and WireGuard](adr/1040-lab-network-and-wireguard.md) | 0.3, 2.2 | — | — |
 | [1041 Naming convention](adr/1041-naming-convention.md) | 0.3, 2.2 | — | 1.4, 2.3 |
 | [2001 MLOps lifecycle](../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | — | 4.4–4.10 | — |
-| [2002 Summary pipeline architecture](../phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | — | 2.1–2.5 | 4.1 |
-| [2003 Self-hosted model on `rl-home-cp02`](../phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | — | 1.3, 3.1, 3.2 | 4.2 |
+| [2002 Summary pipeline architecture](../phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | — | 2.1–2.5 | — |
+| [2003 Self-hosted model on `rl-home-cp02`](../phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | — | 1.3, 3.1, 3.2 | — |
 | [2004 Agentic AI delivery](../phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md) | — | 1.1b, 5.3 | 0.3 |
 | [2005 Fine-tuning on a rented GPU](../phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md) | — | 1.2, 4.6, 4.8–4.10 | — |
 | [3001 kube-bench on EKS only](../phase-3-russetleaf-com/adr/3001-kube-bench-eks-only.md) | 7.2 | — | 2.5 |
-| [3002 Fine-tuning on the EKS GPU pool (superseded by 2005)](../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md) | — | — | 4.2 (optional) |
+| [3002 Fine-tuning on the EKS GPU pool (superseded by 2005)](../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md) | — | — | — |
 | [3003 Cilium chaining on EKS](../phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md) | — | — | 1.4 |
-| [3004 EKS component hardening](../phase-3-russetleaf-com/adr/3004-eks-component-hardening.md) | — | — | 1.4, 2.5, 5.1 |
+| [3004 EKS component hardening](../phase-3-russetleaf-com/adr/3004-eks-component-hardening.md) | — | — | 1.4, 2.5, 4.1 |
 | [3005 EKS access and audit logs](../phase-3-russetleaf-com/adr/3005-eks-access-and-audit-logs.md) | — | — | 1.4, 1.7 |
-| [3006 On-demand demo stack and always-on edge](../phase-3-russetleaf-com/adr/3006-on-demand-demo-stack.md) | — | — | 1.2, 6.1 |
+| [3006 On-demand demo stack and always-on edge](../phase-3-russetleaf-com/adr/3006-on-demand-demo-stack.md) | — | — | 1.2, 5.1 |
 | [3007 RDS for MariaDB behind RDS Proxy](../phase-3-russetleaf-com/adr/3007-rds-mariadb-with-rds-proxy.md) | — | — | 1.6, 3.1 |
 | [3008 Karpenter node pools](../phase-3-russetleaf-com/adr/3008-karpenter-node-pools.md) | — | — | 1.5, 2.3 |
 
@@ -857,7 +857,7 @@ These steps are most of the **Advanced** tier; see the Phase 1 design's [Enginee
 
 ### Step 8.8: Fleet management (hub-and-spoke Argo CD)
 
-**Do:** make the home Argo CD the **hub** for other clusters, with a **local Talos-in-Docker cluster** on the workstation (`talosctl cluster create`) as the first **spoke**: register it with an Argo CD cluster secret using a scoped service account, add an **ApplicationSet with a cluster generator** that deploys a small overlay (e.g. a test namespace with a policy and a demo app) to every registered spoke, and document registering and removing a spoke. Keep the per-cluster Argo CD as a documented fallback. In Phase 3, `demo-up` registers EKS the same way as a second spoke (Phase 3 step 6.5).
+**Do:** make the home Argo CD the **hub** for other clusters, with a **local Talos-in-Docker cluster** on the workstation (`talosctl cluster create`) as the first **spoke**: register it with an Argo CD cluster secret using a scoped service account, add an **ApplicationSet with a cluster generator** that deploys a small overlay (e.g. a test namespace with a policy and a demo app) to every registered spoke, and document registering and removing a spoke. Keep the per-cluster Argo CD as a documented fallback. In Phase 3, `demo-up` registers EKS the same way as a second spoke (Phase 3 step 5.5).
 
 **Test:** with the local spoke running, the hub shows both clusters and the ApplicationSet syncs the overlay to the spoke; deleting the spoke's registration removes its Applications with no errors left behind; the spoke's credentials cannot change anything outside the namespaces the hub manages.
 

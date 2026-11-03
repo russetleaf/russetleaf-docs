@@ -21,14 +21,14 @@ High availability (HA) means a site keeps working when a single component (a nod
 | Cache | Single Valkey | ElastiCache primary + replica in different zones |
 | Storage | Local disks, no replication ([ADR 1010](1010-local-storage-no-ceph.md)) | EBS and S3 (replicated by AWS) |
 | Network path | One home internet connection and power supply; cloudflared has 2 replicas, but on the same box | CloudFront and a multi-zone ALB |
-| Deliberate demo cuts | — | **One NAT Gateway** instead of three; **one spot GPU node** (the LLM gateway falls back to Bedrock if it is reclaimed) |
+| Deliberate demo cuts | — | **One NAT Gateway** instead of three |
 | Availability over time | Up 24/7, with single points of failure everywhere | **Only during demos**; the always-on edge serves an offline page otherwise |
 | Region | One home | One AWS region (us-east-1) |
 
 ## Decision
 
 - **russetleaf.dev: no high availability.** Single points of failure are accepted because the hardware (two 8 GB nodes) and the budget do not allow redundancy. Protection comes from **recovery**, not redundancy: everything is rebuilt from Git (Terraform, Argo CD), and the database is restored from S3 backups.
-- **russetleaf.com: a highly available design, run in demo mode.** It is HA *within one region while running* (EKS control plane, nodes across zones, RDS Multi-AZ, ElastiCache replica, multi-zone ALB, CloudFront), with two deliberate demo cuts (one NAT Gateway, one spot GPU node), and it is not always running.
+- **russetleaf.com: a highly available design, run in demo mode.** It is HA *within one region while running* (EKS control plane, nodes across zones, RDS Multi-AZ, ElastiCache replica, multi-zone ALB, CloudFront), with one deliberate demo cut (one NAT Gateway), and it is not always running.
 - **Recovery targets** (recovery point = how much data can be lost; recovery time = how long until the site is back):
 
 | | Recovery point | Recovery time |
@@ -54,15 +54,14 @@ High availability (HA) means a site keeps working when a single component (a nod
 **AWS (russetleaf.com):**
 
 1. **Three NAT Gateways** (one per zone): about **+$65/month** if running 24/7.
-2. **More GPU capacity:** on-demand or a second GPU node, about **+$350/month** for on-demand; or rely on the existing Bedrock fallback.
-3. **Always-on operation:** the full **~$720–820/month** in the Phase 1 design's cost table.
-4. **Multi-region disaster recovery:** cross-region copies of RDS snapshots and S3 data (backup-and-restore costs little more than storage), or a warm standby in a second region with **Route 53 failover** (roughly doubles the cost).
+2. **Always-on operation:** the full **~$505–555/month** in the Phase 3 design's cost table.
+3. **Multi-region disaster recovery:** cross-region copies of RDS snapshots and S3 data (backup-and-restore costs little more than storage), or a warm standby in a second region with **Route 53 failover** (roughly doubles the cost).
 
 ## Alternatives considered
 
 - **Building HA at home now:** needs a third node, more memory and replicated storage; not affordable with the current hardware, and recovery from Git plus backups is adequate for a portfolio site.
-- **Running russetleaf.com always-on with full HA:** about $725–840/month, far over the $30–60/month budget.
-- **Removing the demo cuts (three NAT Gateways, on-demand GPU) during demos:** adds cost for every demo hour, for resilience that a demo rarely needs; documented as "production would use three" instead.
+- **Running russetleaf.com always-on with full HA:** about $505–555/month, far over the $30–50/month budget.
+- **Removing the demo cut (three NAT Gateways) during demos:** adds cost for every demo hour, for resilience that a demo rarely needs; documented as "production would use three" instead.
 
 ## Consequences
 

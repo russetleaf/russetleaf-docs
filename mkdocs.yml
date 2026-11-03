@@ -133,7 +133,7 @@ nav:
           - "3005 EKS access through Identity Center, and the EKS audit-log archive": phase-3-russetleaf-com/adr/3005-eks-access-and-audit-logs.md
           - "3006 russetleaf.com as an on-demand demo stack behind an always-on edge": phase-3-russetleaf-com/adr/3006-on-demand-demo-stack.md
           - "3007 RDS for MariaDB behind RDS Proxy, with IAM authentication": phase-3-russetleaf-com/adr/3007-rds-mariadb-with-rds-proxy.md
-          - "3008 Karpenter for EKS nodes, with general and GPU node pools": phase-3-russetleaf-com/adr/3008-karpenter-node-pools.md
+          - "3008 Karpenter for EKS nodes": phase-3-russetleaf-com/adr/3008-karpenter-node-pools.md
   - Templates:
       - ADR template: adr/0000-template.md
       - Step spec template: specs/TEMPLATE.md

@@ -16,7 +16,7 @@
 - **Nodes:** AL2023 with a pinned AMI version; **IMDSv2 required with a hop limit of 1**; kubelet `seccompDefault`, system and kubelet reservations, hard eviction thresholds and a per-pod PID limit ([ADR 1034](../../phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md)) through the managed node group's launch template and Karpenter's node configuration; encrypted gp3 root volumes.
 - **Pod Security Admission labels** on every namespace, as at home, with the version pinned.
 - **Add-on versions pinned** in Terraform, checked monthly by the version-age workflow.
-- **Checks:** kube-bench with the EKS profile on every demo ([ADR 3001](3001-kube-bench-eks-only.md)), `aws eks describe-cluster` for encryption and endpoint access, and the EKS items of the security review (Phase 3 step 5.1); the review states that the control plane is AWS's responsibility.
+- **Checks:** kube-bench with the EKS profile on every demo ([ADR 3001](3001-kube-bench-eks-only.md)), `aws eks describe-cluster` for encryption and endpoint access, and the EKS items of the security review (Phase 3 step 4.1); the review states that the control plane is AWS's responsibility.
 
 ## Alternatives considered
 
@@ -35,4 +35,4 @@
 
 ## Open items
 
-- Phase 3 step 1.4: envelope encryption, endpoint access, node settings; step 2.5: kube-bench; step 5.1: the review.
+- Phase 3 step 1.4: envelope encryption, endpoint access, node settings; step 2.5: kube-bench; step 4.1: the review.

@@ -56,4 +56,4 @@ Defense in depth means layering controls so a failure at one layer is caught at 
 
 ## Open items
 
-- Phase 1 steps 0.1, 0.3, 1.1, 2.2, 2.3, 5.1, 5.2, 5.6, 5.7, 6.1 and 8.5 and Phase 2 step 2.4; Phase 3 steps 1.2, 2.4 and 5.1.
+- Phase 1 steps 0.1, 0.3, 1.1, 2.2, 2.3, 5.1, 5.2, 5.6, 5.7, 6.1 and 8.5 and Phase 2 step 2.4; Phase 3 steps 1.2, 2.4 and 4.1.

@@ -38,4 +38,4 @@ The project had become a capable platform (GitOps, signed supply chain, policies
 
 ## Open items
 
-- Phase 1 steps 8.3, 8.4 and 8.8; Phase 3 step 6.5.
+- Phase 1 steps 8.3, 8.4 and 8.8; Phase 3 step 5.5.

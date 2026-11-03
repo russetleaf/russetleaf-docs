@@ -85,7 +85,7 @@ The AWS side follows the **AWS Security Reference Architecture (SRA)**: separate
 | **russetleaf-home** | Workloads | The AWS resources russetleaf.dev uses (S3, Secrets Manager, SES; SQS and Bedrock from Phase 2); this is the **existing account**, which joins the Organization |
 | **russetleaf-com** | Workloads | russetleaf.com: the always-on edge (`envs/aws-edge`) and the demo stack (`envs/aws`). **Created in Phase 3.** |
 
-Separate workload accounts limit how far a compromise can spread, and give each site its own costs, quotas (e.g. the GPU quota) and limits. Accounts are free. All of it is managed by Terraform in `russetleaf-infra/envs/org/` (Organization, OUs, accounts, SCPs, Identity Center, tag policies) and `russetleaf-infra/envs/security/` (the security services), applied from the workstation with management-account and Security Tooling access.
+Separate workload accounts limit how far a compromise can spread, and give each site its own costs, quotas and limits. Accounts are free. All of it is managed by Terraform in `russetleaf-infra/envs/org/` (Organization, OUs, accounts, SCPs, Identity Center, tag policies) and `russetleaf-infra/envs/security/` (the security services), applied from the workstation with management-account and Security Tooling access.
 
 **Cross-account access the design needs** (each a narrow, explicit grant): the russetleaf.com seed Job reads russetleaf.dev's backup and media buckets (bucket policies in `russetleaf-home`); every account's backup-bound buckets replicate into the Backup account; CI roles in each account read and write Terraform state in `russetleaf-infra`.
 
@@ -575,7 +575,7 @@ The project deliberately has **no service mesh**. The reasoning is recorded as a
 
 **When this would change** (also in the ADR): many more services calling each other, a requirement to verify service identity on every connection (e.g. a compliance rule), or traffic between several clusters.
 
-**Optional experiment:** try **Istio ambient mode** in a local kind cluster with Cilium (Phase 1 step 6.4), or on EKS during a demo where memory is not tight (Phase 3 step 5.3), and add the findings (memory used, setup issues with Cilium, what it added) to the ADR. Neither site depends on it.
+**Optional experiment:** try **Istio ambient mode** in a local kind cluster with Cilium (Phase 1 step 6.4), or on EKS during a demo where memory is not tight (Phase 3 step 4.3), and add the findings (memory used, setup issues with Cilium, what it added) to the ADR. Neither site depends on it.
 
 ### Hubble: network-flow visibility
 
@@ -849,7 +849,7 @@ One Slack workspace for the project. The free plan is enough: it keeps 90 days o
 | `#rl-dev-alerts` | All russetleaf.dev warnings and criticals | Alertmanager (home), Cloudflare notifications, uptime checks |
 | `#rl-deploys` | Syncs, failed syncs, unhealthy apps, canary progress and automatic rollbacks, merged version-bump pull requests | Argo CD Notifications, Argo Rollouts notifications, GitHub |
 | `#rl-security` | Falco alerts, Kyverno policy violations, critical vulnerabilities in running images, Kubernetes API audit alerts, GuardDuty and Security Hub findings | Falcosidekick, Policy Reporter (Kyverno's reporting add-on), Trivy Operator metrics → Alertmanager, Loki ruler, EventBridge → SNS → Amazon Q Developer |
-| `#rl-costs` | AWS Budgets, Cost Anomaly Detection, Bedrock budget, OpenCost-based alerts (`GPUNodeRunningLong`, `NamespaceDailyCostSpike`), the weekly OpenCost summary, the per-demo actual-cost report, the demo safety net | Amazon Q Developer in chat applications (formerly AWS Chatbot), Alertmanager, scheduled workflows |
+| `#rl-costs` | AWS Budgets, Cost Anomaly Detection, Bedrock budget, OpenCost-based alerts (`NamespaceDailyCostSpike`), the weekly OpenCost summary, the per-demo actual-cost report, the demo safety net | Amazon Q Developer in chat applications (formerly AWS Chatbot), Alertmanager, scheduled workflows |
 | `#rl-staging` | Staging test runs: started, passed, failed (with results); staging alerts | `staging-test` workflow, Alertmanager (`env=staging`) |
 
 Every message carries a **`site=dev` or `site=com` label** (or a `[dev]` / `[com]` prefix), so the shared channels still show which site it came from.
@@ -978,7 +978,7 @@ Costs are tracked from two angles that complement each other. The reasoning is r
 |---|---|---|
 | What it measures | What AWS actually charges: EKS, EC2, RDS, NAT, S3, Bedrock, everything | How each cluster's cost splits across namespaces, workloads and nodes, estimated from **list prices** (AWS on-demand/spot prices on EKS; custom prices for the home hardware, e.g. electricity per node) |
 | Where | AWS Budgets, Cost Anomaly Detection, Cost Explorer | Both clusters, using each cluster's Prometheus |
-| Strength | Exact, and covers everything outside Kubernetes | Shows *which workload* costs what (e.g. the GPU node's share, cost per summary) |
+| Strength | Exact, and covers everything outside Kubernetes | Shows *which workload* costs what (e.g. a namespace's share; with Phase 2, cost per summary) |
 | Limitation | Does not see inside the cluster; Cost Explorer data lags about 24 hours | Estimates, not the bill; on EKS its data is **lost at every `demo-down`** (it lives in the demo cluster's Prometheus) |
 
 **OpenCost on both sites, not Kubecost.** Kubecost (now owned by IBM) is built on OpenCost and adds billing reconciliation and its own alerts, but needs more components and memory, and would differ between sites. The per-demo Cost Explorer report below covers reconciliation more simply, and alerts come from Prometheus like everything else.
@@ -1228,7 +1228,7 @@ The cost column is what russetleaf.dev costs to run 24/7 in Phase 1. The russetl
 
 | Component | russetleaf.dev (home, 24/7) | russetleaf.com (AWS, Phase 3) | Est. monthly cost (USD) |
 |---|---|---|---|
-| Kubernetes | Talos: three control-plane nodes (`rl-home-cp03`: i5-8500T, 16 GB; `rl-home-cp01`: i5-6400T, 8 GB; `rl-home-cp02`: i5-6500T, 8 GB) with a virtual IP | EKS: general + GPU Karpenter NodePools | ~$3–5 (electricity for `rl-home-cp03`) |
+| Kubernetes | Talos: three control-plane nodes (`rl-home-cp03`: i5-8500T, 16 GB; `rl-home-cp01`: i5-6400T, 8 GB; `rl-home-cp02`: i5-6500T, 8 GB) with a virtual IP | EKS: a Karpenter general NodePool | ~$3–5 (electricity for `rl-home-cp03`) |
 | Node autoscaling | None (fixed hardware) | Karpenter | $0 |
 | Ingress / edge | Cloudflare Tunnel + Cloudflare WAF (free plan) → ingress-nginx | CloudFront (always on) → ALB + AWS WAF | $0 |
 | DNS | Cloudflare (russetleaf.dev) | Route 53 (russetleaf.com) + ExternalDNS | $0 |

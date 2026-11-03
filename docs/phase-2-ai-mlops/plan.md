@@ -76,8 +76,8 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 **Do:**
 
-- The **summary-queue must-use plugin**: on publish or update, send `{"post_id": ...}` to SQS, adding the current trace context (W3C `traceparent`) as a **message attribute** when tracing is on (AWS SDK for PHP, installed with Composer at build time); the queue URL from an environment variable.
-- The `wordpress_posts_without_summary` metric in the metrics must-use plugin, and the **`WordPressPostsMissingSummaries`** alert in the chart (turned on in step 2.4).
+- The **summary-queue must-use plugin**: on publish or update, send `{"post_id": ...}` to SQS, adding the current trace context (W3C `traceparent`) as a **message attribute** when tracing is on (AWS SDK for PHP, installed with Composer at build time); the queue URL from an environment variable. It does **nothing when no queue URL is configured**, so the same image runs unchanged on sites without the pipeline (such as russetleaf.com in Phase 3).
+- The `wordpress_posts_without_summary` metric in the metrics must-use plugin, and the **`WordPressPostsMissingSummaries`** alert in the chart (turned on in step 2.4). The alert is enabled only where the pipeline runs (russetleaf.dev).
 - The styled **AI summary** box on posts in the `russetleaf` theme (model and prompt version in small print), with new visual-regression baselines.
 - A dedicated WordPress user for the summarizer with an **application password** (created in step 2.3).
 - ci: publishing a post sends a message to the stand-in SQS queue; the staging smoke test checks that a published post gets a summary (turned on in step 2.4).

@@ -60,5 +60,5 @@ ThreatMapper's management console bundles several databases and services; its do
 ## Open items
 
 - Phase 1 step 7.5: first Prowler run; record the baseline and accepted findings.
-- Phase 3 step 5.1: first run with the demo stack up.
+- Phase 3 step 4.1: first run with the demo stack up.
 - Check ThreatMapper's current project status if this decision is revisited.

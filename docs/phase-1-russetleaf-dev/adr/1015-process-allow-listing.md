@@ -53,4 +53,4 @@ Platform constraints:
 
 - Phase 1 step 7.1: write and test the allow-list rules.
 - Phase 1 step 7.7 (optional): Security Profiles Operator recordings for WordPress and the summarizer.
-- Phase 3 step 5.4 (optional): Tetragon enforcement trial during a demo; record memory use and any false blocks.
+- Phase 3 step 4.4 (optional): Tetragon enforcement trial during a demo; record memory use and any false blocks.

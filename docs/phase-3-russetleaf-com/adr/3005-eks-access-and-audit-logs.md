@@ -33,4 +33,4 @@
 
 ## Open items
 
-- Phase 3 step 1.4: access entries and audit-log archive; step 5.1: verify both in the security review.
+- Phase 3 step 1.4: access entries and audit-log archive; step 4.1: verify both in the security review.

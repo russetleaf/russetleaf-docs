@@ -38,4 +38,4 @@ The project needs CI for Terraform, manifests, images, charts, evaluation and pr
 
 ## Open items
 
-- Phase 1 step 1.1: scan and make the repos public; step 5.5: runners; Phase 3 steps 1.4 and 6.1: the restricted endpoint and demo workflows on home runners.
+- Phase 1 step 1.1: scan and make the repos public; step 5.5: runners; Phase 3 steps 1.4 and 5.1: the restricted endpoint and demo workflows on home runners.

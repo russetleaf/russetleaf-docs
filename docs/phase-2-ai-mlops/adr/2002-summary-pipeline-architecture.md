@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-02
 - **Applies to:** `russetleaf-llm-summarizer`, `russetleaf-wordpress`'s summary-queue plugin, the LLM gateway, on both sites
-- **Phase:** 2 (Phase 3 runs the same pipeline on EKS)
+- **Phase:** 2 (russetleaf.dev only)
 
 ## Context
 
@@ -40,4 +40,3 @@ Each post gets a short AI-generated summary. Summaries must not slow down publis
 ## Open items
 
 - Phase 2 steps 2.1–2.5: build and deploy the pipeline; step 2.6: set KEDA and gateway limits from the burst test.
-- Phase 3 step 4.1: the same pipeline on EKS (if Phase 2 is built).

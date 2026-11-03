@@ -43,7 +43,7 @@ The design referred to the home servers as "box 1", "box 2" and "box 3", which i
 
 The numbers follow the order the machines joined. Of the two 8 GB machines, the faster CPU (the OptiPlex 3040's i5-6500T) is `rl-home-cp02`, the node that runs the model in Phase 2.
 
-**Cloud nodes (Phase 3):** EKS sets each node's Kubernetes name from its EC2 instance, so node names do not follow this convention. Use **resource-based names** (the instance ID, e.g. `i-0abc123def4567890.ec2.internal`) rather than IP-based ones, so a name never refers to a different node later. The convention applies where the project chooses the name: the EKS cluster (`rl-use1`), the managed node group (`rl-use1-sys`), the Karpenter NodePools (`general`, `gpu`), and the EC2 **`Name` tag** set through the node class (`rl-use1-wk` for general nodes, `rl-use1-gpu` for GPU nodes), alongside the existing `Project`, `Site` and `Env` tags.
+**Cloud nodes (Phase 3):** EKS sets each node's Kubernetes name from its EC2 instance, so node names do not follow this convention. Use **resource-based names** (the instance ID, e.g. `i-0abc123def4567890.ec2.internal`) rather than IP-based ones, so a name never refers to a different node later. The convention applies where the project chooses the name: the EKS cluster (`rl-use1`), the managed node group (`rl-use1-sys`), the Karpenter NodePool (`general`), and the EC2 **`Name` tag** set through the node class (`rl-use1-wk`), alongside the existing `Project`, `Site` and `Env` tags.
 
 **When names are applied:**
 

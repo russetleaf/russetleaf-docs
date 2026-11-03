@@ -45,5 +45,5 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 - Phase 1 step 2.0: create the management account, the Organization, OUs, accounts, SCPs, Identity Center, tag policies and root access management; move the existing account in.
 - Phase 1 step 2.0b: the security services in Security Tooling; first Security Hub score recorded.
 - Phase 1 step 2.4: Access Analyzer policy checks in the Terraform pipeline.
-- Phase 3 steps 0.1 and 1.x: russetleaf.com in its own account (GPU quota, SES, Bedrock access, IMDSv2, VPC endpoints, flow logs).
+- Phase 3 steps 0.1 and 1.x: russetleaf.com in its own account (SES, IMDSv2, VPC endpoints, flow logs).
 - Run the first Well-Architected review once both sites exist; keep the report in `docs/`.

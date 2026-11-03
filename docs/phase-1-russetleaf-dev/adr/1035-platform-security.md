@@ -70,4 +70,4 @@ Supply chain security was strong (signed images with SBOM and SLSA provenance ve
 - Phase 1 step 5.1: GHCR package access, the cleanup workflow, VEX.
 - Phase 1 step 6.1: Kyverno replicas, failure policy, timeouts, ValidatingAdmissionPolicy backstop.
 - Phase 1 step 7.2: admission plugin check; CA rotation runbook and rehearsal.
-- Phase 3 step 5.1: the same checks on EKS.
+- Phase 3 step 4.1: the same checks on EKS.

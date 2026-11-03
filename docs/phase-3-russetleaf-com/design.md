@@ -1,6 +1,6 @@
 # Phase 3 design: russetleaf.com on EKS
 
-**Phase 3** builds **russetleaf.com**: the same WordPress site on the full AWS production design (EKS with Karpenter, RDS for MariaDB behind RDS Proxy with IAM authentication, ElastiCache, CloudFront, ALB and AWS WAF), brought up only for demos, with an always-on CloudFront edge that shows an offline page the rest of the time. It needs Phase 1 and is optional. **Phase 2 is optional for it:** without Phase 2, russetleaf.com runs WordPress only, and the AI parts below (the summarizer, gateway and GPU model on EKS) are skipped. Fine-tuning belongs to Phase 2 ([ADR 2005](../phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md)); its training container can optionally run on the GPU node pool here.
+**Phase 3** builds **russetleaf.com**: the same WordPress site on the full AWS production design (EKS with Karpenter, RDS for MariaDB behind RDS Proxy with IAM authentication, ElastiCache, CloudFront, ALB and AWS WAF), brought up only for demos, with an always-on CloudFront edge that shows an offline page the rest of the time. It needs Phase 1 and is optional. It is **independent of Phase 2**: russetleaf.com runs WordPress only. Posts seeded from russetleaf.dev keep the AI summaries Phase 2 generated there, but russetleaf.com generates none of its own, and the WordPress image's summary-queue plugin does nothing when no queue is configured.
 
 - **Build plan:** [`plan.md`](plan.md)
 - **Decisions:** this phase's ADRs, in the `adr/` folder and listed in the [overview's index](../overview.md#architecture-decision-records)
@@ -44,12 +44,6 @@ flowchart TB
     alb["ALB + AWS WAF<br/>(only CloudFront traffic)"] --> wp["WordPress pods on EKS<br/>(Karpenter nodes across AZs,<br/>Argo Rollouts canaries)"]
     wp --> proxy["RDS Proxy (IAM auth)"] --> rds[("RDS for MariaDB<br/>Multi-AZ")]
     wp --> cache[("ElastiCache Valkey")]
-    subgraph ai["If Phase 2 is built"]
-      sqs[["SQS"]] --> sum["Summarizer (KEDA)"] --> gw["LiteLLM gateway"]
-      gw --> bedrock["Bedrock"]
-      gw --> gpu["llama.cpp (CUDA)<br/>Karpenter GPU pool"]
-    end
-    wp -.-> sqs
   end
   cf -->|"default: origin.russetleaf.com"| alb
   rds -.->|"final snapshot on demo-down"| snap[("Snapshot")]
@@ -62,7 +56,7 @@ flowchart TB
 - **RDS for MariaDB** with **Multi-AZ** turned on. (Aurora does not offer MariaDB; if the site outgrew RDS, Aurora MySQL would be the next step, at the cost of switching engines.) **RDS Proxy** in front of it keeps failovers to seconds.
 - At least **2–3 WordPress replicas** spread across availability zones, plus a **HorizontalPodAutoscaler** and **PodDisruptionBudgets**.
 - EKS worker nodes in **multiple AZs**, provisioned by **Karpenter** (see Delivery and operations).
-- **What this project actually runs:** this design is highly available within one region **while the demo runs**, with two deliberate demo cuts (one NAT Gateway instead of three; one spot GPU node, with the gateway falling back to Bedrock). The home lab, with three control-plane nodes, replicated MariaDB and spread workloads, **survives any single node failure**, but its home power supply and internet connection remain single points of failure ([ADR 1020](../phase-1-russetleaf-dev/adr/1020-three-node-ha-home-cluster.md)). Both are explained, with recovery targets and the changes (and costs) that would add HA, in [ADR 1014](../phase-1-russetleaf-dev/adr/1014-availability-levels.md).
+- **What this project actually runs:** this design is highly available within one region **while the demo runs**, with one deliberate demo cut (one NAT Gateway instead of three). The home lab, with three control-plane nodes, replicated MariaDB and spread workloads, **survives any single node failure**, but its home power supply and internet connection remain single points of failure ([ADR 1020](../phase-1-russetleaf-dev/adr/1020-three-node-ha-home-cluster.md)). Both are explained, with recovery targets and the changes (and costs) that would add HA, in [ADR 1014](../phase-1-russetleaf-dev/adr/1014-availability-levels.md).
 
 ### Traffic and edge
 
@@ -170,9 +164,6 @@ media:
   bucket: russetleaf-com-media
   cdnDomain: russetleaf.com        # media served through CloudFront
 
-summaryQueue:
-  url: https://sqs.us-east-1.amazonaws.com/<account-id>/russetleaf-com-post-summaries
-
 email:
   smtpSecret: ses-smtp             # Amazon SES SMTP credentials
 
@@ -217,8 +208,7 @@ These are approximate prices for **us-east-1**, on demand unless noted, for a sm
 |---|---|---|
 | EKS control plane | 1 cluster ($0.10/hr) | ~$73 |
 | EKS worker nodes (EC2) | Karpenter general pool, ~3 × t3.medium equivalent across AZs (spot can lower this), plus a small managed node group for Karpenter | ~$91–$120 |
-| EKS LLM nodes (GPU) | Karpenter GPU pool, 1 × g6.xlarge on spot (~$0.80/hr on demand, ~$590/month) | ~$200–$250 |
-| EBS for worker nodes | 3 × 20 GB + 1 × 100 GB gp3 (LLM node and model files) | ~$13 |
+| EBS for worker nodes | 3 × 20 GB gp3 | ~$5 |
 | RDS for MariaDB | db.t4g.medium, Multi-AZ (same price as RDS for MySQL) | ~$95 |
 | RDS storage | 50 GB gp3, Multi-AZ | ~$12 |
 | RDS Proxy | 2 vCPUs (db.t4g.medium) × ~$0.015/vCPU-hour | ~$22 |
@@ -228,27 +218,24 @@ These are approximate prices for **us-east-1**, on demand unless noted, for a sm
 | Public IPv4 addresses | ~6 (ALB + NAT), $0.005/hr each | ~$22 |
 | CloudFront | ~1 TB out / 10M requests (free tier or flat-rate plan) | $0–$15 |
 | AWS WAF | 1 web ACL + a few managed rules | ~$10 |
-| S3 (media + model files) | ~60 GB + requests, versioning on | ~$2 |
+| S3 (media) | ~50 GB + requests, versioning on | ~$2 |
 | Secrets Manager | ~5 secrets | ~$2 |
 | Container images | GHCR (free for public images); optional ECR pull-through cache | $0–$1 |
 | CloudWatch (logs + Container Insights) | moderate log volume | ~$20 |
 | Route 53 | 1 hosted zone + queries | ~$1 |
 | ACM certificates | public certificates | $0 |
 | SES | low email volume ($0.10 per 1,000) | <$1 |
-| Amazon SQS + EventBridge | summary queue + dead-letter queue, KEDA polling, Karpenter interruption queue (within free tiers) | <$1 |
-| Amazon Bedrock | ~10–20 new or edited posts/month plus CI evaluation runs, on Haiku and Nova (~$1 per 1M input tokens, ~$5 per 1M output for Haiku; Nova less) | ~$1–$2 |
-| LiteLLM, ARC runners, KEDA, Argo Rollouts, Kyverno, Falco, Trivy Operator, OpenCost, Karpenter, Prometheus/Grafana | run on the existing worker nodes | $0 |
+| Amazon SQS + EventBridge | Karpenter's interruption queue (within free tiers) | <$1 |
+| Argo Rollouts, Kyverno, Falco, Trivy Operator, OpenCost, Karpenter, Prometheus/Grafana | run on the existing worker nodes | $0 |
 | kube-bench | One Job per node pool, every demo (in `demo-up`) | $0 |
 | Loki log storage (S3) | 14-day retention, demo-hours volume | <$1 |
 | Tempo trace storage (S3) | 7-day retention, demo-hours volume | <$1 |
 | CloudTrail + GuardDuty | Organization trail (management events); GuardDuty incl. EKS audit-log monitoring | ~$1–5 |
 | Security Hub + Config + KMS | Organization-wide standards; focused Config recording; KMS keys for logs and backups | ~$5–15 |
 | Alerting (SNS, Amazon Q Developer in chat applications, Slack free plan) | CloudWatch alarms and budget alerts to Slack | $0 |
-| **Total** | | **~$725–$840 / month** |
+| **Total** | | **~$505–$555 / month** |
 
-Without the self-hosted model (Bedrock only behind the gateway), the total is **~$510–$560 / month**. GuardDuty EKS Runtime Monitoring, if used instead of Falco, is billed per vCPU monitored and would add roughly $10–$20/month at this size. New AWS accounts usually have a **GPU instance quota of 0**, so request a quota increase for G-family instances (both on-demand and spot) before the first deploy.
-
-Summarizing an existing back catalog is a one-time cost: about **$0.40 for 100 posts** (~2,700 tokens in, ~200 tokens out each) on Bedrock. Each CI evaluation run (25 posts per model, plus judge calls) costs a few cents.
+GuardDuty EKS Runtime Monitoring, if used instead of Falco, is billed per vCPU monitored and would add roughly $10–$20/month at this size. New AWS accounts usually have a **GPU instance quota of 0**, so request a quota increase for G-family instances (both on-demand and spot) before the first deploy.
 
 ## russetleaf.com between demos
 
@@ -314,17 +301,17 @@ Each demo creates a new RDS instance, so content needs a plan:
 
 ### Short AWS demos
 
-The full AWS design costs roughly **$1.00/hour** while running, including about $0.25–$0.35/hour for the spot GPU node. Run `terraform apply` in `envs/aws`, record a walkthrough of russetleaf.com or take screenshots, then tear it down. The `demo-up` and `demo-down` GitHub Actions workflows in `russetleaf-infra` do this in the right order, and a scheduled safety-net workflow alerts (or tears down) if the stack is left running too long; see [Building it from scratch](../overview.md#building-it-from-scratch). The always-on edge (`envs/aws-edge`) is never destroyed, so russetleaf.com switches to its offline page automatically.
+The full AWS design costs roughly **$0.70 an hour** while running. Run `terraform apply` in `envs/aws`, record a walkthrough of russetleaf.com or take screenshots, then tear it down. The `demo-up` and `demo-down` GitHub Actions workflows in `russetleaf-infra` do this in the right order, and a scheduled safety-net workflow alerts (or tears down) if the stack is left running too long; see [Building it from scratch](../overview.md#building-it-from-scratch). The always-on edge (`envs/aws-edge`) is never destroyed, so russetleaf.com switches to its offline page automatically.
 
 | Demo time per month | Est. cost |
 |---|---|
-| 5 hours | ~$5 |
-| 10 hours | ~$10 |
-| 20 hours | ~$20 |
+| 5 hours | ~$3.50 |
+| 10 hours | ~$7 |
+| 20 hours | ~$14 |
 
-Together with the home lab (~$18–40/month always on), the total is about **$30–60/month** at 20 demo hours; keep demos to about **10 hours a month** to stay **under $50**. If the AWS accounts are new, their free-tier credits can cover some of this.
+Together with the home lab (about $14–33 a month always on), the total is about **$30–50 a month** at 20 demo hours. If the AWS accounts are new, their free-tier credits can cover some of this.
 
-**Tip:** set an AWS Budget with an email alert (e.g. at $25) so a forgotten `terraform destroy` does not run up a bill. The GPU node is the most expensive item to leave running.
+**Tip:** set an AWS Budget with an email alert (e.g. at $25) so a forgotten `terraform destroy` does not run up a bill. NAT Gateways and RDS are the most expensive items to leave running.
 
 ## How russetleaf.com differs in the shared platform
 
@@ -336,10 +323,8 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 
 ### Workload permissions and database security
 
-- S3, SQS, SES and Bedrock access through **EKS Pod Identity** (IRSA only for any component that does not support Pod Identity), not stored AWS access keys. Each role gets only what it needs:
-    - WordPress may write to its S3 bucket, send to the queue, and `rds-db:connect` as the `wordpress` user through RDS Proxy.
-    - The summarizer may read from the queue; it reaches models only through the gateway.
-    - The LLM gateway may call `bedrock:InvokeModel` on the chosen Bedrock models only.
+- S3 and SES access through **EKS Pod Identity** (IRSA only for any component that does not support Pod Identity), not stored AWS access keys. Each role gets only what it needs:
+    - WordPress may write to its S3 bucket and `rds-db:connect` as the `wordpress` user through RDS Proxy.
 - **No application database password on russetleaf.com:** WordPress logs in to RDS Proxy with IAM auth tokens; the master password is generated and rotated by RDS. At home, MariaDB Operator generates and rotates the passwords. See [Database access and credentials](../phase-1-russetleaf-dev/design.md#database-access-and-credentials).
 - RDS in **private subnets**, with **TLS required** on connections.
 
@@ -350,7 +335,7 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 ### Runtime security and compliance scanning
 
 - **kube-bench** (EKS only; see [ADR 3001](adr/3001-kube-bench-eks-only.md)) audits the worker nodes against the **CIS Kubernetes Benchmark** with the **EKS profile**. It runs on **every demo**, as a step in the `demo-up` workflow (not a CronJob, since the cluster only lives a few hours):
-    - **one Job per node pool** (managed node group, Karpenter general pool, GPU pool), each cleaning itself up afterwards
+    - **one Job per node pool** (the managed node group and the Karpenter general pool), each cleaning itself up afterwards
     - **JSON and text output**: the JSON reaches **Loki** automatically through Alloy (a Grafana panel shows pass/fail/warn counts per demo and node pool); both are kept as workflow artifacts
     - a summary committed to `docs/security/kube-bench-eks-<date>.md`, compared with `docs/security/kube-bench-accepted.yaml` (accepted findings, each with a reason) so only **new** failures stand out
     - counts posted to `#rl-security`, flagging new failures
@@ -364,7 +349,6 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 
 - **Node autoscaling** with **Karpenter** instead of fixed managed node groups. A small managed node group runs Karpenter itself; Karpenter then creates EC2 nodes directly from two **NodePools**:
     - a **general pool** (spot and on-demand, several instance types) for WordPress and platform services, with **consolidation** to remove idle or underused nodes
-    - a **GPU pool** for the self-hosted model, with the `workload=llm` label and `dedicated=llm:NoSchedule` taint, on spot
     - **spot interruption handling** through an SQS queue fed by EventBridge, so pods move before AWS reclaims a spot node
 
 ### Encryption in transit
@@ -404,7 +388,6 @@ AWS has no separate staging: russetleaf.com is already temporary, its Terraform 
 | Alert | Source | Fires when |
 |---|---|---|
 | Demo left running | The **demo safety-net workflow** | The demo stack has been up longer than its limit (also alerts `#rl-critical`) |
-| `GPUNodeRunningLong` (EKS) | **OpenCost metrics** → Prometheus → Alertmanager | A GPU node has been running for more than a few hours: an early warning before the safety net |
 
 ### Cost reports
 

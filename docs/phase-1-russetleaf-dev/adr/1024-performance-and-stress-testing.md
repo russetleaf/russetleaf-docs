@@ -42,4 +42,4 @@ Load tests appeared only in passing (the gVisor comparison, light load during no
 - Phase 1 step 5.9: k6 Operator, scripts, the baseline and the regression gate.
 - Phase 2 step 2.6: the AI pipeline burst test.
 - Phase 1 step 7.12: stress, spike and soak tests at home.
-- Phase 3 step 6.4: stress, spike and burst tests on EKS.
+- Phase 3 step 5.4: stress, spike and burst tests on EKS.

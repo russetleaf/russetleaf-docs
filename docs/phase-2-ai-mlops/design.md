@@ -58,12 +58,11 @@ The summarizer authenticates to WordPress with an **application password** store
     - **routing and fallback** (e.g. Bedrock first, the self-hosted model if Bedrock fails or is throttled)
     - **canary splits** for model changes (e.g. send 10% of requests to a new model, then compare quality scores and cost before switching)
     - **rate limits and spending budgets** per app
-- The self-hosted model runs on **dedicated LLM nodes** (a Karpenter GPU NodePool on AWS, `rl-home-cp02` at home):
+- The self-hosted model runs on a **dedicated LLM node**, `rl-home-cp02`:
     - The nodes carry the label `workload=llm` and the taint `dedicated=llm:NoSchedule`, so only the model server (plus cluster-wide agents such as node-exporter) runs there.
     - The model server Deployment has a matching **toleration** and **node selector**.
     - Model files are downloaded once by an init container from each site's **model mirror bucket** in S3 (so rebuilds do not depend on Hugging Face) into a volume on the node.
     - The model **stays loaded**, since the node is dedicated to it; KEDA scales only the summarizer.
-- On AWS, the LLM nodes come from Karpenter's **GPU NodePool** (e.g. g6.xlarge on spot), using a CUDA build of llama.cpp. At home, it is a **dedicated CPU worker node** (see the home lab section). The same manifests deploy both, with per-environment overlays. On EKS, the **NVIDIA device plugin** (a DaemonSet) lets the model server request the GPU (`nvidia.com/gpu: 1`); the Amazon Linux 2023 NVIDIA AMI already includes the drivers.
 
 ### Prompt versioning and evaluation in CI
 
@@ -143,7 +142,6 @@ Post content is untrusted input, so the summarizer treats it as data:
 - **The pipeline** (`russetleaf-llm-summarizer/training/`, one container): fetch the versioned dataset (DVC) → fine-tune (LoRA) → **evaluate against the base model** on the evaluation set (including the adversarial cases) → convert to GGUF → **register** in MLflow as a `local-summarizer` version with its scores → if it beats the champion, propose it as the **challenger**.
 - **Deployment:** the challenger enters the gateway **canary** at home; online evaluation compares it with the champion; promotion to champion is a reviewed pull request.
 - **Drift-triggered retraining:** sustained drift or quality alerts (drift reports from **Evidently**), or enough new feedback, open a **retraining pull request** with the report and the proposed dataset version; merging it starts a training run. A person always decides.
-- **Phase 3 option:** the same container can run on the EKS GPU node pool instead.
 
 ### Data versioning and feedback
 
@@ -211,8 +209,8 @@ Design choices that make it stand on its own:
 | Summary feedback plugin | `russetleaf-wordpress` |
 | Summarizer deployment settings per environment (queue URL, gateway URL, scaling, chart version) | `russetleaf-gitops` |
 | LiteLLM gateway and its routing config (models, fallbacks, canary weights, budgets) | `russetleaf-gitops` |
-| Self-hosted model server (llama.cpp Deployment, tolerations, home CPU / AWS CUDA overlays) | `russetleaf-gitops` |
-| `rl-home-cp02`'s Talos label and taint; Karpenter GPU NodePool IAM | `russetleaf-infra` |
+| Self-hosted model server (llama.cpp Deployment, tolerations, home overlay) | `russetleaf-gitops` |
+| `rl-home-cp02`'s Talos label and taint | `russetleaf-infra` |
 | Bedrock model access, gateway IAM role, SQS queues, Bedrock budget alert | `russetleaf-infra` |
 | SQS must-use plugin that queues posts | `russetleaf-wordpress` |
 
@@ -296,7 +294,7 @@ One trace then shows: a post is published → queued → picked up by the summar
 
 | Test | Load profile | Where | What it shows |
 |---|---|---|---|
-| **AI pipeline burst** | 200–500 posts queued at once | Home staging; EKS | KEDA scale-out limits, Bedrock throttling and gateway fallback to llama.cpp, dead-letter-queue behavior, time to drain the queue, cost per burst |
+| **AI pipeline burst** | 200–500 posts queued at once | Home staging | KEDA scale-out limits, Bedrock throttling and gateway fallback to llama.cpp, dead-letter-queue behavior, time to drain the queue, cost per burst |
 
 ### Cost alerts
 
@@ -334,8 +332,8 @@ One trace then shows: a post is published → queued → picked up by the summar
 
 | Component | russetleaf.dev (home, 24/7) | russetleaf.com (AWS, Terraform in GitHub) | Est. monthly cost (USD) |
 |---|---|---|---|
-| AI post summaries | **Real SQS** + KEDA-scaled summarizer | Same, in EKS | <$1 |
-| LLM gateway | LiteLLM in-cluster, routing to **real Amazon Bedrock** and the self-hosted model | Same | ~$1–$2 (Bedrock tokens) |
-| Self-hosted model | llama.cpp (CPU build) on `rl-home-cp02`, CPU-limited to protect etcd | llama.cpp (CUDA build) on the Karpenter GPU NodePool | ~$2–$4 (electricity for `rl-home-cp02`) |
-| Prompt evaluation | GitHub Actions on ARC runners in the cluster | Same | (included above) |
-| MLOps lifecycle | MLflow, Argo Workflows, online evaluation with Evidently, feedback, DVC (home cluster); fine-tuning on a rented spot GPU | Optional: the same training on the spot GPU NodePool | ~$0 always on; a few $ per fine-tuning run |
+| AI post summaries | **Real SQS** + KEDA-scaled summarizer | — (not on russetleaf.com) | <$1 |
+| LLM gateway | LiteLLM in-cluster, routing to **real Amazon Bedrock** and the self-hosted model | — (not on russetleaf.com) | ~$1–$2 (Bedrock tokens) |
+| Self-hosted model | llama.cpp (CPU build) on `rl-home-cp02`, CPU-limited to protect etcd | — (not on russetleaf.com) | ~$2–$4 (electricity for `rl-home-cp02`) |
+| Prompt evaluation | GitHub Actions on ARC runners in the cluster | — (not on russetleaf.com) | (included above) |
+| MLOps lifecycle | MLflow, Argo Workflows, online evaluation with Evidently, feedback, DVC (home cluster); fine-tuning on a rented spot GPU | — (not on russetleaf.com) | ~$0 always on; a few $ per fine-tuning run |

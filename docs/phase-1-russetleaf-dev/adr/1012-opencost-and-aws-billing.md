@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites and the AWS account
-- **Phase:** 1 (OpenCost at home, AWS Budgets, anomaly detection). Later: Phase 2 adds Bedrock spend and cost per summary; Phase 3 adds the per-demo cost report, the GPU-node alert and the demo safety net.
+- **Phase:** 1 (OpenCost at home, AWS Budgets, anomaly detection). Later: Phase 2 adds Bedrock spend and cost per summary; Phase 3 adds the per-demo cost report and the demo safety net.
 
 ## Context
 
@@ -51,4 +51,4 @@ The design used OpenCost on both clusters (with Kubecost as an optional alternat
 
 - Phase 1 step 2.1: activate the cost allocation tags (they must already exist on a resource).
 - Phase 1 step 7.3: OpenCost alerts and the weekly summary workflow.
-- Phase 3 step 5.2: the per-demo Cost Explorer report; record actual cost per demo hour.
+- Phase 3 step 4.2: the per-demo Cost Explorer report; record actual cost per demo hour.

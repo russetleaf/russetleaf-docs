@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-02
 - **Applies to:** the home cluster's `rl-home-cp02`, the LLM gateway, the model mirror bucket
-- **Phase:** 2 (Phase 3 adds a GPU node pool on EKS)
+- **Phase:** 2
 
 ## Context
 
@@ -38,4 +38,3 @@ The gateway ([ADR 2002](2002-summary-pipeline-architecture.md)) needs a fallback
 ## Open items
 
 - Phase 2 step 1.3: label and taint `rl-home-cp02`; step 3.1: deploy llama.cpp and record time per summary and memory use; step 3.2: gateway routing.
-- Phase 3 step 4.2: the CUDA build on the EKS GPU node pool (if Phase 2 is built).

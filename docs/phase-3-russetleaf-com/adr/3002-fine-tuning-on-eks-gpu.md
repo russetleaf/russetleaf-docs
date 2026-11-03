@@ -1,6 +1,6 @@
 # ADR 3002: Fine-tuning on the EKS GPU node pool, with the challenger served at home
 
-- **Status:** Superseded by [ADR 2005](../../phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md) (fine-tuning moved to Phase 2, on a rented spot GPU); this pipeline remains an option for Phase 3
+- **Status:** Superseded by [ADR 2005](../../phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md) (fine-tuning moved to Phase 2, on a rented spot GPU)
 - **Date:** 2026-11-02
 - **Applies to:** `russetleaf-llm-summarizer/training/`, the EKS GPU NodePool, the home MLflow registry and llama.cpp
 - **Phase:** 3 (needs Phase 2)

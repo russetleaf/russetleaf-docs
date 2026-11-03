@@ -17,7 +17,7 @@ Both sites run **Trivy Operator**, which produces **CIS compliance reports** con
 ## Decision
 
 - **EKS:** run kube-bench with the EKS profile on **every demo**, as a step in the `demo-up` workflow (not a CronJob or an Argo CD Application, since the cluster only exists for a few hours):
-    - **one Job per node pool** (the managed node group, Karpenter's general pool and the GPU pool, which uses a different AMI), using node selectors and the GPU taint's toleration; each Job cleans itself up (`ttlSecondsAfterFinished`)
+    - **one Job per node pool** (the managed node group and Karpenter's general pool), using node selectors and the GPU taint's toleration; each Job cleans itself up (`ttlSecondsAfterFinished`)
     - **JSON and text output**: the JSON lands in **Loki** automatically through Alloy (for a Grafana panel of pass/fail/warn counts per demo and node pool); both are kept as workflow artifacts
     - a summary committed to `docs/security/kube-bench-eks-<date>.md`, compared with an **accepted-findings file** (`docs/security/kube-bench-accepted.yaml`, each with a reason) so only new failures stand out
     - pass/fail/warn counts posted to `#rl-security`, flagging new failures
