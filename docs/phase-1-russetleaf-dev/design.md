@@ -1221,7 +1221,7 @@ spec:
         enabled: true
 ```
 
-**Media is backed up separately:** uploads live in russetleaf.dev's S3 media bucket, which has versioning on, so deleted or overwritten files can be recovered from older versions.
+**Media is backed up separately:** uploads live in russetleaf.dev's S3 media bucket, which has versioning on, so deleted or overwritten files can be recovered from older versions for 90 days ([ADR 1042](adr/1042-s3-versioning-lifecycle-and-storage-classes.md)).
 
 ### Home component mapping and costs
 

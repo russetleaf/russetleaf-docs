@@ -438,8 +438,8 @@ russetleaf-infra/
                             #   conformance pack, aggregator), Access Analyzer, KMS keys; findings to Slack via
                             #   EventBridge, SNS and Amazon Q Developer
   modules/                  # reusable modules shared by both environments
-    s3-media/               # media bucket, versioning, IAM policy
-    s3-mlops/               # MLflow artifact and DVC data buckets (versioning, encryption; written by the
+    s3-media/               # media bucket, versioning (old versions expire after 90 days), IAM policy
+    s3-mlops/               # MLflow artifact and DVC data buckets (versioning, old versions expire, encryption; written by the
                             #   training instance's narrow role)
     s3-logs/                # Loki log and Tempo trace buckets: encryption, lifecycle matching retention, IAM policy
     s3-backups/             # database backup bucket: versioning, encryption, lifecycle rules, IAM policy
@@ -455,7 +455,7 @@ russetleaf-infra/
     aws-edge/               # russetleaf.com, ALWAYS ON (~$1/month): Route 53 hosted zone (DNSSEC signing with a KMS key), ACM certificates
                             #   (us-east-1 for CloudFront; the ALB's region for origin.russetleaf.com), CloudFront
                             #   distribution with the offline-page fallback, offline-page bucket, media bucket,
-                            #   model mirror bucket, SES domain identity,
+                            #   SES domain identity,
                             #   CloudFront-to-ALB secret header
     aws/                    # russetleaf.com DEMO STACK: VPC, EKS (small managed node group for Karpenter),
                             #   Karpenter IAM + interruption queue, RDS (restored from the latest snapshot;
@@ -656,6 +656,7 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [1039](phase-1-russetleaf-dev/adr/1039-bootstrap-through-talos-inline-manifests.md) | Bootstrap Cilium and Argo CD through Talos inline manifests, then hand off to Argo CD | 1 |
 | [1040](phase-1-russetleaf-dev/adr/1040-lab-network-and-wireguard.md) | Lab network behind its own router, reached over WireGuard | 1 |
 | [1041](phase-1-russetleaf-dev/adr/1041-naming-convention.md) | Naming convention for hosts, nodes and clusters | 1 |
+| [1042](phase-1-russetleaf-dev/adr/1042-s3-versioning-lifecycle-and-storage-classes.md) | S3 versioning, lifecycle rules and storage classes | 1 |
 | [2001](phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback | 2 |
 | [2002](phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
 | [2003](phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | Self-hosted model on rl-home-cp02 (CPU llama.cpp), dedicated by taint | 2 |

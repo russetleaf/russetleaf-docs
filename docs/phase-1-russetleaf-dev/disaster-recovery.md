@@ -28,7 +28,7 @@ This plan covers recovering from losses bigger than a single bad change or faile
 ## Backup account and immutable copies
 
 - A separate **Backup** account in the **Security OU** of the AWS Organization (whose **dedicated management account** runs nothing; see [ADR 1019](adr/1019-aws-multi-account-sra.md) and the Phase 1 design's [AWS account structure](design.md#aws-account-structure-and-best-practices-security-reference-architecture)). Nothing runs in it; it only holds copies.
-- Its buckets are in a **second region (us-west-2)** with **S3 Object Lock** (30-day retention, governance mode at first, compliance mode once proven), versioning and encryption.
+- Its buckets are in a **second region (us-west-2)** with **S3 Object Lock** (30-day retention, governance mode at first, compliance mode once proven), versioning and encryption; copies are deleted after 35 days, once their lock ends ([ADR 1042](adr/1042-s3-versioning-lifecycle-and-storage-classes.md)).
 - Buckets in **russetleaf-home**, **russetleaf-infra** and (in Phase 3) **russetleaf-com** **replicate** into them (S3 replication with roles that can only write, not delete); SCPs stop any account from deleting or weakening them.
 - Access to the backup account is through a separate login (IAM Identity Center permission set) that is part of the break-glass kit, so a compromise of a workload account does not reach it.
 - **Cost:** a few cents a month at this data size, plus replication requests.

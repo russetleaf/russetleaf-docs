@@ -260,6 +260,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 | [1039 Bootstrap through Talos inline manifests](adr/1039-bootstrap-through-talos-inline-manifests.md) | 2.2, 3.1 | — | — |
 | [1040 Lab network and WireGuard](adr/1040-lab-network-and-wireguard.md) | 0.3, 2.2 | — | — |
 | [1041 Naming convention](adr/1041-naming-convention.md) | 0.3, 2.2 | — | 1.4, 2.3 |
+| [1042 S3 versioning, lifecycle and storage classes](adr/1042-s3-versioning-lifecycle-and-storage-classes.md) | 2.0b, 2.1, 2.3, 2.5 | 4.4 | 1.2 |
 | [2001 MLOps lifecycle](../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | — | 4.4–4.10 | — |
 | [2002 Summary pipeline architecture](../phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | — | 2.1–2.5 | — |
 | [2003 Self-hosted model on `rl-home-cp02`](../phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | — | 1.3, 3.1, 3.2 | — |
@@ -309,7 +310,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 
 **Do** (`russetleaf-infra/envs/security/`, applied with Security Tooling and Log Archive access):
 
-- **Log Archive:** S3 Object Lock buckets with **KMS customer-managed keys** for the **organization CloudTrail trail** (management events, all accounts and regions, log-file validation), Config history and (later) VPC flow logs.
+- **Log Archive:** S3 Object Lock buckets with **KMS customer-managed keys** for the **organization CloudTrail trail** (management events, all accounts and regions, log-file validation), Config history and (later) VPC flow logs, with lifecycle rules ([ADR 1042](adr/1042-s3-versioning-lifecycle-and-storage-classes.md)): **Glacier Instant Retrieval after 30 days**, deleted after 1 year, incomplete multipart uploads aborted after 7 days.
 - **Security Tooling:** organization-wide **GuardDuty** (with EKS audit-log monitoring, auto-enabled for new accounts), **Security Hub** (AWS Foundational Security Best Practices and CIS standards in every account), **AWS Config** with **focused recording** (IAM, S3, security groups, KMS, EKS, RDS and other key types) and a **CIS conformance pack**, aggregated here, and **IAM Access Analyzer** (organization external-access analyzer).
 - **Findings to Slack:** EventBridge rules for GuardDuty findings (medium and above) and Security Hub findings (critical and high) to SNS topics connected through **Amazon Q Developer in chat applications** (authorize the Slack workspace once) to `#rl-security` (critical also to `#rl-critical`).
 - **Account-level settings in every account:** S3 Block Public Access, EBS encryption by default, EBS snapshot and AMI public-access blocks.
@@ -320,7 +321,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 
 **Do** (`russetleaf-infra/bootstrap/`, applied locally):
 
-- In **russetleaf-infra**: the S3 bucket for Terraform state (versioning, KMS encryption, public access blocked, TLS required, `prevent_destroy`). Backends use `use_lockfile = true`. Bucket policy granting each account's CI roles access to their own state keys only.
+- In **russetleaf-infra**: the S3 bucket for Terraform state (versioning with old versions deleted after 90 days, KMS encryption, public access blocked, TLS required, `prevent_destroy`; lifecycle rules per [ADR 1042](adr/1042-s3-versioning-lifecycle-and-storage-classes.md)). Backends use `use_lockfile = true`. Bucket policy granting each account's CI roles access to their own state keys only.
 - In **each account** that CI deploys to (russetleaf-home, russetleaf-infra and the security accounts; russetleaf-com in Phase 3): the GitHub OIDC provider, a read-only **plan** role (pull requests), an **apply** role (only from the `apply` GitHub Environment), and a read-only **audit** role for Prowler (AWS's `SecurityAudit` and `ViewOnlyAccess` managed policies; used in step 7.5).
 
 **Test:** a scratch root module with the S3 backend runs `terraform init` and `plan`; a GitHub Actions job in `russetleaf-infra` assumes the plan role in russetleaf-home and runs `aws sts get-caller-identity`; the same job cannot read another account's state key.
@@ -359,7 +360,7 @@ The cluster is **highly available for a single node failure** (three etcd member
 **Do** (`russetleaf-infra/modules/` + `envs/home/`; all AWS resources in the **russetleaf-home** account):
 
 - Modules: `s3-media`, `s3-backups`, `secrets` (Phase 2 adds `sqs-queue` and `bedrock-access`).
-- russetleaf.dev resources: media bucket, database-backup bucket (lifecycle: expire after 30 days), **Loki log bucket** (lifecycle: expire after 7 days, used in step 4.6, plus a scoped IAM key for Loki), **Tempo trace bucket** (lifecycle: expire after 3 days, used in step 7.4, with its own scoped key), Secrets Manager entries (empty placeholders; values set by hand or generated).
+- russetleaf.dev resources, each with lifecycle rules per [ADR 1042](adr/1042-s3-versioning-lifecycle-and-storage-classes.md) (including aborting incomplete multipart uploads after 7 days): media bucket (versioned; old versions deleted after 90 days), database-backup bucket (lifecycle: expire after 30 days), **Loki log bucket** (lifecycle: expire after 7 days, used in step 4.6, plus a scoped IAM key for Loki), **Tempo trace bucket** (lifecycle: expire after 3 days, used in step 7.4, with its own scoped key), Secrets Manager entries (empty placeholders; values set by hand or generated).
 - **`prevent_destroy`** on every stateful resource (the state bucket, media, backup, log, trace and model mirror buckets, and Secrets Manager entries), so no plan, including a revert's, can delete them without a deliberate code change (see the Phase 1 design's [Rollback strategy](design.md#rollback-strategy)).
 - **Staging resources** (a second, smaller set of the same modules, tagged `Env=staging`): staging media bucket, Secrets Manager entries, and a scoped IAM key that can **read** the production backup bucket but write only to staging resources. Used from step 5.6.
 - **Email:** an SES domain identity for russetleaf.dev, with its DKIM and SPF records created in Cloudflare, and SES SMTP credentials stored in Secrets Manager. (New SES accounts are in the "sandbox" and can only send to verified addresses; verify a test address, or request production access.)
@@ -387,7 +388,7 @@ The cluster is **highly available for a single node failure** (three etcd member
 **Do:** as described in the [disaster recovery plan](disaster-recovery.md) and [ADR 1018](adr/1018-disaster-recovery.md):
 
 - The **Backup** account already exists (step 2.0).
-- `russetleaf-infra/envs/dr/`: in the Backup account, **S3 Object Lock** buckets in **us-west-2** (30-day retention, governance mode at first), versioned and **KMS-encrypted**; **replication** rules (with write-only roles) from the Terraform state bucket (russetleaf-infra) and the MariaDB backup and media buckets (russetleaf-home). (CloudTrail logs are already isolated in the Log Archive account.)
+- `russetleaf-infra/envs/dr/`: in the Backup account, **S3 Object Lock** buckets in **us-west-2** (30-day retention, governance mode at first), versioned and **KMS-encrypted**, with objects deleted after 35 days once their lock ends; **replication** rules (with write-only roles) from the Terraform state bucket (russetleaf-infra) and the MariaDB backup and media buckets (russetleaf-home). (CloudTrail logs are already isolated in the Log Archive account.)
 - A **daily repo-mirror** workflow (`git bundle` of each repo) uploading to the backup account through a write-only OIDC role.
 - Add the **Talos secrets bundle** and talosconfig (from step 2.2) to the break-glass kit.
 

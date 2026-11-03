@@ -113,6 +113,7 @@ nav:
           - "1039 Bootstrap Cilium and Argo CD through Talos inline manifests, then hand off to Argo CD": phase-1-russetleaf-dev/adr/1039-bootstrap-through-talos-inline-manifests.md
           - "1040 Lab network behind its own router, reached over WireGuard": phase-1-russetleaf-dev/adr/1040-lab-network-and-wireguard.md
           - "1041 Naming convention for hosts, nodes and clusters": phase-1-russetleaf-dev/adr/1041-naming-convention.md
+          - "1042 S3 versioning, lifecycle rules and storage classes": phase-1-russetleaf-dev/adr/1042-s3-versioning-lifecycle-and-storage-classes.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md
