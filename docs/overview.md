@@ -43,7 +43,7 @@ flowchart LR
 - **Each phase folder:** `design.md` (what is built and why), `plan.md` (the steps to build it, with a progress checklist), `roadmap.md` (milestones with target and actual dates; Phase 1's [roadmap](phase-1-russetleaf-dev/roadmap.md)) and `adr/` (the decisions first made in that phase).
 - **Tracking and step specs:** each step becomes a GitHub issue in its roadmap milestone (created by `tools/plan_to_issues.py`), and each step starts with a short spec written from [`specs/TEMPLATE.md`](specs/TEMPLATE.md) and kept in `docs/specs/`, linked from the issue and its pull request. Together with the plans' estimate-vs-actual columns and milestone retros, they show the work was planned, measured and adjusted.
 - **ADR numbers start with their phase:** 1001 upwards for Phase 1, 2001 upwards for Phase 2, 3001 upwards for Phase 3. They are unique across the project and do not change once used; the [index](#architecture-decision-records) lists them all. The template is [`adr/0000-template.md`](adr/0000-template.md).
-- **Writing style:** third person throughout; "the operator" is the person who builds and runs the platform. Instructions in the plans and runbooks use the imperative ("Install X"). No contractions, except inside quoted text such as commands, code or test inputs.
+- **Writing style:** third person throughout; "the operator" is the person who builds and runs the platform. Instructions in the plans and runbooks use the imperative ("Install X"). No contractions, except inside quoted text such as commands, code or test inputs. CI enforces this with `tools/check_doc_style.py`; a line that must break the rule can end with `<!-- style: allow -->`.
 - **References are links:** every mention of an ADR or another document is a link, written as [ADR 1032](phase-1-russetleaf-dev/adr/1032-defense-in-depth.md); only files that do not exist yet (such as future runbooks) appear as plain paths. CI enforces this with `tools/check_doc_links.py`.
 - **Phase 1** also has the [disaster recovery plan](phase-1-russetleaf-dev/disaster-recovery.md).
 
@@ -588,6 +588,7 @@ russetleaf-docs/
   .markdownlint-cli2.yaml   # the Markdown rules that matter for how the site renders
   tools/plan_to_issues.py   # creates milestones, labels and one issue per step from a phase's plan and roadmap
   tools/check_doc_links.py  # CI check: ADR and document references must be links
+  tools/check_doc_style.py  # CI check: no second person or contractions outside code and quotes
   docs/
     index.md                # docs site home page
     overview.md             # this document
