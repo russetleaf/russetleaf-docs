@@ -114,6 +114,7 @@ nav:
           - "1040 Lab network behind its own router, reached over WireGuard": phase-1-russetleaf-dev/adr/1040-lab-network-and-wireguard.md
           - "1041 Naming convention for hosts, nodes and clusters": phase-1-russetleaf-dev/adr/1041-naming-convention.md
           - "1042 S3 versioning, lifecycle rules and storage classes": phase-1-russetleaf-dev/adr/1042-s3-versioning-lifecycle-and-storage-classes.md
+          - "1043 Database encryption at rest and TLS on every connection": phase-1-russetleaf-dev/adr/1043-database-encryption.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md

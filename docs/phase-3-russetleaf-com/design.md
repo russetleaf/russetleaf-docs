@@ -326,7 +326,7 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 - S3 and SES access through **EKS Pod Identity** (IRSA only for any component that does not support Pod Identity), not stored AWS access keys. Each role gets only what it needs:
     - WordPress may write to its S3 bucket and `rds-db:connect` as the `wordpress` user through RDS Proxy.
 - **No application database password on russetleaf.com:** WordPress logs in to RDS Proxy with IAM auth tokens; the master password is generated and rotated by RDS. At home, MariaDB Operator generates and rotates the passwords. See [Database access and credentials](../phase-1-russetleaf-dev/design.md#database-access-and-credentials).
-- RDS in **private subnets**, with **TLS required** on connections.
+- RDS in **private subnets**, with **TLS required by the server** (`require_secure_transport = ON`) on every connection, including RDS Proxy's and the `db-setup` Job's, and **encrypted with a customer-managed KMS key** ([ADR 1043](../phase-1-russetleaf-dev/adr/1043-database-encryption.md)).
 
 ### Intrusion detection and prevention
 
