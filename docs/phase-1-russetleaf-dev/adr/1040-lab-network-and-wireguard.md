@@ -7,7 +7,7 @@
 
 ## Context
 
-[ADR 1032](1032-defense-in-depth.md) requires the cluster to be separated from household devices. The home network is a Spectrum router, a mesh Wi-Fi extender in the server room, and an unmanaged switch connecting the servers. None of these can create VLANs or isolate wired devices, and Spectrum's routers don't allow custom routes. The workstation is on the household Wi-Fi and must stay there.
+[ADR 1032](1032-defense-in-depth.md) requires the cluster to be separated from household devices. The home network is a Spectrum router, a mesh Wi-Fi extender in the server room, and an unmanaged switch (a TP-Link TL-SG105) connecting the servers. None of these can create VLANs or isolate wired devices, and Spectrum's routers don't allow custom routes. The workstation is on the household Wi-Fi and must stay there.
 
 The decision is needed before Talos is installed: the nodes' addresses and the cluster's virtual IP are written into the Talos configuration and certificates, so moving the cluster to another subnet later means re-addressing or rebuilding it.
 

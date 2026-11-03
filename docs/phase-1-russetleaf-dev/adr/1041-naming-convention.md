@@ -39,7 +39,7 @@ The design referred to the home servers as "box 1", "box 2" and "box 3", which i
 | `rl-home-cp02` | Dell OptiPlex 3040 Micro (i5-6500T, 8 GB) | `10.10.0.12` |
 | `rl-home-cp03` | Dell OptiPlex 3060 Micro (i5-8500T, 16 GB) | `10.10.0.13` |
 | `rl-home-rt01` | TP-Link ER605 v2 | `10.10.0.1` |
-| `rl-home-sw01` | Unmanaged gigabit switch | — |
+| `rl-home-sw01` | TP-Link TL-SG105 (5-port gigabit, unmanaged) | — |
 
 The numbers follow the order the machines joined. Of the two 8 GB machines, the faster CPU (the OptiPlex 3040's i5-6500T) is `rl-home-cp02`, the node that runs the model in Phase 2.
 

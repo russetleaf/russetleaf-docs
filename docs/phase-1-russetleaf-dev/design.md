@@ -1135,13 +1135,13 @@ The three nodes are small-form-factor business PCs with 35 W Intel "T" processor
 | `rl-home-cp03` | Dell OptiPlex 3060 Micro | Intel Core i5-8500T, 6 cores, 2.1 GHz | 16 GB DDR4 (32 GB) | 256 GB NVMe SSD | 1 GbE, Intel | `10.10.0.13` | Control plane + **main workloads**: Argo CD, monitoring, Loki, Tempo, platform services, a WordPress replica, the **MariaDB primary** |
 | (virtual IP) | — | — | — | — | — | `10.10.0.10` | The Kubernetes API, held by one healthy node at a time |
 | `rl-home-rt01` | TP-Link ER605 (v2) | — | — | — | 1 GbE, 5 ports | `10.10.0.1` (LAN) | Lab router, firewall and WireGuard server |
-| `rl-home-sw01` | Unmanaged gigabit switch | — | — | — | — | — | Connects the router and the three nodes |
+| `rl-home-sw01` | TP-Link TL-SG105 (unmanaged) | — | — | — | 1 GbE, 5 ports | — | Connects the router and the three nodes (one port spare) |
 
 The numbers follow the order the machines joined the lab; `rl-home-cp03` was bought for the three-node cluster ([ADR 1020](adr/1020-three-node-ha-home-cluster.md)). The maximum memory figures are the manufacturers' published limits as recalled at the time of writing; check them before buying memory.
 
 **Network cards:** all three are Intel (I219-series on these models), so the Talos image needs no extra network firmware.
 
-**TPM:** all three have a TPM 2.0 chip; some OptiPlex 3040 units shipped in TPM 1.2 mode, so check `rl-home-cp02`'s BIOS and switch it to 2.0 (Dell provides a TPM firmware update for this) before installing Talos.
+**TPM:** all three have TPM 2.0 (confirmed), which Talos uses to seal the disk-encryption keys.
 
 **Storage:** 256 GB per node is enough: Talos's system partitions, container images, and the small local volumes (MariaDB, Prometheus with 15-day retention, the Loki and Tempo caches) fit with room to spare, since logs, traces, backups and media are in S3.
 
