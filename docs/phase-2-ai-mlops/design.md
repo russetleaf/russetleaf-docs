@@ -9,7 +9,7 @@
 ## What Phase 2 adds to Phase 1
 
 - A fourth repo, **`russetleaf-llm-summarizer`** (prompts, evaluation set, the summarizer service and its chart).
-- **Box 2 becomes the dedicated LLM node** (label `workload=llm`, taint `dedicated=llm:NoSchedule`) running llama.cpp, with the CI runners next to it.
+- **`rl-home-cp02` becomes the dedicated LLM node** (label `workload=llm`, taint `dedicated=llm:NoSchedule`) running llama.cpp, with the CI runners next to it.
 - AWS resources in russetleaf-home: the **SQS** summary queue and dead-letter queue, **Bedrock** access with a budget, the **model mirror bucket**, and staging equivalents.
 - WordPress changes in `russetleaf-wordpress`: the **summary-queue must-use plugin**, the `wordpress_posts_without_summary` metric and its alert, the **AI summary box** in the theme, and the summarizer's application password.
 - Platform additions: KEDA, LiteLLM, MLflow and Argo Workflows, plus the AI rows in Phase 1's shared sections (policies, network rules, Falco rules, tracing, alerts, SLOs, costs); see [AI components in the shared platform](#ai-components-in-the-shared-platform).
@@ -26,7 +26,7 @@ flowchart LR
   sum -->|"read post, save summary<br/>(REST API)"| wp
   sum --> gw["LiteLLM gateway<br/>routing, fallback, canaries, budgets"]
   gw --> bedrock["Amazon Bedrock<br/>Claude Haiku, Nova Lite"]
-  gw --> llama["llama.cpp (CPU)<br/>on box 2, the LLM node"]
+  gw --> llama["llama.cpp (CPU)<br/>on rl-home-cp02, the LLM node"]
   mirror[("Model mirror bucket")] -->|"model file"| llama
   mlflow["MLflow<br/>tracking and registry"] -->|"feeds"| mirror
   wf["Argo Workflows<br/>online evaluation, data export"] --> mlflow
@@ -57,7 +57,7 @@ The summarizer authenticates to WordPress with an **application password** store
     - **routing and fallback** (e.g. Bedrock first, the self-hosted model if Bedrock fails or is throttled)
     - **canary splits** for model changes (e.g. send 10% of requests to a new model, then compare quality scores and cost before switching)
     - **rate limits and spending budgets** per app
-- The self-hosted model runs on **dedicated LLM nodes** (a Karpenter GPU NodePool on AWS, box 2 at home):
+- The self-hosted model runs on **dedicated LLM nodes** (a Karpenter GPU NodePool on AWS, `rl-home-cp02` at home):
     - The nodes carry the label `workload=llm` and the taint `dedicated=llm:NoSchedule`, so only the model server (plus cluster-wide agents such as node-exporter) runs there.
     - The model server Deployment has a matching **toleration** and **node selector**.
     - Model files are downloaded once by an init container from each site's **model mirror bucket** in S3 (so rebuilds don't depend on Hugging Face) into a volume on the node.
@@ -109,7 +109,7 @@ flowchart LR
 
 ### Experiment tracking and model registry (MLflow)
 
-- **MLflow** runs on the home cluster (on box 3), with its metadata in MariaDB and its artifacts in an S3 bucket.
+- **MLflow** runs on the home cluster (on `rl-home-cp03`), with its metadata in MariaDB and its artifacts in an S3 bucket.
 - **Every evaluation run is an MLflow run:** the CI evaluation gate, the online evaluation and every fine-tuning run log their **parameters** (Git commit, prompt version, model and its registry version, dataset version), **metrics** (rule-check pass rate, judge scores, latency, cost per summary) and **artifacts** (reports, sample outputs).
 - **Registered models**, with lineage back to the runs that produced them:
     - `summarizer-config`: the prompt, model choice and generation settings as one versioned unit
@@ -145,7 +145,7 @@ Fine-tuning the self-hosted model needs a GPU, which the home lab doesn't have, 
 
 ### Cost
 
-MLflow, Argo Workflows and the online-evaluation job run on the home cluster (box 3 has the memory); the extra Bedrock calls for daily judging cost cents a month; each fine-tuning run costs **a few dollars** of spot GPU time on EKS.
+MLflow, Argo Workflows and the online-evaluation job run on the home cluster (`rl-home-cp03` has the memory); the extra Bedrock calls for daily judging cost cents a month; each fine-tuning run costs **a few dollars** of spot GPU time on EKS.
 
 ### Rolling back bad AI summaries
 
@@ -205,7 +205,7 @@ Design choices that make it stand on its own:
 | Summarizer deployment settings per environment (queue URL, gateway URL, scaling, chart version) | `russetleaf-gitops` |
 | LiteLLM gateway and its routing config (models, fallbacks, canary weights, budgets) | `russetleaf-gitops` |
 | Self-hosted model server (llama.cpp Deployment, tolerations, home CPU / AWS CUDA overlays) | `russetleaf-gitops` |
-| Box 2's Talos label and taint; Karpenter GPU NodePool IAM | `russetleaf-infra` |
+| `rl-home-cp02`'s Talos label and taint; Karpenter GPU NodePool IAM | `russetleaf-infra` |
 | Bedrock model access, gateway IAM role, SQS queues, Bedrock budget alert | `russetleaf-infra` |
 | SQS must-use plugin that queues posts | `russetleaf-wordpress` |
 
@@ -310,11 +310,11 @@ One trace then shows: a post is published → queued → picked up by the summar
 |---|---|---|---|---|
 | **Models** (gateway routing) | Quality or cost problems in the canary or after a switch | **Git revert** of the routing weights in `platform/llm-gateway/`; then **re-summarize** affected posts (below) | You | Minutes, plus re-summarizing |
 
-### Model placement on box 2
+### Model placement on `rl-home-cp02`
 
-**Protecting etcd:** etcd is sensitive to CPU starvation and disk latency. llama.cpp on box 2 gets a **CPU limit that leaves about one core free**, every node sets Talos's **system and kubelet reservations**, and every node uses an NVMe or SSD disk.
+**Protecting etcd:** etcd is sensitive to CPU starvation and disk latency. llama.cpp on `rl-home-cp02` gets a **CPU limit that leaves about one core free**, every node sets Talos's **system and kubelet reservations**, and every node uses an NVMe or SSD disk.
 
-**The model:** box 2 has about **5–5.5 GB** free for the model once its control-plane components are running. A **3B model** (4-bit) is the best fit: about 2.5–3.5 GB of RAM, and roughly 1–2 minutes per summary on an i3. That's fine for a queue handling 10–20 posts a month. A 7–8B model would be tight on box 2; moving the model to box 3 (6 cores, more memory) is a possible later experiment.
+**The model:** `rl-home-cp02` has about **5–5.5 GB** free for the model once its control-plane components are running. A **3B model** (4-bit) is the best fit: about 2.5–3.5 GB of RAM, and roughly a minute per summary on its 4-core i5-6500T (measured in step 3.1). That's fine for a queue handling 10–20 posts a month. A 7–8B model would be tight on `rl-home-cp02`; moving the model to `rl-home-cp03` (6 cores, more memory) is a possible later experiment.
 
 ### SLOs
 
@@ -329,6 +329,6 @@ One trace then shows: a post is published → queued → picked up by the summar
 |---|---|---|---|
 | AI post summaries | **Real SQS** + KEDA-scaled summarizer | Same, in EKS | <$1 |
 | LLM gateway | LiteLLM in-cluster, routing to **real Amazon Bedrock** and the self-hosted model | Same | ~$1–$2 (Bedrock tokens) |
-| Self-hosted model | llama.cpp (CPU build) on box 2, CPU-limited to protect etcd | llama.cpp (CUDA build) on the Karpenter GPU NodePool | ~$2–$4 (electricity for box 2) |
+| Self-hosted model | llama.cpp (CPU build) on `rl-home-cp02`, CPU-limited to protect etcd | llama.cpp (CUDA build) on the Karpenter GPU NodePool | ~$2–$4 (electricity for `rl-home-cp02`) |
 | Prompt evaluation | GitHub Actions on ARC runners in the cluster | Same | (included above) |
 | MLOps lifecycle | MLflow, Argo Workflows, online evaluation, feedback, DVC (home cluster) | Fine-tuning runs on the spot GPU NodePool | ~$0 always on; a few $ per fine-tuning run |

@@ -27,7 +27,7 @@ Most of its features are already covered in this design:
 
 Nothing checked the AWS account's actual settings (IAM users and keys, root MFA, CloudTrail, S3 public-access settings, security groups, encryption defaults, GuardDuty status). Terraform and Checkov only check what's written in code, not what's configured in the account, including anything created by hand or by AWS.
 
-ThreatMapper's management console bundles several databases and services; its documented requirements are on the order of 16 GB of RAM and 4 CPU cores for the console alone, more than box 1 has in total.
+ThreatMapper's management console bundles several databases and services; its documented requirements are on the order of 16 GB of RAM and 4 CPU cores for the console alone, more than `rl-home-cp01` has in total.
 
 ## Decision
 
@@ -40,7 +40,7 @@ ThreatMapper's management console bundles several databases and services; its do
 
 ## Alternatives considered
 
-- **ThreatMapper:** broadest single tool, but its console needs more memory than box 1 has, and it duplicates tools already built into CI and the clusters.
+- **ThreatMapper:** broadest single tool, but its console needs more memory than `rl-home-cp01` has, and it duplicates tools already built into CI and the clusters.
 - ~~**AWS Security Hub** (with the Foundational Security Best Practices standard): continuous and AWS-native, but billed per check, and covers only AWS; a reasonable upgrade if the account ever holds production data.~~ **Superseded by [ADR 1019](1019-aws-multi-account-sra.md):** Security Hub is now used as the continuous check, with Prowler as a second opinion.
 - **Kubescape or Trivy for cloud posture:** focused on Kubernetes and images rather than full AWS account configuration.
 - **No account scanning:** leaves configuration done outside Terraform unchecked.

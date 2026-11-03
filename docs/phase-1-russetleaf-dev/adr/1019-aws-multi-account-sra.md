@@ -29,7 +29,7 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 ## Consequences
 
 - Each site, the logs, the backups and the security tooling are isolated; a compromised workload account can't delete logs or backups, and can't turn off security services (SCPs).
-- About **$5–15/month** more (Security Hub, Config, KMS), bringing the always-on total to about $15–35/month at the time (about **$18–40/month** after box 3's electricity was added by [ADR 1020](1020-three-node-ha-home-cluster.md); this total already includes the organization-wide security services).
+- About **$5–15/month** more (Security Hub, Config, KMS), bringing the always-on total to about $15–35/month at the time (about **$18–40/month** after `rl-home-cp03`'s electricity was added by [ADR 1020](1020-three-node-ha-home-cluster.md); this total already includes the organization-wide security services).
 - More moving parts: cross-account access for state, replication and the seed Job; per-account CI roles; per-account quotas (request the GPU quota in russetleaf-com); SES and Bedrock model access per account.
 - Restructuring the existing account into the Organization happens early (before most resources exist), which keeps the move simple.
 - A credible, SRA-shaped AWS foundation to show and discuss.

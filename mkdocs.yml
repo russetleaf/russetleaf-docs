@@ -112,13 +112,14 @@ nav:
           - "1038 Separate documentation repo, published as a docs site": phase-1-russetleaf-dev/adr/1038-documentation-repo-and-site.md
           - "1039 Bootstrap Cilium and Argo CD through Talos inline manifests, then hand off to Argo CD": phase-1-russetleaf-dev/adr/1039-bootstrap-through-talos-inline-manifests.md
           - "1040 Lab network behind its own router, reached over WireGuard": phase-1-russetleaf-dev/adr/1040-lab-network-and-wireguard.md
+          - "1041 Naming convention for hosts, nodes and clusters": phase-1-russetleaf-dev/adr/1041-naming-convention.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md
       - Decisions:
           - "2001 Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback": phase-2-ai-mlops/adr/2001-mlops-lifecycle.md
           - "2002 Summary pipeline: event-driven summarizer behind an LLM gateway": phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md
-          - "2003 Self-hosted model on box 2 (CPU llama.cpp), dedicated by taint": phase-2-ai-mlops/adr/2003-self-hosted-model-on-box-2.md
+          - "2003 Self-hosted model on rl-home-cp02 (CPU llama.cpp), dedicated by taint": phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md
   - "Phase 3: russetleaf.com":
       - Design: phase-3-russetleaf-com/design.md
       - Plan: phase-3-russetleaf-com/plan.md

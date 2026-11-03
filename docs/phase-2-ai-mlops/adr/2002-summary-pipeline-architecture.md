@@ -14,7 +14,7 @@ Each post gets a short AI-generated summary. Summaries must not slow down publis
 - **Event-driven:** a must-use plugin in WordPress sends the post ID to an **SQS queue** on publish or update (with the trace context); a separate **summarizer** service reads the post through the REST API, asks for a summary, validates it and writes it back. Failures retry and then land in a **dead-letter queue** with an alert; a daily sweep re-queues posts still missing a summary.
 - **Scale to zero with KEDA:** the summarizer runs 0–N pods based on queue depth.
 - **One LLM gateway (LiteLLM)** for every model call: one OpenAI-compatible API, routing and **fallback** (Bedrock first, the local model if Bedrock fails or throttles), **canary splits** for model changes, per-app **rate limits and budgets**, and metrics per model.
-- **Models:** **Amazon Bedrock** (Claude Haiku by default, Amazon Nova Lite as the lower-cost option) and a **self-hosted model** ([ADR 2003](2003-self-hosted-model-on-box-2.md)).
+- **Models:** **Amazon Bedrock** (Claude Haiku by default, Amazon Nova Lite as the lower-cost option) and a **self-hosted model** ([ADR 2003](2003-self-hosted-model-on-cp02.md)).
 - **Its own repo (`russetleaf-llm-summarizer`):** versioned prompts, the evaluation set and gate, the chart and the release pipeline, so it stands alone as an MLOps project; deployment config (routing, canary weights) stays in `russetleaf-gitops`.
 - **Python** for the summarizer (boto3, the `openai` client, OpenTelemetry).
 

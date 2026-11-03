@@ -27,7 +27,7 @@ The project had become a capable platform (GitOps, signed supply chain, policies
 ## Consequences
 
 - The platform's value is demonstrated by a second service built on it, with a measured onboarding time.
-- Backstage is a sizeable application to run and upgrade (Node.js plugins, PostgreSQL); about 1–1.5 GB of memory on box 3.
+- Backstage is a sizeable application to run and upgrade (Node.js plugins, PostgreSQL); about 1–1.5 GB of memory on `rl-home-cp03`.
 - The EKS API endpoint is reachable from the home network during demos (restricted by address and IAM).
 - One Argo CD view for both clusters.
 

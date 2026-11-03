@@ -15,7 +15,7 @@ High availability (HA) means a site keeps working when a single component (a nod
 
 | | russetleaf.dev (Talos, home) | russetleaf.com (EKS, AWS) |
 |---|---|---|
-| Kubernetes control plane | **Single node** (box 1): if it fails, the cluster is down | **HA by default**: AWS runs the EKS control plane across three availability zones |
+| Kubernetes control plane | **Single node** (`rl-home-cp01`): if it fails, the cluster is down | **HA by default**: AWS runs the EKS control plane across three availability zones |
 | Worker nodes | Two boxes with distinct roles; losing either loses its workloads | Karpenter nodes across three zones; WordPress has 3+ replicas spread across zones |
 | Database | Single MariaDB on local disk; backups every 6 hours | **RDS Multi-AZ** behind RDS Proxy (failover in seconds) |
 | Cache | Single Valkey | ElastiCache primary + replica in different zones |
@@ -67,7 +67,7 @@ High availability (HA) means a site keeps working when a single component (a nod
 ## Consequences
 
 - Both sites' limits are explicit, with numbers, rather than implied.
-- russetleaf.dev will have outages when box 1, its disk, the home power or the internet fails; the uptime check and dead man's switch alert on them.
+- russetleaf.dev will have outages when `rl-home-cp01`, its disk, the home power or the internet fails; the uptime check and dead man's switch alert on them.
 - russetleaf.com demonstrates an HA design without paying for it around the clock.
 - Recovery depends on the backups, Terraform and GitOps working, which makes the monthly restore test and occasional rebuild rehearsal important.
 

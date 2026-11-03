@@ -45,13 +45,13 @@ flowchart TB
   end
   subgraph lab["Lab network 10.10.0.0/24 behind the ER605 router: Talos cluster, three control-plane nodes"]
     cfd["cloudflared"] --> ingress["ingress-nginx"]
-    ingress --> wp["WordPress pods<br/>(boxes 3 and 1, Argo Rollouts canaries)"]
-    wp --> db[("MariaDB<br/>primary box 3, replica box 1")]
+    ingress --> wp["WordPress pods<br/>(rl-home-cp03 and rl-home-cp01, Argo Rollouts canaries)"]
+    wp --> db[("MariaDB<br/>primary rl-home-cp03, replica rl-home-cp01")]
     wp --> cache[("Valkey")]
     argo["Argo CD"] -.->|syncs| wp
     plat["Platform: Cilium, Kyverno, cert-manager,<br/>External Secrets, Dex, Falco, Trivy Operator"]
     obs["Prometheus, Grafana, Alertmanager,<br/>Loki, Tempo, Hubble"]
-    runners["CI runners (ARC) and staging runs<br/>on box 2; box 2 becomes the LLM node in Phase 2"]
+    runners["CI runners (ARC) and staging runs<br/>on rl-home-cp02; rl-home-cp02 becomes the LLM node in Phase 2"]
   end
   subgraph aws["AWS (russetleaf-home and security accounts)"]
     s3[("S3: media, backups,<br/>logs, traces")]
@@ -124,7 +124,7 @@ Separate workload accounts limit how far a compromise can spread, and give each 
 
 ### Cost
 
-Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-access findings are free. **Security Hub, Config and KMS** add roughly **$5–15/month**, depending mostly on how many resources Config records (focused recording keeps the demo stack's churn in check). That brought the always-on total to about $15–35/month; with box 3's electricity ([ADR 1020](adr/1020-three-node-ha-home-cluster.md)) it's now about **$18–40/month**. That figure is the **whole** always-on cost (the security services are already included in it, not added on top). With about 20 demo hours a month (~$20), the total is **$30–60/month**; keeping demos to about 10 hours keeps it **under $50**.
+Accounts, SCPs, Identity Center, tag policies and Access Analyzer's external-access findings are free. **Security Hub, Config and KMS** add roughly **$5–15/month**, depending mostly on how many resources Config records (focused recording keeps the demo stack's churn in check). That brought the always-on total to about $15–35/month; with `rl-home-cp03`'s electricity ([ADR 1020](adr/1020-three-node-ha-home-cluster.md)) it's now about **$18–40/month**. That figure is the **whole** always-on cost (the security services are already included in it, not added on top). With about 20 demo hours a month (~$20), the total is **$30–60/month**; keeping demos to about 10 hours keeps it **under $50**.
 
 ## Security foundations
 
@@ -187,7 +187,7 @@ The project depends on more than AWS: **GitHub** (code, CI, packages, attestatio
 | Allowed registries | **Restrict Image Registries** (`restrict-image-registries`) | Every container (including init and ephemeral containers) comes from `ghcr.io/<you>/*` or an explicit list of upstream registries used by the platform charts (Cilium, Falco, Argo CD, MariaDB, ...); on EKS, also AWS's own add-on registries |
 | No `latest` tag | **Disallow Latest Tag** (`disallow-latest-tag`) | Every image has an explicit tag or digest |
 | Required labels | **Require Labels** (`require-labels`), plus a **mutate** rule | Workloads carry `app.kubernetes.io/name`, `app.kubernetes.io/part-of` and `env`; the mutate rule fills in `env` from the namespace, so the validate rule is only a backstop. These labels drive alert routing, OpenCost and policy selectors |
-| Requests and limits | **Require Requests and Limits** (`require-requests-limits`) | CPU and memory **requests** and a **memory limit** on every container. **CPU limits are deliberately not required by default** (they cause throttling even on idle nodes); they're used only where a neighbor needs protecting: llama.cpp and the CI runners on box 2 (to protect etcd) and k6 load generators. See [ADR 1026](adr/1026-cpu-limits.md) |
+| Requests and limits | **Require Requests and Limits** (`require-requests-limits`) | CPU and memory **requests** and a **memory limit** on every container. **CPU limits are deliberately not required by default** (they cause throttling even on idle nodes); they're used only where a neighbor needs protecting: llama.cpp and the CI runners on `rl-home-cp02` (to protect etcd) and k6 load generators. See [ADR 1026](adr/1026-cpu-limits.md) |
 | No privileged containers | **Disallow Privileged Containers** (`disallow-privileged-containers`), within Kyverno's **Pod Security Standards** `baseline` rule set | No privileged containers, host paths or host namespaces (network, PID, IPC). Talos already enforces Pod Security `baseline`; Kyverno adds reporting, CI tests and narrow exceptions |
 | Pod Security `restricted` (app namespaces) | Kyverno's **Pod Security Standards `restricted`** rule set, for application namespaces | Everything in the `restricted` profile (non-root, no privilege escalation, all capabilities dropped, seccomp), matching the namespaces' Pod Security Admission `restricted` labels |
 | Secrets as files | **Secrets Not From Env Vars** (`secrets-not-from-env-vars`) | Secrets are mounted as files, not passed as environment variables (which leak into process listings, crash dumps and child processes) |
@@ -409,12 +409,12 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
 | `FalcoEventsDropped` | Falco reports dropped system-call events (it can't keep up, so detections may be missed) | `#rl-security` |
 
 - **API server authorization: only Node and RBAC; ABAC and `AlwaysAllow` off** on both clusters.
-    - **Home (Talos):** Talos configures the API server with Kubernetes' structured authorization config file (`--authorization-config`), enabling only the **Node** and **RBAC** authorizers. The Talos machine config in `russetleaf-infra` must **never override** it (no custom authorization config, no ABAC policy file). Talos's defaults also turn off anonymous access to the kubelet and use webhook authorization for it (verified on box 1: `kubelet.yaml` has `authentication.anonymous.enabled: false` and `authorization.mode: Webhook`, and an anonymous request to the kubelet API on port 10250 returns **401 Unauthorized**). Checked with `talosctl -n <control-plane-ip> read /system/config/kubernetes/kube-apiserver/authorization-config.yaml`, which must list only `Node` and `RBAC`; documented in `docs/talos-hardening.md`.
+    - **Home (Talos):** Talos configures the API server with Kubernetes' structured authorization config file (`--authorization-config`), enabling only the **Node** and **RBAC** authorizers. The Talos machine config in `russetleaf-infra` must **never override** it (no custom authorization config, no ABAC policy file). Talos's defaults also turn off anonymous access to the kubelet and use webhook authorization for it (verified on `rl-home-cp01`: `kubelet.yaml` has `authentication.anonymous.enabled: false` and `authorization.mode: Webhook`, and an anonymous request to the kubelet API on port 10250 returns **401 Unauthorized**). Checked with `talosctl -n <control-plane-ip> read /system/config/kubernetes/kube-apiserver/authorization-config.yaml`, which must list only `Node` and `RBAC`; documented in `docs/talos-hardening.md`.
     - **Both:** the Kubescape CLI scans flag risky RBAC, such as bindings that grant permissions to `system:anonymous` or `system:authenticated`.
 - **Trivy Operator** runs continuously in the cluster, producing CIS compliance reports, vulnerability reports for running images, and configuration audits. Its **compliance results are published as Prometheus metrics** on both clusters, feeding a **Grafana "Compliance" dashboard** that shows both sites side by side, and a `ComplianceFailuresIncreased` alert to `#rl-security` when the number of failing CIS controls rises. This is the continuous compliance signal; kube-bench adds deeper node-level checks on EKS.
 - **Kubescape CLI**, run on demand (monthly at home, once per AWS demo on EKS) from the workstation or the in-cluster CI runners, with **nothing installed in the cluster**: scores each cluster against the **NSA-CISA** and **MITRE ATT&CK** frameworks and analyzes **RBAC** for risky permissions, the one area no other tool here covers. Reports are saved in `docs/` in `russetleaf-gitops`. It complements kube-bench rather than replacing it: kube-bench checks node and control-plane configuration directly on the nodes; Kubescape checks workloads and permissions through the Kubernetes API. The in-cluster Kubescape operator is deliberately not used (0.5–1 GB of memory, mostly duplicating Trivy Operator and Falco); see [ADR 1003](adr/1003-kubescape-cli-not-operator.md).
 - **Security Hub** (with the AWS Foundational Security Best Practices and CIS standards) is the **continuous** check of every account's configuration; see [AWS account structure](#aws-account-structure-and-best-practices-security-reference-architecture).
-- **Prowler**, as a free **second opinion** across **all the accounts**: a scheduled GitHub Actions workflow in `russetleaf-infra` runs it **monthly**, plus once per AWS demo with the stack up, using a **read-only audit role** in each account through GitHub OIDC. It checks the account's actual settings (IAM users and keys, root MFA, CloudTrail, S3 public access, security groups, encryption defaults) against **CIS AWS Foundations** and **AWS Foundational Security Best Practices**, catching anything configured outside Terraform. Reports are kept as workflow artifacts with a summary in `docs/security/` and a short message to `#rl-security`. Deepfence ThreatMapper was considered and not used (its console needs more memory than box 1 has, and it duplicates the tools above); see [ADR 1007](adr/1007-prowler-not-threatmapper.md).
+- **Prowler**, as a free **second opinion** across **all the accounts**: a scheduled GitHub Actions workflow in `russetleaf-infra` runs it **monthly**, plus once per AWS demo with the stack up, using a **read-only audit role** in each account through GitHub OIDC. It checks the account's actual settings (IAM users and keys, root MFA, CloudTrail, S3 public access, security groups, encryption defaults) against **CIS AWS Foundations** and **AWS Foundational Security Best Practices**, catching anything configured outside Terraform. Reports are kept as workflow artifacts with a summary in `docs/security/` and a short message to `#rl-security`. Deepfence ThreatMapper was considered and not used (its console needs more memory than `rl-home-cp01` has, and it duplicates the tools above); see [ADR 1007](adr/1007-prowler-not-threatmapper.md).
 
 ### Stateless operation
 
@@ -555,7 +555,7 @@ encryption:
   nodeEncryption: false        # pod traffic only; node-to-node host traffic is left as is
 ```
 
-- **Home:** the Talos kernel includes WireGuard, so this is a Cilium setting only. WireGuard encrypts traffic **between** nodes; on the home lab, that's traffic between boxes 1, 2 and 3 (e.g. WordPress ↔ the MariaDB primary, MariaDB replication, ARC runners ↔ the gateway). Traffic between pods on the same node never leaves the machine.
+- **Home:** the Talos kernel includes WireGuard, so this is a Cilium setting only. WireGuard encrypts traffic **between** nodes; on the home lab, that's traffic between all three nodes (e.g. WordPress ↔ the MariaDB primary, MariaDB replication, ARC runners ↔ the gateway). Traffic between pods on the same node never leaves the machine.
 - **Cost:** a small amount of CPU for encryption, almost no memory.
 - **Check:** `cilium encrypt status` (or `cilium status`) shows WireGuard enabled with a peer for each other node.
 
@@ -626,7 +626,7 @@ What else is needed for this to work:
 - **Install order:** the ServiceMonitor resource type comes from the Prometheus Operator, which arrives after Cilium. Install the **`prometheus-operator-crds`** chart (from the **prometheus-community** Helm repository, `https://prometheus-community.github.io/helm-charts`) in the first Argo CD sync wave, and have Terraform's bootstrap install of Cilium keep its ServiceMonitors **off**; the Argo CD-managed Cilium values then turn them on.
 - **Prometheus must look in Cilium's namespace:** in kube-prometheus-stack, set `serviceMonitorSelectorNilUsesHelmValues: false` (and the same for PodMonitors and rules) so Prometheus picks up ServiceMonitors from every namespace, including `kube-system` where Cilium runs.
 - **Grafana must load the dashboards:** keep kube-prometheus-stack's Grafana dashboard sidecar watching all namespaces (or the `monitoring` namespace the dashboards are written to), with its default `grafana_dashboard: "1"` label.
-- **Layer-7 metrics** (`httpV2`) only appear for traffic that a layer-7 policy rule inspects (e.g. summarizer → WordPress REST API). That's intended: full HTTP visibility everywhere would cost memory box 1 doesn't have.
+- **Layer-7 metrics** (`httpV2`) only appear for traffic that a layer-7 policy rule inspects (e.g. summarizer → WordPress REST API). That's intended: full HTTP visibility everywhere would cost memory `rl-home-cp01` doesn't have.
 
 **Alerts** (`PrometheusRule`s in `platform/cilium/`, with runbooks, routed by the usual `site` and `team` labels):
 
@@ -808,7 +808,7 @@ Traces show how a single request or job moved through the system: which services
 
 | | russetleaf.com (AWS, Phase 3) | russetleaf.dev (home) |
 |---|---|---|
-| Tempo running | **On for every demo**: EKS has memory to spare, and a live end-to-end trace is a strong demo | **Always on** (box 3 has the memory), with sampling to keep volume low |
+| Tempo running | **On for every demo**: EKS has memory to spare, and a live end-to-end trace is a strong demo | **Always on** (`rl-home-cp03` has the memory), with sampling to keep volume low |
 | Sampling | 100% of traces (demo traffic is low) | Parent-based, ~10% of page requests; 100% of summary jobs (they're rare) |
 | Retention | 7 days, in an S3 bucket in the always-on edge stack (so demo traces can be reviewed afterwards) | 3 days, in an S3 bucket |
 
@@ -856,7 +856,7 @@ Every message carries a **`site=dev` or `site=com` label** (or a `[dev]` / `[com
 
 ### How alerts are routed
 
-- **Site and environment labels:** each cluster's Prometheus adds `site` (`dev` or `com`) and `cluster` (`talos-home` or `eks`) to everything it sends, as external labels. Workloads carry an `env` label (`staging` or `prod`), which alerts inherit.
+- **Site and environment labels:** each cluster's Prometheus adds `site` (`dev` or `com`) and `cluster` (`rl-home` or `eks`) to everything it sends, as external labels. Workloads carry an `env` label (`staging` or `prod`), which alerts inherit.
 - **Alertmanager routing:**
     - `severity=critical` → `#rl-critical` **and** the site's channel
     - `severity=warning` → the site's channel
@@ -902,7 +902,7 @@ Changes never go straight to a live site. Every change to the WordPress image or
 |---|---|---|---|---|
 | **local** | Your Ubuntu workstation: Docker Compose, plus a local Kubernetes cluster (kind, or Talos in Docker with `talosctl cluster create`) | Fast build-and-try loop for the image, charts and summarizer; rehearse Talos upgrades and manifest changes | On demand | $0 |
 | **ci** | A temporary **kind** cluster inside GitHub Actions, created for each pull request | Install the changed charts and run integration tests against **LocalStack** (local stand-ins for S3, SQS and Secrets Manager) and a **mock LLM** (LiteLLM's mock responses), so no AWS account or model is needed | Minutes per pull request | $0 (GitHub-hosted runners are free for public repos) |
-| **staging** | The home cluster, in its own namespaces, at `staging.russetleaf.dev` behind Cloudflare Access | Run each new version against **real** AWS services and real models, with real (scrubbed) content, before production | **On demand only (scale-to-zero):** created for each promotion, deleted when tests finish | ~$0–1/month; ~0.7–1 GB of memory (on box 1), only while running |
+| **staging** | The home cluster, in its own namespaces, at `staging.russetleaf.dev` behind Cloudflare Access | Run each new version against **real** AWS services and real models, with real (scrubbed) content, before production | **On demand only (scale-to-zero):** created for each promotion, deleted when tests finish | ~$0–1/month; ~0.7–1 GB of memory (on `rl-home-cp01`), only while running |
 | **prod (home)** | russetleaf.dev | The live site | 24/7 | see the home lab costs |
 
 ### ci: test clusters in GitHub Actions
@@ -937,7 +937,7 @@ Staging exists **only while it's being tested** (scale-to-zero): it keeps the cl
 
 Infrastructure changes follow the same idea with different tools: Terraform modules are tested with **`terraform test`** in CI, Talos version upgrades are rehearsed on a **local Talos-in-Docker cluster** first, and `envs/home` changes are planned in CI before being applied.
 
-**Kargo (optional, later):** Kargo, a GitOps promotion tool from the makers of Argo CD, can replace the promotion workflows with a visual pipeline (stages, verification, approvals). It's a good portfolio addition, but its controllers are always on, so add it only if box 1 has memory to spare. The workflows above are the lightweight default.
+**Kargo (optional, later):** Kargo, a GitOps promotion tool from the makers of Argo CD, can replace the promotion workflows with a visual pipeline (stages, verification, approvals). It's a good portfolio addition, but its controllers are always on, so add it only if `rl-home-cp01` has memory to spare. The workflows above are the lightweight default.
 
 ## Performance and stress testing
 
@@ -962,7 +962,7 @@ Performance is tested on purpose, at several levels, not just checked for correc
 
 ### Performance regression gate
 
-The `staging-test` workflow also load-tests the **current production version and the candidate back to back in staging**: same hardware and conditions, minutes apart, a few minutes at expected traffic, **three runs each**, comparing the **medians** of 95th-percentile latency and error rate. A candidate more than about **20% slower**, or above the error threshold, **fails promotion**, in the same way an exhausted error budget does. The gate **waits** while box 2 is busy with a summarization burst or a stress test is running, so shared-cluster load doesn't cause false failures. The comparison is attached to the promotion pull request; production baselines (measured after each promotion) are kept for trends and the capacity plan.
+The `staging-test` workflow also load-tests the **current production version and the candidate back to back in staging**: same hardware and conditions, minutes apart, a few minutes at expected traffic, **three runs each**, comparing the **medians** of 95th-percentile latency and error rate. A candidate more than about **20% slower**, or above the error threshold, **fails promotion**, in the same way an exhausted error budget does. The gate **waits** while `rl-home-cp02` is busy with a summarization burst or a stress test is running, so shared-cluster load doesn't cause false failures. The comparison is attached to the promotion pull request; production baselines (measured after each promotion) are kept for trends and the capacity plan.
 
 ### How results are used
 
@@ -1015,7 +1015,7 @@ Every update, from a WordPress plugin to a Kubernetes version, arrives as a **pu
 | **WordPress core, plugins, themes** (`russetleaf-wordpress`) | **Renovate** pull requests. Plugins and themes are managed with **Composer through WPackagist** (a Composer mirror of the WordPress.org plugin and theme directories), so Renovate can track them | Build → kind ci tests → **staging** → promotion PR to prod → Argo Rollouts canary | Weekly; **security releases within 48 hours** |
 | **Base images** (official `wordpress`, Python) | Renovate updates the **pinned digests**; a **weekly scheduled rebuild** picks up OS patches even without code changes | Same pipeline as above | Weekly |
 | **Platform components** (Cilium, Argo CD, Kyverno, Falco, Loki, Tempo, etc.) | Renovate in `russetleaf-gitops`, **grouped** into one pull request per component | **Patch versions:** auto-merge once CI passes. **Minor and major versions:** read the changelog, try on a **local Talos-in-Docker cluster** first, merge by hand. (Staging doesn't help here: platform components are shared by staging and prod.) | Weekly review; minors monthly |
-| **Talos and Kubernetes** (home) | Versions bumped in `russetleaf-infra/envs/home` (Renovate tracks them with a custom version rule) | Take an **etcd snapshot** and an on-demand MariaDB backup; rehearse on a local Talos cluster; check Cilium and other components support the new Kubernetes version; upgrade **Talos one node at a time** (box 2, box 1, then box 3), checking etcd health between nodes, so the site stays up throughout, then Kubernetes (`talosctl upgrade-k8s`). Roll back with `talosctl rollback` | Talos patches monthly; Kubernetes minor versions within a few months of release, staying **within the supported window** |
+| **Talos and Kubernetes** (home) | Versions bumped in `russetleaf-infra/envs/home` (Renovate tracks them with a custom version rule) | Take an **etcd snapshot** and an on-demand MariaDB backup; rehearse on a local Talos cluster; check Cilium and other components support the new Kubernetes version; upgrade **Talos one node at a time** (`rl-home-cp02`, `rl-home-cp01`, then `rl-home-cp03`), checking etcd health between nodes, so the site stays up throughout, then Kubernetes (`talosctl upgrade-k8s`). Roll back with `talosctl rollback` | Talos patches monthly; Kubernetes minor versions within a few months of release, staying **within the supported window** |
 | **Terraform providers and modules** | Renovate (with the lock file) | CI plan, Checkov, `terraform test` | Monthly |
 | **CLI tools and GitHub Actions** | Renovate (`.mise.toml`; actions pinned to commit hashes) | CI | Monthly; patches auto-merge |
 | **Workstation** (Ubuntu) | Unattended security upgrades | — | Automatic |
@@ -1126,29 +1126,42 @@ The full AWS stack costs too much to run 24/7 as a portfolio project. Instead:
 
 ### Home hardware
 
-| Node | Hardware | Role |
-|---|---|---|
-| Box 3 | **Intel i5-8500T** (6 cores, 35 W), **16 GB** RAM, NVMe SSD | Talos **control plane** + **main workloads**: Argo CD, monitoring, Loki, Tempo, platform services, a WordPress replica, the **MariaDB primary** |
-| Box 1 | Intel i3, 8 GB RAM, **SSD required** | Talos **control plane** + **secondary workloads**: a WordPress replica, the **MariaDB replica**, second ingress-nginx and cloudflared replicas, staging runs |
-| Box 2 | Intel i3, 8 GB RAM, **SSD required** | Talos **control plane** + general workloads: the CI runners and staging runs. In Phase 2 it becomes the **dedicated LLM node** (label and taint; see the Phase 2 design) |
+The three nodes are small-form-factor business PCs with 35 W Intel "T" processors. Hostnames follow the project's [naming convention](adr/1041-naming-convention.md); addresses are on the lab network ([ADR 1040](adr/1040-lab-network-and-wireguard.md)).
+
+| Hostname | Model | CPU | RAM (max) | Disk | Network | Address | Role |
+|---|---|---|---|---|---|---|---|
+| `rl-home-cp01` | Lenovo ThinkCentre M710q Tiny | Intel Core i5-6400T, 4 cores, 2.2 GHz | 8 GB DDR4 (32 GB) | 256 GB SSD | 1 GbE, Intel | `10.10.0.11` | Control plane + **secondary workloads**: a WordPress replica, the **MariaDB replica**, second ingress-nginx and cloudflared replicas |
+| `rl-home-cp02` | Dell OptiPlex 3040 Micro | Intel Core i5-6500T, 4 cores, 2.5 GHz | 8 GB DDR4 (16 GB) | 256 GB SSD | 1 GbE, Intel | `10.10.0.12` | Control plane + general workloads: the CI runners and staging runs. In Phase 2 it becomes the **dedicated LLM node** (it has the faster of the two 4-core CPUs) |
+| `rl-home-cp03` | Dell OptiPlex 3060 Micro | Intel Core i5-8500T, 6 cores, 2.1 GHz | 16 GB DDR4 (32 GB) | 256 GB NVMe SSD | 1 GbE, Intel | `10.10.0.13` | Control plane + **main workloads**: Argo CD, monitoring, Loki, Tempo, platform services, a WordPress replica, the **MariaDB primary** |
+| (virtual IP) | — | — | — | — | — | `10.10.0.10` | The Kubernetes API, held by one healthy node at a time |
+| `rl-home-rt01` | TP-Link ER605 (v2) | — | — | — | 1 GbE, 5 ports | `10.10.0.1` (LAN) | Lab router, firewall and WireGuard server |
+| `rl-home-sw01` | Unmanaged gigabit switch | — | — | — | — | — | Connects the router and the three nodes |
+
+The numbers follow the order the machines joined the lab; `rl-home-cp03` was bought for the three-node cluster ([ADR 1020](adr/1020-three-node-ha-home-cluster.md)). The maximum memory figures are the manufacturers' published limits as recalled at the time of writing; check them before buying memory.
+
+**Network cards:** all three are Intel (I219-series on these models), so the Talos image needs no extra network firmware.
+
+**TPM:** all three have a TPM 2.0 chip; some OptiPlex 3040 units shipped in TPM 1.2 mode, so check `rl-home-cp02`'s BIOS and switch it to 2.0 (Dell provides a TPM firmware update for this) before installing Talos.
+
+**Storage:** 256 GB per node is enough: Talos's system partitions, container images, and the small local volumes (MariaDB, Prometheus with 15-day retention, the Loki and Tempo caches) fit with room to spare, since logs, traces, backups and media are in S3.
 
 All three nodes are **control-plane nodes** that also run workloads, so etcd keeps quorum and the Kubernetes API stays up when any one node fails; **Talos's shared virtual IP** gives the API a single address that moves to a healthy node. The layout is recorded in [ADR 1020](adr/1020-three-node-ha-home-cluster.md).
 
 **Disk encryption:** Talos encrypts each node's system-state and data partitions, **sealed to the node's TPM 2.0** ([ADR 1031](adr/1031-kubernetes-component-hardening.md)).
 
-**Disks:** all three nodes must use **SSD or NVMe** storage, because etcd runs on every node and is sensitive to disk latency. Check boxes 1 and 2; a spinning disk should be replaced with an inexpensive SATA SSD before installing Talos.
+**Disks:** all three nodes have **SSD or NVMe** storage, which etcd needs, because it runs on every node and is sensitive to disk latency.
 
 **Memory budget** (Phase 1, estimates with every tier installed, including Advanced; Phase 2's additions are in its design doc):
 
 | Node | Main memory users | Estimated use |
 |---|---|---|
-| Box 3 (16 GB) | Talos control plane and etcd (~1.5 GB), Prometheus/Grafana/Alertmanager (~2 GB), Argo CD (~0.7 GB), Loki and Tempo (~0.8 GB), platform services (Kyverno, External Secrets, Trivy Operator, OpenCost, Argo Rollouts: ~2 GB), node agents (Cilium, Falco, Alloy: ~0.7 GB), MariaDB primary and a WordPress replica (~1.3 GB), Backstage with PostgreSQL (~1.2 GB), Chaos Mesh, CrowdSec and Tetragon (~0.6 GB) | **~11–14 GB** |
-| Box 1 (8 GB) | Talos control plane and etcd (~1.5 GB), node agents (~0.7 GB), a WordPress replica, the MariaDB replica, ingress-nginx and cloudflared replicas (~1.5 GB), staging runs while they exist (~1 GB) | **~4.5–5 GB** |
-| Box 2 (8 GB) | Talos control plane and etcd (~1.5 GB), node agents (~0.7 GB), CI runners while running (~0.5–1 GB), and overflow from box 3 (e.g. Backstage) if needed | **~3–5 GB** (Phase 2 adds the model: ~6.5–7 GB) |
+| `rl-home-cp03` (16 GB) | Talos control plane and etcd (~1.5 GB), Prometheus/Grafana/Alertmanager (~2 GB), Argo CD (~0.7 GB), Loki and Tempo (~0.8 GB), platform services (Kyverno, External Secrets, Trivy Operator, OpenCost, Argo Rollouts: ~2 GB), node agents (Cilium, Falco, Alloy: ~0.7 GB), MariaDB primary and a WordPress replica (~1.3 GB), Backstage with PostgreSQL (~1.2 GB), Chaos Mesh, CrowdSec and Tetragon (~0.6 GB) | **~11–14 GB** |
+| `rl-home-cp01` (8 GB) | Talos control plane and etcd (~1.5 GB), node agents (~0.7 GB), a WordPress replica, the MariaDB replica, ingress-nginx and cloudflared replicas (~1.5 GB), staging runs while they exist (~1 GB) | **~4.5–5 GB** |
+| `rl-home-cp02` (8 GB) | Talos control plane and etcd (~1.5 GB), node agents (~0.7 GB), CI runners while running (~0.5–1 GB), and overflow from `rl-home-cp03` (e.g. Backstage) if needed | **~3–5 GB** (Phase 2 adds the model: ~6.5–7 GB) |
 
-**Rule:** if box 3 passes about **85%** memory use, move Backstage (or, in Phase 2, MLflow) to box 1 or box 2 (which has the headroom), or upgrade box 3 to 32 GB (i5-8500T mini PCs take up to 64 GB). The plan checks memory at the steps that add large components.
+**Rule:** if `rl-home-cp03` passes about **85%** memory use, move Backstage (or, in Phase 2, MLflow) to `rl-home-cp01` or `rl-home-cp02` (which has the headroom), or upgrade `rl-home-cp03` to 32 GB (its maximum). The plan checks memory at the steps that add large components.
 
-**Memory:** about **32 GB** in total, so the earlier squeeze on box 1 is gone. Requests and memory limits on everything (Kyverno requires them) still keep a busy pod from starving the others, and the extra room allows **Tempo always on**, **CrowdSec** and **Tetragon** at home, and longer Prometheus retention (e.g. 15 days).
+**Memory:** about **32 GB** in total, so the earlier squeeze on `rl-home-cp01` is gone. Requests and memory limits on everything (Kyverno requires them) still keep a busy pod from starving the others, and the extra room allows **Tempo always on**, **CrowdSec** and **Tetragon** at home, and longer Prometheus retention (e.g. 15 days).
 
 **BIOS settings on every node:** power on after AC loss (so nodes restart by themselves after a power cut), virtualization enabled, current BIOS.
 
@@ -1161,7 +1174,7 @@ Two parts of the AWS design deliberately don't run at home:
 
 ### russetleaf.dev database backups
 
-The database is protected in two ways. Against a **node failure**, MariaDB Operator runs **primary–replica replication** (primary on box 3, replica on box 1) with **automatic failover**, so at most a few seconds of changes are lost. Against **disasters** (data deleted or corrupted, or the whole home lab lost), these **backups** run **every 6 hours**, so at most 6 hours of posts and settings can be lost. Volumes are on local disks with no replicated storage (no Ceph or Longhorn; see [ADR 1010](adr/1010-local-storage-no-ceph.md)).
+The database is protected in two ways. Against a **node failure**, MariaDB Operator runs **primary–replica replication** (primary on `rl-home-cp03`, replica on `rl-home-cp01`) with **automatic failover**, so at most a few seconds of changes are lost. Against **disasters** (data deleted or corrupted, or the whole home lab lost), these **backups** run **every 6 hours**, so at most 6 hours of posts and settings can be lost. Volumes are on local disks with no replicated storage (no Ceph or Longhorn; see [ADR 1010](adr/1010-local-storage-no-ceph.md)).
 
 **MariaDB Operator** (not Talos) backs up the russetleaf.dev database. Talos has its own snapshot feature, but it only covers the cluster's internal state (etcd), not application data. The operator's `Backup` resource, deployed by Argo CD from `russetleaf-gitops/platform/mariadb/`, runs a scheduled dump and uploads it to S3.
 
@@ -1215,7 +1228,7 @@ The cost column is what russetleaf.dev costs to run 24/7 in Phase 1. The russetl
 
 | Component | russetleaf.dev (home, 24/7) | russetleaf.com (AWS, Phase 3) | Est. monthly cost (USD) |
 |---|---|---|---|
-| Kubernetes | Talos: three control-plane nodes (box 3: i5-8500T, 16 GB; boxes 1 and 2: i3, 8 GB) with a virtual IP | EKS: general + GPU Karpenter NodePools | ~$3–5 (electricity for box 3) |
+| Kubernetes | Talos: three control-plane nodes (`rl-home-cp03`: i5-8500T, 16 GB; `rl-home-cp01`: i5-6400T, 8 GB; `rl-home-cp02`: i5-6500T, 8 GB) with a virtual IP | EKS: general + GPU Karpenter NodePools | ~$3–5 (electricity for `rl-home-cp03`) |
 | Node autoscaling | None (fixed hardware) | Karpenter | $0 |
 | Ingress / edge | Cloudflare Tunnel + Cloudflare WAF (free plan) → ingress-nginx | CloudFront (always on) → ALB + AWS WAF | $0 |
 | DNS | Cloudflare (russetleaf.dev) | Route 53 (russetleaf.com) + ExternalDNS | $0 |
@@ -1269,7 +1282,7 @@ A scheduled workflow computes the four **DORA metrics** from GitHub (pull reques
 
 ### Internal developer platform: golden paths and multi-tenancy
 
-- **Backstage** (on box 3, with a small PostgreSQL database run by the CloudNativePG operator) as the **developer portal**: a **service catalog** of every component and its owner, **TechDocs** built from the repos' documentation, and links to dashboards, runbooks and SLOs.
+- **Backstage** (on `rl-home-cp03`, with a small PostgreSQL database run by the CloudNativePG operator) as the **developer portal**: a **service catalog** of every component and its owner, **TechDocs** built from the repos' documentation, and links to dashboards, runbooks and SLOs.
 - **A software template (golden path)** that creates a **new service** with everything the platform expects: a repo with the CI pipeline (linting, SAST, tests, signed and attested images), a Helm chart that passes the Kyverno policies, CiliumNetworkPolicies, SLO definitions, a Grafana dashboard and alerts, a runbook stub, and registration with Argo CD through an **ApplicationSet**, all from one form.
 - **Proof:** a **second, different service** is created from the template (e.g. a small Go API serving post statistics or checking for broken links), and the **time from template to first production deploy** is measured and published.
 - **Multi-tenancy:** each team (or service) gets a **namespace**, an **Argo CD project**, **resource quotas and limit ranges**, scoped **RBAC**, per-tenant Kyverno policies, and **cost showback** per tenant (OpenCost). See [ADR 1022](adr/1022-internal-developer-platform.md).
@@ -1280,7 +1293,7 @@ The home Argo CD becomes the **hub** for other clusters. In Phase 1 the spoke is
 
 ### Reliability practice: chaos experiments and postmortems
 
-- **Chaos Mesh** runs **scheduled experiments**, each with a written hypothesis and expected outcome: kill the MariaDB primary, kill a WordPress pod mid-canary, fill a node's disk, partition box 2 from the others (Phase 2 adds latency injected into model calls). Results go into `docs/chaos/`.
+- **Chaos Mesh** runs **scheduled experiments**, each with a written hypothesis and expected outcome: kill the MariaDB primary, kill a WordPress pod mid-canary, fill a node's disk, partition `rl-home-cp02` from the others (Phase 2 adds latency injected into model calls). Results go into `docs/chaos/`.
 - **Blameless postmortems** (`docs/postmortems/`, from a template: summary, impact, timeline, root causes, what went well, action items with owners) for every real incident and notable drill; at least two from the build itself.
 - **SLO-based paging** (above) and runbook standards: every page links a runbook. See [ADR 1023](adr/1023-reliability-practice.md).
 
@@ -1304,4 +1317,4 @@ A series of **articles on russetleaf.dev** explaining the design decisions (the 
 
 ### Cost and memory
 
-Backstage (~1–1.5 GB with its database), Chaos Mesh and Sloth's rules fit on the three-node cluster (mostly box 3). About **$0**.
+Backstage (~1–1.5 GB with its database), Chaos Mesh and Sloth's rules fit on the three-node cluster (mostly `rl-home-cp03`). About **$0**.

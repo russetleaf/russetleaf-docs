@@ -17,7 +17,7 @@ Each step ends with a **test** that must pass before moving on. Unlike the home 
 
 Use the same Ubuntu 24.04 setup as the home lab ([Local workstation setup](../phase-1-russetleaf-dev/plan.md#local-workstation-setup-ubuntu-2404)). Additions for AWS:
 
-- An AWS SSO profile for the demo account (or the same account), and `aws eks update-kubeconfig --name <cluster> --alias eks-com --profile <profile>` after each `demo-up`, so the kubeconfig context is clearly named.
+- An AWS SSO profile for the demo account (or the same account), and `aws eks update-kubeconfig --name <cluster> --alias rl-use1 --profile <profile>` after each `demo-up`, so the kubeconfig context is clearly named.
 - Nothing else to install: `terraform`, `kubectl`, `helm`, `argocd` and the AWS CLI from the home lab setup cover EKS. Pin the `kubectl` version in `russetleaf-infra`'s `.mise.toml` within one minor version of the EKS version.
 
 ## Priorities and time estimates
@@ -124,6 +124,7 @@ Record each answer in the [decision log](#decision-log).
 **Do:**
 
 - EKS cluster with a small **managed node group** (2 nodes, e.g. t3.medium) for Karpenter, CoreDNS and other system pods.
+- **Names** ([ADR 1041](../phase-1-russetleaf-dev/adr/1041-naming-convention.md)): the cluster **`rl-use1`** (also the kubeconfig context and the `cluster` label), the managed node group **`rl-use1-sys`**, and **resource-based node names** (the instance ID rather than the IP address) for every node.
 - **Secrets envelope encryption** with a **customer-managed KMS key** ([ADR 1031](../phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md)), and kubelet `seccompDefault` on the nodes, plus a **per-pod PID limit** and **hard eviction thresholds** ([ADR 1034](../phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md)), through the managed node group's launch template (AL2023 node configuration) and Karpenter's node configuration (step 2.3).
 - Add-ons: VPC CNI (with its own network policy enforcement **off**, since Cilium enforces policies), CoreDNS, kube-proxy, **EBS CSI driver**, **Pod Identity agent**.
 - **Cilium in chaining mode**, installed by Terraform's Helm provider right after the cluster and managed node group exist: `cni.chainingMode: aws-cni`, `cni.exclusive: false`, `enableIPv4Masquerade: false`, `routingMode: native`; Hubble and Hubble Relay on; **WireGuard transparent encryption** on, **if** the Cilium version you install supports it in chaining mode with the VPC CNI (check Cilium's documentation; if it doesn't, leave it off and record that in the open items of [ADR 1001](../phase-1-russetleaf-dev/adr/1001-no-service-mesh.md), relying on the TLS already on every sensitive connection); ServiceMonitors **off** until monitoring exists (step 2.4); `lifecycle { ignore_changes }` so Argo CD manages it afterwards from `platform/cilium/overlays/aws`. Restart any pods that started before Cilium (e.g. CoreDNS) so Cilium manages them.
@@ -200,7 +201,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 2.3: Karpenter NodePools
 
-**Do:** `platform/karpenter/`: `EC2NodeClass` (AL2023 with a **pinned AMI version**, tracked by Renovate rather than "latest", so node images only change through a reviewed pull request; subnets and security groups by tag, encrypted gp3 root volume, **IMDSv2 required with a hop limit of 1** so pods can't reach the node's instance credentials; kubelet settings for `systemReserved`, `kubeReserved`, hard eviction thresholds and the **per-pod PID limit** from [ADR 1034](../phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md), set through the EC2NodeClass's kubelet settings or AL2023 node configuration, whichever the installed Karpenter version supports); **general NodePool** (spot + on-demand, several instance families, consolidation on, disruption budget); **GPU NodePool** (g6 family, spot preferred, label `workload=llm`, taint `dedicated=llm:NoSchedule`, consolidation off or limited so the model isn't moved needlessly). Both NodePools add the **startup taint** `node.cilium.io/agent-not-ready=true:NoExecute`, so no pod is scheduled on a new node until Cilium is running there.
+**Do:** `platform/karpenter/`: `EC2NodeClass` (a **`Name` tag** of `rl-use1-wk` for general nodes and `rl-use1-gpu` for GPU nodes, per [ADR 1041](../phase-1-russetleaf-dev/adr/1041-naming-convention.md); AL2023 with a **pinned AMI version**, tracked by Renovate rather than "latest", so node images only change through a reviewed pull request; subnets and security groups by tag, encrypted gp3 root volume, **IMDSv2 required with a hop limit of 1** so pods can't reach the node's instance credentials; kubelet settings for `systemReserved`, `kubeReserved`, hard eviction thresholds and the **per-pod PID limit** from [ADR 1034](../phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md), set through the EC2NodeClass's kubelet settings or AL2023 node configuration, whichever the installed Karpenter version supports); **general NodePool** (spot + on-demand, several instance families, consolidation on, disruption budget); **GPU NodePool** (g6 family, spot preferred, label `workload=llm`, taint `dedicated=llm:NoSchedule`, consolidation off or limited so the model isn't moved needlessly). Both NodePools add the **startup taint** `node.cilium.io/agent-not-ready=true:NoExecute`, so no pod is scheduled on a new node until Cilium is running there.
 
 - **NVIDIA device plugin** (DaemonSet) so pods can request `nvidia.com/gpu`. (The AL2023 NVIDIA AMI includes the drivers.)
 
@@ -211,7 +212,7 @@ Record each answer in the [decision log](#decision-log).
 **Do:** add `overlays/aws` for each shared component, changing only what AWS needs:
 
 - External Secrets: Pod Identity instead of the bootstrap key.
-- Monitoring: same stack; add CloudWatch metrics (ALB, RDS, RDS Proxy, ElastiCache) per the step 0.2 decision, in place of the home lab's MariaDB and Valkey exporters. The WordPress chart's apache_exporter, custom metrics and alerts work unchanged; point the blackbox_exporter probes at WordPress's in-cluster Service. Grafana is reached by `kubectl port-forward` only (there's no Cloudflare Access on this site). Alertmanager overlay: external labels `site=com`, `cluster=eks`; receivers for `#rl-com-alerts` and `#rl-critical`, plus the shared `#rl-security`, `#rl-mlops` and `#rl-costs` routes; the `Watchdog` heartbeat goes to its **own** heartbeat check, which is paused when the demo stack is down.
+- Monitoring: same stack; add CloudWatch metrics (ALB, RDS, RDS Proxy, ElastiCache) per the step 0.2 decision, in place of the home lab's MariaDB and Valkey exporters. The WordPress chart's apache_exporter, custom metrics and alerts work unchanged; point the blackbox_exporter probes at WordPress's in-cluster Service. Grafana is reached by `kubectl port-forward` only (there's no Cloudflare Access on this site). Alertmanager overlay: external labels `site=com`, `cluster=rl-use1`; receivers for `#rl-com-alerts` and `#rl-critical`, plus the shared `#rl-security`, `#rl-mlops` and `#rl-costs` routes; the `Watchdog` heartbeat goes to its **own** heartbeat check, which is paused when the demo stack is down.
 - **CiliumNetworkPolicies:** the same cluster-wide baseline and per-component policies from each component's `base/` (Phase 1 step 6.3), with AWS-specific destinations in `overlays/aws`: WordPress → the **RDS Proxy** and **ElastiCache** endpoints **by DNS name** instead of in-cluster MariaDB and Valkey; inbound to WordPress from the ALB (target-type `ip`, so traffic arrives from the VPC; allow the VPC's CIDR or the ALB's subnets); no cloudflared policy.
 - **Cilium and Hubble metrics:** the same `platform/cilium/` monitoring values as home (ServiceMonitors, Hubble metric set, dashboards, alert rules), now that the Prometheus Operator exists; Hubble UI by `kubectl port-forward`.
 - The same **Secrets Not From Env Vars**, user-namespace (if supported) and **mirrored-image** settings as home: EKS pulls the critical third-party images from the GHCR mirror.
@@ -280,7 +281,7 @@ Record each answer in the [decision log](#decision-log).
 
 **Do:** `platform/llm-serving/overlays/aws`: the llama.cpp **CUDA** server image (a third-party image: add a Kyverno exception for its exact digest, or rebuild and sign it in your own CI), `nvidia.com/gpu: 1` limit, tolerations and node selector for the GPU pool, the init container reading the model from the **model mirror bucket**; add it to the gateway's routing.
 
-**Test:** the pod lands on a spot g6 node; tokens per second are recorded (compare with box 2 in the decision log); gateway fallback to the local model works.
+**Test:** the pod lands on a spot g6 node; tokens per second are recorded (compare with `rl-home-cp02` in the decision log); gateway fallback to the local model works.
 
 ### Step 4.3: Evaluation on AWS (once)
 
@@ -302,7 +303,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 4.6: Deploy a fine-tuned challenger (at home)
 
-**Do:** after step 4.5 has produced a registered fine-tuned `local-summarizer` version that beats the base model, deploy it to box 2 as the **challenger**: llama.cpp loads it from the model mirror bucket (fed from the registry), the gateway sends it a canary share of summaries, and online evaluation compares it with the champion. Promote it (MLflow alias plus a `russetleaf-gitops` routing pull request) only if it holds up for a week; update `MODEL_CARD.md`.
+**Do:** after step 4.5 has produced a registered fine-tuned `local-summarizer` version that beats the base model, deploy it to `rl-home-cp02` as the **challenger**: llama.cpp loads it from the model mirror bucket (fed from the registry), the gateway sends it a canary share of summaries, and online evaluation compares it with the champion. Promote it (MLflow alias plus a `russetleaf-gitops` routing pull request) only if it holds up for a week; update `MODEL_CARD.md`.
 
 **Test:** the challenger serves its canary share; online evaluation shows champion-versus-challenger scores side by side; promotion or rejection is recorded in MLflow, the model card and the decision log.
 

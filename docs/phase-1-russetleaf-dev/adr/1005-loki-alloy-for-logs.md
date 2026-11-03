@@ -9,7 +9,7 @@
 
 The design covered metrics (Prometheus), alerts (Alertmanager to Slack), network flows (Hubble), security events (Falco) and optional traces (Tempo), but had **no central log storage**. Logs could only be read live with `kubectl logs` or `stern`; once a pod restarted, was evicted, or a staging run was deleted, its logs were lost. That makes debugging and incident review much harder.
 
-Constraints: box 1 of the home lab has 8 GB of RAM and already uses about 6–7 GB; both sites should work the same way; the home site runs outside AWS; cost must stay near zero.
+Constraints: `rl-home-cp01` of the home lab has 8 GB of RAM and already uses about 6–7 GB; both sites should work the same way; the home site runs outside AWS; cost must stay near zero.
 
 ## Decision
 
@@ -31,13 +31,13 @@ Constraints: box 1 of the home lab has 8 GB of RAM and already uses about 6–7 
 
 - Logs survive restarts and deletions, and are searchable alongside metrics and traces in Grafana.
 - New alert type: log-based alerts with runbooks.
-- Roughly **0.3–0.7 GB** more memory in use on box 1; retention, label count and dropped noise must be watched.
+- Roughly **0.3–0.7 GB** more memory in use on `rl-home-cp01`; retention, label count and dropped noise must be watched.
 - Alloy needs a narrow Kyverno `PolicyException` (host paths for log files, a host port for Talos logs).
 - Logs may hold personal data (IP addresses, occasionally emails): short retention, masking and restricted Grafana access are required.
 
 ## When to revisit
 
-- Memory becomes a blocker (originally box 1; since [ADR 1020](1020-three-node-ha-home-cluster.md), box 3 hosts Loki): consider VictoriaLogs, or shorter retention.
+- Memory becomes a blocker (originally `rl-home-cp01`; since [ADR 1020](1020-three-node-ha-home-cluster.md), `rl-home-cp03` hosts Loki): consider VictoriaLogs, or shorter retention.
 - Log volume grows enough that Loki's single-binary mode struggles: move to its scalable deployment mode (on AWS) or reduce what's collected.
 - A requirement for long-term log retention (e.g. an audit): add S3 lifecycle transitions to cheaper storage classes.
 

@@ -5,13 +5,13 @@
 - **Applies to:** both sites (always on for russetleaf.com demos; on demand for russetleaf.dev)
 - **Phase:** 1 (page traces, always on at home). Later: Phase 2 traces the summary pipeline end to end (100% of summary jobs); Phase 3 runs Tempo on every demo.
 
-> **Update ([ADR 1020](1020-three-node-ha-home-cluster.md)):** The home cluster now has three nodes (box 3: i5-8500T, 16 GB), so **Tempo runs always on at home** (sampled, 3-day retention), not on demand.
+> **Update ([ADR 1020](1020-three-node-ha-home-cluster.md)):** The home cluster now has three nodes (`rl-home-cp03`: i5-8500T, 16 GB), so **Tempo runs always on at home** (sampled, 3-day retention), not on demand.
 
 ## Context
 
 The design already has metrics (Prometheus), logs (Loki + Alloy), network flows (Hubble) and security events (Falco). Tracing was listed only as an optional WordPress-only extra, and the AWS plan had no step for it. The AI summary pipeline (WordPress → SQS → summarizer → LiteLLM gateway → Bedrock or llama.cpp) is asynchronous and crosses several services: when a summary is slow or fails, metrics and logs show *that* something went wrong, but not easily *where*.
 
-Constraints: box 1 of the home lab has 8 GB of RAM and is close to its limit; EKS (demos only) has memory to spare; cost must stay near zero.
+Constraints: `rl-home-cp01` of the home lab has 8 GB of RAM and is close to its limit; EKS (demos only) has memory to spare; cost must stay near zero.
 
 ## Decision
 
@@ -31,7 +31,7 @@ Constraints: box 1 of the home lab has 8 GB of RAM and is close to its limit; EK
 - **Jaeger:** a well-known tracing backend, but a separate UI from Grafana, and its storage options are heavier for this setup; Tempo integrates directly with Grafana, Loki and Prometheus.
 - **AWS X-Ray:** AWS-native, but doesn't cover the home site, and would split tracing between two tools.
 - **A separate OpenTelemetry Collector:** unnecessary, since Alloy already runs on every node and handles OTLP.
-- ~~**Always-on Tempo at home:** doesn't fit box 1's memory alongside everything else.~~ **Superseded by [ADR 1020](1020-three-node-ha-home-cluster.md):** with three nodes (box 3 has 16 GB), Tempo now runs always on at home.
+- ~~**Always-on Tempo at home:** doesn't fit `rl-home-cp01`'s memory alongside everything else.~~ **Superseded by [ADR 1020](1020-three-node-ha-home-cluster.md):** with three nodes (`rl-home-cp03` has 16 GB), Tempo now runs always on at home.
 
 ## Consequences
 
@@ -42,7 +42,7 @@ Constraints: box 1 of the home lab has 8 GB of RAM and is close to its limit; EK
 
 ## When to revisit
 
-- More memory on box 1: keep Tempo on permanently at home.
+- More memory on `rl-home-cp01`: keep Tempo on permanently at home.
 - Trace volume growing beyond what single-binary Tempo handles: move to its scalable deployment mode.
 - A move fully into AWS: reconsider X-Ray or AWS's managed options.
 

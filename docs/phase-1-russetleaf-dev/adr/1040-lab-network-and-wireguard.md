@@ -13,7 +13,7 @@ The decision is needed before Talos is installed: the nodes' addresses and the c
 
 ## Decision
 
-- **A TP-Link ER605 (v2) router in front of the lab:** WAN port to the mesh extender, LAN port to the switch. The lab is its own subnet, **`10.10.0.0/24`**: gateway `10.10.0.1`, cluster virtual IP `10.10.0.10`, boxes 1–3 at `10.10.0.11`–`.13`.
+- **A TP-Link ER605 (v2) router in front of the lab:** WAN port to the mesh extender, LAN port to the switch. The lab is its own subnet, **`10.10.0.0/24`**: gateway `10.10.0.1`, cluster virtual IP `10.10.0.10`, the three nodes at `10.10.0.11`–`.13`.
 - **Isolation:** an access-control rule on the ER605 lets the lab reach the internet but **not `192.168.1.0/24`**; the ER605's NAT keeps household devices out; no port forwards anywhere (the Cloudflare Tunnel is outbound-only).
 - **Workstation access over WireGuard:** the ER605's WireGuard server (clients `10.10.99.0/24`) listens on its WAN address on the household network, so the workstation connects from the household Wi-Fi with **no port forwarding on the Spectrum router**. The client profile is a **split tunnel** (only `10.10.0.0/24`). The Talos host firewall allows the Kubernetes and Talos APIs only from the lab subnet and the WireGuard clients.
 - **The admin tools don't need the VPN:** Grafana, Argo CD and Hubble UI stay behind Cloudflare Access.

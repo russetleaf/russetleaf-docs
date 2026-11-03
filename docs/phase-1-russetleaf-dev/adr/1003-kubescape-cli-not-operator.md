@@ -21,7 +21,7 @@ Most of this is already covered by tools in the design:
 | Network policy suggestions | Hand-written CiliumNetworkPolicies, debugged with Hubble |
 | **Framework scores (NSA-CISA, MITRE ATT&CK) and RBAC risk analysis** | **Nothing (the gap)** |
 
-Box 1 of the home lab has 8 GB of RAM and already uses about 6–7 GB.
+`rl-home-cp01` of the home lab has 8 GB of RAM and already uses about 6–7 GB.
 
 ## Decision
 
@@ -33,7 +33,7 @@ Box 1 of the home lab has 8 GB of RAM and already uses about 6–7 GB.
 
 ## Alternatives considered
 
-- **Kubescape operator in the cluster:** continuous scanning and in-cluster reports, but several components using roughly 0.5–1 GB of memory, most of it duplicating Trivy Operator and Falco. Doesn't fit box 1.
+- **Kubescape operator in the cluster:** continuous scanning and in-cluster reports, but several components using roughly 0.5–1 GB of memory, most of it duplicating Trivy Operator and Falco. Doesn't fit `rl-home-cp01`.
 - **Kubescape manifest scanning in CI:** largely duplicates Checkov and the Kyverno CLI; adds framework labels but little new coverage.
 - **Not using Kubescape at all:** leaves no framework-based posture score or RBAC risk review.
 

@@ -1,6 +1,6 @@
 # Phase 2 build plan: AI post summaries and MLOps
 
-This is the step-by-step plan for **Phase 2**, described in the [Phase 2 design](design.md): AI-generated post summaries on russetleaf.dev, with an LLM gateway, a self-hosted model on box 2, and an MLOps lifecycle. It needs **Phase 1's Core tier** finished (the cluster, GitOps, platform services, WordPress, ci, staging and promotion, Kyverno and network policies). Fine-tuning and deploying a fine-tuned challenger need a GPU, so they're in [Phase 3](../phase-3-russetleaf-com/plan.md) (steps 4.5 and 4.6).
+This is the step-by-step plan for **Phase 2**, described in the [Phase 2 design](design.md): AI-generated post summaries on russetleaf.dev, with an LLM gateway, a self-hosted model on `rl-home-cp02`, and an MLOps lifecycle. It needs **Phase 1's Core tier** finished (the cluster, GitOps, platform services, WordPress, ci, staging and promotion, Kyverno and network policies). Fine-tuning and deploying a fine-tuned challenger need a GPU, so they're in [Phase 3](../phase-3-russetleaf-com/plan.md) (steps 4.5 and 4.6).
 
 Each step is sized for one or a few Claude sessions and ends with a **test** that must pass before moving on. Work the same way as in Phase 1 (see its [How to use this plan with Claude](../phase-1-russetleaf-dev/plan.md#how-to-use-this-plan-with-claude)): start each session by pointing Claude at this plan, the Phase 2 design and the overview; one step at a time; record actual hours; keep the plan and decision log current. Before starting, write this phase's `roadmap.md` (milestones and dates, in the format of Phase 1's [roadmap](../phase-1-russetleaf-dev/roadmap.md)), create its issues with `tools/plan_to_issues.py`, and write a spec per step from [`docs/specs/TEMPLATE.md`](../specs/TEMPLATE.md).
 
@@ -10,7 +10,7 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | A working, evaluated and secured summary pipeline: the repo, AWS resources, box 2 as the LLM node, the WordPress side, KEDA, the gateway, the summarizer, its release and monitoring, the evaluation set, runners and gate, security for the new components, and the docs. | 1.1–1.4, 2.1–2.5, 4.1–4.3, 5.1, 5.3 | **~47–81** |
+| **Core** | A working, evaluated and secured summary pipeline: the repo, AWS resources, `rl-home-cp02` as the LLM node, the WordPress side, KEDA, the gateway, the summarizer, its release and monitoring, the evaluation set, runners and gate, security for the new components, and the docs. | 1.1–1.4, 2.1–2.5, 4.1–4.3, 5.1, 5.3 | **~47–81** |
 | **Extended** | The full MLOps lifecycle: the AI burst test, the self-hosted model and gateway routing, MLflow tracking and registry, guardrails, online evaluation and drift, and observability and operations for the AI components. | 2.6, 3.1, 3.2, 4.4–4.6, 5.2 | **~32–53** |
 | **Advanced** | The feedback loop and data versioning (DVC). | 4.7 | **~6–10** |
 | **Total** | | | **~85–144** |
@@ -24,10 +24,10 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | Decision | Recommendation | Why it matters |
 |---|---|---|
 | **Summarizer language** | **Python** (boto3 for SQS, the `openai` client for the gateway, OpenTelemetry SDK). | Fastest path; the most common language for MLOps work. |
-| **Models** | **Claude Haiku** (default) and **Amazon Nova Lite** on Bedrock, plus a 4-bit **3B model** (e.g. Qwen2.5-3B or Llama 3.2 3B) on box 2 with llama.cpp. | Sets the budgets, the evaluation set and box 2's memory use. |
+| **Models** | **Claude Haiku** (default) and **Amazon Nova Lite** on Bedrock, plus a 4-bit **3B model** (e.g. Qwen2.5-3B or Llama 3.2 3B) on `rl-home-cp02` with llama.cpp. | Sets the budgets, the evaluation set and `rl-home-cp02`'s memory use. |
 | **AWS access for the AI components** | Pod roles through the cluster's OIDC provider if Phase 1 step 9.1 (keyless AWS access) is done; otherwise scoped IAM keys, like the rest of Phase 1. | Avoids adding new static keys if they can be avoided. |
 
-ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture) and 2003 (self-hosted model on box 2), in `adr/` (see the [overview's index](../overview.md#architecture-decision-records)).
+ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture) and 2003 (self-hosted model on `rl-home-cp02`), in `adr/` (see the [overview's index](../overview.md#architecture-decision-records)).
 
 ## Stage 1: Foundations
 
@@ -43,11 +43,11 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 **Test:** each credential's allowed action works and a disallowed one fails (e.g. the summarizer can't send to the queue); `aws bedrock-runtime converse` with the LiteLLM credential returns a response; the budget alert exists; deleting the model mirror bucket is refused by the plan.
 
-### Step 1.3: Box 2 as the LLM node
+### Step 1.3: `rl-home-cp02` as the LLM node
 
-**Do:** in `russetleaf-infra/envs/home`, label box 2 `workload=llm` and taint it `dedicated=llm:NoSchedule`; give the ARC runners a matching toleration so they keep running there, next to the model; move anything else that ran on box 2 in Phase 1 (e.g. Backstage overflow) back to boxes 1 and 3; recheck the kubelet PID limit against llama.cpp's process count. Update the memory budget in the Phase 2 design.
+**Do:** in `russetleaf-infra/envs/home`, label `rl-home-cp02` `workload=llm` and taint it `dedicated=llm:NoSchedule`; give the ARC runners a matching toleration so they keep running there, next to the model; move anything else that ran on `rl-home-cp02` in Phase 1 (e.g. Backstage overflow) back to `rl-home-cp01` and `rl-home-cp03`; recheck the kubelet PID limit against llama.cpp's process count. Update the memory budget in the Phase 2 design.
 
-**Test:** `kubectl describe node <box2>` shows the label and taint; only the runners and node agents run on box 2; every node stays under its memory budget.
+**Test:** `kubectl describe node <box2>` shows the label and taint; only the runners and node agents run on `rl-home-cp02`; every node stays under its memory budget.
 
 ### Step 1.4: WordPress side of the pipeline (`russetleaf-wordpress`)
 
@@ -118,13 +118,13 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 **Test:** the queue drains completely within the expected time, nothing is lost (failures end up in the dead-letter queue with alerts), the summarizer scales back to zero, and the burst's cost is recorded.
 
-## Stage 3: Self-hosted model (box 2)
+## Stage 3: Self-hosted model (`rl-home-cp02`)
 
 ### Step 3.1: llama.cpp model server
 
-**Do:** `platform/llm-serving/`: llama.cpp server (CPU build) with a toleration and node selector for box 2; an init container that downloads a 4-bit **3B model** (e.g. Qwen2.5-3B or Llama 3.2 3B) into a local-path volume (mirror the file in S3 so rebuilds don't depend on Hugging Face); metrics enabled; memory limits leaving ~1 GB free on the node, and a **CPU limit leaving about one core free**, because box 2 is also an etcd member (watch etcd's latency metrics while summaries run).
+**Do:** `platform/llm-serving/`: llama.cpp server (CPU build) with a toleration and node selector for `rl-home-cp02`; an init container that downloads a 4-bit **3B model** (e.g. Qwen2.5-3B or Llama 3.2 3B) into a local-path volume (mirror the file in S3 so rebuilds don't depend on Hugging Face); metrics enabled; memory limits leaving ~1 GB free on the node, and a **CPU limit leaving about one core free**, because `rl-home-cp02` is also an etcd member (watch etcd's latency metrics while summaries run).
 
-**Test:** the pod runs **only** on box 2; an OpenAI-style request returns a summary; record the time per summary and memory use in the decision log.
+**Test:** the pod runs **only** on `rl-home-cp02`; an OpenAI-style request returns a summary; record the time per summary and memory use in the decision log.
 
 ### Step 3.2: Gateway routing to the local model
 
@@ -142,7 +142,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 4.2: Runners for `russetleaf-llm-summarizer`
 
-**Do:** add a second ARC runner scale set (Phase 1 step 5.5) registered to **`russetleaf-llm-summarizer`**, on box 2 next to the model, with the same protections (approval for fork pull requests, self-hosted label limited to the evaluation workflows).
+**Do:** add a second ARC runner scale set (Phase 1 step 5.5) registered to **`russetleaf-llm-summarizer`**, on `rl-home-cp02` next to the model, with the same protections (approval for fork pull requests, self-hosted label limited to the evaluation workflows).
 
 **Test:** a test workflow runs on a self-hosted runner pod, which is deleted afterwards; a fork pull request waits for approval.
 
@@ -159,9 +159,9 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 4.4: Experiment tracking and model registry (MLflow)
 
-**Do:** `platform/mlflow/` (placed on box 3): the MLflow tracking server with MariaDB for metadata and an S3 artifact bucket (`s3-mlops` module in `russetleaf-infra`, scoped access through External Secrets), behind Cloudflare Access. Change the evaluation gate (step 4.3) to log every run to MLflow (Git commit, prompt version, model, dataset version, scores, latency, cost). Register `summarizer-config` and `local-summarizer` (the current 3B model file) with `champion` aliases, feed the model mirror bucket from the registry, and make routing changes in `russetleaf-gitops` reference registry versions. (If Phase 3 is built, its step 1.7 adds a **cross-account bucket-policy grant** in the `s3-mlops` module letting russetleaf-com's EKS **training role** write to the MLflow artifact and DVC buckets.) **Check box 3's memory** afterwards against the budget in the Phase 2 design; if it passes about 85%, place MLflow on box 1. See the Phase 2 design's [MLOps lifecycle](design.md#mlops-lifecycle).
+**Do:** `platform/mlflow/` (placed on `rl-home-cp03`): the MLflow tracking server with MariaDB for metadata and an S3 artifact bucket (`s3-mlops` module in `russetleaf-infra`, scoped access through External Secrets), behind Cloudflare Access. Change the evaluation gate (step 4.3) to log every run to MLflow (Git commit, prompt version, model, dataset version, scores, latency, cost). Register `summarizer-config` and `local-summarizer` (the current 3B model file) with `champion` aliases, feed the model mirror bucket from the registry, and make routing changes in `russetleaf-gitops` reference registry versions. (If Phase 3 is built, its step 1.7 adds a **cross-account bucket-policy grant** in the `s3-mlops` module letting russetleaf-com's EKS **training role** write to the MLflow artifact and DVC buckets.) **Check `rl-home-cp03`'s memory** afterwards against the budget in the Phase 2 design; if it passes about 85%, place MLflow on `rl-home-cp01`. See the Phase 2 design's [MLOps lifecycle](design.md#mlops-lifecycle).
 
-**Test:** box 3's memory stays under about 85%; an evaluation run appears in MLflow with its parameters, metrics and report; the registry shows both models with lineage to their runs; the gateway's routing points at a registered version.
+**Test:** `rl-home-cp03`'s memory stays under about 85%; an evaluation run appears in MLflow with its parameters, metrics and report; the registry shows both models with lineage to their runs; the gateway's routing points at a registered version.
 
 ### Step 4.5: Guardrails
 
@@ -189,7 +189,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 - **Kyverno:** add the `russetleaf-llm-summarizer` release workflow's signing identity to image verification (signature, SBOM and provenance); Pod Security Admission labels (`restricted`) and quotas on the summarizer, gateway and model namespaces; KEDA on the service-account token allow-list; a `PolicyException` for llama.cpp's image only if it genuinely can't run read-only or as non-root.
 - **CiliumNetworkPolicies:** summarizer → SQS, the gateway and WordPress's REST API (a **layer-7** rule: `GET`/`POST` on `/wp-json/*` only); gateway → llama.cpp and `bedrock-runtime`; llama.cpp's init container → the model mirror bucket only.
-- **Falco:** process allow-lists for the summarizer and gateway (`python`) and llama.cpp (`llama-server`); a rule for unexpected outbound connections from box 2.
+- **Falco:** process allow-lists for the summarizer and gateway (`python`) and llama.cpp (`llama-server`); a rule for unexpected outbound connections from `rl-home-cp02`.
 - Optional: a recorded **custom seccomp profile** for the summarizer (as in Phase 1 step 7.7).
 
 **Test:** an unsigned summarizer image is rejected; a non-REST-API request from the summarizer to WordPress is blocked at layer 7; `curl https://example.com` from the gateway is blocked while Bedrock calls work; starting an unlisted process in the summarizer raises a Falco alert; the summary pipeline still works end to end.
@@ -199,17 +199,17 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Do:**
 
 - **Tracing:** turn tracing on in the summarizer and gateway values, sampling 100% of summary jobs.
-- **Cost:** OpenCost with box 2 attributed to the LLM namespace and the Bedrock spend shown alongside; the Bedrock row in the monthly cost review.
+- **Cost:** OpenCost with `rl-home-cp02` attributed to the LLM namespace and the Bedrock spend shown alongside; the Bedrock row in the monthly cost review.
 - **SLOs:** summary **freshness** (99% within 15 minutes) and daily **quality** (95%) in Sloth, with the error-budget policy covering summarizer releases (if Phase 1 step 8.1 is done).
 - **Chaos:** latency injected into model calls with a **Toxiproxy** sidecar in front of the gateway's upstream calls (Chaos Mesh's network rules can't reliably target AWS endpoints), if Phase 1 step 8.6 is done.
 - **Rollback:** `docs/runbooks/rollback-models.md` (routing revert, re-summarize job) and a drill: roll back a prompt version and re-summarize the affected posts.
-- **Drills:** include the summarizer in the node-failure drill (box 2 offline: the gateway falls back to Bedrock).
+- **Drills:** include the summarizer in the node-failure drill (`rl-home-cp02` offline: the gateway falls back to Bedrock).
 
-**Test:** publishing a post produces **one trace** covering WordPress → the queue message → the summarizer → the gateway → the model call → saving the summary, showing which model answered, with no post text, prompts or summaries in any span; OpenCost shows the LLM namespace's cost; the re-summarize drill restores the earlier summaries; with box 2 off, summaries still arrive through Bedrock.
+**Test:** publishing a post produces **one trace** covering WordPress → the queue message → the summarizer → the gateway → the model call → saving the summary, showing which model answered, with no post text, prompts or summaries in any span; OpenCost shows the LLM namespace's cost; the re-summarize drill restores the earlier summaries; with `rl-home-cp02` off, summaries still arrive through Bedrock.
 
 ### Step 5.3: Documentation
 
-**Do:** finish ADRs [2001](adr/2001-mlops-lifecycle.md), [2002](adr/2002-summary-pipeline-architecture.md) and [2003](adr/2003-self-hosted-model-on-box-2.md) (resolve their open items); update the Phase 2 design wherever the build differed; add the LLM dashboard, an evaluation report and an MLflow run to the hub README's screenshots; add the AI pipeline to the hub README's architecture diagram; optionally an article on evaluation gates for LLMs.
+**Do:** finish ADRs [2001](adr/2001-mlops-lifecycle.md), [2002](adr/2002-summary-pipeline-architecture.md) and [2003](adr/2003-self-hosted-model-on-cp02.md) (resolve their open items); update the Phase 2 design wherever the build differed; add the LLM dashboard, an evaluation report and an MLflow run to the hub README's screenshots; add the AI pipeline to the hub README's architecture diagram; optionally an article on evaluation gates for LLMs.
 
 **Test:** every Phase 2 ADR's open items are resolved or moved to a later phase; the README shows the pipeline.
 
@@ -228,7 +228,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 |---|---|---|---|---|---|---|---|
 | 1.1 `russetleaf-llm-summarizer` repo | Core | 2–3 | ☐ | | | | |
 | 1.2 AWS resources for the AI pipeline | Core | 3–5 | ☐ | | | | |
-| 1.3 Box 2 as the LLM node | Core | 1–2 | ☐ | | | | |
+| 1.3 `rl-home-cp02` as the LLM node | Core | 1–2 | ☐ | | | | |
 | 1.4 WordPress side of the pipeline | Core | 4–7 | ☐ | | | | |
 | 2.1 KEDA | Core | 1–3 | ☐ | | | | |
 | 2.2 LiteLLM gateway | Core | 3–5 | ☐ | | | | |
@@ -236,7 +236,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 | 2.4 Summarizer chart + deploy | Core | 6–10 | ☐ | | | | |
 | 2.5 LLM monitoring | Core | 3–6 | ☐ | | | | |
 | 2.6 AI pipeline burst test | Extended | 3–5 | ☐ | | | | |
-| 3.1 llama.cpp on box 2 | Extended | 4–6 | ☐ | | | | |
+| 3.1 llama.cpp on `rl-home-cp02` | Extended | 4–6 | ☐ | | | | |
 | 3.2 Gateway routing to local model | Extended | 2–4 | ☐ | | | | |
 | 4.1 Evaluation set | Core | 5–8 | ☐ | | | | |
 | 4.2 Runners for `russetleaf-llm-summarizer` | Core | 1–2 | ☐ | | | | |

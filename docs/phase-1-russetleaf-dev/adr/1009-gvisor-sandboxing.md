@@ -36,7 +36,7 @@ Constraints: home nodes have 8 GB of RAM; Talos offers official system extension
 ## Consequences
 
 - Every container runs with the default seccomp filter at no cost.
-- Code from pull requests runs in a user-space kernel sandbox, separated from box 2's host kernel.
+- Code from pull requests runs in a user-space kernel sandbox, separated from `rl-home-cp02`'s host kernel.
 - gVisor adds some CPU overhead and a little memory per sandboxed pod, and some programs that rely on unusual system calls may not work under it (test before enforcing).
 - Falco needs its gVisor event source configured to keep visibility inside sandboxed pods.
 - The two sites differ: gVisor is home-only, documented here.

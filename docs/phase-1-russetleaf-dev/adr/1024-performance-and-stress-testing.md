@@ -14,7 +14,7 @@ Load tests appeared only in passing (the gVisor comparison, light load during no
 - Six test types: **smoke, load, stress/breakpoint, spike, soak** and an **AI pipeline burst**, with defined places to run them (staging, quiet production windows, EKS during demos).
 - **k6** scripts in `russetleaf-gitops/perf/` with thresholds in code; the **k6 Operator** for distributed, in-cluster tests against the ingress; results to Prometheus and Grafana; summaries in `docs/performance/`.
 - **Edge tests** through Cloudflare or CloudFront only with a narrow, temporary WAF allow rule applied by Terraform.
-- A **performance regression gate** in `staging-test`: the **current production version and the candidate are load-tested back to back in staging** (same hardware, same conditions, minutes apart), each **three times**, comparing **medians**; more than about 20% slower, or over the error threshold, fails promotion. The gate **waits** while box 2 is busy with a summarization burst or a stress test is running, so shared-cluster load doesn't cause false failures.
+- A **performance regression gate** in `staging-test`: the **current production version and the candidate are load-tested back to back in staging** (same hardware, same conditions, minutes apart), each **three times**, comparing **medians**; more than about 20% slower, or over the error threshold, fails promotion. The gate **waits** while `rl-home-cp02` is busy with a summarization burst or a stress test is running, so shared-cluster load doesn't cause false failures.
 - Results feed the SLO targets, the capacity and cost plan, KEDA limits and Bedrock budget thresholds.
 
 ## Alternatives considered
@@ -23,7 +23,7 @@ Load tests appeared only in passing (the gVisor comparison, light load during no
 - **Grafana Cloud k6 or other hosted load testing:** easy to scale and run from many regions, but a paid hosted service; in-cluster tests cover these sites' needs.
 - **Testing only through the edge from a workstation:** realistic, but limited by home bandwidth and blocked by the WAFs; used only for deliberate edge tests.
 - **No regression gate:** simpler, but lets performance degrade release by release unnoticed.
-- **Comparing staging results with a stored production baseline:** simpler, but noisy on a shared three-node cluster (LLM work on box 2 and monitoring on box 3 vary over time); back-to-back runs in the same conditions are more reliable.
+- **Comparing staging results with a stored production baseline:** simpler, but noisy on a shared three-node cluster (LLM work on `rl-home-cp02` and monitoring on `rl-home-cp03` vary over time); back-to-back runs in the same conditions are more reliable.
 
 ## Consequences
 

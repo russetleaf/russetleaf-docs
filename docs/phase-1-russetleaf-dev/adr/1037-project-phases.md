@@ -16,13 +16,13 @@ Build in **three phases**, each complete and demonstrable on its own, with its o
 | Phase | Builds | Needs |
 |---|---|---|
 | **1. russetleaf.dev** | WordPress on the three-node Talos cluster at home, with the AWS Organization it uses, GitOps, platform services, security, observability, staging and promotion, DR, and the Advanced-tier practices | — |
-| **2. AI summaries and MLOps** | The summary pipeline (SQS, KEDA, LiteLLM, Bedrock, the self-hosted model on box 2), the evaluation gate, MLflow, guardrails, online evaluation, drift, feedback and DVC | Phase 1 |
+| **2. AI summaries and MLOps** | The summary pipeline (SQS, KEDA, LiteLLM, Bedrock, the self-hosted model on `rl-home-cp02`), the evaluation gate, MLflow, guardrails, online evaluation, drift, feedback and DVC | Phase 1 |
 | **3. russetleaf.com** | The EKS demo site (Karpenter, RDS with RDS Proxy, ElastiCache, CloudFront, ALB, WAF, the always-on edge), plus the AI pipeline on EKS and GPU fine-tuning if Phase 2 is built | Phase 1 (Phase 2 optional) |
 
 - **Documents:** the [overview](../../overview.md) holds what's shared (the phases, how the two sites compare, security views, effort, repositories, the ADR index); each phase has a folder with `design.md`, `plan.md` and `adr/`.
 - **ADR numbers start with the phase:** Phase 1's decisions are numbered 1001 upwards, Phase 2's 2001 upwards and Phase 3's 3001 upwards, so each phase's set is contiguous and complete on its own, and a number shows its phase at a glance. Numbers are unique across the project and don't change once used. Each ADR lives in the `adr/` folder of the phase that first implements it. (The ADRs were renumbered into this scheme on 2026-11-02, before any were published; earlier commits use the old 0001–0048 numbers.) Where a decision has a substantial later-phase part, that part is a separate ADR in the later phase (3002–3005); smaller later-phase parts are noted in the ADR's **Phase** line.
 - **Plans group steps into stages** ("Phase" always means one of the three project phases); step references across phases name the phase ("Phase 1 step 4.6").
-- **Phase 1 stands alone:** nothing in it waits for AI or EKS. Box 2 is an ordinary third node until Phase 2; fleet management uses a local spoke cluster until Phase 3; the capacity plan uses home load tests until Phase 3.
+- **Phase 1 stands alone:** nothing in it waits for AI or EKS. `rl-home-cp02` is an ordinary third node until Phase 2; fleet management uses a local spoke cluster until Phase 3; the capacity plan uses home load tests until Phase 3.
 
 ## Alternatives considered
 
