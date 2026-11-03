@@ -38,6 +38,7 @@ The design could already rebuild most things from code (Terraform, GitOps, image
 - Backups survive an account compromise, an account loss, and malicious deletion (for 30 days), not just hardware failures.
 - One more AWS account to secure (root login with MFA, no day-to-day use), and an AWS Organization to manage.
 - A few cents a month for storage and replication.
+- **Security Hub backup findings:** AWS Backup is not used, so Security Hub may report resources (e.g. RDS instances, S3 buckets) as not covered by a backup plan. These findings are **suppressed with a recorded reason** pointing to this ADR (S3 replication with Object Lock, MariaDB Operator backups, RDS automated backups, final snapshots and logical dumps cover them), rather than left open; the weekly Security Hub review checks no new kind of backup finding appears.
 - Recovery is documented and rehearsed; a full rebuild's real duration is known.
 - The break-glass kit becomes critical: it must be kept current and its printed copy stored safely.
 

@@ -74,6 +74,7 @@ These steps must be done first, because this plan builds on them:
 - **SES production access** (or a verified test address) for russetleaf.com.
 - **Backup account:** the disaster-recovery backup account and replication (Phase 1 step 2.5) must exist first; add the russetleaf.com media and backup buckets to its replication in step 1.2.
 - **russetleaf.com DNS:** if the domain is registered outside Route 53, plan to move its name servers to Route 53 in step 1.2.
+- **AWS Config for the new account** (`envs/security`): the organization's focused recording, with **daily recording** for the high-churn demo resource types (EC2 instances, network interfaces, security groups, volumes) and continuous recording for IAM, S3 and KMS ([ADR 1019](../phase-1-russetleaf-dev/adr/1019-aws-multi-account-sra.md)).
 - **Budget guardrails:** the **russetleaf-com** account's budget (from `envs/org`, e.g. alerts at $20 and $40 per month), and a **Cost Anomaly Detection** monitor. Send both to an **SNS topic** connected to Slack `#rl-costs` through **Amazon Q Developer in chat applications** (formerly AWS Chatbot), as well as by email. (Created by hand here; Terraform's `alerting` module takes over in step 1.7.)
 
 **Test:** the russetleaf-com account exists in the Workloads OU; a test budget notification arrives by email and in `#rl-costs`.
