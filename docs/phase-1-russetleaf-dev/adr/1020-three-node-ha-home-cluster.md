@@ -6,7 +6,7 @@
 - **Phase:** 1. Later: `rl-home-cp02` becomes the dedicated LLM node in Phase 2 ([ADR 2003](../../phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md)).
 - **Updates:** [ADR 1006](1006-tempo-tracing.md) (Tempo always on at home), [ADR 1010](1010-local-storage-no-ceph.md) (database HA from replication), [ADR 1014](1014-availability-levels.md) (home availability), [ADR 1015](1015-process-allow-listing.md) (Tetragon feasible at home), [ADR 1017](1017-intrusion-detection-and-prevention.md) (CrowdSec feasible at home)
 
-> **Update ([ADR 1026](1026-cpu-limits.md)):** The CI runners on `rl-home-cp02` also get **CPU limits**, so llama.cpp and the runners together always leave at least one core for etcd, and **etcd health alerts** (disk sync latency, leader changes, proposal failures) watch whether that's enough; if they fire, the runners move to `rl-home-cp01`. See [ADR 1026](1026-cpu-limits.md).
+> **Update ([ADR 1026](1026-cpu-limits.md)):** The CI runners on `rl-home-cp02` also get **CPU limits**, so llama.cpp and the runners together always leave at least one core for etcd, and **etcd health alerts** (disk sync latency, leader changes, proposal failures) watch whether that is enough; if they fire, the runners move to `rl-home-cp01`. See [ADR 1026](1026-cpu-limits.md).
 
 ## Context
 
@@ -22,8 +22,8 @@ The home lab had two nodes with 8 GB of RAM each: `rl-home-cp01` (single control
 | **`rl-home-cp01`** | Lenovo M710q, i5-6400T (4 cores), 8 GB | Control plane + **secondary workloads**: a WordPress replica, the **MariaDB replica**, second ingress-nginx and cloudflared replicas, staging runs |
 | **`rl-home-cp02`** | Dell OptiPlex 3040, i5-6500T (4 cores), 8 GB | Control plane + **dedicated LLM** (label `workload=llm`, taint `dedicated=llm:NoSchedule`) and the CI runners |
 
-- **Protect etcd on `rl-home-cp02`:** llama.cpp gets a **CPU limit leaving about one core free**, and every node sets Talos's **system and kubelet reservations** (CPU and memory), so the model can't starve etcd or the kubelet. **All three nodes must use SSD or NVMe storage** (etcd now runs on every node and is sensitive to disk latency); check `rl-home-cp01` and `rl-home-cp02`, and replace a spinning disk with an inexpensive SATA SSD before installing Talos.
-- **Database HA through replication, not distributed storage:** MariaDB Operator **primary–replica replication** (primary on `rl-home-cp03`, replica on `rl-home-cp01`) with **automatic failover**; the 6-hourly S3 backups stay for disasters. Valkey stays single (it's a cache; WordPress falls back to the database).
+- **Protect etcd on `rl-home-cp02`:** llama.cpp gets a **CPU limit leaving about one core free**, and every node sets Talos's **system and kubelet reservations** (CPU and memory), so the model cannot starve etcd or the kubelet. **All three nodes must use SSD or NVMe storage** (etcd now runs on every node and is sensitive to disk latency); check `rl-home-cp01` and `rl-home-cp02`, and replace a spinning disk with an inexpensive SATA SSD before installing Talos.
+- **Database HA through replication, not distributed storage:** MariaDB Operator **primary–replica replication** (primary on `rl-home-cp03`, replica on `rl-home-cp01`) with **automatic failover**; the 6-hourly S3 backups stay for disasters. Valkey stays single (it is a cache; WordPress falls back to the database).
 - **Spread the stateless workloads:** WordPress (2–3 replicas), ingress-nginx and cloudflared (2 replicas each) across nodes with anti-affinity or topology spread, and PodDisruptionBudgets.
 - **Memory budget per node** (estimates with every tier installed): `rl-home-cp03` about **11–14 GB of 16**, `rl-home-cp01` about **4.5–5 GB of 8**, `rl-home-cp02` about **6.5–7 GB of 8** (with a 3B model). If `rl-home-cp03` passes about **85%**, move MLflow or Backstage to `rl-home-cp01`, or upgrade `rl-home-cp03` to 32 GB (its maximum). Memory is checked in the plan steps that add large components (9.4, 12.3, 12.6).
 - **Use the extra memory** (about 32 GB in total): Tempo **always on** at home; **CrowdSec** and **Tetragon enforcement** become realistic at home (after the EKS trial); longer Prometheus retention (e.g. 15 days).
@@ -36,7 +36,7 @@ The home lab had two nodes with 8 GB of RAM each: `rl-home-cp01` (single control
 - **One control plane (`rl-home-cp03`) plus two workers:** simpler, but no control-plane HA; losing `rl-home-cp03` would stop the cluster.
 - **Two control planes:** worse than one, since etcd needs a majority (2 of 2) and so tolerates no failures.
 - **Moving the LLM to `rl-home-cp03`** (6 cores, more memory): a 7–8B model would run faster, but crowds the main workloads; kept as a later experiment.
-- **Longhorn or Rook-Ceph for replicated volumes:** Ceph still doesn't fit (memory per storage daemon); Longhorn is now possible but unnecessary, since the only important in-cluster state (MariaDB) is replicated at the application level.
+- **Longhorn or Rook-Ceph for replicated volumes:** Ceph still does not fit (memory per storage daemon); Longhorn is now possible but unnecessary, since the only important in-cluster state (MariaDB) is replicated at the application level.
 - **MariaDB Galera (multi-primary):** needs three database members, but `rl-home-cp02` is reserved for the LLM; primary–replica replication with automatic failover covers a single-node loss.
 
 ## Consequences

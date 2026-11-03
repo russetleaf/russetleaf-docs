@@ -30,7 +30,7 @@ One or two sentences: what exists when this step is done, and why it matters.
 ## Approach
 
 How it will be built: the components, files and repos touched, key settings, and anything decided now
-that isn't already in an ADR. If a decision is significant or hard to reverse, write or update an ADR
+that is not already in an ADR. If a decision is significant or hard to reverse, write or update an ADR
 instead of deciding it here.
 
 ## Tasks

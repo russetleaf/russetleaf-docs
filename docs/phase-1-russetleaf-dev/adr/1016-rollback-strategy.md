@@ -7,7 +7,7 @@
 
 ## Context
 
-Rollback mechanisms existed in pieces (Argo Rollouts canaries, Git reverts, `talosctl rollback`, database backups and snapshots, staging gates), but there was no single strategy. Several cases weren't covered:
+Rollback mechanisms existed in pieces (Argo Rollouts canaries, Git reverts, `talosctl rollback`, database backups and snapshots, staging gates), but there was no single strategy. Several cases were not covered:
 
 - **Database schema changes:** WordPress core upgrades change the database structure on first run, so rolling back the image afterwards can break the site.
 - **Argo CD auto-sync:** a manual `argocd app rollback` is immediately overwritten by auto-sync.
@@ -25,7 +25,7 @@ Rollback mechanisms existed in pieces (Argo Rollouts canaries, Git reverts, `tal
 - **Schema changes:** CI labels releases that change WordPress's database version; the promotion workflow takes an **on-demand backup** (a manual RDS snapshot on AWS) before such a release can be merged; recovery is restore-and-roll-back or fix forward, decided within 15 minutes.
 - **High-risk components:** Cilium on manual sync with a workstation recovery path (`helm rollback`); Kyverno's webhooks exclude `kube-system`, `kyverno` and `argocd`, with an emergency webhook-removal procedure; Argo CD recoverable with `helm rollback`.
 - **Terraform:** `prevent_destroy` on stateful resources; reverts go through a reviewed saved plan, stopping on any destructive change to stateful resources.
-- **Talos:** `talosctl rollback`; Kubernetes minor downgrades aren't supported, so restore from the pre-upgrade etcd snapshot.
+- **Talos:** `talosctl rollback`; Kubernetes minor downgrades are not supported, so restore from the pre-upgrade etcd snapshot.
 - **EKS demo stack:** rebuild with previous versions; RDS point-in-time restore for data mistakes.
 - **Secrets:** fall back to Secrets Manager's `AWSPREVIOUS` version.
 - **AI summaries:** a re-summarize job re-queues posts summarized by a bad prompt or model version.
@@ -35,12 +35,12 @@ Rollback mechanisms existed in pieces (Argo Rollouts canaries, Git reverts, `tal
 
 - **`argocd app rollback` as the default:** quick, but conflicts with auto-sync and leaves Git out of step with the cluster.
 - **Always fixing forward:** avoids schema-rollback problems, but keeps users on a broken site while the fix is written and tested.
-- **Blue/green deployments for every release:** cleaner cut-overs, but doubles the running workload; `rl-home-cp01` can't afford it, and canaries achieve most of the benefit.
-- **Database migration tooling with down-migrations:** WordPress core doesn't provide reversible migrations, so backups are the practical safety net.
+- **Blue/green deployments for every release:** cleaner cut-overs, but doubles the running workload; `rl-home-cp01` cannot afford it, and canaries achieve most of the benefit.
+- **Database migration tooling with down-migrations:** WordPress core does not provide reversible migrations, so backups are the practical safety net.
 
 ## Consequences
 
-- Rollback is mostly a Git revert, so it's fast, reviewable and leaves Git as the record of what runs.
+- Rollback is mostly a Git revert, so it is fast, reviewable and leaves Git as the record of what runs.
 - Schema-changing releases take a few extra minutes (the backup) before promotion.
 - Cilium upgrades need a manual sync and a little more care.
 - `prevent_destroy` means deleting a protected resource on purpose requires a deliberate two-step change.

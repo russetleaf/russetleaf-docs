@@ -60,9 +60,9 @@ The summarizer authenticates to WordPress with an **application password** store
 - The self-hosted model runs on **dedicated LLM nodes** (a Karpenter GPU NodePool on AWS, `rl-home-cp02` at home):
     - The nodes carry the label `workload=llm` and the taint `dedicated=llm:NoSchedule`, so only the model server (plus cluster-wide agents such as node-exporter) runs there.
     - The model server Deployment has a matching **toleration** and **node selector**.
-    - Model files are downloaded once by an init container from each site's **model mirror bucket** in S3 (so rebuilds don't depend on Hugging Face) into a volume on the node.
+    - Model files are downloaded once by an init container from each site's **model mirror bucket** in S3 (so rebuilds do not depend on Hugging Face) into a volume on the node.
     - The model **stays loaded**, since the node is dedicated to it; KEDA scales only the summarizer.
-- On AWS, the LLM nodes come from Karpenter's **GPU NodePool** (e.g. g6.xlarge on spot), using a CUDA build of llama.cpp. At home, it's a **dedicated CPU worker node** (see the home lab section). The same manifests deploy both, with per-environment overlays. On EKS, the **NVIDIA device plugin** (a DaemonSet) lets the model server request the GPU (`nvidia.com/gpu: 1`); the Amazon Linux 2023 NVIDIA AMI already includes the drivers.
+- On AWS, the LLM nodes come from Karpenter's **GPU NodePool** (e.g. g6.xlarge on spot), using a CUDA build of llama.cpp. At home, it is a **dedicated CPU worker node** (see the home lab section). The same manifests deploy both, with per-environment overlays. On EKS, the **NVIDIA device plugin** (a DaemonSet) lets the model server request the GPU (`nvidia.com/gpu: 1`); the Amazon Linux 2023 NVIDIA AMI already includes the drivers.
 
 ### Prompt versioning and evaluation in CI
 
@@ -115,7 +115,7 @@ flowchart LR
     - `summarizer-config`: the prompt, model choice and generation settings as one versioned unit
     - `local-summarizer`: the self-hosted model's file (base or fine-tuned, in llama.cpp's GGUF format)
 - **Aliases** mark the roles: `champion` (production) and `challenger` (in the gateway canary). Promotion is a reviewed change: the pipeline proposes it, a pull request on `russetleaf-gitops` changes the gateway's routing to the registered version, and the MLflow alias is updated when it merges.
-- The model mirror bucket keeps serving files to llama.cpp; it's fed **from the registry**, so every file in use has a registry entry.
+- The model mirror bucket keeps serving files to llama.cpp; it is fed **from the registry**, so every file in use has a registry entry.
 
 ### Guardrails
 
@@ -136,7 +136,7 @@ Post content is untrusted input, so the summarizer treats it as data:
 
 ### Fine-tuning (in Phase 3)
 
-Fine-tuning the self-hosted model needs a GPU, which the home lab doesn't have, so the **fine-tuning pipeline and deploying a fine-tuned challenger** belong to Phase 3 (the EKS GPU node pool); see the [Phase 3 design](../phase-3-russetleaf-com/design.md#fine-tuning-on-the-gpu-pool-if-phase-2-is-built) and [ADR 3002](../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md). Without Phase 3, the MLOps lifecycle here still covers evaluation, the registry, guardrails, online evaluation, drift and the feedback loop.
+Fine-tuning the self-hosted model needs a GPU, which the home lab does not have, so the **fine-tuning pipeline and deploying a fine-tuned challenger** belong to Phase 3 (the EKS GPU node pool); see the [Phase 3 design](../phase-3-russetleaf-com/design.md#fine-tuning-on-the-gpu-pool-if-phase-2-is-built) and [ADR 3002](../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md). Without Phase 3, the MLOps lifecycle here still covers evaluation, the registry, guardrails, online evaluation, drift and the feedback loop.
 
 ### Data versioning and feedback
 
@@ -149,7 +149,7 @@ MLflow, Argo Workflows and the online-evaluation job run on the home cluster (`r
 
 ### Rolling back bad AI summaries
 
-Rolling back a prompt or model doesn't fix summaries already saved. Each summary is stored with its **prompt version and model** (as post metadata), so a **re-summarize job** in `russetleaf-llm-summarizer` can find every post summarized by a bad version and **re-queue** it through SQS, regenerating the summaries with the restored version.
+Rolling back a prompt or model does not fix summaries already saved. Each summary is stored with its **prompt version and model** (as post metadata), so a **re-summarize job** in `russetleaf-llm-summarizer` can find every post summarized by a bad version and **re-queue** it through SQS, regenerating the summaries with the restored version.
 
 ## Repository: `russetleaf-llm-summarizer`
 
@@ -209,7 +209,7 @@ Design choices that make it stand on its own:
 | Bedrock model access, gateway IAM role, SQS queues, Bedrock budget alert | `russetleaf-infra` |
 | SQS must-use plugin that queues posts | `russetleaf-wordpress` |
 
-The self-hosted model isn't a special case: its deployment is ordinary platform config in `russetleaf-gitops`, on a dedicated node defined in `russetleaf-infra`, and its quality is judged in `russetleaf-llm-summarizer` alongside the Bedrock models.
+The self-hosted model is not a special case: its deployment is ordinary platform config in `russetleaf-gitops`, on a dedicated node defined in `russetleaf-infra`, and its quality is judged in `russetleaf-llm-summarizer` alongside the Bedrock models.
 
 ## AI components in the shared platform
 
@@ -266,12 +266,12 @@ These parts of Phase 1's shared platform sections exist only once the AI pipelin
 
 ### Tracing
 
-| Component | How it's instrumented | Spans it produces |
+| Component | How it is instrumented | Spans it produces |
 |---|---|---|
 | **summary-queue must-use plugin** (custom) | Adds the current trace context (the W3C `traceparent` value) to each SQS message as a **message attribute** | The "queue summary" span |
 | **Post-summarizer** | OpenTelemetry's **Python SDK** with auto-instrumentation for boto3 and HTTP clients; reads `traceparent` from each SQS message and continues the trace | Receiving the message, reading the post, the gateway call, saving the summary |
 | **LiteLLM gateway** | LiteLLM's built-in **OpenTelemetry** support | Routing, fallback, and the model call, with attributes for the model used, tokens and latency |
-| **Model calls** | Covered by the gateway's spans (Bedrock and llama.cpp aren't instrumented themselves) | — |
+| **Model calls** | Covered by the gateway's spans (Bedrock and llama.cpp are not instrumented themselves) | — |
 
 One trace then shows: a post is published → queued → picked up by the summarizer (possibly minutes later) → sent through the gateway → answered by a specific model → summary saved. Because the queue makes the pipeline asynchronous, the summarizer's spans are linked to the publish trace through the message's trace context.
 
@@ -299,7 +299,7 @@ One trace then shows: a post is published → queued → picked up by the summar
 
 ### Updates
 
-| Layer | How updates arrive | How they're tested and rolled out | Cadence |
+| Layer | How updates arrive | How they are tested and rolled out | Cadence |
 |---|---|---|---|
 | **Summarizer dependencies** (Python) | Renovate (lock file) | Unit and kind tests, the **evaluation gate**, staging, promotion | Weekly |
 | **Models** (Bedrock models, llama.cpp, the local model file) | AWS's **Bedrock model deprecation notices**; llama.cpp image via Renovate | **Evaluation gate** first, then a gateway **canary split**, then a routing change citing the evaluation report | When a new version appears or a deprecation date nears |
@@ -308,13 +308,13 @@ One trace then shows: a post is published → queued → picked up by the summar
 
 | Layer | Trigger | Mechanism | Started by | Expected time |
 |---|---|---|---|---|
-| **Models** (gateway routing) | Quality or cost problems in the canary or after a switch | **Git revert** of the routing weights in `platform/llm-gateway/`; then **re-summarize** affected posts (below) | You | Minutes, plus re-summarizing |
+| **Models** (gateway routing) | Quality or cost problems in the canary or after a switch | **Git revert** of the routing weights in `platform/llm-gateway/`; then **re-summarize** affected posts (below) | Operator | Minutes, plus re-summarizing |
 
 ### Model placement on `rl-home-cp02`
 
 **Protecting etcd:** etcd is sensitive to CPU starvation and disk latency. llama.cpp on `rl-home-cp02` gets a **CPU limit that leaves about one core free**, every node sets Talos's **system and kubelet reservations**, and every node uses an NVMe or SSD disk.
 
-**The model:** `rl-home-cp02` has about **5–5.5 GB** free for the model once its control-plane components are running. A **3B model** (4-bit) is the best fit: about 2.5–3.5 GB of RAM, and roughly a minute per summary on its 4-core i5-6500T (measured in step 3.1). That's fine for a queue handling 10–20 posts a month. A 7–8B model would be tight on `rl-home-cp02`; moving the model to `rl-home-cp03` (6 cores, more memory) is a possible later experiment.
+**The model:** `rl-home-cp02` has about **5–5.5 GB** free for the model once its control-plane components are running. A **3B model** (4-bit) is the best fit: about 2.5–3.5 GB of RAM, and roughly a minute per summary on its 4-core i5-6500T (measured in step 3.1). That is fine for a queue handling 10–20 posts a month. A 7–8B model would be tight on `rl-home-cp02`; moving the model to `rl-home-cp03` (6 cores, more memory) is a possible later experiment.
 
 ### SLOs
 

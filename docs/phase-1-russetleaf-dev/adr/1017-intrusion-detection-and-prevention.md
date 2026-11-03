@@ -11,7 +11,7 @@
 
 ## Context
 
-Falco provides runtime detection inside containers, but on its own it isn't an intrusion detection and prevention strategy. The design already had several prevention layers (the Cloudflare and AWS WAFs, edge login for the admin area, default-deny CiliumNetworkPolicies, Kyverno admission rules, seccomp, gVisor, read-only filesystems) and detection layers (Falco, Hubble, posture scanners). Three gaps remained:
+Falco provides runtime detection inside containers, but on its own it is not an intrusion detection and prevention strategy. The design already had several prevention layers (the Cloudflare and AWS WAFs, edge login for the admin area, default-deny CiliumNetworkPolicies, Kyverno admission rules, seccomp, gVisor, read-only filesystems) and detection layers (Falco, Hubble, posture scanners). Three gaps remained:
 
 - **Nothing watched the Kubernetes API** for suspicious activity (e.g. `exec` into pods, Secret reads, RBAC changes, anonymous requests).
 - **No continuous AWS account threat detection**: no CloudTrail trail and no GuardDuty, only monthly Prowler scans, although the account holds keys, buckets and Bedrock access around the clock.
@@ -31,7 +31,7 @@ Falco provides runtime detection inside containers, but on its own it isn't an i
 
 - **Falco's Kubernetes audit plugin** instead of Loki alert rules: richer rule language, but needs the API server to send audit events to a webhook (more Talos configuration) and more memory; Loki already holds the logs and runs alert rules.
 - **Suricata or Zeek in the cluster:** heavy on CPU and memory, and most traffic is either TLS terminated (and inspected) at the WAFs, or covered by Cilium policies and Hubble.
-- **GuardDuty Runtime Monitoring** (an AWS agent on EKS nodes): overlaps with Falco, adds cost per node, and doesn't cover the home cluster.
+- **GuardDuty Runtime Monitoring** (an AWS agent on EKS nodes): overlaps with Falco, adds cost per node, and does not cover the home cluster.
 - **AWS Security Hub:** aggregates findings and runs posture checks continuously, but costs per check; Prowler ([ADR 1007](1007-prowler-not-threatmapper.md)) and GuardDuty cover the needs here.
 - **Cloudflare Pro** (paid WAF rule sets): more rules, but the free managed rule set plus rate limiting and XML-RPC blocking covers the WordPress basics at no cost.
 

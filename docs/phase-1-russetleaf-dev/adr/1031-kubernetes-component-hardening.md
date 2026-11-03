@@ -15,16 +15,16 @@ On the home cluster, Talos manages the control-plane components and their settin
 
 ## Decision
 
-| Component | Controls | How it's checked |
+| Component | Controls | How it is checked |
 |---|---|---|
 | **kube-apiserver** | Node and RBAC authorization only; audit logging with alert rules; NodeRestriction and PodSecurity admission plugins; **Secrets encrypted at rest** (Talos's built-in encryption at home; EKS **envelope encryption** with a **customer-managed KMS key**); API reachable only from the lab subnet and WireGuard clients, on the virtual IP (home) or from the home address (EKS); a **Talos host firewall** limiting ports 6443 and 50000 to the lab subnet and WireGuard clients | `talosctl` reads of the API server arguments and authorization config; an EKS `describe-cluster` check of encryption and endpoint access; a firewall test from outside the allowed range |
 | **kube-controller-manager** | Profiling off; listening only locally (secure port); per-controller service-account credentials; kubelet server-certificate rotation | `talosctl` read of its arguments; kube-bench on EKS nodes; AWS-managed control plane on EKS |
 | **kube-scheduler** | Profiling off; listening only locally | `talosctl` read of its arguments |
-| **kubelet** | Anonymous access off; webhook authorization; **read-only port (10255) off**; certificate rotation; **`seccompDefault: true`** (RuntimeDefault for every pod even if it doesn't ask); system and kubelet reservations | `talosctl` read of `kubelet.yaml`; anonymous request to 10250 returns 401; connection to 10255 refused; kube-bench on EKS |
+| **kubelet** | Anonymous access off; webhook authorization; **read-only port (10255) off**; certificate rotation; **`seccompDefault: true`** (RuntimeDefault for every pod even if it does not ask); system and kubelet reservations | `talosctl` read of `kubelet.yaml`; anonymous request to 10250 returns 401; connection to 10255 refused; kube-bench on EKS |
 | **Container runtime** | containerd on immutable Talos (or the EKS AMI); no access to the containerd socket (host paths blocked by Pod Security and Kyverno); seccomp RuntimeDefault; gVisor for CI runners; signed, attested images pinned by digest | Kyverno policy tests; Falco rules |
 | **kube-proxy** | Replaced by Cilium on Talos; AWS-managed on EKS | `cilium status` (kube-proxy replacement) at home |
 | **etcd** | Mutual TLS between members and clients (Talos default); three members; Secrets encrypted at rest; **snapshots stored only in the KMS-encrypted backup bucket** (and its Object Lock copy), readable only by the backup role and break-glass access; health alerts | `talosctl etcd members` and status; bucket policy review; Security Hub and Prowler bucket checks |
-| **Pod Security Admission** | Per-namespace labels on **both clusters** (EKS doesn't enforce by default): **`restricted`** for application namespaces (WordPress, summarizer, gateway, model server, staging, tenants), **`baseline`** for most platform services, **`privileged`** only for node agents (Cilium, Falco, Alloy, the storage provisioner, the NVIDIA device plugin); `warn` and `audit` set to `restricted` everywhere | A pod violating `restricted` is rejected in an application namespace; namespace labels checked by a Kyverno rule |
+| **Pod Security Admission** | Per-namespace labels on **both clusters** (EKS does not enforce by default): **`restricted`** for application namespaces (WordPress, summarizer, gateway, model server, staging, tenants), **`baseline`** for most platform services, **`privileged`** only for node agents (Cilium, Falco, Alloy, the storage provisioner, the NVIDIA device plugin); `warn` and `audit` set to `restricted` everywhere | A pod violating `restricted` is rejected in an application namespace; namespace labels checked by a Kyverno rule |
 | **Pod Security Standards** | Kyverno's **`restricted`** policy set for application namespaces (non-root, no privilege escalation, all capabilities dropped, seccomp, read-only root filesystem) and `baseline` elsewhere, alongside PSA (two independent enforcement points) | Kyverno CLI tests in CI; Policy Reporter |
 | **Service accounts** | **Token mounting off by default** (`automountServiceAccountToken: false`, Kyverno mutate rule), enabled only for workloads that call the Kubernetes API (operators, Argo CD, KEDA, External Secrets); least-privilege RBAC for those | Kubescape RBAC review; a test pod has no token mounted |
 | **Container network** | Cilium default-deny CiliumNetworkPolicies, DNS-name egress, layer-7 rules, WireGuard, Hubble ([ADR 1027](1027-cilium-cni.md)) | Connectivity and policy tests; Hubble drop alerts |
@@ -32,9 +32,9 @@ On the home cluster, Talos manages the control-plane components and their settin
 
 ## Alternatives considered
 
-- **Relying on Talos and EKS defaults without verification:** the defaults are good, but unverified claims don't hold up in an audit or review; the checks make them evidence.
+- **Relying on Talos and EKS defaults without verification:** the defaults are good, but unverified claims do not hold up in an audit or review; the checks make them evidence.
 - **Kyverno only (no PSA labels):** one enforcement point; adding PSA gives a second, built-in one at almost no cost.
-- **PSA only (no Kyverno restricted set):** the built-in controller can't produce reports or CI tests, and can't express project-specific rules.
+- **PSA only (no Kyverno restricted set):** the built-in controller cannot produce reports or CI tests, and cannot express project-specific rules.
 - **Disk encryption with a static key or node ID instead of the TPM:** works on hardware without a TPM, but the key is less protected; TPM sealing is preferred where available.
 
 ## Consequences

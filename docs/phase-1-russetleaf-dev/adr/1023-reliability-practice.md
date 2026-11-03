@@ -18,7 +18,7 @@ The design had rollback, node-failure and disaster drills, but no regular, hypot
 ## Alternatives considered
 
 - **LitmusChaos:** similar capabilities with a larger footprint (its control plane and database); Chaos Mesh is lighter and integrates well with Kubernetes and Grafana.
-- **AWS Fault Injection Service:** AWS-only; useful on EKS for spot interruptions (already used there), but doesn't cover the home cluster.
+- **AWS Fault Injection Service:** AWS-only; useful on EKS for spot interruptions (already used there), but does not cover the home cluster.
 - **Ad-hoc drills only:** less systematic, and easy to skip.
 
 ## Consequences

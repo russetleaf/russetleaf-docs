@@ -23,7 +23,7 @@ Constraints: `rl-home-cp01` of the home lab has 8 GB of RAM and already uses abo
 
 - **VictoriaLogs:** lighter on memory than Loki and simple to run; a reasonable fit for 8 GB. Not chosen because Loki is more widely used, integrates natively with Grafana (correlation with metrics and traces), and is the more recognisable skill.
 - **OpenSearch / ELK (Elasticsearch, Logstash, Kibana):** full-text search over everything, but needs several GB of memory; far too heavy for this hardware.
-- **CloudWatch Logs only:** fine on AWS, but doesn't cover the home site, and costs per GB ingested.
+- **CloudWatch Logs only:** fine on AWS, but does not cover the home site, and costs per GB ingested.
 - **Promtail** as the collector: deprecated in favor of Alloy.
 - **No central logs (status quo):** rejected; losing logs on every restart is not production-grade.
 
@@ -38,7 +38,7 @@ Constraints: `rl-home-cp01` of the home lab has 8 GB of RAM and already uses abo
 ## When to revisit
 
 - Memory becomes a blocker (originally `rl-home-cp01`; since [ADR 1020](1020-three-node-ha-home-cluster.md), `rl-home-cp03` hosts Loki): consider VictoriaLogs, or shorter retention.
-- Log volume grows enough that Loki's single-binary mode struggles: move to its scalable deployment mode (on AWS) or reduce what's collected.
+- Log volume grows enough that Loki's single-binary mode struggles: move to its scalable deployment mode (on AWS) or reduce what is collected.
 - A requirement for long-term log retention (e.g. an audit): add S3 lifecycle transitions to cheaper storage classes.
 
 ## Open items

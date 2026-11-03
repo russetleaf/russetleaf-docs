@@ -23,7 +23,7 @@ The image pipelines already had gitleaks, Checkov, Trivy (critical vulnerabiliti
 
 ## Alternatives considered
 
-- **CodeQL instead of Semgrep:** deeper analysis and free on public repos, but doesn't support PHP; running both would duplicate Python coverage. CodeQL could be added for Python later.
+- **CodeQL instead of Semgrep:** deeper analysis and free on public repos, but does not support PHP; running both would duplicate Python coverage. CodeQL could be added for Python later.
 - **BuildKit's built-in provenance and SBOM attestations** (`docker buildx --provenance --sbom`): stored in the registry, but not signed with the same keyless identity the rest of the pipeline and Kyverno already use; GitHub's attestations integrate with `gh attestation verify` and Sigstore.
 - **SLSA Build Level 3 with the SLSA GitHub generator:** a stronger isolation guarantee, but more workflow complexity. *[Corrected:]* GitHub's artifact attestations on their own provide **SLSA Build Level 2** provenance; GitHub documents reaching **Build Level 3** by running the build in a **reusable workflow**, which isolates the build definition from the calling repository. This project adopts that (see Decision), rather than the separate SLSA generator.
 - **Docker Scout, Snyk Container, Grype:** overlap with Trivy.

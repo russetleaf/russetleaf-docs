@@ -21,14 +21,14 @@ The design could already rebuild most things from code (Terraform, GitOps, image
 - **A separate backup AWS account** (in an AWS Organization), holding **S3 Object Lock** buckets in **us-west-2** (30-day retention; governance mode first, compliance mode once proven), receiving **S3 replication** from the main account's backup, Terraform state, media and CloudTrail buckets through a write-only replication role. Access through a separate login kept in the break-glass kit.
 - **russetleaf.com's database:** a logical dump at every `demo-down`, stored in its backup bucket and replicated (instead of cross-account snapshot copies, which would need KMS key sharing).
 - **Daily repo mirrors** (`git bundle`) of the four repos into the backup account, through a write-only OIDC role. Images and charts are rebuilt rather than copied.
-- **Regenerate secrets rather than copy them**, except those that can't be regenerated (account access, the Talos secrets bundle), which go in the **break-glass kit**: the password manager plus a printed copy of the essentials.
+- **Regenerate secrets rather than copy them**, except those that cannot be regenerated (account access, the Talos secrets bundle), which go in the **break-glass kit**: the password manager plus a printed copy of the essentials.
 - **A written plan** (the [disaster recovery plan](../disaster-recovery.md)): an asset inventory, scenarios with data-loss and recovery-time targets and procedures, and the bootstrap order from zero.
 - **Drills:** monthly restore; quarterly restore from the backup account; a yearly full "home lab destroyed" rebuild using only the kit and backups; a once-then-yearly russetleaf.com restore; a 6-monthly break-glass kit check.
 
 ## Alternatives considered
 
 - **Cross-region copies in the same account:** protects against a regional outage, but not against an account compromise or loss.
-- **AWS Backup with a logically air-gapped vault:** a managed option for immutable cross-account backups, but adds cost and setup for data that's mostly plain S3 objects; S3 replication with Object Lock achieves the same here.
+- **AWS Backup with a logically air-gapped vault:** a managed option for immutable cross-account backups, but adds cost and setup for data that is mostly plain S3 objects; S3 replication with Object Lock achieves the same here.
 - **A different cloud provider for backup copies** (e.g. Cloudflare R2 or Backblaze B2): independent of AWS entirely, but another account and set of credentials to manage; worth revisiting if AWS-level risks become a concern.
 - **Copying every secret:** simpler restores, but spreads secrets across more places; regenerating is safer and the plan lists what to regenerate.
 - **Mirroring images to a second registry:** unnecessary, since images are reproducible from the mirrored source and re-signed on rebuild.

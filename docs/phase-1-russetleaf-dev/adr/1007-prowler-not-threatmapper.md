@@ -25,18 +25,18 @@ Most of its features are already covered in this design:
 | Malware scanning | Nothing (low value: minimal, signed, scanned, immutable images with read-only filesystems) |
 | **AWS account posture** | **Nothing (the real gap)** |
 
-Nothing checked the AWS account's actual settings (IAM users and keys, root MFA, CloudTrail, S3 public-access settings, security groups, encryption defaults, GuardDuty status). Terraform and Checkov only check what's written in code, not what's configured in the account, including anything created by hand or by AWS.
+Nothing checked the AWS account's actual settings (IAM users and keys, root MFA, CloudTrail, S3 public-access settings, security groups, encryption defaults, GuardDuty status). Terraform and Checkov only check what is written in code, not what is configured in the account, including anything created by hand or by AWS.
 
 ThreatMapper's management console bundles several databases and services; its documented requirements are on the order of 16 GB of RAM and 4 CPU cores for the console alone, more than `rl-home-cp01` has in total.
 
 ## Decision
 
-- **Don't use ThreatMapper.**
+- **Do not use ThreatMapper.**
 - **Use Prowler** (open source) to scan the AWS account against **CIS AWS Foundations**, **AWS Foundational Security Best Practices** and related checks:
     - a **scheduled GitHub Actions workflow** in `russetleaf-infra`, **monthly** (the account exists permanently), plus manual runs; it assumes a **read-only audit role** through GitHub OIDC (AWS's `SecurityAudit` and `ViewOnlyAccess` managed policies), so no keys are stored
     - an extra run **once per AWS demo** with the demo stack up, to check EKS, RDS, the ALB and the rest while they exist
     - reports kept as workflow artifacts, a summary committed to `russetleaf-gitops/docs/security/`, and a short Slack message to `#rl-security` with the counts of failed high and critical checks
-    - accepted findings explained in the summary (e.g. checks that don't apply to a demo account)
+    - accepted findings explained in the summary (e.g. checks that do not apply to a demo account)
 
 ## Alternatives considered
 

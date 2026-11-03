@@ -8,7 +8,7 @@ Reads a phase's `plan.md` (steps, tiers, estimates, tests) and `roadmap.md`
   - one issue per step, with the step's work as a checklist and its test as
     acceptance criteria, in the right milestone
 
-It's a dry run unless --apply is given, and it's safe to run again: milestones,
+It is a dry run unless --apply is given, and it is safe to run again: milestones,
 labels and issues that already exist (matched by title) are left alone.
 Needs the GitHub CLI (`gh`), signed in with access to the repo.
 

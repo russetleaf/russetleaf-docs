@@ -22,7 +22,7 @@ The project needs CI for Terraform, manifests, images, charts, evaluation and pr
 
 - **Private repos until the end:** hides work in progress, but runs into the minute limit (or costs a paid plan) and private-package limits.
 - **GitLab CI or another platform:** capable, but the code, packages, attestations and code scanning are on GitHub; moving CI elsewhere adds integration work.
-- **Self-hosted runners for everything:** no minute limits, but runs untrusted pull-request code at home for jobs that don't need to, and uses home-cluster capacity.
+- **Self-hosted runners for everything:** no minute limits, but runs untrusted pull-request code at home for jobs that do not need to, and uses home-cluster capacity.
 - **Jenkins, Tekton or Argo Workflows for CI:** more to run and maintain; Argo Workflows is used for ML pipelines ([ADR 2001](../../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md)), not general CI.
 
 ## Consequences

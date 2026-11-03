@@ -34,7 +34,7 @@ The summary pipeline already had strong **inference-side** practices (often call
 - **Tekton:** Kubernetes-native pipelines aimed mainly at CI/CD; weaker support for data and ML workflows (artifacts, parameters between steps, retries per step, DAG visualization) than Argo Workflows.
 - **Apache Airflow:** the standard for data pipelines, but a heavier, Python-centric scheduler with its own database and web server, and less natural for running each step as a GPU pod.
 - **Plain Kubernetes CronJobs and Jobs:** enough for the daily online evaluation alone, but no multi-step pipelines with artifacts, retries per step, or a view of each run.
-- **Amazon SageMaker** (training jobs, model registry, pipelines): AWS-native and capable, but doesn't cover the home site and would split the lifecycle across two platforms.
+- **Amazon SageMaker** (training jobs, model registry, pipelines): AWS-native and capable, but does not cover the home site and would split the lifecycle across two platforms.
 - **Weights & Biases or other hosted tracking:** polished, but a third-party service and account; MLflow is open source and self-hosted.
 - **No fine-tuning (inference only):** simpler, but leaves out the training half of the lifecycle; fine-tuning is kept, in Phase 3 ([ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)).
 - **A heavyweight guardrail service** (e.g. Presidio, Llama Guard): more thorough, but adds memory and latency; rule-based guardrails plus adversarial evaluation cover this pipeline, with these as later options.
@@ -43,7 +43,7 @@ The summary pipeline already had strong **inference-side** practices (often call
 
 - Every result is traceable: which data, prompt, model and code produced it, and which version is in production.
 - Quality is checked before release **and** monitored after it, with alerts on degradation.
-- The pipeline resists injected instructions in posts and doesn't send personal data to external models.
+- The pipeline resists injected instructions in posts and does not send personal data to external models.
 - The self-hosted model's registry, canary and online evaluation are ready for a fine-tuned challenger from Phase 3 ([ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)).
 - More components (MLflow, Argo Workflows, the online-evaluation job) and about 45–75 hours of work.
 

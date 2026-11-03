@@ -1,6 +1,6 @@
 # RussetLeaf
 
-RussetLeaf is a portfolio project: a production-grade WordPress platform, designed, planned and built the way a platform team would do it. It covers infrastructure as code, GitOps, layered security, observability, tested delivery and operations, with every significant decision recorded. This site is the project's documentation: how the platform works, why it's built that way, and how the build is planned and tracked.
+RussetLeaf is a portfolio project: a production-grade WordPress platform, designed, planned and built the way a platform team would do it. It covers infrastructure as code, GitOps, layered security, observability, tested delivery and operations, with every significant decision recorded. This site is the project's documentation: how the platform works, why it is built that way, and how the build is planned and tracked.
 
 The live site it runs is **[russetleaf.dev](https://russetleaf.dev)**.
 

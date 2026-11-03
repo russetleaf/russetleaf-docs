@@ -21,14 +21,14 @@ High availability (HA) means a site keeps working when a single component (a nod
 | Cache | Single Valkey | ElastiCache primary + replica in different zones |
 | Storage | Local disks, no replication ([ADR 1010](1010-local-storage-no-ceph.md)) | EBS and S3 (replicated by AWS) |
 | Network path | One home internet connection and power supply; cloudflared has 2 replicas, but on the same box | CloudFront and a multi-zone ALB |
-| Deliberate demo cuts | — | **One NAT Gateway** instead of three; **one spot GPU node** (the LLM gateway falls back to Bedrock if it's reclaimed) |
+| Deliberate demo cuts | — | **One NAT Gateway** instead of three; **one spot GPU node** (the LLM gateway falls back to Bedrock if it is reclaimed) |
 | Availability over time | Up 24/7, with single points of failure everywhere | **Only during demos**; the always-on edge serves an offline page otherwise |
 | Region | One home | One AWS region (us-east-1) |
 
 ## Decision
 
-- **russetleaf.dev: no high availability.** Single points of failure are accepted because the hardware (two 8 GB nodes) and the budget don't allow redundancy. Protection comes from **recovery**, not redundancy: everything is rebuilt from Git (Terraform, Argo CD), and the database is restored from S3 backups.
-- **russetleaf.com: a highly available design, run in demo mode.** It's HA *within one region while running* (EKS control plane, nodes across zones, RDS Multi-AZ, ElastiCache replica, multi-zone ALB, CloudFront), with two deliberate demo cuts (one NAT Gateway, one spot GPU node), and it isn't always running.
+- **russetleaf.dev: no high availability.** Single points of failure are accepted because the hardware (two 8 GB nodes) and the budget do not allow redundancy. Protection comes from **recovery**, not redundancy: everything is rebuilt from Git (Terraform, Argo CD), and the database is restored from S3 backups.
+- **russetleaf.com: a highly available design, run in demo mode.** It is HA *within one region while running* (EKS control plane, nodes across zones, RDS Multi-AZ, ElastiCache replica, multi-zone ALB, CloudFront), with two deliberate demo cuts (one NAT Gateway, one spot GPU node), and it is not always running.
 - **Recovery targets** (recovery point = how much data can be lost; recovery time = how long until the site is back):
 
 | | Recovery point | Recovery time |
@@ -47,7 +47,7 @@ High availability (HA) means a site keeps working when a single component (a nod
 
 1. ~~**A third node, and three control-plane nodes** (Talos supports control-plane nodes that also run workloads), with Talos's **shared virtual IP** for the Kubernetes API. Roughly **$150–300** for a used mini PC.~~ **Done ([ADR 1020](1020-three-node-ha-home-cluster.md)).**
 2. **Replicated storage** (Rook-Ceph or Longhorn) once three nodes with spare disks and memory exist ([ADR 1010](1010-local-storage-no-ceph.md)).
-3. ~~**MariaDB replication** (MariaDB Operator supports replicated and Galera clusters)~~ **Done ([ADR 1020](1020-three-node-ha-home-cluster.md)):** primary–replica replication with automatic failover. ~~and **Valkey with Sentinel**~~ Not planned: Valkey stays single, since it's a cache and WordPress falls back to the database ([ADR 1020](1020-three-node-ha-home-cluster.md)).
+3. ~~**MariaDB replication** (MariaDB Operator supports replicated and Galera clusters)~~ **Done ([ADR 1020](1020-three-node-ha-home-cluster.md)):** primary–replica replication with automatic failover. ~~and **Valkey with Sentinel**~~ Not planned: Valkey stays single, since it is a cache and WordPress falls back to the database ([ADR 1020](1020-three-node-ha-home-cluster.md)).
 4. ~~**Spread workloads** (cloudflared, ingress-nginx, WordPress) across nodes with anti-affinity and PodDisruptionBudgets.~~ **Done ([ADR 1020](1020-three-node-ha-home-cluster.md)).**
 5. A **UPS** for all three nodes and the router (roughly **$100–200**), and optionally a **backup internet connection** (a 4G/5G failover router, roughly **$15–30/month** for a data plan).
 

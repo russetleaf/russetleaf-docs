@@ -19,7 +19,7 @@
 ## Alternatives considered
 
 - **Dex OIDC on EKS too:** one identity model for both clusters, but EKS's IAM-based access is what EKS users are expected to know, and Identity Center already holds the logins.
-- **The `aws-auth` ConfigMap:** the older mechanism; access entries are managed through the API and Terraform and can't be broken by a bad ConfigMap edit.
+- **The `aws-auth` ConfigMap:** the older mechanism; access entries are managed through the API and Terraform and cannot be broken by a bad ConfigMap edit.
 - **CloudWatch retention only:** simpler, but logs would stay in the workload account, and long retention there costs more.
 
 ## Consequences

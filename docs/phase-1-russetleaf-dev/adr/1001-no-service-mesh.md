@@ -13,7 +13,7 @@ This project has about four services that talk to each other: WordPress, the pos
 
 ## Decision
 
-Don't run a service mesh. Cover a mesh's benefits with tools already in the design:
+Do not run a service mesh. Cover a mesh's benefits with tools already in the design:
 
 | What a mesh would add | How this design covers it |
 |---|---|
@@ -25,7 +25,7 @@ Don't run a service mesh. Cover a mesh's benefits with tools already in the desi
 
 ## Alternatives considered
 
-- **Istio, sidecar mode:** a proxy in every pod (roughly 50–100 MB each) plus `istiod` (~300–500 MB). Didn't fit `rl-home-cp01`'s memory on the original two-node cluster; still a large share of the three-node cluster's memory ([ADR 1020](1020-three-node-ha-home-cluster.md)).
+- **Istio, sidecar mode:** a proxy in every pod (roughly 50–100 MB each) plus `istiod` (~300–500 MB). Did not fit `rl-home-cp01`'s memory on the original two-node cluster; still a large share of the three-node cluster's memory ([ADR 1020](1020-three-node-ha-home-cluster.md)).
 - **Istio, ambient mode:** no per-pod proxies; a small proxy per node plus optional layer-7 "waypoint" proxies. Much lighter, but still a few hundred MB, a second policy system overlapping Cilium's, specific settings to run alongside Cilium, and more to upgrade and debug.
 - **Linkerd:** lighter than Istio, but the same overlap with Cilium and the same small benefit at this scale.
 - **Cilium's own mutual authentication:** not used, as it adds little over WireGuard plus layer-7 policies for four services.

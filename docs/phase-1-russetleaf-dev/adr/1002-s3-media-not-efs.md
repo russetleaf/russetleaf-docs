@@ -23,8 +23,8 @@ This is the pattern used by large containerized WordPress platforms such as Word
 
 | | EFS (shared `wp-content`) | S3 media + code in the image (chosen) |
 |---|---|---|
-| What's running | Can change at runtime (admin installs, plugin updates, edited files), drifting from Git | Exactly what's in Git: a signed, scanned image pinned by digest |
-| Rollback | Rolling back the image doesn't roll back files changed on EFS | Roll back the image version |
+| What is running | Can change at runtime (admin installs, plugin updates, edited files), drifting from Git | Exactly what is in Git: a signed, scanned image pinned by digest |
+| Rollback | Rolling back the image does not roll back files changed on EFS | Roll back the image version |
 | Security | A writable code directory is where attackers hide web shells, which persist across restarts | Read-only root filesystem; a compromised pod is replaced clean |
 | Performance | PHP reads many small files per request over the network; needs careful OPcache tuning | Code on local disk; media served by the CDN from S3 |
 | Cost | ~$0.30/GB-month, plus throughput charges at scale | ~$0.023/GB-month |
@@ -34,7 +34,7 @@ This is the pattern used by large containerized WordPress platforms such as Word
 Also considered:
 
 - **EFS for uploads only** (code in the image, media on EFS): avoids an offload plugin, but keeps EFS's cost, needs NFS at home, and loses CDN-native media delivery.
-- **A persistent volume per pod:** doesn't work with several replicas, since each pod would see different files.
+- **A persistent volume per pod:** does not work with several replicas, since each pod would see different files.
 
 ## Consequences
 

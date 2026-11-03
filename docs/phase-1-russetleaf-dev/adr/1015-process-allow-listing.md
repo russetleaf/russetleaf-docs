@@ -9,21 +9,21 @@
 
 ## Context
 
-Process allow-listing means only expected programs may run in a container, so an attacker who gets code execution can't run shells, download tools or miners. On Linux it's usually built from mandatory access control profiles (**AppArmor** or **SELinux**), **seccomp** system-call filters, or runtime tools that watch or block process execution.
+Process allow-listing means only expected programs may run in a container, so an attacker who gets code execution cannot run shells, download tools or miners. On Linux it is usually built from mandatory access control profiles (**AppArmor** or **SELinux**), **seccomp** system-call filters, or runtime tools that watch or block process execution.
 
 The project already has: seccomp `RuntimeDefault` required by Kyverno ([ADR 1009](1009-gvisor-sandboxing.md)), a read-only root filesystem and non-root user for its own workloads, gVisor for CI runners, Falco runtime detection (including shells in pods and writes to WordPress code), and Cilium on both clusters.
 
 Platform constraints:
 
-- **Talos** doesn't ship AppArmor, and its SELinux support is limited.
-- **EKS** nodes run Amazon Linux 2023, which doesn't use AppArmor and typically runs SELinux in permissive mode; the control plane is AWS-managed.
+- **Talos** does not ship AppArmor, and its SELinux support is limited.
+- **EKS** nodes run Amazon Linux 2023, which does not use AppArmor and typically runs SELinux in permissive mode; the control plane is AWS-managed.
 
 ## Decision
 
 - **Keep seccomp `RuntimeDefault`** everywhere (already enforced).
 - **Add Falco process allow-list rules** per workload: WordPress (`apache2`, `php`, plus **`bash` only as the container's first process running the image's entrypoint scripts**, `docker-entrypoint.sh` and `apache2-foreground`; any other shell alerts), the summarizer (`python`), the LiteLLM gateway (`python`), llama.cpp (`llama-server`); any other process alerts `#rl-security`. The lists live in Git and are tested.
 - **Keep the images lean:** no download tools or package managers in final images where practical (the official WordPress image's startup script still needs its shell), checked by container-structure-test.
-- **Don't use AppArmor or custom SELinux policies.**
+- **Do not use AppArmor or custom SELinux policies.**
 - **Optional extras:**
     - **Tetragon** enforcement (kill unlisted processes), tried on EKS during a demo first, and at home only if memory allows.
     - **Custom seccomp profiles** recorded with the **Security Profiles Operator** for WordPress and the summarizer.

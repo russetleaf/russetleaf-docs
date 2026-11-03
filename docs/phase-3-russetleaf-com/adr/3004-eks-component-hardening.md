@@ -7,7 +7,7 @@
 
 ## Context
 
-[ADR 1031](../../phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md) sets explicit controls and checks for every Kubernetes component on the home Talos cluster, and the controls shared by both clusters (Pod Security Admission labels, Kyverno's `restricted` set, service-account tokens off by default, network policies). On EKS, AWS manages the control plane under the shared-responsibility model; the project controls encryption settings, endpoint access, the nodes, add-ons and workloads. EKS doesn't enforce Pod Security by default.
+[ADR 1031](../../phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md) sets explicit controls and checks for every Kubernetes component on the home Talos cluster, and the controls shared by both clusters (Pod Security Admission labels, Kyverno's `restricted` set, service-account tokens off by default, network policies). On EKS, AWS manages the control plane under the shared-responsibility model; the project controls encryption settings, endpoint access, the nodes, add-ons and workloads. EKS does not enforce Pod Security by default.
 
 ## Decision
 

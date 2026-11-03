@@ -11,7 +11,7 @@ Every release needs testing against real AWS services, real models and realistic
 
 ## Decision
 
-- **Staging exists only while it's being tested:** Argo CD Applications for staging (WordPress, a small MariaDB, the summarizer) are in Git with **auto-sync off**; the `staging-test` workflow syncs them, loads **scrubbed** production data, runs smoke tests, the performance regression gate and a short soak, records the results, then **deletes** them (volumes included).
+- **Staging exists only while it is being tested:** Argo CD Applications for staging (WordPress, a small MariaDB, the summarizer) are in Git with **auto-sync off**; the `staging-test` workflow syncs them, loads **scrubbed** production data, runs smoke tests, the performance regression gate and a short soak, records the results, then **deletes** them (volumes included).
 - Staging has its own namespaces, database, bucket, queue, secrets and Bedrock budget; it shares the gateway and the self-hosted model.
 - AWS has no separate staging: russetleaf.com's versions are tested at home first.
 
@@ -26,7 +26,7 @@ Every release needs testing against real AWS services, real models and realistic
 
 - No standing memory cost; each test starts from a clean, recent, scrubbed copy of production.
 - Each promotion takes longer (create, load data, test, soak, delete).
-- Platform components are shared with production, so platform upgrades can't be staged this way ([ADR 1011](1011-update-strategy.md)'s local rehearsal covers them).
+- Platform components are shared with production, so platform upgrades cannot be staged this way ([ADR 1011](1011-update-strategy.md)'s local rehearsal covers them).
 
 ## When to revisit
 

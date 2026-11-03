@@ -18,7 +18,7 @@ On the home cluster, etcd runs on all three nodes ([ADR 1020](1020-three-node-ha
 - **CPU limits are used where a specific neighbor needs protecting:**
     - **llama.cpp** on `rl-home-cp02`, leaving about one core free for etcd and the kubelet
     - **CI runners** on `rl-home-cp02`, so the model and runners together can never take every core
-    - load-test generators (k6), so tests can't starve the system under test on the same node
+    - load-test generators (k6), so tests cannot starve the system under test on the same node
 - **Talos system and kubelet reservations** on every node protect the control plane regardless.
 - **etcd health alerts** (disk sync latency, leader changes, proposal failures) show whether the protection is enough.
 

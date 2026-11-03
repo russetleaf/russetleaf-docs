@@ -16,7 +16,7 @@ Diagrams follow the [C4 model](https://c4model.com/): system context, then conta
 flowchart LR
   visitor(["Visitor"])
   admin(["Admin"])
-  op(["Operator (you)"])
+  op(["Operator"])
   site["russetleaf.com<br/>WordPress on EKS, demos only"]
   dev["russetleaf.dev<br/>(Phase 1): Argo CD hub,<br/>CI runners, backups to seed from"]
   aws["AWS<br/>russetleaf-com account and<br/>the Organization's security accounts"]
@@ -59,7 +59,7 @@ flowchart TB
 
 ### High availability
 
-- **RDS for MariaDB** with **Multi-AZ** turned on. (Aurora doesn't offer MariaDB; if the site outgrew RDS, Aurora MySQL would be the next step, at the cost of switching engines.) **RDS Proxy** in front of it keeps failovers to seconds.
+- **RDS for MariaDB** with **Multi-AZ** turned on. (Aurora does not offer MariaDB; if the site outgrew RDS, Aurora MySQL would be the next step, at the cost of switching engines.) **RDS Proxy** in front of it keeps failovers to seconds.
 - At least **2–3 WordPress replicas** spread across availability zones, plus a **HorizontalPodAutoscaler** and **PodDisruptionBudgets**.
 - EKS worker nodes in **multiple AZs**, provisioned by **Karpenter** (see Delivery and operations).
 - **What this project actually runs:** this design is highly available within one region **while the demo runs**, with two deliberate demo cuts (one NAT Gateway instead of three; one spot GPU node, with the gateway falling back to Bedrock). The home lab, with three control-plane nodes, replicated MariaDB and spread workloads, **survives any single node failure**, but its home power supply and internet connection remain single points of failure ([ADR 1020](../phase-1-russetleaf-dev/adr/1020-three-node-ha-home-cluster.md)). Both are explained, with recovery targets and the changes (and costs) that would add HA, in [ADR 1014](../phase-1-russetleaf-dev/adr/1014-availability-levels.md).
@@ -85,8 +85,8 @@ flowchart LR
 - **The IAM check happens at RDS Proxy.** The proxy is set to `iam_auth = REQUIRED` and `require_tls = true`. WordPress's role is allowed `rds-db:connect` on the proxy's `wordpress` user only.
 - **Behind the proxy, an ordinary database user.** The proxy logs in to RDS as `wordpress` with a password that Terraform generates and stores in **Secrets Manager**. Only the proxy's own IAM role can read it; no pod, person or Git repo ever holds it. It can be rotated automatically with Secrets Manager's rotation for MariaDB (the proxy picks up the new value).
 - **Why a proxy, not IAM straight to RDS:** WordPress opens a new database connection on almost every page request. AWS recommends direct IAM database authentication only for apps making fewer than about 200 new connections per second, and each IAM-checked connection costs a little extra time. RDS Proxy keeps a pool of connections open to the database, so WordPress's connection churn hits the proxy, not the database. It also hides Multi-AZ failovers from WordPress: a failover takes seconds instead of waiting for DNS to change.
-- **The master (admin) user:** `manage_master_user_password = true`, so **RDS generates the master password, stores it in Secrets Manager and rotates it**. Nobody chooses or sees it. It's used only by the one-off database setup Job (below) and for break-glass admin work.
-- **Creating the `wordpress` user:** the RDS instance is in private subnets, so Terraform (running in GitHub Actions) can't reach it. A small, idempotent **`db-setup` Job** in `overlays/aws` (an Argo CD PreSync hook) reads the master secret and the `wordpress` secret, then runs `CREATE USER IF NOT EXISTS` and `GRANT ... ON wordpress.*`. Because the user lives in the database, it survives demo teardowns in the final snapshot; the Job only does real work on the very first demo.
+- **The master (admin) user:** `manage_master_user_password = true`, so **RDS generates the master password, stores it in Secrets Manager and rotates it**. Nobody chooses or sees it. It is used only by the one-off database setup Job (below) and for break-glass admin work.
+- **Creating the `wordpress` user:** the RDS instance is in private subnets, so Terraform (running in GitHub Actions) cannot reach it. A small, idempotent **`db-setup` Job** in `overlays/aws` (an Argo CD PreSync hook) reads the master secret and the `wordpress` secret, then runs `CREATE USER IF NOT EXISTS` and `GRANT ... ON wordpress.*`. Because the user lives in the database, it survives demo teardowns in the final snapshot; the Job only does real work on the very first demo.
 - **The seed Job** (seeding russetleaf.com from russetleaf.dev) connects the same way as WordPress: IAM token through the proxy, with `rds-db:connect` on its own Pod Identity role.
 
 ### Risk: confirm IAM tokens work from PHP first (with a fallback)
@@ -121,7 +121,7 @@ Switching between the two is an **overlay change** in `russetleaf-gitops` (`data
 
 The WordPress Rollout, Service, HPA and the rest of the base are the same for both sites; only where the credential comes from differs, which is exactly what overlays are for. A `russetleaf-wordpress` release adding the drop-in goes through ci → staging → prod like any other.
 
-**In short:** in the cloud, the database trusts **IAM identities**, so the application has no secret at all; self-hosted, you can't remove every secret, so you **minimize, generate, isolate and rotate** them.
+**In short:** in the cloud, the database trusts **IAM identities**, so the application has no secret at all; self-hosted, not every secret can be removed, so the design **minimizes, generates, isolates and rotates** them.
 
 ## Fine-tuning on the GPU pool (if Phase 2 is built)
 
@@ -267,7 +267,7 @@ Summarizing an existing back catalog is a one-time cost: about **$0.40 for 100 p
 
 ### Requirement
 
-When the EKS demo stack isn't running, **russetleaf.com must still answer** with a simple static page, served by CloudFront, that says the AWS demo is offline and links visitors to **russetleaf.dev**. It must switch to the offline page **automatically** when the stack is destroyed, and back to the live site automatically when the stack comes up, with no manual DNS changes.
+When the EKS demo stack is not running, **russetleaf.com must still answer** with a simple static page, served by CloudFront, that says the AWS demo is offline and links visitors to **russetleaf.dev**. It must switch to the offline page **automatically** when the stack is destroyed, and back to the live site automatically when the stack comes up, with no manual DNS changes.
 
 ### Mechanism: an always-on CloudFront edge with error fallback (recommended)
 
@@ -290,15 +290,15 @@ The CloudFront distribution is set up like this:
 
 How the switch works:
 
-1. **Demo stack down:** `origin.russetleaf.com` doesn't exist, so CloudFront can't reach the origin and gets a 502. The custom error response serves the offline page instead. Visitors see "The AWS demo of this site is offline. Visit russetleaf.dev to see the live site."
+1. **Demo stack down:** `origin.russetleaf.com` does not exist, so CloudFront cannot reach the origin and gets a 502. The custom error response serves the offline page instead. Visitors see "The AWS demo of this site is offline. Visit russetleaf.dev to see the live site."
 2. **Demo stack up:** Argo CD deploys WordPress, the Load Balancer Controller creates the ALB, and ExternalDNS creates `origin.russetleaf.com`. Within a minute or so (the DNS record's TTL plus the 10-second error cache), CloudFront reaches the origin and serves the live site.
 3. **Demo stack torn down:** removing the Argo CD Applications deletes the Ingress, so the ALB is removed and ExternalDNS deletes the DNS record (run ExternalDNS with `--policy=sync` so it removes records it created). CloudFront falls back to the offline page again.
 
-Returning **503** (rather than 200) tells search engines the site is temporarily unavailable, so they don't index the offline page as the site's content. If the live site is ever broken during a demo (the ALB returns 5xx), visitors see the same offline page rather than an error.
+Returning **503** (rather than 200) tells search engines the site is temporarily unavailable, so they do not index the offline page as the site's content. If the live site is ever broken during a demo (the ALB returns 5xx), visitors see the same offline page rather than an error.
 
 This also works for any HTTP method (logins and form posts get the offline page too), and needs no health checks or DNS changes outside Kubernetes.
 
-**Alternative: Route 53 failover routing.** A primary record pointing at the demo stack with a Route 53 health check, and a secondary record pointing at the offline page. It works, but it's a worse fit here: the primary record would point at resources that are deleted after every demo, health checks add cost (about $0.50–$2/month each), and DNS caching slows the switch. The CloudFront approach needs neither.
+**Alternative: Route 53 failover routing.** A primary record pointing at the demo stack with a Route 53 health check, and a secondary record pointing at the offline page. It works, but it is a worse fit here: the primary record would point at resources that are deleted after every demo, health checks add cost (about $0.50–$2/month each), and DNS caching slows the switch. The CloudFront approach needs neither.
 
 ### Keeping russetleaf.com content between demos
 
@@ -337,7 +337,7 @@ The full AWS design costs roughly **$1.00/hour** while running, including about 
 
 Together with the home lab (~$18–40/month always on), the total is about **$30–60/month** at 20 demo hours; keep demos to about **10 hours a month** to stay **under $50**. If the AWS accounts are new, their free-tier credits can cover some of this.
 
-**Tip:** set an AWS Budget with an email alert (e.g. at $25) so a forgotten `terraform destroy` doesn't run up a bill. The GPU node is the most expensive item to leave running.
+**Tip:** set an AWS Budget with an email alert (e.g. at $25) so a forgotten `terraform destroy` does not run up a bill. The GPU node is the most expensive item to leave running.
 
 ## How russetleaf.com differs in the shared platform
 
@@ -345,11 +345,11 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 
 ### Sandboxed runtimes (gVisor)
 
-**russetleaf.com (EKS):** gVisor isn't used. AWS doesn't offer it as a managed option, and installing it through a custom AMI or node user data isn't worth it for a demo cluster (the CI runners only run at home anyway). seccomp `RuntimeDefault` still applies.
+**russetleaf.com (EKS):** gVisor is not used. AWS does not offer it as a managed option, and installing it through a custom AMI or node user data is not worth it for a demo cluster (the CI runners only run at home anyway). seccomp `RuntimeDefault` still applies.
 
 ### Workload permissions and database security
 
-- S3, SQS, SES and Bedrock access through **EKS Pod Identity** (IRSA only for any component that doesn't support Pod Identity), not stored AWS access keys. Each role gets only what it needs:
+- S3, SQS, SES and Bedrock access through **EKS Pod Identity** (IRSA only for any component that does not support Pod Identity), not stored AWS access keys. Each role gets only what it needs:
     - WordPress may write to its S3 bucket, send to the queue, and `rds-db:connect` as the `wordpress` user through RDS Proxy.
     - The summarizer may read from the queue; it reaches models only through the gateway.
     - The LLM gateway may call `bedrock:InvokeModel` on the chosen Bedrock models only.
@@ -367,7 +367,7 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
     - **JSON and text output**: the JSON reaches **Loki** automatically through Alloy (a Grafana panel shows pass/fail/warn counts per demo and node pool); both are kept as workflow artifacts
     - a summary committed to `docs/security/kube-bench-eks-<date>.md`, compared with `docs/security/kube-bench-accepted.yaml` (accepted findings, each with a reason) so only **new** failures stand out
     - counts posted to `#rl-security`, flagging new failures
-    - **EKS:** AWS manages the API server and enables Node and RBAC, plus its own webhook for IAM-based access entries; ABAC can't be enabled. Under AWS's shared-responsibility model, the control plane is AWS's to secure, which the kube-bench summary states; kube-bench still checks the node-side settings (kubelet anonymous access and authorization mode).
+    - **EKS:** AWS manages the API server and enables Node and RBAC, plus its own webhook for IAM-based access entries; ABAC cannot be enabled. Under AWS's shared-responsibility model, the control plane is AWS's to secure, which the kube-bench summary states; kube-bench still checks the node-side settings (kubelet anonymous access and authorization mode).
 
 ### Backup and recovery
 
@@ -382,7 +382,7 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 
 ### Encryption in transit
 
-- **EKS:** confirm that Cilium's WireGuard encryption is supported in **chaining mode** with the VPC CNI for the Cilium version you install. If it is, turn it on the same way. If not, record that in the service-mesh ADR (below) and rely on the application-level TLS already on every sensitive connection.
+- **EKS:** confirm that Cilium's WireGuard encryption is supported in **chaining mode** with the VPC CNI for the installed Cilium version. If it is, turn it on the same way. If not, record that in the service-mesh ADR (below) and rely on the application-level TLS already on every sensitive connection.
 
 ### Admin sign-in
 
@@ -427,16 +427,16 @@ AWS has no separate staging: russetleaf.com is already temporary, its Terraform 
 
 ### Updates
 
-| Layer | How updates arrive | How they're tested and rolled out | Cadence |
+| Layer | How updates arrive | How they are tested and rolled out | Cadence |
 |---|---|---|---|
-| **EKS** | Versions bumped in `russetleaf-infra/envs/aws`: cluster version, **pinned EKS add-on versions** (VPC CNI, CoreDNS, kube-proxy, EBS CSI, Pod Identity agent; Renovate can't track these, so the monthly version-age workflow checks `aws eks describe-addon-versions` for the cluster version and opens a pull request when newer compatible versions exist), **pinned AMI version** in Karpenter's node class (Renovate-tracked), RDS and ElastiCache engine versions | The stack is rebuilt every demo, so there are no in-place upgrades; `demo-up` uses the new versions. RDS's MariaDB version is kept **matched to the home MariaDB**, so backups restore cleanly | Before each demo; always in EKS **standard support** |
+| **EKS** | Versions bumped in `russetleaf-infra/envs/aws`: cluster version, **pinned EKS add-on versions** (VPC CNI, CoreDNS, kube-proxy, EBS CSI, Pod Identity agent; Renovate cannot track these, so the monthly version-age workflow checks `aws eks describe-addon-versions` for the cluster version and opens a pull request when newer compatible versions exist), **pinned AMI version** in Karpenter's node class (Renovate-tracked), RDS and ElastiCache engine versions | The stack is rebuilt every demo, so there are no in-place upgrades; `demo-up` uses the new versions. RDS's MariaDB version is kept **matched to the home MariaDB**, so backups restore cleanly | Before each demo; always in EKS **standard support** |
 
 ### Rollback
 
 | Layer | Trigger | Mechanism | Started by | Expected time |
 |---|---|---|---|---|
-| **EKS demo stack** | Anything wrong during a demo | **`demo-down`** and **`demo-up`** with the previous versions (the stack is rebuilt each time); RDS **point-in-time restore** for data mistakes | You | 20–30 minutes |
-| **Always-on edge** (CloudFront, DNS) | Site or offline page broken after an edge change | **Git revert** in `envs/aws-edge`, apply the reviewed plan | You | Minutes (plus CloudFront propagation) |
+| **EKS demo stack** | Anything wrong during a demo | **`demo-down`** and **`demo-up`** with the previous versions (the stack is rebuilt each time); RDS **point-in-time restore** for data mistakes | Operator | 20–30 minutes |
+| **Always-on edge** (CloudFront, DNS) | Site or offline page broken after an edge change | **Git revert** in `envs/aws-edge`, apply the reviewed plan | Operator | Minutes (plus CloudFront propagation) |
 
 ### Rollback drills
 

@@ -2,12 +2,12 @@
 """Check that references to ADRs and other documents are links.
 
 Fails (exit 1) on:
-  - a plain "ADR 1032" or "ADRs 1004 and 1030" that isn't a Markdown link
+  - a plain "ADR 1032" or "ADRs 1004 and 1030" that is not a Markdown link
   - a repo path to an existing document in code formatting, e.g. `docs/phase-1-.../adr/1032-....md`
     or `docs/phase-1-russetleaf-dev/disaster-recovery.md`, instead of a link
 
 Allowed: an ADR's title and mentions of its own number, headings, code blocks, HTML comments, and
-paths to files that don't exist yet (such as future runbooks).
+paths to files that do not exist yet (such as future runbooks).
 
 Usage: tools/check_doc_links.py [files...]   (default: every Markdown file in the repo)
 """

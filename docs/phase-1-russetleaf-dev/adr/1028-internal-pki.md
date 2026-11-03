@@ -20,7 +20,7 @@ Public TLS is handled at the edge: Cloudflare (russetleaf.dev) and ACM (russetle
 ## Alternatives considered
 
 - **Each operator's self-generated certificates:** fewer components, but several separate CAs, no single trust bundle, and inconsistent renewal and monitoring.
-- **AWS Private CA:** managed, but costs a few hundred dollars a month per CA (or a short-lived-certificate mode with per-certificate charges) and doesn't suit the home cluster.
+- **AWS Private CA:** managed, but costs a few hundred dollars a month per CA (or a short-lived-certificate mode with per-certificate charges) and does not suit the home cluster.
 - **A service mesh issuing mTLS certificates:** not used ([ADR 1001](1001-no-service-mesh.md)).
 
 ## Consequences

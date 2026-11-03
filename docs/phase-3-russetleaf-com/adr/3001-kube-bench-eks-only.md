@@ -10,7 +10,7 @@
 **kube-bench** checks a cluster against the **CIS Kubernetes Benchmark** by running on a node and inspecting configuration files, file permissions and process arguments (kubelet, API server, etcd) in the locations used by standard Linux distributions and kubeadm-style installs.
 
 - **EKS (russetleaf.com):** AWS manages the control plane, and kube-bench has an **EKS profile** that checks the worker nodes (kubelet settings, file permissions) and some policy items; the control plane is AWS's responsibility under the shared-responsibility model.
-- **Talos (russetleaf.dev):** Talos has no shell or SSH, an immutable read-only system, API-only management, and keeps its configuration in different locations. kube-bench's checks look for files and processes that don't exist there, so most fail or come back "not applicable", producing a noisy report that says little about Talos's real security. Talos is hardened by default (only Node and RBAC authorization, no anonymous kubelet access, webhook kubelet authorization, Pod Security `baseline`).
+- **Talos (russetleaf.dev):** Talos has no shell or SSH, an immutable read-only system, API-only management, and keeps its configuration in different locations. kube-bench's checks look for files and processes that do not exist there, so most fail or come back "not applicable", producing a noisy report that says little about Talos's real security. Talos is hardened by default (only Node and RBAC authorization, no anonymous kubelet access, webhook kubelet authorization, Pod Security `baseline`).
 
 Both sites run **Trivy Operator**, which produces **CIS compliance reports** continuously from inside the cluster and can publish them as Prometheus metrics.
 
@@ -21,16 +21,16 @@ Both sites run **Trivy Operator**, which produces **CIS compliance reports** con
     - **JSON and text output**: the JSON lands in **Loki** automatically through Alloy (for a Grafana panel of pass/fail/warn counts per demo and node pool); both are kept as workflow artifacts
     - a summary committed to `docs/security/kube-bench-eks-<date>.md`, compared with an **accepted-findings file** (`docs/security/kube-bench-accepted.yaml`, each with a reason) so only new failures stand out
     - pass/fail/warn counts posted to `#rl-security`, flagging new failures
-- **Talos:** don't run kube-bench. Instead:
+- **Talos:** do not run kube-bench. Instead:
     - `docs/talos-hardening.md` maps Talos's defaults to the relevant CIS controls, with **`talosctl` checks** (API server authorization config; kubelet configuration on each node) and an anonymous kubelet request that must return 401
     - **Trivy Operator's CIS compliance report**, reviewed monthly
 - **Both sites:** Trivy Operator's **compliance metrics in Prometheus**, a **Grafana "Compliance" dashboard** covering both clusters, and an alert to `#rl-security` when the number of failing controls rises.
 
 ## Alternatives considered
 
-- **kube-bench on Talos with custom path settings:** possible in principle, but Talos's layout and API-only design mean many checks still can't be evaluated meaningfully; maintaining custom configuration for little real signal isn't worth it.
+- **kube-bench on Talos with custom path settings:** possible in principle, but Talos's layout and API-only design mean many checks still cannot be evaluated meaningfully; maintaining custom configuration for little real signal is not worth it.
 - **Trivy Operator only, on both sites:** continuous and consistent, but less detailed on node-level configuration than kube-bench on EKS.
-- **Kubescape's CIS framework:** reads the cluster through the Kubernetes API only, so it can't inspect node files; used instead for NSA-CISA, MITRE ATT&CK and RBAC ([ADR 1003](../../phase-1-russetleaf-dev/adr/1003-kubescape-cli-not-operator.md)).
+- **Kubescape's CIS framework:** reads the cluster through the Kubernetes API only, so it cannot inspect node files; used instead for NSA-CISA, MITRE ATT&CK and RBAC ([ADR 1003](../../phase-1-russetleaf-dev/adr/1003-kubescape-cli-not-operator.md)).
 - **kube-bench results pushed to Prometheus (Pushgateway):** a once-per-demo result fits poorly in Prometheus, and the EKS Prometheus is destroyed at every `demo-down`; Loki (whose bucket survives teardown) and the committed summary hold the results instead.
 
 ## Consequences

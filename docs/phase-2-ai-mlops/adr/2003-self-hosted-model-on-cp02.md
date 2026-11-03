@@ -7,14 +7,14 @@
 
 ## Context
 
-The gateway ([ADR 2002](2002-summary-pipeline-architecture.md)) needs a fallback that doesn't depend on Bedrock, and the project should show model serving on Kubernetes, not only API calls. The home lab has no GPU. `rl-home-cp02` (a Dell OptiPlex 3040 with a 4-core i5-6500T and 8 GB) is an etcd member and control-plane node, so anything heavy on it risks the cluster's stability.
+The gateway ([ADR 2002](2002-summary-pipeline-architecture.md)) needs a fallback that does not depend on Bedrock, and the project should show model serving on Kubernetes, not only API calls. The home lab has no GPU. `rl-home-cp02` (a Dell OptiPlex 3040 with a 4-core i5-6500T and 8 GB) is an etcd member and control-plane node, so anything heavy on it risks the cluster's stability.
 
 ## Decision
 
 - **llama.cpp (CPU build)** serving a 4-bit **3B model** (e.g. Qwen2.5-3B or Llama 3.2 3B) through its OpenAI-compatible server, behind the gateway as the fallback and canary target.
 - **`rl-home-cp02` becomes the dedicated LLM node** in Phase 2: label `workload=llm`, taint `dedicated=llm:NoSchedule`; only the model server (plus node agents and the CI runners, which tolerate the taint) runs there. In Phase 1, `rl-home-cp02` is an ordinary third node.
 - **Protect etcd:** a **CPU limit** on llama.cpp (and the runners) that leaves about one core free, memory limits leaving about 1 GB free, and etcd latency watched while summaries run ([ADR 1026](../../phase-1-russetleaf-dev/adr/1026-cpu-limits.md)).
-- **Model files from a mirror bucket** in S3, fed from the MLflow registry ([ADR 2001](2001-mlops-lifecycle.md)), so rebuilds don't depend on Hugging Face and every file in use has a registry entry.
+- **Model files from a mirror bucket** in S3, fed from the MLflow registry ([ADR 2001](2001-mlops-lifecycle.md)), so rebuilds do not depend on Hugging Face and every file in use has a registry entry.
 - **The model stays loaded**; KEDA scales only the summarizer.
 
 ## Alternatives considered

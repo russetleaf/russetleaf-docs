@@ -7,7 +7,7 @@
 
 ## Context
 
-The design referred to the home servers as "box 1", "box 2" and "box 3", which isn't how they appear anywhere real: in Talos, Kubernetes, DHCP, monitoring labels or the physical machines. The lab is about to be built (Phase 1 step 2.2), and names become hard to change once they're in certificates, node objects, dashboards and runbooks. The convention also has to work for future machines and for cloud nodes, whose names AWS assigns.
+The design referred to the home servers as "box 1", "box 2" and "box 3", which is not how they appear anywhere real: in Talos, Kubernetes, DHCP, monitoring labels or the physical machines. The lab is about to be built (Phase 1 step 2.2), and names become hard to change once they are in certificates, node objects, dashboards and runbooks. The convention also has to work for future machines and for cloud nodes, whose names AWS assigns.
 
 ## Decision
 
@@ -43,7 +43,7 @@ The design referred to the home servers as "box 1", "box 2" and "box 3", which i
 
 The numbers follow the order the machines joined. Of the two 8 GB machines, the faster CPU (the OptiPlex 3040's i5-6500T) is `rl-home-cp02`, the node that runs the model in Phase 2.
 
-**Cloud nodes (Phase 3):** EKS sets each node's Kubernetes name from its EC2 instance, so node names don't follow this convention. Use **resource-based names** (the instance ID, e.g. `i-0abc123def4567890.ec2.internal`) rather than IP-based ones, so a name never refers to a different node later. The convention applies where the project chooses the name: the EKS cluster (`rl-use1`), the managed node group (`rl-use1-sys`), the Karpenter NodePools (`general`, `gpu`), and the EC2 **`Name` tag** set through the node class (`rl-use1-wk` for general nodes, `rl-use1-gpu` for GPU nodes), alongside the existing `Project`, `Site` and `Env` tags.
+**Cloud nodes (Phase 3):** EKS sets each node's Kubernetes name from its EC2 instance, so node names do not follow this convention. Use **resource-based names** (the instance ID, e.g. `i-0abc123def4567890.ec2.internal`) rather than IP-based ones, so a name never refers to a different node later. The convention applies where the project chooses the name: the EKS cluster (`rl-use1`), the managed node group (`rl-use1-sys`), the Karpenter NodePools (`general`, `gpu`), and the EC2 **`Name` tag** set through the node class (`rl-use1-wk` for general nodes, `rl-use1-gpu` for GPU nodes), alongside the existing `Project`, `Site` and `Env` tags.
 
 **When names are applied:**
 
@@ -54,10 +54,10 @@ The numbers follow the order the machines joined. Of the two 8 GB machines, the 
 ## Alternatives considered
 
 - **Keep "box 1–3":** fine in planning, but it exists nowhere in the real system.
-- **Themed names** (e.g. trees or planets): memorable, but carry no information and don't scale to cloud resources.
+- **Themed names** (e.g. trees or planets): memorable, but carry no information and do not scale to cloud resources.
 - **Names describing hardware or workload** (e.g. `rl-dell-16g`, `rl-llm-01`): stale as soon as hardware is replaced or the workload moves.
 - **A longer project prefix** (`russetleaf-home-cp01`): clearer to outsiders, but longer in every command, dashboard and alert; the prefix is defined here once.
-- **Forcing EKS node names to the convention:** possible only with custom bootstrapping that EKS and Karpenter don't support well; tags and node group names give the same traceability.
+- **Forcing EKS node names to the convention:** possible only with custom bootstrapping that EKS and Karpenter do not support well; tags and node group names give the same traceability.
 
 ## Consequences
 

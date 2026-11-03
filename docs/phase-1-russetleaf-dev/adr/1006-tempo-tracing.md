@@ -29,16 +29,16 @@ Constraints: `rl-home-cp01` of the home lab has 8 GB of RAM and is close to its 
 
 - **WordPress-only tracing (the previous plan):** misses the asynchronous AI pipeline, where tracing helps most.
 - **Jaeger:** a well-known tracing backend, but a separate UI from Grafana, and its storage options are heavier for this setup; Tempo integrates directly with Grafana, Loki and Prometheus.
-- **AWS X-Ray:** AWS-native, but doesn't cover the home site, and would split tracing between two tools.
+- **AWS X-Ray:** AWS-native, but does not cover the home site, and would split tracing between two tools.
 - **A separate OpenTelemetry Collector:** unnecessary, since Alloy already runs on every node and handles OTLP.
-- ~~**Always-on Tempo at home:** doesn't fit `rl-home-cp01`'s memory alongside everything else.~~ **Superseded by [ADR 1020](1020-three-node-ha-home-cluster.md):** with three nodes (`rl-home-cp03` has 16 GB), Tempo now runs always on at home.
+- ~~**Always-on Tempo at home:** does not fit `rl-home-cp01`'s memory alongside everything else.~~ **Superseded by [ADR 1020](1020-three-node-ha-home-cluster.md):** with three nodes (`rl-home-cp03` has 16 GB), Tempo now runs always on at home.
 
 ## Consequences
 
 - One trace shows a post's whole journey, including which model answered and how long each step took: useful for debugging and a strong demo.
 - Trace IDs in logs link traces and logs in Grafana; exemplars link latency metrics to example traces.
 - The summarizer and summary-queue plugin carry a little extra code for propagating trace context through SQS.
-- Home tracing isn't continuous, so intermittent problems there may need tracing turned on and the issue reproduced.
+- Home tracing is not continuous, so intermittent problems there may need tracing turned on and the issue reproduced.
 
 ## When to revisit
 

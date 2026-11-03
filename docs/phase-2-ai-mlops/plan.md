@@ -1,6 +1,6 @@
 # Phase 2 build plan: AI post summaries and MLOps
 
-This is the step-by-step plan for **Phase 2**, described in the [Phase 2 design](design.md): AI-generated post summaries on russetleaf.dev, with an LLM gateway, a self-hosted model on `rl-home-cp02`, and an MLOps lifecycle. It needs **Phase 1's Core tier** finished (the cluster, GitOps, platform services, WordPress, ci, staging and promotion, Kyverno and network policies). Fine-tuning and deploying a fine-tuned challenger need a GPU, so they're in [Phase 3](../phase-3-russetleaf-com/plan.md) (steps 4.5 and 4.6).
+This is the step-by-step plan for **Phase 2**, described in the [Phase 2 design](design.md): AI-generated post summaries on russetleaf.dev, with an LLM gateway, a self-hosted model on `rl-home-cp02`, and an MLOps lifecycle. It needs **Phase 1's Core tier** finished (the cluster, GitOps, platform services, WordPress, ci, staging and promotion, Kyverno and network policies). Fine-tuning and deploying a fine-tuned challenger need a GPU, so they are in [Phase 3](../phase-3-russetleaf-com/plan.md) (steps 4.5 and 4.6).
 
 Each step is sized for one or a few Claude sessions and ends with a **test** that must pass before moving on. Work the same way as in Phase 1 (see its [How to use this plan with Claude](../phase-1-russetleaf-dev/plan.md#how-to-use-this-plan-with-claude)): start each session by pointing Claude at this plan, the Phase 2 design and the overview; one step at a time; record actual hours; keep the plan and decision log current. Before starting, write this phase's `roadmap.md` (milestones and dates, in the format of Phase 1's [roadmap](../phase-1-russetleaf-dev/roadmap.md)), create its issues with `tools/plan_to_issues.py`, and write a spec per step from [`docs/specs/TEMPLATE.md`](../specs/TEMPLATE.md).
 
@@ -39,9 +39,9 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 ### Step 1.2: AWS resources for the AI pipeline
 
-**Do:** in `russetleaf-infra`, add the **`sqs-queue`** (with dead-letter queue) and **`bedrock-access`** modules, then in `envs/home`: the **summary queue** and dead-letter queue (production and staging), the **model mirror bucket** (with `prevent_destroy`), the **Bedrock budget alert**, and credentials for WordPress (send to the queue), the summarizer (read from the queue) and LiteLLM (`bedrock:InvokeModel` on the chosen models only), each in Secrets Manager (or pod roles, if Phase 1 step 9.1 is done). Confirm access to Claude Haiku and Amazon Nova Lite in the chosen region (Anthropic models may need a one-time use-case form in the console). Extend the ci stand-ins with SQS (LocalStack, or **ElasticMQ** if LocalStack's terms don't suit).
+**Do:** in `russetleaf-infra`, add the **`sqs-queue`** (with dead-letter queue) and **`bedrock-access`** modules, then in `envs/home`: the **summary queue** and dead-letter queue (production and staging), the **model mirror bucket** (with `prevent_destroy`), the **Bedrock budget alert**, and credentials for WordPress (send to the queue), the summarizer (read from the queue) and LiteLLM (`bedrock:InvokeModel` on the chosen models only), each in Secrets Manager (or pod roles, if Phase 1 step 9.1 is done). Confirm access to Claude Haiku and Amazon Nova Lite in the chosen region (Anthropic models may need a one-time use-case form in the console). Extend the ci stand-ins with SQS (LocalStack, or **ElasticMQ** if LocalStack's terms do not suit).
 
-**Test:** each credential's allowed action works and a disallowed one fails (e.g. the summarizer can't send to the queue); `aws bedrock-runtime converse` with the LiteLLM credential returns a response; the budget alert exists; deleting the model mirror bucket is refused by the plan.
+**Test:** each credential's allowed action works and a disallowed one fails (e.g. the summarizer cannot send to the queue); `aws bedrock-runtime converse` with the LiteLLM credential returns a response; the budget alert exists; deleting the model mirror bucket is refused by the plan.
 
 ### Step 1.3: `rl-home-cp02` as the LLM node
 
@@ -100,7 +100,7 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 - Release workflow: build, SBOM, scan, push by digest, sign, attach the SBOM as a signed attestation, add **SLSA build provenance**, verify all three, write release notes with digests and Rekor links, push the image and the chart (OCI) to GHCR, open a chart-bump pull request on `russetleaf-gitops` for **`overlays/home-staging`** (promoted to prod by the Phase 1 step 5.7 pipeline).
 - `russetleaf-gitops/apps/post-summarizer/overlays/home` and `overlays/home-staging`: queue URL, gateway URL (staging uses its own LiteLLM key and budget), WordPress URL, credentials from External Secrets.
 - Turn on the summarizer check in the staging smoke tests (added in step 1.4).
-- A **re-summarize job** (a CLI in `russetleaf-llm-summarizer`, run as a Kubernetes Job): find posts whose stored summary metadata matches a given prompt version or model, and re-queue them through SQS so they're summarized again with the current version. Document it in `docs/runbooks/rollback-models.md`.
+- A **re-summarize job** (a CLI in `russetleaf-llm-summarizer`, run as a Kubernetes Job): find posts whose stored summary metadata matches a given prompt version or model, and re-queue them through SQS so they are summarized again with the current version. Document it in `docs/runbooks/rollback-models.md`.
 
 Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom metrics plugin), routed to `#rl-mlops`.
 
@@ -122,7 +122,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 3.1: llama.cpp model server
 
-**Do:** `platform/llm-serving/`: llama.cpp server (CPU build) with a toleration and node selector for `rl-home-cp02`; an init container that downloads a 4-bit **3B model** (e.g. Qwen2.5-3B or Llama 3.2 3B) into a local-path volume (mirror the file in S3 so rebuilds don't depend on Hugging Face); metrics enabled; memory limits leaving ~1 GB free on the node, and a **CPU limit leaving about one core free**, because `rl-home-cp02` is also an etcd member (watch etcd's latency metrics while summaries run).
+**Do:** `platform/llm-serving/`: llama.cpp server (CPU build) with a toleration and node selector for `rl-home-cp02`; an init container that downloads a 4-bit **3B model** (e.g. Qwen2.5-3B or Llama 3.2 3B) into a local-path volume (mirror the file in S3 so rebuilds do not depend on Hugging Face); metrics enabled; memory limits leaving ~1 GB free on the node, and a **CPU limit leaving about one core free**, because `rl-home-cp02` is also an etcd member (watch etcd's latency metrics while summaries run).
 
 **Test:** the pod runs **only** on `rl-home-cp02`; an OpenAI-style request returns a summary; record the time per summary and memory use in the decision log.
 
@@ -165,9 +165,9 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 4.5: Guardrails
 
-**Do:** in `russetleaf-llm-summarizer/guardrails/`: delimit post text as content (never instructions), redact email addresses, phone numbers and similar patterns before calls leave the cluster, and validate output (length, plain text, no URLs, no instructions or system-prompt text; retry once, then don't save and alert). Add **adversarial cases** (posts containing injection attempts and personal data) to the evaluation set, and guardrail metrics (blocked, retried, redacted) with an alert on spikes to `#rl-mlops`.
+**Do:** in `russetleaf-llm-summarizer/guardrails/`: delimit post text as content (never instructions), redact email addresses, phone numbers and similar patterns before calls leave the cluster, and validate output (length, plain text, no URLs, no instructions or system-prompt text; retry once, then do not save and alert). Add **adversarial cases** (posts containing injection attempts and personal data) to the evaluation set, and guardrail metrics (blocked, retried, redacted) with an alert on spikes to `#rl-mlops`.
 
-**Test:** a post containing "ignore your instructions and…" produces a normal summary; a post with an email address never sends it to Bedrock (checked in traces or gateway logs); an invalid output isn't saved and alerts; the CI gate fails if an adversarial case gets through.
+**Test:** a post containing "ignore your instructions and…" produces a normal summary; a post with an email address never sends it to Bedrock (checked in traces or gateway logs); an invalid output is not saved and alerts; the CI gate fails if an adversarial case gets through.
 
 ### Step 4.6: Online evaluation and drift monitoring
 
@@ -187,7 +187,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 **Do:** extend Phase 1's controls to the new workloads:
 
-- **Kyverno:** add the `russetleaf-llm-summarizer` release workflow's signing identity to image verification (signature, SBOM and provenance); Pod Security Admission labels (`restricted`) and quotas on the summarizer, gateway and model namespaces; KEDA on the service-account token allow-list; a `PolicyException` for llama.cpp's image only if it genuinely can't run read-only or as non-root.
+- **Kyverno:** add the `russetleaf-llm-summarizer` release workflow's signing identity to image verification (signature, SBOM and provenance); Pod Security Admission labels (`restricted`) and quotas on the summarizer, gateway and model namespaces; KEDA on the service-account token allow-list; a `PolicyException` for llama.cpp's image only if it genuinely cannot run read-only or as non-root.
 - **CiliumNetworkPolicies:** summarizer → SQS, the gateway and WordPress's REST API (a **layer-7** rule: `GET`/`POST` on `/wp-json/*` only); gateway → llama.cpp and `bedrock-runtime`; llama.cpp's init container → the model mirror bucket only.
 - **Falco:** process allow-lists for the summarizer and gateway (`python`) and llama.cpp (`llama-server`); a rule for unexpected outbound connections from `rl-home-cp02`.
 - Optional: a recorded **custom seccomp profile** for the summarizer (as in Phase 1 step 7.7).
@@ -201,7 +201,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 - **Tracing:** turn tracing on in the summarizer and gateway values, sampling 100% of summary jobs.
 - **Cost:** OpenCost with `rl-home-cp02` attributed to the LLM namespace and the Bedrock spend shown alongside; the Bedrock row in the monthly cost review.
 - **SLOs:** summary **freshness** (99% within 15 minutes) and daily **quality** (95%) in Sloth, with the error-budget policy covering summarizer releases (if Phase 1 step 8.1 is done).
-- **Chaos:** latency injected into model calls with a **Toxiproxy** sidecar in front of the gateway's upstream calls (Chaos Mesh's network rules can't reliably target AWS endpoints), if Phase 1 step 8.6 is done.
+- **Chaos:** latency injected into model calls with a **Toxiproxy** sidecar in front of the gateway's upstream calls (Chaos Mesh's network rules cannot reliably target AWS endpoints), if Phase 1 step 8.6 is done.
 - **Rollback:** `docs/runbooks/rollback-models.md` (routing revert, re-summarize job) and a drill: roll back a prompt version and re-summarize the affected posts.
 - **Drills:** include the summarizer in the node-failure drill (`rl-home-cp02` offline: the gateway falls back to Bedrock).
 

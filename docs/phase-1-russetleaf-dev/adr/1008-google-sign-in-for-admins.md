@@ -7,7 +7,7 @@
 
 ## Context
 
-Only admins and editors log in to WordPress; site visitors don't. By default WordPress uses its own username/password logins at `/wp-login.php`, which is a constant target for password-guessing and credential-stuffing attacks. The project already avoids human-handled passwords elsewhere (IAM auth for the database on AWS, generated passwords at home) and already uses Cloudflare Access for admin tools on the home site. Constraints: no cost, both sites working the same way, no plugin installs from the admin screen ([ADR 1002](1002-s3-media-not-efs.md)), and the post-summarizer must keep logging in to the REST API with an application password.
+Only admins and editors log in to WordPress; site visitors do not. By default WordPress uses its own username/password logins at `/wp-login.php`, which is a constant target for password-guessing and credential-stuffing attacks. The project already avoids human-handled passwords elsewhere (IAM auth for the database on AWS, generated passwords at home) and already uses Cloudflare Access for admin tools on the home site. Constraints: no cost, both sites working the same way, no plugin installs from the admin screen ([ADR 1002](1002-s3-media-not-efs.md)), and the post-summarizer must keep logging in to the REST API with an application password.
 
 ## Decision
 
@@ -24,12 +24,12 @@ Only admins and editors log in to WordPress; site visitors don't. By default Wor
 - **Keep WordPress passwords (with a 2FA plugin):** still exposes a password login page to the internet, and passwords must be managed.
 - **Edge layer only (Cloudflare Access / ALB OIDC) without WordPress OIDC:** strong protection, but WordPress would still need its own passwords behind it.
 - **WordPress OIDC only, no edge layer:** removes passwords, but the login page and admin area stay reachable by anyone.
-- **Amazon Cognito** (federated with Google): adds a user pool and configuration with no benefit for a handful of admins, and doesn't cover the home site.
+- **Amazon Cognito** (federated with Google): adds a user pool and configuration with no benefit for a handful of admins, and does not cover the home site.
 - **Freemium "social login" plugins:** often lock features behind paid tiers and add more code than needed.
 
 ## Consequences
 
-- No human WordPress passwords on either site; the admin area isn't reachable without a Google login at the edge.
+- No human WordPress passwords on either site; the admin area is not reachable without a Google login at the edge.
 - Admins sign in twice (edge, then WordPress), both with Google and usually a single click the second time.
 - New dependency on Google's availability for admin access (break-glass via `wp-cli` covers outages).
 - Extra configuration: OAuth clients per site (created by hand in the Google Cloud console and documented), CiliumNetworkPolicy egress to Google, uncached admin paths in CloudFront, a mock OIDC provider in ci.

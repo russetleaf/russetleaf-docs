@@ -11,8 +11,8 @@ The design used OpenCost on both clusters (with Kubecost as an optional alternat
 
 - OpenCost has **no alerting** of its own, and nothing produced the "weekly OpenCost summary" listed for `#rl-costs`.
 - OpenCost estimates costs from **list prices**, not the actual bill, and on EKS its data is **lost at every `demo-down`**, since it lives in the demo cluster's Prometheus.
-- The AWS side and the cluster side weren't connected: nothing compared estimated demo costs with what AWS actually charged.
-- The project's tags (`Project`, `Site`, `Env`, `Stack`) weren't **activated as cost allocation tags**, so Budgets and Cost Explorer couldn't filter by them.
+- The AWS side and the cluster side were not connected: nothing compared estimated demo costs with what AWS actually charged.
+- The project's tags (`Project`, `Site`, `Env`, `Stack`) were not **activated as cost allocation tags**, so Budgets and Cost Explorer could not filter by them.
 
 ## Decision
 
@@ -29,8 +29,8 @@ The design used OpenCost on both clusters (with Kubecost as an optional alternat
 
 ## Alternatives considered
 
-- **Kubecost (free tier or the EKS bundle):** adds billing reconciliation and built-in budget alerts, but runs more components (memory `rl-home-cp01` can't spare) and would differ between sites; the Cost Explorer report covers reconciliation more simply.
-- **AWS billing only:** exact, but can't show which workload in a cluster drives cost, and doesn't cover the home cluster's hardware.
+- **Kubecost (free tier or the EKS bundle):** adds billing reconciliation and built-in budget alerts, but runs more components (memory `rl-home-cp01` cannot spare) and would differ between sites; the Cost Explorer report covers reconciliation more simply.
+- **AWS billing only:** exact, but cannot show which workload in a cluster drives cost, and does not cover the home cluster's hardware.
 - **OpenCost only:** shows allocation but not the actual bill, and misses everything outside Kubernetes (NAT Gateways, RDS, S3, Bedrock).
 - **Long-term storage for EKS OpenCost data** (e.g. remote-writing Prometheus to the home cluster or a managed service): keeps per-demo allocation history, but adds plumbing for a cluster that runs a few hours at a time; the Cost Explorer report keeps the important number (actual cost per demo).
 
@@ -38,7 +38,7 @@ The design used OpenCost on both clusters (with Kubecost as an optional alternat
 
 - Every cost signal ends up in `#rl-costs`, whether it comes from AWS or the clusters.
 - Estimates and actual costs are compared after every demo, so the cost tables in the Phase 1 design stay honest.
-- Per-workload allocation history on EKS isn't kept between demos; only the actual totals are.
+- Per-workload allocation history on EKS is not kept between demos; only the actual totals are.
 - Cost Explorer API calls cost about $0.01 each; a daily report costs pennies a month.
 
 ## When to revisit

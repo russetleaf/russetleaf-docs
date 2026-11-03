@@ -5,20 +5,20 @@
 - **Applies to:** both sites, the AWS accounts and the supporting SaaS accounts
 - **Phase:** 1 (most controls). Later: Phase 2 adds prompt-injection guardrails; Phase 3 adds the AWS edge and VPC controls.
 
-> **Update ([ADR 1040](1040-lab-network-and-wireguard.md)):** the lab network is a separate subnet behind a TP-Link ER605 router (the household router can't do VLANs), and the workstation reaches the cluster over WireGuard.
+> **Update ([ADR 1040](1040-lab-network-and-wireguard.md)):** the lab network is a separate subnet behind a TP-Link ER605 router (the household router cannot do VLANs), and the workstation reaches the cluster over WireGuard.
 
 ## Context
 
 Defense in depth means layering controls so a failure at one layer is caught at another. For a Kubernetes platform, the layers are commonly named after Kubernetes' security documentation (the "4 C's"): **Cloud** (the provider and infrastructure), **Cluster** (Kubernetes), **Container** (images and runtime) and **Code** (the application and its dependencies); each depends on the one outside it. A review against those layers, and against cloud provider, infrastructure, isolation, artifact, image, workload and application-code security, found the design strong in depth but with gaps:
 
-- the project's **other providers** (GitHub, Cloudflare, Google Cloud, Slack, the domain registrars) weren't hardened like AWS
-- the **home network** put the nodes on the same LAN as household devices; **Secure Boot** and **BIOS passwords** weren't decided
-- **user namespaces** weren't used
-- **Helm charts** weren't signed or pinned by digest; critical **third-party images** weren't mirrored; `packages: write` wasn't limited to release jobs; Python and PHP dependencies weren't **hash-pinned**
-- the summarizer's **base image** wasn't specified
-- **Secrets as environment variables** weren't prevented
+- the project's **other providers** (GitHub, Cloudflare, Google Cloud, Slack, the domain registrars) were not hardened like AWS
+- the **home network** put the nodes on the same LAN as household devices; **Secure Boot** and **BIOS passwords** were not decided
+- **user namespaces** were not used
+- **Helm charts** were not signed or pinned by digest; critical **third-party images** were not mirrored; `packages: write` was not limited to release jobs; Python and PHP dependencies were not **hash-pinned**
+- the summarizer's **base image** was not specified
+- **Secrets as environment variables** were not prevented
 - the sites had **no HTTP security headers**, **no DAST**, no WordPress-specific hardening (user enumeration, keys and salts), and no **OWASP ASVS** mapping
-- the controls weren't summarized **by layer**
+- the controls were not summarized **by layer**
 
 ## Decision
 
@@ -39,7 +39,7 @@ Defense in depth means layering controls so a failure at one layer is caught at 
 - **Leaving non-AWS providers at defaults:** they hold the code, DNS, sign-in and alerts; a compromise there bypasses the AWS controls.
 - **Flat home network:** simpler, but a compromised node could reach household devices (and vice versa).
 - **Signing images only:** leaves charts (which define what runs) unverified.
-- **A WAF-only approach to web security:** WAFs don't set browser security policies (CSP, HSTS) or find application flaws the way DAST does.
+- **A WAF-only approach to web security:** WAFs do not set browser security policies (CSP, HSTS) or find application flaws the way DAST does.
 - **A commercial DAST or ASVS tool:** ZAP's baseline scan is free and enough for this site.
 
 ## Consequences
@@ -51,8 +51,8 @@ Defense in depth means layering controls so a failure at one layer is caught at 
 
 ## When to revisit
 
-- User namespaces aren't supported yet: re-check after Talos and Kubernetes upgrades.
-- ~~The router can't do VLANs: use a separate router or firewall for the lab.~~ Done: [ADR 1040](1040-lab-network-and-wireguard.md).
+- User namespaces are not supported yet: re-check after Talos and Kubernetes upgrades.
+- ~~The router cannot do VLANs: use a separate router or firewall for the lab.~~ Done: [ADR 1040](1040-lab-network-and-wireguard.md).
 
 ## Open items
 

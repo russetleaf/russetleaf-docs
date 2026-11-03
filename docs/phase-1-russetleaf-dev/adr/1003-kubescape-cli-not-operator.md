@@ -25,7 +25,7 @@ Most of this is already covered by tools in the design:
 
 ## Decision
 
-- **Don't install the Kubescape operator** in either cluster.
+- **Do not install the Kubescape operator** in either cluster.
 - **Run the Kubescape CLI on demand** against each live cluster, from the workstation or the in-cluster CI runners, with nothing installed in the cluster:
     - frameworks: **NSA-CISA** and **MITRE ATT&CK**, plus the **RBAC** analysis
     - **monthly** on the home cluster, and **once per AWS demo** on EKS
@@ -33,7 +33,7 @@ Most of this is already covered by tools in the design:
 
 ## Alternatives considered
 
-- **Kubescape operator in the cluster:** continuous scanning and in-cluster reports, but several components using roughly 0.5–1 GB of memory, most of it duplicating Trivy Operator and Falco. Doesn't fit `rl-home-cp01`.
+- **Kubescape operator in the cluster:** continuous scanning and in-cluster reports, but several components using roughly 0.5–1 GB of memory, most of it duplicating Trivy Operator and Falco. Does not fit `rl-home-cp01`.
 - **Kubescape manifest scanning in CI:** largely duplicates Checkov and the Kyverno CLI; adds framework labels but little new coverage.
 - **Not using Kubescape at all:** leaves no framework-based posture score or RBAC risk review.
 
@@ -41,7 +41,7 @@ Most of this is already covered by tools in the design:
 
 - Fills the gap (framework scores, RBAC risks) at no memory or money cost.
 - Scans are periodic, not continuous: a posture regression between scans is found at the next monthly scan (Kyverno, Checkov and Trivy Operator still catch most issues continuously).
-- The CLI reads the cluster through the Kubernetes API only, so it **doesn't replace kube-bench**: kube-bench checks the node and control-plane configuration (kubelet flags, file permissions, API server settings) by reading the nodes directly; Kubescape checks workloads and permissions through the API. They complement each other.
+- The CLI reads the cluster through the Kubernetes API only, so it **does not replace kube-bench**: kube-bench checks the node and control-plane configuration (kubelet flags, file permissions, API server settings) by reading the nodes directly; Kubescape checks workloads and permissions through the API. They complement each other.
 
 ## When to revisit
 

@@ -20,7 +20,7 @@
 ## Alternatives considered
 
 - **Fine-tuning on CPU at home:** possible for tiny models, but impractically slow for a 3B model on these 4- and 6-core mobile-class CPUs.
-- **A one-off rented GPU (a single EC2 spot instance, or a hosted notebook) without EKS:** cheaper to set up and possible without Phase 3, but outside the cluster's scheduling, policies and monitoring; kept as the fallback if Phase 3 isn't built.
+- **A one-off rented GPU (a single EC2 spot instance, or a hosted notebook) without EKS:** cheaper to set up and possible without Phase 3, but outside the cluster's scheduling, policies and monitoring; kept as the fallback if Phase 3 is not built.
 - **Amazon SageMaker training jobs:** managed and capable, but a separate platform from the cluster and the home registry.
 - **No fine-tuning:** leaves out the training half of the lifecycle ([ADR 2001](../../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md)).
 
@@ -33,7 +33,7 @@
 ## When to revisit
 
 - A GPU at home: run the same workflow locally and drop the cross-account grant.
-- Phase 3 isn't going to be built: use the rented-GPU alternative.
+- Phase 3 is not going to be built: use the rented-GPU alternative.
 
 ## Open items
 

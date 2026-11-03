@@ -34,7 +34,7 @@ The milestones for building [Phase 1](plan.md), with target dates, and the actua
 | **Thu, Nov 5** | Step 2.2, day 1: Talos on all three nodes with their hostnames (`rl-home-cp01` to `rl-home-cp03`), etcd healthy, the virtual IP, Cilium and Argo CD from the inline manifests |
 | **Fri, Nov 6** | Step 2.2, day 2: Secure Boot and disk-encryption checks, firewall, kubelet settings, the remaining tests, and the rebuild from scratch |
 
-What each milestone shows when it's done:
+What each milestone shows when it is done:
 
 - **M1:** accounts, tools, budget alert, the lab network with WireGuard access, decisions recorded, the repos, the AWS Organization and accounts, and the Terraform state bucket.
 - **M2:** the three-node, highly available Talos cluster with Cilium and Argo CD, hardened and tested.

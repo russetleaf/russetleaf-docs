@@ -7,9 +7,9 @@
 
 ## Context
 
-A new Talos cluster has no network plugin (Talos's default Flannel and kube-proxy are turned off for Cilium, [ADR 1027](1027-cilium-cni.md)), so nothing can run until Cilium is installed, including Argo CD, which is meant to manage everything afterwards. The plan installed Cilium with Terraform's Helm provider right after bootstrap, then Argo CD with Helm by hand, and only then handed both to GitOps. That's three tools and a manual step before the cluster is usable.
+A new Talos cluster has no network plugin (Talos's default Flannel and kube-proxy are turned off for Cilium, [ADR 1027](1027-cilium-cni.md)), so nothing can run until Cilium is installed, including Argo CD, which is meant to manage everything afterwards. The plan installed Cilium with Terraform's Helm provider right after bootstrap, then Argo CD with Helm by hand, and only then handed both to GitOps. That is three tools and a manual step before the cluster is usable.
 
-Talos images can't contain Kubernetes applications: Image Factory only adds system extensions and kernel settings. But Talos's machine config can carry **inline manifests**, which Talos applies while it creates the cluster.
+Talos images cannot contain Kubernetes applications: Image Factory only adds system extensions and kernel settings. But Talos's machine config can carry **inline manifests**, which Talos applies while it creates the cluster.
 
 ## Decision
 
@@ -29,7 +29,7 @@ Talos images can't contain Kubernetes applications: Image Factory only adds syst
 
 - One `terraform apply` produces a cluster that is already running Argo CD and syncing from Git.
 - A short, deliberate hand-off in step 3.1, with a check that nothing changes during it.
-- The machine config temporarily holds large rendered manifests; they're removed after the hand-off.
+- The machine config temporarily holds large rendered manifests; they are removed after the hand-off.
 
 ## When to revisit
 

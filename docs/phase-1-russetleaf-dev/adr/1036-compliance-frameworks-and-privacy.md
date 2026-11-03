@@ -9,11 +9,11 @@
 
 The design was checked against common compliance frameworks: MITRE ATT&CK, GDPR, HIPAA, PCI DSS, NIST and the CIS Benchmarks.
 
-- **CIS** was well covered: the CIS Kubernetes Benchmark (kube-bench on EKS, Trivy Operator compliance reports, Talos hardening notes), CIS AWS Foundations through Security Hub, and the CIS Controls in the control matrix (Phase 1 step 8.5). But the image build had no CIS Docker Benchmark check, and the benchmark results weren't linked to the control matrix.
+- **CIS** was well covered: the CIS Kubernetes Benchmark (kube-bench on EKS, Trivy Operator compliance reports, Talos hardening notes), CIS AWS Foundations through Security Hub, and the CIS Controls in the control matrix (Phase 1 step 8.5). But the image build had no CIS Docker Benchmark check, and the benchmark results were not linked to the control matrix.
 - **MITRE ATT&CK** was used only as a Kubescape posture score; nothing showed which attack techniques the detections (Falco, audit alerts, GuardDuty, Hubble) cover and which they miss.
-- **GDPR** wasn't addressed, although the sites are public and hold personal data: commenters' names and email addresses, visitors' IP addresses in logs, and admins' Google accounts. There was no privacy notice, no record of processing or processor list, no retention schedule, no procedure for access or deletion requests, and no breach-notification runbook. The 30-day locked backups ([ADR 1018](1018-disaster-recovery.md)) can't be erased early, which needs to be stated.
-- **NIST** wasn't referenced. Many controls match NIST guidance, but none were mapped.
-- **HIPAA** and **PCI DSS** don't apply (no health data, no card payments), but the documents didn't say so.
+- **GDPR** was not addressed, although the sites are public and hold personal data: commenters' names and email addresses, visitors' IP addresses in logs, and admins' Google accounts. There was no privacy notice, no record of processing or processor list, no retention schedule, no procedure for access or deletion requests, and no breach-notification runbook. The 30-day locked backups ([ADR 1018](1018-disaster-recovery.md)) cannot be erased early, which needs to be stated.
+- **NIST** was not referenced. Many controls match NIST guidance, but none were mapped.
+- **HIPAA** and **PCI DSS** do not apply (no health data, no card payments), but the documents did not say so.
 
 ## Decision
 
@@ -21,8 +21,8 @@ The design was checked against common compliance frameworks: MITRE ATT&CK, GDPR,
     - **Apply:** GDPR (lightly: a small public site), CIS Benchmarks, NIST guidance (as a reference, not a certification), MITRE ATT&CK (for detection coverage).
     - **Out of scope, with reasons:** HIPAA (no health data; if it ever applied, the encryption, audit logging and access controls carry over, AWS's Business Associate Agreement would be needed, and only HIPAA-eligible AWS services could be used) and PCI DSS (no card data; if a shop is ever added, a **hosted payment page** such as Stripe Checkout keeps card data off the site, so the site stays in PCI's smallest self-assessment category, SAQ A).
 - **GDPR basics** (Core, since they apply from the day the site is public):
-    - A **privacy notice** page in the theme (who runs the site, what's collected, why, how long, which processors, how to make a request), linked from every page footer and the comment form.
-    - **Record of processing** (`docs/privacy/record-of-processing.md`): each kind of personal data, where it's stored (database, logs, backups, Slack alerts), why, and for how long.
+    - A **privacy notice** page in the theme (who runs the site, what is collected, why, how long, which processors, how to make a request), linked from every page footer and the comment form.
+    - **Record of processing** (`docs/privacy/record-of-processing.md`): each kind of personal data, where it is stored (database, logs, backups, Slack alerts), why, and for how long.
     - **Processors list:** Cloudflare, AWS, Google, GitHub and Slack, each with its data processing terms linked.
     - **Retention schedule:** logs 7–14 days; database backups 30 days locked plus the lifecycle period; audit logs 1 year ([ADR 1033](1033-identity-and-access.md)); unapproved comments deleted after 30 days.
     - **Request runbook** (`docs/runbooks/data-subject-request.md`): find and export or delete a person's data with WordPress's built-in **personal data export and erasure tools**; locked backups expire on their own within the retention period, and a restore re-applies past erasures (kept in an erasure log).
@@ -36,12 +36,12 @@ The design was checked against common compliance frameworks: MITRE ATT&CK, GDPR,
 
 - **A consent-management platform:** unnecessary without tracking cookies; adds a third-party script.
 - **Mapping to NIST SP 800-53:** far more detail than a project this size needs; CSF 2.0 plus the container and SSDF guidance fit better.
-- **Treating GDPR as out of scope** (a personal, non-commercial site): GDPR's household exemption doesn't cover a public website, and the basics are cheap.
+- **Treating GDPR as out of scope** (a personal, non-commercial site): GDPR's household exemption does not cover a public website, and the basics are cheap.
 - **Formal certification (SOC 2, ISO 27001):** not meaningful for a portfolio project; the control matrix shows the same thinking.
 
 ## Consequences
 
-- The project can say clearly which frameworks it follows and why the others don't apply.
+- The project can say clearly which frameworks it follows and why the others do not apply.
 - The sites have a privacy notice and documented handling of personal data from launch.
 - Detection coverage is measurable, and its gaps are explicit.
 - A little ongoing work: keeping the record of processing and the ATT&CK map current when components change.

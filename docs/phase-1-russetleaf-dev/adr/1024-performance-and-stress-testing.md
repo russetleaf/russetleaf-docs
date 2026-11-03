@@ -14,7 +14,7 @@ Load tests appeared only in passing (the gVisor comparison, light load during no
 - Six test types: **smoke, load, stress/breakpoint, spike, soak** and an **AI pipeline burst**, with defined places to run them (staging, quiet production windows, EKS during demos).
 - **k6** scripts in `russetleaf-gitops/perf/` with thresholds in code; the **k6 Operator** for distributed, in-cluster tests against the ingress; results to Prometheus and Grafana; summaries in `docs/performance/`.
 - **Edge tests** through Cloudflare or CloudFront only with a narrow, temporary WAF allow rule applied by Terraform.
-- A **performance regression gate** in `staging-test`: the **current production version and the candidate are load-tested back to back in staging** (same hardware, same conditions, minutes apart), each **three times**, comparing **medians**; more than about 20% slower, or over the error threshold, fails promotion. The gate **waits** while `rl-home-cp02` is busy with a summarization burst or a stress test is running, so shared-cluster load doesn't cause false failures.
+- A **performance regression gate** in `staging-test`: the **current production version and the candidate are load-tested back to back in staging** (same hardware, same conditions, minutes apart), each **three times**, comparing **medians**; more than about 20% slower, or over the error threshold, fails promotion. The gate **waits** while `rl-home-cp02` is busy with a summarization burst or a stress test is running, so shared-cluster load does not cause false failures.
 - Results feed the SLO targets, the capacity and cost plan, KEDA limits and Bedrock budget thresholds.
 
 ## Alternatives considered
@@ -34,7 +34,7 @@ Load tests appeared only in passing (the gVisor comparison, light load during no
 
 ## When to revisit
 
-- Traffic grows enough that in-cluster tests can't generate realistic load: use a hosted, multi-region load-testing service.
+- Traffic grows enough that in-cluster tests cannot generate realistic load: use a hosted, multi-region load-testing service.
 - The regression threshold proves too noisy: widen it or compare medians over several runs.
 
 ## Open items

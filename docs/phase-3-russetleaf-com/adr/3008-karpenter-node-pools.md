@@ -7,14 +7,14 @@
 
 ## Context
 
-EKS nodes cost money by the hour, demos are short, traffic during a load test varies widely, and the self-hosted model (if Phase 2 is built) needs a GPU only while it runs. Fixed managed node groups would sit partly idle and can't pick cheaper instance types or spot capacity flexibly.
+EKS nodes cost money by the hour, demos are short, traffic during a load test varies widely, and the self-hosted model (if Phase 2 is built) needs a GPU only while it runs. Fixed managed node groups would sit partly idle and cannot pick cheaper instance types or spot capacity flexibly.
 
 ## Decision
 
 - **A small managed node group** (two nodes) runs Karpenter itself, CoreDNS and other system pods.
 - **Karpenter** creates all other nodes from two **NodePools**:
     - a **general pool** (spot and on-demand, several instance families) for WordPress and platform services, with **consolidation** to remove idle or underused nodes and a disruption budget;
-    - a **GPU pool** (g6 family, spot preferred) for the model server and fine-tuning, labeled `workload=llm` and tainted `dedicated=llm:NoSchedule`, with consolidation limited so the model isn't moved needlessly; created only if Phase 2 is built.
+    - a **GPU pool** (g6 family, spot preferred) for the model server and fine-tuning, labeled `workload=llm` and tainted `dedicated=llm:NoSchedule`, with consolidation limited so the model is not moved needlessly; created only if Phase 2 is built.
 - **Spot interruption handling** through an SQS queue fed by EventBridge, so pods move before AWS reclaims a node.
 - **Node settings** in the `EC2NodeClass`: AL2023 with a pinned AMI version tracked by Renovate, IMDSv2 with hop limit 1, encrypted root volumes, kubelet limits ([ADR 3004](3004-eks-component-hardening.md)), and the Cilium startup taint ([ADR 3003](3003-cilium-chaining-on-eks.md)).
 - **Cost alert:** `GPUNodeRunningLong` from OpenCost when a GPU node runs longer than expected.
@@ -22,7 +22,7 @@ EKS nodes cost money by the hour, demos are short, traffic during a load test va
 ## Alternatives considered
 
 - **Cluster Autoscaler with managed node groups:** the older, widely used option, but slower, tied to node group definitions, and weaker at mixing instance types and spot.
-- **EKS Auto Mode:** AWS manages Karpenter-style provisioning for you; simpler, but hides the configuration this project is meant to show, and adds a per-node management fee.
+- **EKS Auto Mode:** AWS manages Karpenter-style provisioning itself; simpler, but hides the configuration this project is meant to show, and adds a per-node management fee.
 - **Fargate:** no nodes to manage, but no DaemonSets (Falco, Cilium, Alloy), no GPUs, and less control.
 
 ## Consequences

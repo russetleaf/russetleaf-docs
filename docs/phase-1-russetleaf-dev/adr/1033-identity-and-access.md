@@ -11,11 +11,11 @@
 
 Workload identity was well covered (projected service-account tokens off by default, Pod Identity on EKS, scoped keys at home), and the admin UIs sat behind Cloudflare Access with Google. But for **people**:
 
-- the home cluster was used through Talos's generated **admin kubeconfig**: a long-lived **cluster-admin client certificate** that **can't be revoked**
+- the home cluster was used through Talos's generated **admin kubeconfig**: a long-lived **cluster-admin client certificate** that **cannot be revoked**
 - day-to-day Talos API access used the full admin role
 - there were no defined **human roles**; cluster-admin was the default
 - Argo CD, Grafana and Backstage relied on the edge login, without their own SSO and roles
-- **audit logs** were kept only 7 days (Loki at home) or briefly (CloudWatch on EKS), and Argo CD's audit trail wasn't collected
+- **audit logs** were kept only 7 days (Loki at home) or briefly (CloudWatch on EKS), and Argo CD's audit trail was not collected
 - **platform namespaces** had no default-deny network policies
 - the home External Secrets bootstrap key remained a static key until an optional later step
 
@@ -29,12 +29,12 @@ Workload identity was well covered (projected service-account tokens off by defa
 - **SSO inside the admin tools:** Argo CD (OIDC through Dex, with its RBAC mapping groups to roles), Grafana (OIDC with Viewer, Editor and Admin roles) and Backstage, all behind Cloudflare Access as well.
 - **Audit-log retention:** Kubernetes audit logs are also shipped to an **S3 bucket with Object Lock in the Log Archive account**, kept **1 year** (Alloy writes a copy; EKS: [ADR 3005](../../phase-3-russetleaf-com/adr/3005-eks-access-and-audit-logs.md)); Argo CD's audit events (who synced or changed what) are collected into Loki and the same archive.
 - **Default-deny network policies for platform namespaces** too (Argo CD, monitoring, logging, External Secrets, Kyverno, cert-manager, Dex, KEDA, Argo Rollouts and others), with least-privilege egress per component (e.g. Argo CD → GitHub and GHCR and the API server; External Secrets → Secrets Manager; cert-manager → the API server), tested in CI.
-- **Pod Security Admission version pinned** on every namespace (`enforce-version`), so Kubernetes upgrades don't silently change enforcement.
+- **Pod Security Admission version pinned** on every namespace (`enforce-version`), so Kubernetes upgrades do not silently change enforcement.
 - **Keyless AWS access for the home cluster** (Phase 1 step 9.1) moves into the **Extended** tier (it was optional), removing the last static AWS keys.
 
 ## Alternatives considered
 
-- **Admin client certificates for everyday use:** simple, but can't be revoked and grant full control.
+- **Admin client certificates for everyday use:** simple, but cannot be revoked and grant full control.
 - **API server OIDC directly against Google:** fewer components, but Google's tokens carry no groups for personal accounts and Google's audience rules make kubectl setup awkward; Dex adds groups and a single issuer for all tools.
 - **Pinniped or a hosted identity provider (e.g. Okta, Auth0):** capable; Dex is lighter and self-hosted.
 - **Cloudflare Access alone for the admin tools:** strong edge protection, but every signed-in person gets the same rights inside each tool.

@@ -3,13 +3,13 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** seccomp on both sites; gVisor on the home cluster only
-- **Phase:** 1. Later: Phase 2 runs the evaluation jobs on the sandboxed runners; Phase 3 doesn't use gVisor on EKS.
+- **Phase:** 1. Later: Phase 2 runs the evaluation jobs on the sandboxed runners; Phase 3 does not use gVisor on EKS.
 
 ## Context
 
-Containers on a node share its Linux kernel, so a kernel exploit from inside one container could compromise the whole node. The design already limits what containers can do (Pod Security `baseline`, non-root, read-only root filesystem, dropped capabilities, CiliumNetworkPolicies, Falco), but didn't require a **seccomp** profile and had no **sandboxed runtime**.
+Containers on a node share its Linux kernel, so a kernel exploit from inside one container could compromise the whole node. The design already limits what containers can do (Pod Security `baseline`, non-root, read-only root filesystem, dropped capabilities, CiliumNetworkPolicies, Falco), but did not require a **seccomp** profile and had no **sandboxed runtime**.
 
-Two workloads run code that isn't fully trusted:
+Two workloads run code that is not fully trusted:
 
 - the **ARC self-hosted CI runners**, which run code from pull requests
 - **WordPress**, internet-facing PHP whose plugins are its most common attack route
@@ -23,15 +23,15 @@ Constraints: home nodes have 8 GB of RAM; Talos offers official system extension
     - **ARC runners:** run under gVisor, **enforced** by a Kyverno rule in their namespace.
     - **WordPress:** **trial** under gVisor with a before-and-after load test; keep it only if response times stay acceptable (record the numbers here).
     - Falco's **gVisor event source** turned on, so detection still covers sandboxed pods.
-- **EKS:** no gVisor (custom AMIs aren't worth it for a demo cluster, and the runners only run at home); seccomp `RuntimeDefault` still applies.
+- **EKS:** no gVisor (custom AMIs are not worth it for a demo cluster, and the runners only run at home); seccomp `RuntimeDefault` still applies.
 - **Kata Containers:** not used.
 
 ## Alternatives considered
 
-- **Kata Containers:** a lightweight VM per pod, the strongest isolation. Each pod's VM needs its own memory, which 8 GB nodes can't spare, and on AWS it needs hardware virtualization inside the instance (historically bare-metal instances only). **AWS Fargate** also uses microVMs, but doesn't support DaemonSets (Cilium, Falco, Alloy) or GPUs.
-- **gVisor everywhere:** slows system-call-heavy workloads and isn't compatible with node agents that need host access; little benefit for trusted project code.
+- **Kata Containers:** a lightweight VM per pod, the strongest isolation. Each pod's VM needs its own memory, which 8 GB nodes cannot spare, and on AWS it needs hardware virtualization inside the instance (historically bare-metal instances only). **AWS Fargate** also uses microVMs, but does not support DaemonSets (Cilium, Falco, Alloy) or GPUs.
+- **gVisor everywhere:** slows system-call-heavy workloads and is not compatible with node agents that need host access; little benefit for trusted project code.
 - **gVisor on EKS via a custom AMI or node user data:** possible, but adds AMI maintenance for a cluster that only exists during demos.
-- **seccomp only:** a strong, free baseline, but doesn't isolate pull-request code from the host kernel.
+- **seccomp only:** a strong, free baseline, but does not isolate pull-request code from the host kernel.
 
 ## Consequences
 

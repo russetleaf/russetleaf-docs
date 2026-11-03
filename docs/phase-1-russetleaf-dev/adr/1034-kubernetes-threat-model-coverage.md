@@ -14,7 +14,7 @@ Four areas were well covered: malicious code execution (signed images, Falco, gV
 Four had gaps:
 
 - **Trust boundaries and data flow:** described only in the Advanced-tier threat model (Phase 1 step 8.5), late in the build and not mapped to these areas.
-- **Persistence:** nodes can't be changed (Talos), and Argo CD self-heal reverts changes to what it manages, but nothing flagged **new** objects created outside Argo CD (a CronJob, DaemonSet or admission webhook left behind by an attacker), and long-lived service-account token Secrets weren't blocked.
+- **Persistence:** nodes cannot be changed (Talos), and Argo CD self-heal reverts changes to what it manages, but nothing flagged **new** objects created outside Argo CD (a CronJob, DaemonSet or admission webhook left behind by an attacker), and long-lived service-account token Secrets were not blocked.
 - **Denial of service:** quotas, memory limits and edge rate limits existed, but there was **no per-pod process (PID) limit** (a fork bomb could exhaust a node), no explicit eviction thresholds, no ephemeral-storage limits, and nothing watched the API server's request throttling.
 - **Privilege escalation through RBAC:** Pod Security blocks container-based escalation, but nothing checked roles for **risky permissions** (`escalate`, `bind`, `impersonate`, `nodes/proxy`, wildcards, or `create pods` where powerful service accounts run), especially in third-party charts.
 
@@ -22,7 +22,7 @@ Four had gaps:
 
 - **Trust boundaries and data flows** are drawn now in the overview ([Kubernetes threat model coverage](../../overview.md#kubernetes-threat-model-coverage)), with a table mapping each of the eight areas to its controls and tests. The STRIDE threat model (Phase 1 step 8.5) adds a cross-check against the eight areas.
 - **Persistence:**
-    - Argo CD **AppProjects warn about orphaned resources** (objects in managed namespaces that Argo CD doesn't own), shown in the UI and sent to `#rl-security` through Argo CD Notifications.
+    - Argo CD **AppProjects warn about orphaned resources** (objects in managed namespaces that Argo CD does not own), shown in the UI and sent to `#rl-security` through Argo CD Notifications.
     - New audit alerts: **`KubeWorkloadCreatedOutsideArgoCD`** (Pods, Deployments, DaemonSets, StatefulSets, Jobs or CronJobs created in production or platform namespaces by anyone other than Argo CD and the expected controllers), **`KubeAdmissionWebhookChanged`** (validating or mutating webhook configurations created, changed or deleted by anyone other than Argo CD and the components that manage their own webhooks, such as Kyverno and cert-manager's CA injector) and **`KubeTokenSecretCreated`** (a long-lived service-account token Secret).
     - Kyverno **blocks** Secrets of type `kubernetes.io/service-account-token` outside an allow-list (none expected).
 - **Denial of service:**
@@ -47,7 +47,7 @@ Four had gaps:
 - Each of the eight threat areas has named controls, a detection, and a test.
 - A few more audit alerts to tune: controllers that create objects (operators, KEDA, Argo Rollouts, the MariaDB Operator) go on the expected-identity list.
 - Third-party charts with broad RBAC need allow-list entries with reasons; some upgrades will need a review.
-- The PID limit must be high enough for PHP-FPM or Apache workers and the model server; it's measured before enforcing.
+- The PID limit must be high enough for PHP-FPM or Apache workers and the model server; it is measured before enforcing.
 - About **8–9 hours** more across the two plans.
 
 ## When to revisit

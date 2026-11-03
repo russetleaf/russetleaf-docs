@@ -11,17 +11,17 @@ The design was checked against the common platform security topics: supply chain
 
 Supply chain security was strong (signed images with SBOM and SLSA provenance verified at admission, signed charts pinned by digest, mirrored upstream images). Service mesh and mTLS were covered by [ADR 1001](1001-no-service-mesh.md) (no mesh; WireGuard plus TLS on every sensitive connection, with the lack of per-service identity stated). The rest had gaps:
 
-- **Admission controllers:** Kyverno's replica count, failure behavior and webhook timeouts weren't decided; if Kyverno was down or misconfigured, nothing built into Kubernetes backed up its most important rules; the enabled admission plugins weren't checked on EKS.
+- **Admission controllers:** Kyverno's replica count, failure behavior and webhook timeouts were not decided; if Kyverno was down or misconfigured, nothing built into Kubernetes backed up its most important rules; the enabled admission plugins were not checked on EKS.
 - **Kubernetes PKI:** Talos manages the cluster CAs and rotates leaf certificates, but the kubelets' **serving certificates are self-signed** by default, so metrics-server and Prometheus would skip verification (`--kubelet-insecure-tls`); there was no **CA rotation** procedure, no expiry alerts for Talos- and Kubernetes-managed certificates, and the **talosconfig client certificate expires after a year** with nothing to remind anyone.
-- **Image repository:** GHCR package permissions and a cleanup policy weren't set down; a careless cleanup could delete an image needed for rollback.
-- **Observability:** Loki holds the API audit log, Falco events and Argo CD audit events, and Grafana's free edition can't restrict data sources, so any Grafana user could read them. Loki, Prometheus, Tempo and Alertmanager have no authentication inside the cluster.
-- **Supply chain (small):** accepted vulnerabilities were recorded only in `.trivyignore`, which other tools can't read.
+- **Image repository:** GHCR package permissions and a cleanup policy were not set down; a careless cleanup could delete an image needed for rollback.
+- **Observability:** Loki holds the API audit log, Falco events and Argo CD audit events, and Grafana's free edition cannot restrict data sources, so any Grafana user could read them. Loki, Prometheus, Tempo and Alertmanager have no authentication inside the cluster.
+- **Supply chain (small):** accepted vulnerabilities were recorded only in `.trivyignore`, which other tools cannot read.
 
 ## Decision
 
 - **Admission controllers:**
     - Kyverno's **admission controller runs three replicas**, spread across the three nodes (topology spread constraints), with a PodDisruptionBudget; the background, reports and cleanup controllers stay at one replica each.
-    - Security policies **fail closed** (`failurePolicy: Fail`): if Kyverno can't answer, the request is rejected rather than admitted unchecked. The existing namespace exclusions (`kube-system`, `kyverno`, `argocd`) and the emergency runbook keep recovery possible. Webhook timeouts are short (e.g. 5 seconds) so a slow Kyverno fails fast.
+    - Security policies **fail closed** (`failurePolicy: Fail`): if Kyverno cannot answer, the request is rejected rather than admitted unchecked. The existing namespace exclusions (`kube-system`, `kyverno`, `argocd`) and the emergency runbook keep recovery possible. Webhook timeouts are short (e.g. 5 seconds) so a slow Kyverno fails fast.
     - **Built-in backstop:** a few critical rules are also written as Kubernetes **ValidatingAdmissionPolicies** (CEL, evaluated in the API server, no webhook): images only from the allowed registries, no bindings to `cluster-admin` outside the allow-list, and no long-lived service-account token Secrets. They still apply if Kyverno is down or its webhooks are deleted in an emergency.
     - The **enabled admission plugins** are checked on both clusters (home: the API server's arguments through `talosctl`; EKS: AWS's documented list for the version) and recorded in `docs/talos-hardening.md` and the EKS security review: NodeRestriction, PodSecurity and the validating and mutating webhook plugins on; `AlwaysAdmit` off.
 - **Kubernetes PKI:**
@@ -42,10 +42,10 @@ Supply chain security was strong (signed images with SBOM and SLSA provenance ve
 ## Alternatives considered
 
 - **Kyverno fail-open:** keeps deployments flowing when Kyverno is down, but admits unchecked workloads; the exclusions and runbook already make fail-closed safe to recover from.
-- **Replacing Kyverno with ValidatingAdmissionPolicies:** no webhook to fail, but CEL can't verify signatures or attestations, generate resources or mutate; used as a backstop only.
-- **Grafana Enterprise data-source permissions:** solves observability access directly, but isn't free.
+- **Replacing Kyverno with ValidatingAdmissionPolicies:** no webhook to fail, but CEL cannot verify signatures or attestations, generate resources or mutate; used as a backstop only.
+- **Grafana Enterprise data-source permissions:** solves observability access directly, but is not free.
 - **Authentication in front of Loki and Prometheus (an auth proxy):** stronger inside the cluster, but more moving parts; network policies already restrict who can connect.
-- **Immutable tags in the registry:** GHCR doesn't offer them; digests in Git achieve the same for deployments.
+- **Immutable tags in the registry:** GHCR does not offer them; digests in Git achieve the same for deployments.
 
 ## Consequences
 
