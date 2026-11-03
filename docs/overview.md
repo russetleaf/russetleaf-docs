@@ -660,6 +660,7 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [1044](phase-1-russetleaf-dev/adr/1044-cilium-gateway-api.md) | Cilium's Gateway API for traffic into the home cluster (ingress-nginx is retired) | 1 |
 | [1045](phase-1-russetleaf-dev/adr/1045-container-forensics.md) | Preserve evidence from a compromised container before containing and rebuilding it | 1 |
 | [1046](phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md) | Incident response, incident runbooks and one runbook index | 1 |
+| [1047](phase-1-russetleaf-dev/adr/1047-in-cluster-credentials-and-rotation.md) | The home cluster's own passwords are generated in the cluster and rotated automatically | 1 |
 | [2001](phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback | 2 |
 | [2002](phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
 | [2003](phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | Self-hosted model on rl-home-cp02 (CPU llama.cpp), dedicated by taint | 2 |

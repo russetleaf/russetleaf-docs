@@ -119,6 +119,7 @@ nav:
           - "1044 Cilium's Gateway API for traffic into the home cluster (ingress-nginx is retired)": phase-1-russetleaf-dev/adr/1044-cilium-gateway-api.md
           - "1045 Preserve evidence from a compromised container before containing and rebuilding it": phase-1-russetleaf-dev/adr/1045-container-forensics.md
           - "1046 Incident response, incident runbooks and one runbook index": phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md
+          - "1047 The home cluster's own passwords are generated in the cluster and rotated automatically": phase-1-russetleaf-dev/adr/1047-in-cluster-credentials-and-rotation.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md
