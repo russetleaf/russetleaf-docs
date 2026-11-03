@@ -221,7 +221,7 @@ These are approximate prices for **us-east-1**, on demand unless noted, for a sm
 | S3 (media) | ~50 GB + requests, versioning on | ~$2 |
 | Secrets Manager | ~5 secrets | ~$2 |
 | Container images | GHCR (free for public images); optional ECR pull-through cache | $0–$1 |
-| CloudWatch (logs + Container Insights) | moderate log volume | ~$20 |
+| CloudWatch (EKS audit logs with short retention, metrics read by alarms and Grafana; no Container Insights) | moderate log volume | ~$10 |
 | Route 53 | 1 hosted zone + queries | ~$1 |
 | ACM certificates | public certificates | $0 |
 | SES | low email volume ($0.10 per 1,000) | <$1 |
@@ -233,9 +233,9 @@ These are approximate prices for **us-east-1**, on demand unless noted, for a sm
 | CloudTrail + GuardDuty | Organization trail (management events); GuardDuty incl. EKS audit-log monitoring | ~$1–5 |
 | Security Hub + Config + KMS | Organization-wide standards; focused Config recording; KMS keys for logs and backups | ~$5–15 |
 | Alerting (SNS, Amazon Q Developer in chat applications, Slack free plan) | CloudWatch alarms and budget alerts to Slack | $0 |
-| **Total** | | **~$525–$585 / month** |
+| **Total** | | **~$515–$575 / month** |
 
-The last two rows (CloudTrail and GuardDuty; Security Hub, Config and KMS) are organization-wide services, already counted in the home lab's always-on cost; without them, the demo stack alone is about **$520–$565 / month** if left running.
+The last two rows (CloudTrail and GuardDuty; Security Hub, Config and KMS) are organization-wide services, already counted in the home lab's always-on cost; without them, the demo stack alone is about **$510–$555 / month** if left running.
 
 GuardDuty EKS Runtime Monitoring, if used instead of Falco, is billed per vCPU monitored and would add roughly $10–$20/month at this size.
 
@@ -346,6 +346,7 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 
 ### Backup and recovery
 
+- **Database Insights (Standard)** on RDS: database load and the top SQL statements, free with 7 days of history, used in the load tests.
 - Automated **RDS backups** with point-in-time recovery, plus a **final snapshot** each time the russetleaf.com demo stack is destroyed.
 
 ### Node autoscaling (Karpenter)

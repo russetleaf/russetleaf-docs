@@ -54,13 +54,13 @@ High availability (HA) means a site keeps working when a single component (a nod
 **AWS (russetleaf.com):**
 
 1. **Three NAT Gateways** (one per zone): about **+$65/month** if running 24/7.
-2. **Always-on operation:** the full **~$525–585/month** in the Phase 3 design's cost table.
+2. **Always-on operation:** the full **~$515–575/month** in the Phase 3 design's cost table.
 3. **Multi-region disaster recovery:** cross-region copies of RDS snapshots and S3 data (backup-and-restore costs little more than storage), or a warm standby in a second region with **Route 53 failover** (roughly doubles the cost).
 
 ## Alternatives considered
 
 - **Building HA at home now:** needs a third node, more memory and replicated storage; not affordable with the current hardware, and recovery from Git plus backups is adequate for a portfolio site.
-- **Running russetleaf.com always-on with full HA:** about $525–585/month, far over the $30–50/month budget.
+- **Running russetleaf.com always-on with full HA:** about $515–575/month, far over the $30–50/month budget.
 - **Removing the demo cut (three NAT Gateways) during demos:** adds cost for every demo hour, for resilience that a demo rarely needs; documented as "production would use three" instead.
 
 ## Consequences
