@@ -318,7 +318,7 @@ Also add the **AWS WAF steps** to the `under-attack.md` and `emergency-vulnerabi
 
 ### Step 5.1b: Rollback drill on EKS
 
-**Do:** during one demo, run the AWS rollback paths from the rollback runbooks: deploy a deliberately broken WordPress version and let the **Argo Rollouts canary (CloudWatch analysis) roll it back**; take a manual RDS snapshot, then do a **point-in-time restore** of RDS to a moment before a test change; and for a `schema-change` release, confirm the manual RDS snapshot is taken before the demo uses it. Record the times in the decision log.
+**Do:** during one demo, run the AWS rollback paths from the rollback runbooks: deploy a deliberately broken WordPress version and let the **Argo Rollouts canary (CloudWatch analysis) roll it back**; take a manual RDS snapshot, then do a **point-in-time restore** of RDS to a moment before a test change, and flush the ElastiCache object cache as `rollback-data.md` requires; and for a `schema-change` release, confirm the manual RDS snapshot is taken before the demo uses it. Record the times in the decision log.
 
 Also restore russetleaf.com's database **from the latest logical dump in the backup account** into the fresh RDS instance (the disaster-recovery path when snapshots are unavailable).
 

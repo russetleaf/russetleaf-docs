@@ -44,7 +44,7 @@ The project plans runbooks for **changes and losses**: one per alert, a rollback
 | Runbook | Covers | Phase 1 step | Later |
 |---|---|---|---|
 | `incident-response.md` | The process above | 4.4 | — |
-| `credential-leak.md` | An inventory of every credential (where it lives, how to revoke and replace it, what breaks meanwhile); revoke first, then check for use | 4.2 | Phase 2 step 2.2 adds the LiteLLM keys |
+| `credential-leak.md` | An inventory of every credential (where it lives, how to revoke and replace it, what breaks meanwhile); revoke first, then check for use | 4.2 | Phase 2 step 2.2 adds the LiteLLM keys; Phase 3 the ElastiCache AUTH token |
 | `lost-access.md` | Sign-in failures; using break-glass and what to rotate afterwards | 4.7 | — |
 | `terraform-state.md` | A stuck lock, drift, restoring an earlier state version | 2.4 | — |
 | `upgrade-talos-kubernetes.md` | The upgrade procedure, one node at a time, with stop conditions | 7.8 | — |
@@ -52,7 +52,7 @@ The project plans runbooks for **changes and losses**: one per alert, a rollback
 | `replace-node.md` | Remove the etcd member, reset or replace the machine, re-enroll the TPM, rejoin | 7.11 | — |
 | `cold-start.md` | All three nodes lost power: what to check, in order, as they come back (MariaDB first) | 7.11 | — |
 | `emergency-change.md` | The rule above | 7.14 | — |
-| `wordpress-compromise.md` | Rogue admins, injected content, defacement: preserve, remove access, end every session, restore content | 7.14 | — |
+| `wordpress-compromise.md` | Rogue admins, injected content, defacement: preserve, remove access, end every session, restore content, flush the object cache | 7.14 | — |
 | `emergency-vulnerability.md` | An exploited vulnerability with no fix: a WAF rule to block the exploit, removing the plugin, maintenance mode | 7.14 | Phase 3 step 4.1 adds AWS WAF |
 | `supply-chain-compromise.md` | A compromised workflow, runner, dependency or signing identity: stop promotion, find affected digests, tighten Kyverno, rebuild from a known-good commit | 7.14 | — |
 | `under-attack.md` | A bot flood or DDoS: Cloudflare's "I'm Under Attack" security level per hostname, tighter rate limits, CrowdSec | 7.14 | Phase 3 step 4.1 adds AWS WAF |

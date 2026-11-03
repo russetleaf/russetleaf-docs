@@ -39,9 +39,10 @@ Each platform also limits what can be collected:
     - the process list with command lines, environment variables and open files
     - the container's writable layer (the overlay `upperdir`) and its `emptyDir` volumes, compared with the image
     - the pod's YAML, events and image digest, and the node's `dmesg`
+    - a dump of the Valkey object cache (`valkey-cli --rdb`) if the pod could write to it, since a poisoned cache keeps serving the attacker's content after the database is clean
 4. **Export the logs before they expire:** Falco's alerts, Hubble's flows and DNS records, and the workload's logs from Loki for the incident window. Write down the audit-log time range (the audit logs are already kept for 1 year), and on EKS the VPC flow log and Resolver query log ranges.
 5. **Keep the chain of custody:** a SHA-256 hash for every file, a notes file (who did what, when, and from which machine), and everything uploaded from the workstation to the **evidence bucket**.
-6. **Hand off:** to the personal-data breach runbook (its 72-hour clock may already have started), to credential rotation (the pod's Secrets and any keys it could reach, through the secret rollback runbook), and to a postmortem. Only then delete the quarantined pod and turn automation back on.
+6. **Hand off:** to the personal-data breach runbook (its 72-hour clock may already have started), to credential rotation (the pod's Secrets and any keys it could reach, through the secret rollback runbook), and to a postmortem. Only then flush the object cache, delete the quarantined pod and turn automation back on.
 
 **Prepared in advance**, because none of it can be built during an incident:
 
