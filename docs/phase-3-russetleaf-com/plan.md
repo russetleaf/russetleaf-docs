@@ -37,9 +37,9 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
 | **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the demo workflows, one rehearsed and **recorded demo**, and the docs. | 0.1–2.4, 3.1, 3.2, 5.1, 5.2, 5.3 | **~73–121** |
-| **Extended** | kube-bench and Kubescape on EKS, the security and cost reviews, and the EKS rollback drill. | 2.5, 4.1, 4.2, 5.1b | **~10–16** |
+| **Extended** | kube-bench and Kubescape on EKS, the security and cost reviews, and the EKS rollback and forensics drills. | 2.5, 4.1, 4.2, 5.1b, 5.1c | **~13–21** |
 | **Advanced** | Load, stress and spike tests for the capacity plan, EKS as a second spoke of the Argo CD hub, and the Istio ambient and Tetragon experiments. | 4.3, 4.4, 5.4, 5.5 | **~16–25** |
-| **Total** | | | **~99–162** |
+| **Total** | | | **~102–167** |
 
 **Calendar time:** about **5–8 weeks at ~20 hours a week** for the whole plan, after Phase 1's Core tier is done (this plan depends on it). Allow for waiting: **SES production access** in the new account.
 
@@ -321,6 +321,17 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 
 **Test:** the broken version is rolled back automatically; the point-in-time restore recovers the earlier data; the restore from the backup account's dump works; the timings are recorded.
 
+### Step 5.1c: Forensic hold and forensics drill on EKS
+
+**Do:** add the EKS steps to the compromised-container runbook from Phase 1 step 7.13 ([ADR 1045](../phase-1-russetleaf-dev/adr/1045-container-forensics.md)), and the infrastructure they need:
+
+- **Forensic hold** in the demo workflows (step 5.1): `demo-down` stops with a clear message, and the safety net alerts but does not run `demo-down`, while any resource in the demo stack is tagged `ForensicHold=true`. A `forensic-hold` workflow (`workflow_dispatch`, with `set` and `release` inputs) adds or removes the tag on the VPC and posts to `#rl-security`.
+- **In `envs/aws`:** an **isolation security group** with no rules; a policy granting **SSM Session Manager** access, kept detached from the node roles and attached only during an incident (by the runbook, through the break-glass permission set); session logging to the Log Archive account.
+- **Runbook, EKS section:** annotate the node `karpenter.sh/do-not-disrupt: "true"` and set the forensic hold; run the shared freeze, contain and capture steps with the toolkit pod; capture whole-node memory with **AVML** through SSM, uploaded to the evidence bucket with a presigned URL; take an **EBS snapshot** of the node's volume tagged `ForensicHold=true`; swap the instance's security groups for the isolation group and turn on termination protection; record the VPC flow log and Resolver query log time ranges. Note that a **spot** node can be reclaimed with two minutes' warning, so memory comes first.
+- Check whether the kubelet's **checkpoint API** works on the EKS nodes, and record the result in [ADR 1045](../phase-1-russetleaf-dev/adr/1045-container-forensics.md).
+
+**Test:** during one demo, repeat the Phase 1 drill on a russetleaf.com WordPress pod (the marker string found in the captured memory, the quarantined pod cut off while a replacement serves the site); the AVML image and EBS snapshot exist, and the hashes in the evidence bucket match; Karpenter does not remove the held node during the drill; `demo-down` refuses to run while the hold is set, and the safety net (with its limit lowered) alerts without tearing down; after the runbook's release steps (termination protection off, then `forensic-hold release`), `demo-down` completes; the SSM policy is detached again. Record the time from alert to evidence uploaded in the decision log.
+
 ### Step 5.2: Full rehearsal and demo script
 
 **Do:** write `docs/demo-script.md`: what to show and in what order (offline page → `demo-up` → live site → a page request's trace in Tempo → Argo Rollouts canary → Kyverno rejecting an unsigned image → Falco alert → OpenCost → `demo-down` → offline page). Rehearse, then record a walkthrough.
@@ -392,6 +403,7 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 | 4.4 Tetragon enforcement (optional) | Advanced | 3–5 | ☐ | | | | | | |
 | 5.1 Demo workflows | Core | 5–8 | ☐ | | | | | | |
 | 5.1b Rollback drill on EKS | Extended | 2–4 | ☐ | | | | | | |
+| 5.1c Forensic hold + forensics drill on EKS | Extended | 3–5 | ☐ | | | | | | |
 | 5.2 Rehearsal + recording | Core | 3–5 | ☐ | | | | | | |
 | 5.3 Documentation | Core | 2–3 | ☐ | | | | | | |
 | 5.4 Load, stress and spike tests | Advanced | 6–9 | ☐ | | | | | | |

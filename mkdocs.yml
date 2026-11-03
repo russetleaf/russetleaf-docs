@@ -116,6 +116,7 @@ nav:
           - "1042 S3 versioning, lifecycle rules and storage classes": phase-1-russetleaf-dev/adr/1042-s3-versioning-lifecycle-and-storage-classes.md
           - "1043 Database encryption at rest and TLS on every connection": phase-1-russetleaf-dev/adr/1043-database-encryption.md
           - "1044 Cilium's Gateway API for traffic into the home cluster (ingress-nginx is retired)": phase-1-russetleaf-dev/adr/1044-cilium-gateway-api.md
+          - "1045 Preserve evidence from a compromised container before containing and rebuilding it": phase-1-russetleaf-dev/adr/1045-container-forensics.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md

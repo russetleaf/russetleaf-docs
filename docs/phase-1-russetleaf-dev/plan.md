@@ -25,19 +25,19 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
 | **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, privacy basics (GDPR), and the docs. Finished on its own, this is a complete platform. | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 5.12, 6.1, 6.3, 9.2 | **~169–275** |
-| **Extended** | Hardening, operations and evidence: progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure and disaster drills). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.12, 9.1 | **~72–127** |
+| **Extended** | Hardening, operations and evidence: progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure, disaster and forensics drills). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.13, 9.1 | **~77–135** |
 | **Advanced** | Reliability and platform practices: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management with a local spoke cluster, chaos experiments and postmortems, a threat model and control matrix, strategy documents, public writing, and a custom seccomp profile for WordPress. | 7.7, 8.1–8.9 | **~89–144** |
-| **Total** | | | **~330–546** |
+| **Total** | | | **~335–554** |
 
 **Calendar time** (Phase 1 only):
 
 | Hours per week | Core | + Extended | + Advanced (everything) |
 |---|---|---|---|
 | ~10 | 4–7 months | 6–9 months | 8–13 months |
-| ~20 | 9–14 weeks | 12–20 weeks | 17–27 weeks |
+| ~20 | 9–14 weeks | 12–20 weeks | 17–28 weeks |
 | ~40 | 4–7 weeks | 6–10 weeks | 8–14 weeks |
 
-The optional later phases add about **146–243 hours** (Phase 2) and **99–162 hours** (Phase 3); see the [overview](../overview.md#build-plans-priorities-and-effort).
+The optional later phases add about **146–243 hours** (Phase 2) and **102–167 hours** (Phase 3); see the [overview](../overview.md#build-plans-priorities-and-effort).
 
 **Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to explain its trade-offs**.
 
@@ -263,6 +263,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 | [1042 S3 versioning, lifecycle and storage classes](adr/1042-s3-versioning-lifecycle-and-storage-classes.md) | 2.0b, 2.1, 2.3, 2.5 | 4.4 | 1.2 |
 | [1043 Database encryption and TLS](adr/1043-database-encryption.md) | 2.3, 4.5 | 4.4 | 1.6 |
 | [1044 Cilium Gateway API](adr/1044-cilium-gateway-api.md) | 4.3, 6.2, 7.9 | — | — |
+| [1045 Container forensics](adr/1045-container-forensics.md) | 7.13 | — | 5.1c |
 | [2001 MLOps lifecycle](../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | — | 4.4–4.10 | — |
 | [2002 Summary pipeline architecture](../phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | — | 2.1–2.5 | — |
 | [2003 Self-hosted model on `rl-home-cp02`](../phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | — | 1.3, 3.1, 3.2 | — |
@@ -826,6 +827,17 @@ Record each drill's time in the decision log and compare it with the expected ti
 
 **Test:** each test's results are recorded with graphs; the first bottleneck has an action item or an explanation; the soak shows no steadily growing memory or connections (or a fix is planned).
 
+### Step 7.13: Compromised-container runbook and forensics drill
+
+**Do:** prepare everything the runbook needs in advance, write it, then rehearse it ([ADR 1045](adr/1045-container-forensics.md)):
+
+- **Toolkit image** `rl-forensics`: a minimal image with `gdb` (for `gcore`), `procps`, `iproute2`, `lsof`, `tcpdump`, `tar` and `coreutils`, built, signed and attested by the same supply-chain workflow as the WordPress image (step 5.1), with a container-structure-test that checks each tool runs.
+- **`platform/forensics/`** in `russetleaf-gitops`: the empty `forensics` namespace (Pod Security `privileged`, pinned version); a Kyverno **`PolicyException`** allowing only the toolkit image, pinned by digest, to run there with `hostPID`, `privileged` and a read-only `hostPath` mount of `/var`; RBAC so only `platform-admin` can create pods there; and the **quarantine policy**, a `CiliumClusterwideNetworkPolicy` with `ingressDeny` and `egressDeny` rules for every pod labeled `rl/quarantine=true`.
+- **Evidence bucket** in `russetleaf-infra`: `rl-forensic-evidence` in the **Log Archive** account, with versioning, SSE-KMS and **Object Lock** (governance mode, 1-year retention); a **write-only** Identity Center permission set for uploads from the workstation and a read permission set for the security role. Add the bucket to the record of processing and the retention schedule (step 5.12; [ADR 1036](adr/1036-compliance-frameworks-and-privacy.md)).
+- **Runbook** `docs/runbooks/compromised-container.md` in `russetleaf-gitops`, following the runbook template: freeze (Argo CD auto-sync and self-heal off on the root app, then the affected app), contain (quarantine label, remove the ReplicaSet's selector label so the pod is orphaned and replaced, cordon the node), capture (process memory with `gcore`, sockets, a short `talosctl pcap`, processes and open files, the writable layer and `emptyDir` volumes, pod YAML, events, image digest, `dmesg`), export the logs from Loki for the incident window (Falco, Hubble flows and DNS records, the workload's logs), hash and upload everything with a notes file, then hand off to the personal-data breach runbook, secret rotation and a postmortem. Include the steps for a **gVisor pod** (`runsc debug`, `runsc checkpoint`) and for a suspected **node** compromise (capture first, then disconnect the node's network cable). Leave a marked section for the EKS steps (Phase 3 step 5.1c). Link the runbook from the runbooks of every Falco, audit and GuardDuty alert that can mean a compromised container.
+
+**Test:** a **drill in staging**: send a request to the staging WordPress pod with a unique marker string in its URL, then trigger a Falco allow-list alert in the pod (`kubectl exec <pod> -- sleep 600`) and write a file to `/tmp`; follow the runbook end to end. Afterwards: the marker string is found in the captured memory (`grep -a <marker>` on the core files); the `sleep` process and the `/tmp` file appear in the captured process list and writable layer; the quarantined pod can reach nothing (`hubble observe --verdict DROPPED` shows its attempts) while a replacement serves staging; Argo CD did not revert the quarantine during the drill; every file in the evidence bucket matches its recorded hash, and deleting one is refused by Object Lock; creating the toolkit pod raised `KubeWorkloadCreatedOutsideArgoCD`. Repeat the memory capture on a gVisor runner pod (or record why it does not work). Record the time from alert to evidence uploaded in the decision log (aim for under 30 minutes), and fix the runbook wherever it was wrong.
+
 ## Stage 8: Engineering practices
 
 These steps are most of the **Advanced** tier; see the Phase 1 design's [Engineering practices](design.md#engineering-practices). Do them after the Core and most Extended steps.
@@ -1002,6 +1014,7 @@ Phase 1 builds most of what these need: the shared Terraform modules, the base m
 | 7.10 First full disaster drill | Extended | 6–10 | ☐ | | | | |
 | 7.11 Node-failure drills | Extended | 3–6 | ☐ | | | | |
 | 7.12 Stress, spike and soak tests | Extended | 5–8 | ☐ | | | | |
+| 7.13 Compromised-container runbook + forensics drill | Extended | 5–8 | ☐ | | | | |
 | 9.1 Keyless AWS access | Extended | 5–10 | ☐ | | | | |
 | 9.2 Docs + go public | Core | 6–10 | ☐ | | | | |
 | 8.1 SLOs and error budgets | Advanced | 10–15 | ☐ | | | | |
