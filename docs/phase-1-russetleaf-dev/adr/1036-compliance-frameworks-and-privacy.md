@@ -37,6 +37,7 @@ The design was checked against common compliance frameworks: MITRE ATT&CK, GDPR,
 - **A consent-management platform:** unnecessary without tracking cookies; adds a third-party script.
 - **Mapping to NIST SP 800-53:** far more detail than a project this size needs; CSF 2.0 plus the container and SSDF guidance fit better.
 - **Treating GDPR as out of scope** (a personal, non-commercial site): GDPR's household exemption does not cover a public website, and the basics are cheap.
+- **AWS Audit Manager** (collects evidence from Config, CloudTrail and Security Hub automatically and maps it to frameworks such as CIS, NIST CSF, SOC 2 and PCI DSS): it only sees AWS, while most of the controls live in Kubernetes, CI and the home cluster; it charges per evidence item; and no audit is planned. The control matrix (Phase 1 step 8.5) maps every control to its evidence instead. Revisit for a real audit of an always-on russetleaf.com.
 - **Formal certification (SOC 2, ISO 27001):** not meaningful for a portfolio project; the control matrix shows the same thinking.
 
 ## Consequences
