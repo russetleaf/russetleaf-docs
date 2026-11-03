@@ -7,6 +7,7 @@ Each step is sized for one or a few Claude sessions, and ends with a **test** th
 ## How to use this plan with Claude
 
 - **Start each session** with something like: *"Read the overview, the Phase 1 design and the Phase 1 plan. We are working on step 4.3. Here is where I left off: ..."* (the [overview](../overview.md), [design](design.md) and this plan). Claude has no memory of earlier sessions, so these files are the shared context.
+- **AI assistance, not agents.** Phase 1 is built with Claude in conversation (answers, drafts and reviews), with the operator running every command and making every change. Phases 2 and 3 use AI coding agents ([ADR 2004](../phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md)), and this phase's actual hours are the baseline for comparing them, so record them carefully.
 - **Track the work on GitHub.** Each step is a GitHub issue in a milestone from the [roadmap](roadmap.md) (created in step 1.1 by `tools/plan_to_issues.py`); move it across the Projects board as work progresses, and update the roadmap's **Actual** columns when a milestone closes.
 - **Start each step with a spec.** Ask Claude to write the step's spec from [`docs/specs/TEMPLATE.md`](../specs/TEMPLATE.md) (goal, context, scope, approach, tasks of 1–3 hours, acceptance criteria from the step's test, risks), save it as `docs/specs/phase-1/<step>-<name>.md`, review it, then build against it. The pull request links the issue and the spec, and the spec's **Outcome** records actual hours and what changed.
 - **One step at a time.** Build it, run the step's test, fix, commit. Do not start the next step until the test passes.
@@ -258,9 +259,11 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 | [1038 Separate documentation repo and docs site](adr/1038-documentation-repo-and-site.md) | 1.1 | — | — |
 | [1039 Bootstrap through Talos inline manifests](adr/1039-bootstrap-through-talos-inline-manifests.md) | 2.2, 3.1 | — | — |
 | [1040 Lab network and WireGuard](adr/1040-lab-network-and-wireguard.md) | 0.3, 2.2 | — | — |
+| [1041 Naming convention](adr/1041-naming-convention.md) | 0.3, 2.2 | — | 1.4, 2.3 |
 | [2001 MLOps lifecycle](../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | — | 4.4–4.7 | 4.5, 4.6 |
 | [2002 Summary pipeline architecture](../phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | — | 2.1–2.5 | 4.1 |
 | [2003 Self-hosted model on `rl-home-cp02`](../phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | — | 1.3, 3.1, 3.2 | 4.2 |
+| [2004 Agentic AI delivery](../phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md) | — | 1.1b, 5.3 | 0.3 |
 | [3001 kube-bench on EKS only](../phase-3-russetleaf-com/adr/3001-kube-bench-eks-only.md) | 7.2 | — | 2.5 |
 | [3002 Fine-tuning on the EKS GPU pool](../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md) | — | — | 4.5, 4.6 |
 | [3003 Cilium chaining on EKS](../phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md) | — | — | 1.4 |
@@ -269,7 +272,6 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 | [3006 On-demand demo stack and always-on edge](../phase-3-russetleaf-com/adr/3006-on-demand-demo-stack.md) | — | — | 1.2, 6.1 |
 | [3007 RDS for MariaDB behind RDS Proxy](../phase-3-russetleaf-com/adr/3007-rds-mariadb-with-rds-proxy.md) | — | — | 1.6, 3.1 |
 | [3008 Karpenter node pools](../phase-3-russetleaf-com/adr/3008-karpenter-node-pools.md) | — | — | 1.5, 2.3 |
-| [1041 Naming convention](adr/1041-naming-convention.md) | 0.3, 2.2 | — | 1.4, 2.3 |
 
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo, scan each repo's **full history**, and then **make the repos public** ([ADR 1030](adr/1030-github-actions-ci.md)); turn on **secret scanning with push protection**.
 - **GitHub organization settings** in `russetleaf-infra/envs/github/` (Terraform's GitHub provider): default workflow token **read-only**, only verified or allow-listed Actions, branch protection and required reviews, environments, secret scanning with push protection.

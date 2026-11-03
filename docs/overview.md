@@ -236,6 +236,8 @@ What each phase builds and shows. Phase 1 on its own is a complete project; Phas
 
 ### Phase 2: AI summaries and MLOps
 
+- **Built with AI coding agents, measured:** least-privilege agent identities, sandbox-first iteration, `AGENTS.md` instructions in every repo, pull-request review, and per-step records of what agents did and what review caught, compared with the agent-free Phase 1 baseline ([ADR 2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md)).
+
 - **Generative AI run like production software:** Bedrock integration with least-privilege IAM, event-driven scaling to zero, a dead-letter queue, and cost controls, with the same code running on both clusters.
 - **Model serving on Kubernetes:** a self-hosted model on dedicated nodes (labels, taints, tolerations, node selectors), behind an LLM gateway with routing, fallback, canary splits, rate limits and budgets, so no single model provider is a dependency.
 - **The full MLOps lifecycle:** MLflow experiment tracking and model registry with lineage, guardrails against prompt injection and personal-data leaks, online evaluation and drift alerts, a LoRA fine-tuning (distillation) pipeline on a spot GPU (Phase 3) with evaluation against the base model, DVC-versioned data, and an editor feedback loop.
@@ -243,6 +245,8 @@ What each phase builds and shows. Phase 1 on its own is a complete project; Phas
 - **LLM monitoring:** token, latency, error, fallback and cost metrics per model and prompt version, plus model-server throughput, in Prometheus and Grafana, with alerts.
 
 ### Phase 3: russetleaf.com on EKS
+
+- **Agentic infrastructure work with guardrails:** AI agents write Terraform and manifests and run `terraform plan` through a plan-only AWS role, while applies stay behind human approval ([ADR 2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md)).
 
 - **An always-on edge for an on-demand stack:** russetleaf.com's CloudFront distribution falls back to an offline page automatically whenever the EKS stack is down, with ExternalDNS and the Load Balancer Controller handling the switch, and RDS snapshots carrying content between demos.
 - **EKS node autoscaling with Karpenter:** general and GPU NodePools, spot with interruption handling, and consolidation, with a documented reason it does not apply to fixed home hardware.
@@ -263,11 +267,11 @@ Each phase's plan tiers every step as **Core** (a complete, working, secure plat
 | Plan | Core | Extended | Advanced | Total |
 |---|---|---|---|---|
 | [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~169–275 | ~72–127 | ~89–144 | **~330–546** |
-| [Phase 2: AI summaries and MLOps](phase-2-ai-mlops/plan.md#priorities-and-time-estimates) (optional) | ~47–81 | ~32–53 | ~6–10 | **~85–144** |
-| [Phase 3: russetleaf.com](phase-3-russetleaf-com/plan.md#priorities-and-time-estimates) (optional) | ~71–117 | ~18–33 | ~36–60 | **~125–210** |
-| **Whole project** | ~287–473 | ~122–213 | ~131–214 | **~540–900** |
+| [Phase 2: AI summaries and MLOps](phase-2-ai-mlops/plan.md#priorities-and-time-estimates) (optional) | ~50–86 | ~32–53 | ~6–10 | **~88–149** |
+| [Phase 3: russetleaf.com](phase-3-russetleaf-com/plan.md#priorities-and-time-estimates) (optional) | ~73–120 | ~18–33 | ~36–60 | **~127–213** |
+| **Whole project** | ~292–481 | ~122–213 | ~131–214 | **~545–908** |
 
-Phase 3's figures include its AI steps (about 28–52 hours), which only apply if Phase 2 is built; without them Phase 3 is about **97–158 hours**.
+Phase 3's figures include its AI steps (about 28–52 hours), which only apply if Phase 2 is built; without them Phase 3 is about **99–161 hours**.
 
 **Calendar time at about 20 hours a week:**
 
@@ -275,10 +279,10 @@ Phase 3's figures include its AI steps (about 28–52 hours), which only apply i
 |---|---|---|
 | Phase 1, Core tier | ~169–275 | 9–14 weeks |
 | Phase 1, everything | ~330–546 | 17–27 weeks (4–6.5 months) |
-| Phases 1 and 2 | ~415–690 | 21–35 weeks (5–8 months) |
-| All three phases | ~540–900 | 27–45 weeks (6–11 months; 12–21 months at 10 hours a week) |
+| Phases 1 and 2 | ~418–695 | 21–35 weeks (5–8 months) |
+| All three phases | ~545–908 | 27–46 weeks (6–11 months; 12–21 months at 10 hours a week) |
 
-Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar. A finished Phase 1 is worth more than three unfinished phases.
+Phase 1 is built with AI assistance in conversation; Phases 2 and 3 are built with AI coding agents under [ADR 2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md), with Phase 1's actual hours as the baseline for measuring the difference. Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar. A finished Phase 1 is worth more than three unfinished phases.
 
 ## Repository structure (four repos)
 
@@ -658,6 +662,7 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [2001](phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback | 2 |
 | [2002](phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
 | [2003](phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | Self-hosted model on rl-home-cp02 (CPU llama.cpp), dedicated by taint | 2 |
+| [2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md) | Agentic AI delivery, with least-privilege access and measured results | 2 |
 | [3001](phase-3-russetleaf-com/adr/3001-kube-bench-eks-only.md) | kube-bench on EKS only; Talos checked with its own hardening checks and Trivy Operator | 3 |
 | [3002](phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md) | Fine-tuning on the EKS GPU node pool, with the challenger served at home | 3 |
 | [3003](phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md) | Cilium on EKS in chaining mode with the VPC CNI | 3 |

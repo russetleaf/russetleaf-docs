@@ -13,6 +13,16 @@ Each step ends with a **test** that must pass before moving on. Unlike the home 
 - **Change the AWS overlay only.** Put AWS-specific settings in `overlays/aws`. If the base needs changing, send the change through Phase 1's environments first (local → ci → staging → russetleaf.dev), so russetleaf.dev never breaks. Application versions reach `overlays/aws` through the same `promote-to-prod` pull requests as russetleaf.dev.
 - **Keep the plan current.** Check off steps in the [progress checklist](#progress-checklist), record actual costs, and add to the [decision log](#decision-log).
 
+## Working with AI agents
+
+This phase is built with **AI coding agents** under [ADR 2004](../phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md); Phase 1 was built without them, so its actual hours are the baseline.
+
+- **One step per agent session.** Write or approve the step's spec first; its acceptance criteria are the agent's definition of done. The agent works on a branch and opens a pull request.
+- **Sandbox first:** agents iterate on `terraform validate`, tflint, Checkov, `terraform plan`, Infracost and local clusters; they never apply, and repeated applies against the demo stack (about $1 an hour) are avoided.
+- **Least privilege:** agents use the plan-only AWS role from step 0.3 and the identities from Phase 2 step 1.1b; applies go through the human-approved `apply` environment.
+- **Review:** every agent pull request runs the same checks as any other; review IAM, policies, network rules and anything touching secrets line by line.
+- **Record the results** in the progress checklist: **Done by** (agent, operator or both) and **Review findings** (problems caught in review or CI that the agent missed), alongside actual hours. Each milestone retro includes a short section on the agents.
+
 ## Workstation
 
 Use the same Ubuntu 24.04 setup as the home lab ([Local workstation setup](../phase-1-russetleaf-dev/plan.md#local-workstation-setup-ubuntu-2404)). Additions for AWS:
@@ -26,11 +36,11 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the demo workflows, one rehearsed and **recorded demo**, and the docs. | 0.1–2.4, 3.1, 3.2, 6.1, 6.2, 6.3 | **~71–117** |
+| **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the demo workflows, one rehearsed and **recorded demo**, and the docs. | 0.1–2.4, 3.1, 3.2, 6.1, 6.2, 6.3 | **~73–120** |
 | **Extended** | kube-bench and Kubescape on EKS, the security and cost reviews, and the EKS rollback drill. | 2.5, 5.1, 5.2, 6.1b | **~10–16** |
 | **Advanced** | Load, stress and spike tests for the capacity plan, EKS as a second spoke of the Argo CD hub, and the Istio ambient and Tetragon experiments. | 5.3, 5.4, 6.4, 6.5 | **~16–25** |
 | **AI on EKS** *(if Phase 2 is built)* | The summarizer and gateway on EKS, the GPU model server, evaluation and tracing on AWS (Extended); the fine-tuning pipeline and the fine-tuned challenger (Advanced). | 4.1–4.4 (Extended), 4.5, 4.6 (Advanced) | **~28–52** |
-| **Total** | | | **~125–210** (~97–158 without Phase 2) |
+| **Total** | | | **~127–213** (~99–161 without Phase 2) |
 
 **Calendar time:** about **6–11 weeks at ~20 hours a week** for the whole plan (5–8 weeks without the AI steps), after Phase 1's Core tier is done (this plan depends on it). Allow for waiting: **SES production access**, and, if Phase 2 is built, the **GPU quota** request (days; submit it in step 0.1 well ahead) and **Bedrock model access** in the new account.
 
@@ -87,6 +97,12 @@ Record each answer in the [decision log](#decision-log).
 | **Monitoring on AWS** | The same **kube-prometheus-stack** as the home lab, plus **CloudWatch** for things Prometheus cannot see (ALB, RDS, ElastiCache metrics, via the CloudWatch exporter or Grafana's CloudWatch data source). Skip Container Insights for demos. | The Argo Rollouts analysis needs request metrics, which come from the ALB (CloudWatch) on AWS, not from ingress-nginx. |
 | **Self-hosted model size** | Start with the **same 3B model** as the home lab, so evaluation results are comparable; try a larger one on the GPU later. | The GPU (24 GB on a g6.xlarge) can run 7–8B models easily. |
 | **Tagging** | Every resource gets `Project=russetleaf`, `Site=com`, `Stack=edge|demo`, `ManagedBy=terraform`. Set as provider `default_tags`. | Makes leftover checks and cost reports possible. |
+
+### Step 0.3: Agent access for AWS
+
+**Do** ([ADR 2004](../phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md)): an IAM Identity Center permission set **`rl-com-agent-plan`** for agent sessions: read-only access to russetleaf-com, read access to the Terraform state and its lock in russetleaf-infra, and **no** permission to change resources. Update the agent permission settings (Phase 2 step 1.1b, or create them now if Phase 2 was skipped) to allow `terraform plan` and deny `terraform apply` and `terraform state` changes; extend `AGENTS.md` in `russetleaf-infra` with the cost rules.
+
+**Test:** with the agent's role, `terraform plan` in `envs/aws` works and `terraform apply` fails with an access error; IAM Access Analyzer's policy check shows no write actions in the permission set.
 
 ## Stage 1: Infrastructure (`russetleaf-infra`)
 
@@ -397,42 +413,43 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 
 ## Progress checklist
 
-| Step | Tier | Est. hours | Done | Date | Actual hours | Stack cost this session | Notes |
-|---|---|---|---|---|---|---|---|
-| 0.1 GPU quota, DNS, guardrails | Core | 2–3 | ☐ | | | | |
-| 0.2 Decisions | Core | 1–2 | ☐ | | | | |
-| 1.1 CI roles | Core | 2–3 | ☐ | | | | |
-| 1.2 Always-on edge | Core | 7–10 | ☐ | | | | |
-| 1.3 Network | Core | 3–5 | ☐ | | | | |
-| 1.4 EKS cluster | Core | 8–12 | ☐ | | | | |
-| 1.5 Karpenter infrastructure | Core | 3–5 | ☐ | | | | |
-| 1.6 RDS for MariaDB + Valkey | Core | 6–10 | ☐ | | | | |
-| 1.7 App resources + permissions | Core | 4–7 | ☐ | | | | |
-| 1.8 Argo CD on EKS | Core | 2–3 | ☐ | | | | |
-| 1.9 CI for AWS environments | Core | 2–4 | ☐ | | | | |
-| 2.1 AWS root app | Core | 2–3 | ☐ | | | | |
-| 2.2 Load Balancer Controller, ExternalDNS, storage | Core | 3–5 | ☐ | | | | |
-| 2.3 Karpenter NodePools + NVIDIA plugin | Core | 4–7 | ☐ | | | | |
-| 2.4 Shared platform overlays | Core | 4–8 | ☐ | | | | |
-| 2.5 kube-bench + Kubescape scan | Extended | 2–3 | ☐ | | | | |
-| 3.1 WordPress AWS overlay | Core | 5–9 | ☐ | | | | |
-| 3.2 Seed + snapshot cycle | Core | 3–5 | ☐ | | | | |
-| 4.1 Summarizer + gateway | Extended | 2–4 | ☐ | | | | |
-| 4.2 GPU model server | Extended | 4–7 | ☐ | | | | |
-| 4.3 Evaluation on AWS | Extended | 1–3 | ☐ | | | | |
-| 4.4 End-to-end tracing | Extended | 1–3 | ☐ | | | | |
-| 4.5 Fine-tuning pipeline | Advanced | 16–28 | ☐ | | | | |
-| 4.6 Fine-tuned challenger (at home) | Advanced | 4–7 | ☐ | | | | |
-| 5.1 Security review | Extended | 4–6 | ☐ | | | | |
-| 5.2 Cost review | Extended | 2–3 | ☐ | | | | |
-| 5.3 Istio ambient experiment (optional) | Advanced | 3–5 | ☐ | | | | |
-| 5.4 Tetragon enforcement (optional) | Advanced | 3–5 | ☐ | | | | |
-| 6.1 Demo workflows | Core | 5–8 | ☐ | | | | |
-| 6.1b Rollback drill on EKS | Extended | 2–4 | ☐ | | | | |
-| 6.2 Rehearsal + recording | Core | 3–5 | ☐ | | | | |
-| 6.3 Documentation | Core | 2–3 | ☐ | | | | |
-| 6.4 Load, stress, spike + burst tests | Advanced | 6–9 | ☐ | | | | |
-| 6.5 Register EKS with the Argo CD hub | Advanced | 4–6 | ☐ | | | | |
+| Step | Tier | Est. hours | Done | Date | Actual hours | Done by | Review findings | Stack cost this session | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| 0.1 GPU quota, DNS, guardrails | Core | 2–3 | ☐ | | | | | | |
+| 0.2 Decisions | Core | 1–2 | ☐ | | | | | | |
+| 0.3 Agent access for AWS | Core | 2–3 | ☐ | | | | | | |
+| 1.1 CI roles | Core | 2–3 | ☐ | | | | | | |
+| 1.2 Always-on edge | Core | 7–10 | ☐ | | | | | | |
+| 1.3 Network | Core | 3–5 | ☐ | | | | | | |
+| 1.4 EKS cluster | Core | 8–12 | ☐ | | | | | | |
+| 1.5 Karpenter infrastructure | Core | 3–5 | ☐ | | | | | | |
+| 1.6 RDS for MariaDB + Valkey | Core | 6–10 | ☐ | | | | | | |
+| 1.7 App resources + permissions | Core | 4–7 | ☐ | | | | | | |
+| 1.8 Argo CD on EKS | Core | 2–3 | ☐ | | | | | | |
+| 1.9 CI for AWS environments | Core | 2–4 | ☐ | | | | | | |
+| 2.1 AWS root app | Core | 2–3 | ☐ | | | | | | |
+| 2.2 Load Balancer Controller, ExternalDNS, storage | Core | 3–5 | ☐ | | | | | | |
+| 2.3 Karpenter NodePools + NVIDIA plugin | Core | 4–7 | ☐ | | | | | | |
+| 2.4 Shared platform overlays | Core | 4–8 | ☐ | | | | | | |
+| 2.5 kube-bench + Kubescape scan | Extended | 2–3 | ☐ | | | | | | |
+| 3.1 WordPress AWS overlay | Core | 5–9 | ☐ | | | | | | |
+| 3.2 Seed + snapshot cycle | Core | 3–5 | ☐ | | | | | | |
+| 4.1 Summarizer + gateway | Extended | 2–4 | ☐ | | | | | | |
+| 4.2 GPU model server | Extended | 4–7 | ☐ | | | | | | |
+| 4.3 Evaluation on AWS | Extended | 1–3 | ☐ | | | | | | |
+| 4.4 End-to-end tracing | Extended | 1–3 | ☐ | | | | | | |
+| 4.5 Fine-tuning pipeline | Advanced | 16–28 | ☐ | | | | | | |
+| 4.6 Fine-tuned challenger (at home) | Advanced | 4–7 | ☐ | | | | | | |
+| 5.1 Security review | Extended | 4–6 | ☐ | | | | | | |
+| 5.2 Cost review | Extended | 2–3 | ☐ | | | | | | |
+| 5.3 Istio ambient experiment (optional) | Advanced | 3–5 | ☐ | | | | | | |
+| 5.4 Tetragon enforcement (optional) | Advanced | 3–5 | ☐ | | | | | | |
+| 6.1 Demo workflows | Core | 5–8 | ☐ | | | | | | |
+| 6.1b Rollback drill on EKS | Extended | 2–4 | ☐ | | | | | | |
+| 6.2 Rehearsal + recording | Core | 3–5 | ☐ | | | | | | |
+| 6.3 Documentation | Core | 2–3 | ☐ | | | | | | |
+| 6.4 Load, stress, spike + burst tests | Advanced | 6–9 | ☐ | | | | | | |
+| 6.5 Register EKS with the Argo CD hub | Advanced | 4–6 | ☐ | | | | | | |
 
 ## Decision log
 

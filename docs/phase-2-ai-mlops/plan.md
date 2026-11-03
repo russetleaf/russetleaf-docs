@@ -4,18 +4,28 @@ This is the step-by-step plan for **Phase 2**, described in the [Phase 2 design]
 
 Each step is sized for one or a few Claude sessions and ends with a **test** that must pass before moving on. Work the same way as in Phase 1 (see its [How to use this plan with Claude](../phase-1-russetleaf-dev/plan.md#how-to-use-this-plan-with-claude)): start each session by pointing Claude at this plan, the Phase 2 design and the overview; one step at a time; record actual hours; keep the plan and decision log current. Before starting, write this phase's `roadmap.md` (milestones and dates, in the format of Phase 1's [roadmap](../phase-1-russetleaf-dev/roadmap.md)), create its issues with `tools/plan_to_issues.py`, and write a spec per step from [`docs/specs/TEMPLATE.md`](../specs/TEMPLATE.md).
 
+## Working with AI agents
+
+This phase is built with **AI coding agents** under [ADR 2004](adr/2004-agentic-ai-delivery.md); Phase 1 was built without them, so its actual hours are the baseline.
+
+- **One step per agent session.** Write or approve the step's spec first; its acceptance criteria are the agent's definition of done. The agent works on a branch and opens a pull request.
+- **Sandbox first:** agents iterate against the Docker Compose demo, unit tests, kind with LocalStack and the mock LLM, and the evaluation harness, never against the production cluster or the live Bedrock budget.
+- **Least privilege:** agents use the identities from step 1.1b: branch and pull-request access on GitHub, the cluster's read-only role, and no secrets or AWS credentials.
+- **Review:** every agent pull request runs the same checks as any other; review IAM, policies, network rules and anything touching secrets line by line.
+- **Record the results** in the progress checklist: **Done by** (agent, operator or both) and **Review findings** (problems caught in review or CI that the agent missed), alongside actual hours. Each milestone retro includes a short section on the agents.
+
 ## Priorities and time estimates
 
 Every step in the [progress checklist](#progress-checklist) has a **tier** and an **estimate** in focused hours (with Claude's help); expect ±50%.
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | A working, evaluated and secured summary pipeline: the repo, AWS resources, `rl-home-cp02` as the LLM node, the WordPress side, KEDA, the gateway, the summarizer, its release and monitoring, the evaluation set, runners and gate, security for the new components, and the docs. | 1.1–1.4, 2.1–2.5, 4.1–4.3, 5.1, 5.3 | **~47–81** |
+| **Core** | A working, evaluated and secured summary pipeline: the repo, the agents' workspace and guardrails, AWS resources, `rl-home-cp02` as the LLM node, the WordPress side, KEDA, the gateway, the summarizer, its release and monitoring, the evaluation set, runners and gate, security for the new components, and the docs. | 1.1–1.4, 2.1–2.5, 4.1–4.3, 5.1, 5.3 | **~50–86** |
 | **Extended** | The full MLOps lifecycle: the AI burst test, the self-hosted model and gateway routing, MLflow tracking and registry, guardrails, online evaluation and drift, and observability and operations for the AI components. | 2.6, 3.1, 3.2, 4.4–4.6, 5.2 | **~32–53** |
 | **Advanced** | The feedback loop and data versioning (DVC). | 4.7 | **~6–10** |
-| **Total** | | | **~85–144** |
+| **Total** | | | **~88–149** |
 
-**Calendar time:** about **4–7 weeks at ~20 hours a week** (2–3.5 months at ~10), after Phase 1's Core tier. Allow a few days for Bedrock model access.
+**Calendar time:** about **4–8 weeks at ~20 hours a week** (2–3.5 months at ~10), after Phase 1's Core tier. Allow a few days for Bedrock model access.
 
 **Recommended order:** Stage 1, then the Core steps of Stages 2 and 4 (a working, evaluated pipeline), then 5.1 and 5.3; add the Extended steps after that. Fine-tuning is in Phase 3 (steps 4.5 and 4.6), because it needs a GPU.
 
@@ -36,6 +46,19 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 **Do:** create **`russetleaf-llm-summarizer`** the same way as the Phase 1 repos (Phase 1 step 1.1): README, `.gitignore`, license, branch protection, gitleaks with a full-history scan, then **make it public** with secret scanning and push protection; **OpenSSF Scorecard**, **zizmor**, **dependency review**, **Checkov** (workflows first) and **Renovate** (Python lock file, base images, GitHub Actions, `.mise.toml`). Add the GitHub organization settings for it in `russetleaf-infra/envs/github/`. Layout: `src/`, `prompts/`, `evals/`, `guardrails/`, `chart/`, `ci/`, `demo/`, `online-eval/` (see the [Phase 2 design](design.md#repository-russetleaf-llm-summarizer)).
 
 **Test:** the repo is public with a clean history scan and push protection on; a test pull request runs the secret scan and Checkov; Renovate opens its onboarding pull request.
+
+### Step 1.1b: Agent workspace and guardrails
+
+**Do** ([ADR 2004](adr/2004-agentic-ai-delivery.md)):
+
+- **Agent instructions:** an `AGENTS.md` in `russetleaf-llm-summarizer`, `russetleaf-gitops`, `russetleaf-wordpress` and `russetleaf-docs` (the project's conventions, how to run each repo's checks, and what an agent must not do), and a `CLAUDE.md` in each that imports it.
+- **Permission settings** for the agent tool: allow the repo's local tools and tests; deny reading `.env` files, kubeconfigs with write access, talosconfigs and credential files; deny `terraform apply`, `kubectl apply` against the home cluster, `git push` to `main`, and `gh pr merge`.
+- **Identities:** a read-only kubeconfig for agents (the `read-only` role from Phase 1 step 4.7, short-lived), and no AWS credentials in agent sessions.
+- **Sandbox:** a documented local environment per repo (Docker Compose demo, kind with LocalStack and the mock LLM) that an agent can create and destroy on its own.
+- **Pull-request template** in each repo: a "Done by" field and a checklist for the reviewer (IAM, policies, network rules, secrets, new dependencies).
+- Add the **Done by** and **Review findings** columns to this plan's progress checklist (done), and an agents section to the milestone retro notes.
+
+**Test:** an agent session in `russetleaf-llm-summarizer` can run the unit tests and the Compose demo, but is refused when it tries to read a `.env` file, apply to the cluster or push to `main`; with the agent's kubeconfig, `kubectl get secrets` is forbidden; the pull-request template appears on a test pull request.
 
 ### Step 1.2: AWS resources for the AI pipeline
 
@@ -211,6 +234,8 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 **Do:** finish ADRs [2001](adr/2001-mlops-lifecycle.md), [2002](adr/2002-summary-pipeline-architecture.md) and [2003](adr/2003-self-hosted-model-on-cp02.md) (resolve their open items); update the Phase 2 design wherever the build differed; add the LLM dashboard, an evaluation report and an MLflow run to the hub README's screenshots; add the AI pipeline to the hub README's architecture diagram; optionally an article on evaluation gates for LLMs.
 
+Also write **an account of building Phase 2 with agents** (`docs/agentic-delivery-phase-2.md` in `russetleaf-docs`, and optionally an article): what agents did, the guardrails, the review findings, and actual hours compared with the estimates and with similar Phase 1 work, using the checklist's **Done by** and **Review findings** columns ([ADR 2004](adr/2004-agentic-ai-delivery.md)).
+
 **Test:** every Phase 2 ADR's open items are resolved or moved to a later phase; the README shows the pipeline.
 
 ## Ongoing operations (Phase 2 additions)
@@ -224,30 +249,31 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ## Progress checklist
 
-| Step | Tier | Est. hours | Done | Date | Actual hours | Node memory after | Notes |
-|---|---|---|---|---|---|---|---|
-| 1.1 `russetleaf-llm-summarizer` repo | Core | 2–3 | ☐ | | | | |
-| 1.2 AWS resources for the AI pipeline | Core | 3–5 | ☐ | | | | |
-| 1.3 `rl-home-cp02` as the LLM node | Core | 1–2 | ☐ | | | | |
-| 1.4 WordPress side of the pipeline | Core | 4–7 | ☐ | | | | |
-| 2.1 KEDA | Core | 1–3 | ☐ | | | | |
-| 2.2 LiteLLM gateway | Core | 3–5 | ☐ | | | | |
-| 2.3 Summarizer code | Core | 8–12 | ☐ | | | | |
-| 2.4 Summarizer chart + deploy | Core | 6–10 | ☐ | | | | |
-| 2.5 LLM monitoring | Core | 3–6 | ☐ | | | | |
-| 2.6 AI pipeline burst test | Extended | 3–5 | ☐ | | | | |
-| 3.1 llama.cpp on `rl-home-cp02` | Extended | 4–6 | ☐ | | | | |
-| 3.2 Gateway routing to local model | Extended | 2–4 | ☐ | | | | |
-| 4.1 Evaluation set | Core | 5–8 | ☐ | | | | |
-| 4.2 Runners for `russetleaf-llm-summarizer` | Core | 1–2 | ☐ | | | | |
-| 4.3 Evaluation gate + releases | Core | 4–7 | ☐ | | | | |
-| 4.4 MLflow tracking + registry | Extended | 6–10 | ☐ | | | | |
-| 4.5 Guardrails | Extended | 6–10 | ☐ | | | | |
-| 4.6 Online evaluation + drift | Extended | 6–10 | ☐ | | | | |
-| 4.7 Feedback loop + DVC | Advanced | 6–10 | ☐ | | | | |
-| 5.1 Security for the AI components | Core | 4–7 | ☐ | | | | |
-| 5.2 Observability and operations for AI | Extended | 5–8 | ☐ | | | | |
-| 5.3 Documentation | Core | 2–4 | ☐ | | | | |
+| Step | Tier | Est. hours | Done | Date | Actual hours | Done by | Review findings | Node memory after | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| 1.1 `russetleaf-llm-summarizer` repo | Core | 2–3 | ☐ | | | | | | |
+| 1.1b Agent workspace and guardrails | Core | 3–5 | ☐ | | | | | | |
+| 1.2 AWS resources for the AI pipeline | Core | 3–5 | ☐ | | | | | | |
+| 1.3 `rl-home-cp02` as the LLM node | Core | 1–2 | ☐ | | | | | | |
+| 1.4 WordPress side of the pipeline | Core | 4–7 | ☐ | | | | | | |
+| 2.1 KEDA | Core | 1–3 | ☐ | | | | | | |
+| 2.2 LiteLLM gateway | Core | 3–5 | ☐ | | | | | | |
+| 2.3 Summarizer code | Core | 8–12 | ☐ | | | | | | |
+| 2.4 Summarizer chart + deploy | Core | 6–10 | ☐ | | | | | | |
+| 2.5 LLM monitoring | Core | 3–6 | ☐ | | | | | | |
+| 2.6 AI pipeline burst test | Extended | 3–5 | ☐ | | | | | | |
+| 3.1 llama.cpp on `rl-home-cp02` | Extended | 4–6 | ☐ | | | | | | |
+| 3.2 Gateway routing to local model | Extended | 2–4 | ☐ | | | | | | |
+| 4.1 Evaluation set | Core | 5–8 | ☐ | | | | | | |
+| 4.2 Runners for `russetleaf-llm-summarizer` | Core | 1–2 | ☐ | | | | | | |
+| 4.3 Evaluation gate + releases | Core | 4–7 | ☐ | | | | | | |
+| 4.4 MLflow tracking + registry | Extended | 6–10 | ☐ | | | | | | |
+| 4.5 Guardrails | Extended | 6–10 | ☐ | | | | | | |
+| 4.6 Online evaluation + drift | Extended | 6–10 | ☐ | | | | | | |
+| 4.7 Feedback loop + DVC | Advanced | 6–10 | ☐ | | | | | | |
+| 5.1 Security for the AI components | Core | 4–7 | ☐ | | | | | | |
+| 5.2 Observability and operations for AI | Extended | 5–8 | ☐ | | | | | | |
+| 5.3 Documentation | Core | 2–4 | ☐ | | | | | | |
 
 ## Decision log
 
