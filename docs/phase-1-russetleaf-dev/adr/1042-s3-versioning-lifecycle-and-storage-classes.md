@@ -20,13 +20,15 @@ The buckets had versioning where it mattered and lifecycle rules that delete sho
 | Media (both sites) | Kept | Deleted after **90 days** | Standard |
 | Database backups | Deleted after 30 days | Deleted after 30 days | Standard |
 | Backup account copies (Object Lock, 30 days) | Deleted after **35 days** (after the lock ends) | Deleted after 1 day, once unlocked | Standard |
+| Backup account monthly copies (Object Lock, 365 days; [ADR 1018](1018-disaster-recovery.md)) | Deleted after **366 days** (after the lock ends) | Deleted after 1 day, once unlocked | **Glacier Instant Retrieval** from the start |
 | Log Archive (CloudTrail, Config, Kubernetes audit logs, VPC flow logs, Route 53 Resolver query logs; Object Lock) | **Glacier Instant Retrieval after 30 days**; deleted after **1 year** (CloudTrail kept longer only if a requirement appears) | Deleted after 1 day, once unlocked | Standard, then **Glacier Instant Retrieval** |
 | MLflow artifacts and DVC data | Kept | Deleted after 30 days | Standard |
 | Loki and Tempo | Deleted when their retention ends (3–14 days) | n/a | Standard |
 
 - **Every bucket** also has a rule **aborting incomplete multipart uploads after 7 days**, so the parts of failed large uploads (backups, model files, datasets) are not billed indefinitely.
 - **Glacier Instant Retrieval for the Log Archive only:** the logs are kept a year and rarely read, but must stay readable at once for investigations and Athena queries, which the Flexible Retrieval and Deep Archive classes do not allow without a restore. Lifecycle transitions work on Object Lock objects and do not shorten their retention.
-- **No Glacier where it costs more:** backups and their copies live 30–35 days, less than Glacier's 90-day minimum; media is small, frequently served through the CDN, and mostly under Intelligent-Tiering's 128 KB threshold; logs, traces and ML data are deleted quickly or used actively.
+- **Glacier Instant Retrieval for the monthly copies too:** they are kept a year and almost never read, well past the 90-day minimum, and stay readable at once when a restore is needed.
+- **No Glacier where it costs more:** the daily backups and their copies live 30–35 days, less than Glacier's 90-day minimum; media is small, frequently served through the CDN, and mostly under Intelligent-Tiering's 128 KB threshold; logs, traces and ML data are deleted quickly or used actively.
 - **In the modules:** the `s3-*` modules take the retention periods as inputs with these defaults; Checkov's S3 checks (versioning and lifecycle configuration) run in CI.
 
 ## Alternatives considered

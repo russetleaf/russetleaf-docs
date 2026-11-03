@@ -266,19 +266,19 @@ Each phase's plan tiers every step as **Core** (a complete, working, secure plat
 
 | Plan | Core | Extended | Advanced | Total |
 |---|---|---|---|---|
-| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~176–287 | ~89–156 | ~89–144 | **~354–587** |
+| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~176–287 | ~93–161 | ~89–144 | **~358–592** |
 | [Phase 2: AI summaries and MLOps](phase-2-ai-mlops/plan.md#priorities-and-time-estimates) (optional) | ~50–86 | ~33–54 | ~64–104 | **~147–244** |
 | [Phase 3: russetleaf.com](phase-3-russetleaf-com/plan.md#priorities-and-time-estimates) (optional) | ~74–123 | ~14–22 | ~16–25 | **~104–170** |
-| **Whole project** | ~300–496 | ~136–232 | ~169–273 | **~605–1001** |
+| **Whole project** | ~300–496 | ~140–237 | ~169–273 | **~609–1006** |
 
 **Calendar time at about 20 hours a week:**
 
 | Scope | Hours | Calendar |
 |---|---|---|
 | Phase 1, Core tier | ~176–287 | 9–14 weeks |
-| Phase 1, everything | ~354–587 | 18–29 weeks (4–7 months) |
-| Phases 1 and 2 | ~501–831 | 25–41 weeks (6–10 months) |
-| All three phases | ~605–1001 | 30–50 weeks (7–12 months; 14–23 months at 10 hours a week) |
+| Phase 1, everything | ~358–592 | 18–30 weeks (4–7 months) |
+| Phases 1 and 2 | ~505–836 | 25–42 weeks (6–10 months) |
+| All three phases | ~609–1006 | 30–50 weeks (7–12 months; 14–23 months at 10 hours a week) |
 
 Phase 1 is built with AI assistance in conversation; Phases 2 and 3 are built with AI coding agents under [ADR 2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md), with Phase 1's actual hours as the baseline for measuring the difference. Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar. A finished Phase 1 is worth more than three unfinished phases.
 

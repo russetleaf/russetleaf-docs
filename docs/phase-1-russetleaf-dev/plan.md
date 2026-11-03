@@ -25,16 +25,16 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
 | **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting with an incident process, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, privacy basics (GDPR), and the docs. Finished on its own, this is a complete platform. | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 5.12, 6.1, 6.3, 9.2 | **~176–287** |
-| **Extended** | Hardening, operations and evidence: progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure, cold-start, disaster, forensics and incident drills, with their runbooks). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.14, 9.1 | **~89–156** |
+| **Extended** | Hardening, operations and evidence: progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure, cold-start, disaster, forensics and incident drills, with their runbooks). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.14, 9.1 | **~93–161** |
 | **Advanced** | Reliability and platform practices: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management with a local spoke cluster, chaos experiments and postmortems, a threat model and control matrix, strategy documents, public writing, and a custom seccomp profile for WordPress. | 7.7, 8.1–8.9 | **~89–144** |
-| **Total** | | | **~354–587** |
+| **Total** | | | **~358–592** |
 
 **Calendar time** (Phase 1 only):
 
 | Hours per week | Core | + Extended | + Advanced (everything) |
 |---|---|---|---|
 | ~10 | 4–7 months | 6–10 months | 8–14 months |
-| ~20 | 9–14 weeks | 13–22 weeks | 18–29 weeks |
+| ~20 | 9–14 weeks | 13–22 weeks | 18–30 weeks |
 | ~40 | 4–7 weeks | 7–11 weeks | 9–15 weeks |
 
 The optional later phases add about **147–244 hours** (Phase 2) and **104–170 hours** (Phase 3); see the [overview](../overview.md#build-plans-priorities-and-effort).
@@ -401,13 +401,15 @@ The cluster is **highly available for a single node failure** (three etcd member
 **Do:** as described in the [disaster recovery plan](disaster-recovery.md) and [ADR 1018](adr/1018-disaster-recovery.md):
 
 - The **Backup** account already exists (step 2.0).
-- `russetleaf-infra/envs/dr/`: in the Backup account, **S3 Object Lock** buckets in **us-west-2** (30-day retention, governance mode at first), versioned and **KMS-encrypted**, with objects deleted after 35 days once their lock ends; **replication** rules (with write-only roles) from the Terraform state bucket (russetleaf-infra) and the MariaDB backup and media buckets (russetleaf-home). (CloudTrail logs are already isolated in the Log Archive account.)
+- `russetleaf-infra/envs/dr/`: in the Backup account, **S3 Object Lock** buckets in **us-west-2** (30-day retention, governance mode at first), versioned and encrypted with **KMS keys owned by the Backup account**, with objects deleted after 35 days once their lock ends; **replication** rules (with write-only roles) from the Terraform state bucket (russetleaf-infra) and the MariaDB backup and media buckets (russetleaf-home), each set to **replicate KMS-encrypted objects** (`SseKmsEncryptedObjects`) and **re-encrypt them with the Backup account's key** (`ReplicaKmsKeyID`), with replication metrics and failure events on. (CloudTrail logs are already isolated in the Log Archive account.)
+- **Monthly copies:** a monthly bucket in the Backup account (Object Lock **365 days**, Glacier Instant Retrieval, the Backup account's key) and a workflow on the first of each month that assumes a role in the Backup account (read the daily copies, write the monthly bucket, no delete) and copies the latest database dump, Terraform state, repo bundles and media (not etcd snapshots; [ADR 1018](adr/1018-disaster-recovery.md)).
+- **Watching the copies** ([disaster recovery plan](disaster-recovery.md#watching-the-copies)): replication failure events through EventBridge to `#rl-critical`; a daily **freshness check** workflow with a read-only Backup-account role (and a read-only R2 token) that posts **`BackupCopiesStale`** when any copy is older than its schedule allows; failure alerts for the R2 copy CronJob and the repo-mirror workflow.
 - A **daily repo-mirror** workflow (`git bundle` of each repo) uploading to the backup account through a write-only OIDC role.
 - **Weekly etcd snapshots:** a CronJob using Talos's API access from Kubernetes (the narrow `os:etcd:backup` role) runs `talosctl etcd snapshot` and uploads the snapshot to the KMS-encrypted database backup bucket (which replicates to the Backup account), readable only by the backup role and break-glass access, since snapshots contain every Secret; an alert if the last snapshot is more than 8 days old.
 - **A copy outside AWS** ([ADR 1018](adr/1018-disaster-recovery.md)): a Cloudflare **R2 bucket** with a **bucket lock** rule (30 days; objects deleted after 35) in `envs/home` (Cloudflare provider, where it supports the lock rule; otherwise set once by hand and recorded), an R2 token limited to that bucket in Secrets Manager, and a daily CronJob that encrypts the latest MariaDB dump and etcd snapshot with **`age`** (public key only in the cluster) and uploads them with `rclone`. Put the `age` private key in the break-glass kit.
 - Add the **Talos secrets bundle** and talosconfig (from step 2.2) to the break-glass kit.
 
-**Test:** a new MariaDB backup appears in the backup account within minutes; a manual run of the etcd snapshot CronJob produces a snapshot there too; the R2 bucket receives encrypted copies that cannot be deleted before their lock ends, and a dump restored from R2 with the break-glass `age` key, without any AWS access, loads into a scratch MariaDB; deleting or overwriting it there **fails** (Object Lock); restoring a MariaDB backup **from the backup account's copy** into a scratch instance works; a repo can be cloned from its latest bundle.
+**Test:** a new MariaDB backup appears in the backup account within minutes; a manual run of the etcd snapshot CronJob produces a snapshot there too; the R2 bucket receives encrypted copies that cannot be deleted before their lock ends, and a dump restored from R2 with the break-glass `age` key, without any AWS access, loads into a scratch MariaDB; deleting or overwriting it there **fails** (Object Lock); restoring a MariaDB backup **from the backup account's copy** into a scratch instance works while signed in **only** to the Backup account (proving the copies do not need russetleaf-home's keys), and `aws s3api head-object` on a copy shows the Backup account's key; a repo can be cloned from its latest bundle, a media object restored from the replica, and Terraform state copied back from the Backup account into a scratch workspace that plans cleanly; a manual run of the monthly workflow creates locked copies that cannot be deleted; pausing the R2 CronJob makes the freshness check post `BackupCopiesStale`, and a deliberately broken replication rule raises a replication failure in `#rl-critical`.
 
 ## Stage 3: GitOps foundation (`russetleaf-gitops`)
 
@@ -662,7 +664,7 @@ Check `kubectl top nodes` after each step.
 
 - `docs/security/compliance.md`: which frameworks apply (GDPR lightly, CIS, NIST guidance, MITRE ATT&CK) and which do not, with reasons (HIPAA: no health data; PCI DSS: no card data, and a hosted payment page if a shop is ever added).
 - A **privacy notice** page in the `russetleaf` theme (who runs the site, what is collected, why, how long, which processors, how to make a request), linked from every footer and the comment form.
-- `docs/privacy/record-of-processing.md`: each kind of personal data (commenters' names and emails, visitors' IPs in logs, admins' Google accounts, anything in Slack alerts), where it is stored, why, and for how long; the **processors list** (Cloudflare, AWS, Google, GitHub, Slack) with their data processing terms; the **retention schedule** (logs 7–14 days, backups 30 days locked plus lifecycle, audit logs 1 year, unapproved comments deleted after 30 days by a scheduled WP-Cron task).
+- `docs/privacy/record-of-processing.md`: each kind of personal data (commenters' names and emails, visitors' IPs in logs, admins' Google accounts, anything in Slack alerts), where it is stored, why, and for how long; the **processors list** (Cloudflare, AWS, Google, GitHub, Slack) with their data processing terms; the **retention schedule** (logs 7–14 days, backups 30 days locked plus lifecycle and **monthly copies for 12 months**, which hold commenters' details for up to a year and are covered by the erasure log, audit logs 1 year, unapproved comments deleted after 30 days by a scheduled WP-Cron task).
 - Runbooks: `docs/runbooks/data-subject-request.md` (WordPress's built-in **personal data export and erasure tools**; locked backups expire on their own; an **erasure log** re-applied after any restore) and `docs/runbooks/personal-data-breach.md` (assess, contain, record; notify the supervisory authority within **72 hours** if required), linked from the security alerts' runbooks.
 - **No tracking cookies:** a Playwright check in `russetleaf-wordpress` CI and the staging gate that anonymous views of the home page and a post set **no cookies** and load **no third-party scripts**.
 
@@ -867,9 +869,10 @@ Then write and rehearse two runbooks ([ADR 1046](adr/1046-incident-response-and-
 - **`wordpress-compromise.md`:** signs (an unknown admin, unexpected content or settings changes, a `KubeUnexpectedSecretRead`); preserve first (an on-demand MariaDB backup kept in the evidence bucket, plus the compromised-container runbook if a pod is involved); remove the attacker's access (unknown users removed with `wp-cli`, the admin allow-list and the Cloudflare Access policy checked, **WordPress keys and salts rotated** so every session ends); restore content from a backup taken before the compromise, re-applying the erasure log; **flush the object cache** after the restore and the user removals (dump it first with `valkey-cli --rdb` as evidence), since Valkey still holds the injected posts, options and users; then the breach runbook.
 - **`emergency-vulnerability.md`:** a vulnerability being exploited, or with a public exploit, and no fix yet: a **Cloudflare WAF custom rule** blocking the vulnerable path or parameter (a temporary block for the exploit until a fix exists); disabling the feature or removing the plugin through the normal fast path (ci, staging, promotion); maintenance mode as the last resort; removing the WAF rule once the fix is released. Phase 3 step 4.1 adds AWS WAF.
 - **`supply-chain-compromise.md`:** a compromised workflow, action, dependency, ARC runner or signing identity: pause the promotion workflows and disable the affected workflow; find every affected image digest from the attestations and SBOMs; pin Kyverno's image verification to known-good digests or a narrower signing identity; revoke the GitHub tokens and runner registrations, and rebuild the runners; rebuild and re-sign from a known-good commit; then the credential-leak runbook for every secret the pipeline could read.
+- **`cluster-compromise.md`:** the home cluster itself is compromised (cluster-admin, or root on a node): contain and preserve evidence (`compromised-container.md`), declare a SEV1, then **rebuild from zero with new Talos secrets** by the disaster recovery plan's bootstrap order, never restoring an etcd snapshot; restore data from a backup from **before** the compromise (the monthly copies if needed); rotate every credential in the inventory; check the repos and images for tampering; and decide when the rebuilt cluster may serve traffic again.
 - **`under-attack.md`:** a bot flood or DDoS: Cloudflare's **"I'm Under Attack"** security level through a configuration rule for the affected hostname (not the whole zone), tighter rate limits, and blocks by network or country where justified; check CrowdSec's bans; watch the origin's load; the conditions for switching back. Phase 3 step 4.1 adds AWS WAF.
 
-Then run two **tabletop exercises** (talking a scenario through against the runbooks, without touching production), each recorded as a postmortem in `docs/postmortems/` ([ADR 1023](adr/1023-reliability-practice.md)): "a scoped AWS key is found in a public commit" and "a bad release breaks the site while GitHub is down".
+Then run two **tabletop exercises** (talking a scenario through against the runbooks, without touching production), each recorded as a postmortem in `docs/postmortems/` ([ADR 1023](adr/1023-reliability-practice.md)): "a scoped AWS key is found in a public commit" and "a bad release breaks the site while GitHub is down"; and a third, walking through `cluster-compromise.md`, for "Falco shows a shell on a node, and the audit log shows a new ClusterRoleBinding nobody made".
 
 **Test:** in staging: a WAF custom rule from the emergency-vulnerability runbook blocks a test request to the chosen path while other pages load; an emergency change made by the runbook (with Argo CD's sync off) raises the expected alerts, and the reconciling pull request returns the app to `Synced`; a rogue admin and an injected post created with `wp-cli` are removed by following the compromise runbook, with **Valkey turned on in the staging overlay for this drill** (staging normally runs without it), and the injected post no longer appears after the cache flush; a browser session from before the salt rotation is signed out; the under-attack configuration rule challenges a `k6` burst against the staging hostname but not production; Kyverno rejects an image signed by an identity other than the one the supply-chain runbook pins; both tabletops have postmortems with action items, and every runbook gap they found is fixed.
 
@@ -955,7 +958,8 @@ These keep russetleaf.dev healthy once it is running. Add each as a calendar rem
 |---|---|---|
 | Node-failure drill | Quarterly | Take one node offline (alternating nodes); confirm failover and record the timings |
 | Rollback drill | Monthly (staging); quarterly (Talos, Cilium, Kyverno locally) | Follow a rollback runbook end to end and time it; fix the runbook if anything differed |
-| Restore from the backup account | Quarterly | Restore a MariaDB backup from the backup account's locked copy into a scratch instance |
+| Restore from the backup account | Quarterly | Restore a MariaDB backup from the backup account's locked copy into a scratch instance, signed in only to the Backup account |
+| Restore the other copies | Twice a year | A repo from its git bundle, a media object from the replica, and Terraform state from the Backup account; once a year also a dump from the monthly copies, with the erasure log re-applied |
 | Restore from the copy outside AWS | Quarterly | Restore a MariaDB dump from the encrypted Cloudflare R2 copy with the break-glass `age` key, without AWS access |
 | Full disaster drill | Yearly | Rebuild russetleaf.dev using only the break-glass kit and off-account backups; record the time |
 | Incident tabletop | Twice a year | Talk a scenario through against the runbooks (e.g. a leaked credential, or GitHub down during an outage); write it up as a postmortem and fix any runbook gaps ([ADR 1046](adr/1046-incident-response-and-runbook-index.md)) |
@@ -1016,7 +1020,7 @@ Phase 1 builds most of what these need: the shared Terraform modules, the base m
 | 2.2 Talos cluster | Core | 13–19 | ☐ | | | | |
 | 2.3 AWS + Cloudflare resources | Core | 6–9 | ☐ | | | | |
 | 2.4 `russetleaf-infra` CI | Core | 5–8 | ☐ | | | | |
-| 2.5 Disaster recovery copies | Extended | 3–6 | ☐ | | | | |
+| 2.5 Disaster recovery copies | Extended | 6–10 | ☐ | | | | |
 | 3.1 GitOps structure + Argo CD | Core | 6–10 | ☐ | | | | |
 | 4.1 Storage | Core | 1–2 | ☐ | | | | |
 | 4.2 Secrets + internal certificates | Core | 6–9 | ☐ | | | | |
@@ -1055,7 +1059,7 @@ Phase 1 builds most of what these need: the shared Terraform modules, the base m
 | 7.11 Node-failure, replacement + cold-start drills | Extended | 5–10 | ☐ | | | | |
 | 7.12 Stress, spike and soak tests | Extended | 5–8 | ☐ | | | | |
 | 7.13 Compromised-container runbook + forensics drill | Extended | 5–8 | ☐ | | | | |
-| 7.14 Incident runbooks + tabletop drills | Extended | 6–10 | ☐ | | | | |
+| 7.14 Incident runbooks + tabletop drills | Extended | 7–11 | ☐ | | | | |
 | 9.1 Keyless AWS access | Extended | 5–10 | ☐ | | | | |
 | 9.2 Docs + go public | Core | 6–10 | ☐ | | | | |
 | 8.1 SLOs and error budgets | Advanced | 10–15 | ☐ | | | | |
