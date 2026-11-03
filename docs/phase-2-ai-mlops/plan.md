@@ -1,6 +1,6 @@
 # Phase 2 build plan: AI post summaries and MLOps
 
-This is the step-by-step plan for **Phase 2**, described in the [Phase 2 design](design.md): AI-generated post summaries on russetleaf.dev, with an LLM gateway, a self-hosted model on `rl-home-cp02`, and an MLOps lifecycle. It needs **Phase 1's Core tier** finished (the cluster, GitOps, platform services, WordPress, ci, staging and promotion, Kyverno and network policies). Fine-tuning and deploying a fine-tuned challenger need a GPU, so they are in [Phase 3](../phase-3-russetleaf-com/plan.md) (steps 4.5 and 4.6).
+This is the step-by-step plan for **Phase 2**, described in the [Phase 2 design](design.md): AI-generated post summaries on russetleaf.dev, with an LLM gateway, a self-hosted model on `rl-home-cp02`, and an MLOps lifecycle. It needs **Phase 1's Core tier** finished (the cluster, GitOps, platform services, WordPress, ci, staging and promotion, Kyverno and network policies). Fine-tuning runs on a rented spot GPU in AWS, since the home lab has none ([ADR 2005](adr/2005-fine-tuning-on-a-rented-gpu.md)).
 
 Each step is sized for one or a few Claude sessions and ends with a **test** that must pass before moving on. Work the same way as in Phase 1 (see its [How to use this plan with Claude](../phase-1-russetleaf-dev/plan.md#how-to-use-this-plan-with-claude)): start each session by pointing Claude at this plan, the Phase 2 design and the overview; one step at a time; record actual hours; keep the plan and decision log current. Before starting, write this phase's `roadmap.md` (milestones and dates, in the format of Phase 1's [roadmap](../phase-1-russetleaf-dev/roadmap.md)), create its issues with `tools/plan_to_issues.py`, and write a spec per step from [`docs/specs/TEMPLATE.md`](../specs/TEMPLATE.md).
 
@@ -22,12 +22,12 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 |---|---|---|---|
 | **Core** | A working, evaluated and secured summary pipeline: the repo, the agents' workspace and guardrails, AWS resources, `rl-home-cp02` as the LLM node, the WordPress side, KEDA, the gateway, the summarizer, its release and monitoring, the evaluation set, runners and gate, security for the new components, and the docs. | 1.1–1.4, 2.1–2.5, 4.1–4.3, 5.1, 5.3 | **~50–86** |
 | **Extended** | The full MLOps lifecycle: the AI burst test, the self-hosted model and gateway routing, MLflow tracking and registry, guardrails, online evaluation and drift, and observability and operations for the AI components. | 2.6, 3.1, 3.2, 4.4–4.6, 5.2 | **~32–53** |
-| **Advanced** | The feedback loop and data versioning (DVC). | 4.7 | **~6–10** |
-| **Total** | | | **~88–149** |
+| **Advanced** | The feedback loop and data versioning (DVC); fine-tuning on a rented GPU, the fine-tuned challenger, and drift-triggered retraining. | 4.7–4.10 | **~31–52** |
+| **Total** | | | **~113–191** |
 
-**Calendar time:** about **4–8 weeks at ~20 hours a week** (2–3.5 months at ~10), after Phase 1's Core tier. Allow a few days for Bedrock model access.
+**Calendar time:** about **6–10 weeks at ~20 hours a week** (2–3.5 months at ~10), after Phase 1's Core tier. Allow a few days for Bedrock model access.
 
-**Recommended order:** Stage 1, then the Core steps of Stages 2 and 4 (a working, evaluated pipeline), then 5.1 and 5.3; add the Extended steps after that. Fine-tuning is in Phase 3 (steps 4.5 and 4.6), because it needs a GPU.
+**Recommended order:** Stage 1, then the Core steps of Stages 2 and 4 (a working, evaluated pipeline), then 5.1 and 5.3; add the Extended steps after that. The fine-tuning steps (4.8–4.10) come last; request the GPU quota early (step 1.2), since approval can take days.
 
 ## Decisions to make before writing code
 
@@ -62,7 +62,7 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 ### Step 1.2: AWS resources for the AI pipeline
 
-**Do:** in `russetleaf-infra`, add the **`sqs-queue`** (with dead-letter queue) and **`bedrock-access`** modules, then in `envs/home`: the **summary queue** and dead-letter queue (production and staging), the **model mirror bucket** (with `prevent_destroy`), the **Bedrock budget alert**, and credentials for WordPress (send to the queue), the summarizer (read from the queue) and LiteLLM (`bedrock:InvokeModel` on the chosen models only), each in Secrets Manager (or pod roles, if Phase 1 step 9.1 is done). Confirm access to Claude Haiku and Amazon Nova Lite in the chosen region (Anthropic models may need a one-time use-case form in the console). Extend the ci stand-ins with SQS (LocalStack, or **ElasticMQ** if LocalStack's terms do not suit).
+**Do:** in `russetleaf-infra`, add the **`sqs-queue`** (with dead-letter queue) and **`bedrock-access`** modules, then in `envs/home`: the **summary queue** and dead-letter queue (production and staging), the **model mirror bucket** (with `prevent_destroy`), the **Bedrock budget alert**, and credentials for WordPress (send to the queue), the summarizer (read from the queue) and LiteLLM (`bedrock:InvokeModel` on the chosen models only), each in Secrets Manager (or pod roles, if Phase 1 step 9.1 is done). Confirm access to Claude Haiku and Amazon Nova Lite in the chosen region (Anthropic models may need a one-time use-case form in the console). Extend the ci stand-ins with SQS (LocalStack, or **ElasticMQ** if LocalStack's terms do not suit). Request a **GPU quota** for G-family spot instances in russetleaf-home now if the fine-tuning steps (4.8–4.10) are planned; approval can take days.
 
 **Test:** each credential's allowed action works and a disallowed one fails (e.g. the summarizer cannot send to the queue); `aws bedrock-runtime converse` with the LiteLLM credential returns a response; the budget alert exists; deleting the model mirror bucket is refused by the plan.
 
@@ -194,7 +194,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 4.6: Online evaluation and drift monitoring
 
-**Do:** `platform/argo-workflows/` (Argo Workflows), and a **daily workflow** from `russetleaf-llm-summarizer/online-eval/` that samples a few percent of the day's summaries, scores them with the CI gate's rules and judge, checks input drift (length, language, topics) against the evaluation set, and logs to MLflow and Prometheus. Grafana panels for quality and drift per model and prompt version; `SummaryQualityDegraded` and `InputDriftDetected` alerts to `#rl-mlops`, with runbooks.
+**Do:** `platform/argo-workflows/` (Argo Workflows), and a **daily workflow** from `russetleaf-llm-summarizer/online-eval/` that samples a few percent of the day's summaries, scores them with the CI gate's rules and judge, checks input drift (length, language, topics) against the evaluation set with **Evidently** (drift reports kept with each run), and logs to MLflow and Prometheus. Grafana panels for quality and drift per model and prompt version; `SummaryQualityDegraded` and `InputDriftDetected` alerts to `#rl-mlops`, with runbooks.
 
 **Test:** the workflow runs daily and its results appear in MLflow and Grafana; temporarily switching routing to a deliberately weak prompt lowers the scores and fires `SummaryQualityDegraded`.
 
@@ -203,6 +203,30 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Do:** a `summary-feedback` must-use plugin in `russetleaf-wordpress` (editor-only "helpful / not helpful" plus a note on each summary, stored as post metadata); **DVC** in `russetleaf-llm-summarizer` with an S3 remote, tracking the evaluation set, adversarial cases and training data; a nightly workflow exporting new ratings (with each summary's model and prompt version) into the DVC-tracked dataset; MLflow runs record the dataset version.
 
 **Test:** rating a summary in the admin shows up in the next nightly export; `dvc pull` reproduces any past dataset version; an MLflow run's dataset version checks out the exact data it used.
+
+### Step 4.8: Fine-tuning pipeline on a rented GPU
+
+**Do** ([ADR 2005](adr/2005-fine-tuning-on-a-rented-gpu.md)):
+
+- **Training container** in `russetleaf-llm-summarizer/training/`: fetch the DVC-versioned training set; **LoRA fine-tune** the 3B base model; **evaluate against the base** on the evaluation set (including the adversarial cases); convert to GGUF; **register** the result in MLflow as a `local-summarizer` version with its scores, dataset version and Git commit; propose it as **challenger** if it beats the base. Build, scan and sign it like the summarizer image.
+- **Infrastructure** in `russetleaf-infra/envs/home`: a **launch template** for one spot GPU instance (e.g. g6.xlarge; a GPU-ready image; outbound-only security group; a **maximum run time** after which the instance shuts itself down), an **instance profile** that can only read the DVC training data and write to the MLflow artifact bucket, and a **training-launcher role** for the `train` workflow (GitHub OIDC; may start and stop instances from that template only). The instance reaches the home MLflow through Cloudflare Access with a service token kept in Secrets Manager.
+- **`train` workflow** (on the home runners, started by hand or by a merged retraining pull request): assume the launcher role, start the instance with the dataset version and base model as parameters, wait for the run to register its result, then confirm the instance has terminated.
+- **Cost alert:** `TrainingInstanceRunningLong` when a training instance has been running longer than expected, to `#rl-costs` and `#rl-mlops`.
+- Before generating training data with a teacher model, **check the provider's terms**; use an open-weights teacher if in doubt.
+
+**Test:** a complete run finishes on a spot GPU instance, registers a model version with its metrics, dataset version and Git commit in MLflow, produces an evaluation report against the base, and leaves no instance running; the launcher role cannot start any other instance type; the run's cost is recorded in the checklist and [ADR 2005](adr/2005-fine-tuning-on-a-rented-gpu.md).
+
+### Step 4.9: Deploy a fine-tuned challenger
+
+**Do:** once step 4.8 has registered a fine-tuned `local-summarizer` version that beats the base model, deploy it to `rl-home-cp02` as the **challenger**: llama.cpp loads it from the model mirror bucket (fed from the registry), the gateway sends it a canary share of summaries, and online evaluation compares it with the champion. Promote it (MLflow alias plus a `russetleaf-gitops` routing pull request) only if it holds up for a week; update `MODEL_CARD.md`.
+
+**Test:** the challenger serves its canary share; online evaluation shows champion-versus-challenger scores side by side; promotion or rejection is recorded in MLflow, the model card and the decision log.
+
+### Step 4.10: Drift-triggered retraining
+
+**Do:** when `InputDriftDetected` or `SummaryQualityDegraded` stays firing for a set period, or enough new feedback has accumulated, an Argo Workflows job **opens a retraining pull request** in `russetleaf-llm-summarizer` with the Evidently drift report, the proposed DVC dataset version and the expected cost; merging it starts the `train` workflow (step 4.8). A person always decides; nothing retrains on its own.
+
+**Test:** forcing drift (e.g. replaying a batch of unusually long or off-topic posts in staging) opens a retraining pull request with the report attached; merging it starts a training run; closing it starts nothing.
 
 ## Stage 5: Platform integration and finishing
 
@@ -271,6 +295,9 @@ Also write **an account of building Phase 2 with agents** (`docs/agentic-deliver
 | 4.5 Guardrails | Extended | 6–10 | ☐ | | | | | | |
 | 4.6 Online evaluation + drift | Extended | 6–10 | ☐ | | | | | | |
 | 4.7 Feedback loop + DVC | Advanced | 6–10 | ☐ | | | | | | |
+| 4.8 Fine-tuning on a rented GPU | Advanced | 19–31 | ☐ | | | | | | |
+| 4.9 Fine-tuned challenger | Advanced | 4–7 | ☐ | | | | | | |
+| 4.10 Drift-triggered retraining | Advanced | 2–4 | ☐ | | | | | | |
 | 5.1 Security for the AI components | Core | 4–7 | ☐ | | | | | | |
 | 5.2 Observability and operations for AI | Extended | 5–8 | ☐ | | | | | | |
 | 5.3 Documentation | Core | 2–4 | ☐ | | | | | | |

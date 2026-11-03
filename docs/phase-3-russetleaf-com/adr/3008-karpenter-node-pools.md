@@ -14,7 +14,7 @@ EKS nodes cost money by the hour, demos are short, traffic during a load test va
 - **A small managed node group** (two nodes) runs Karpenter itself, CoreDNS and other system pods.
 - **Karpenter** creates all other nodes from two **NodePools**:
     - a **general pool** (spot and on-demand, several instance families) for WordPress and platform services, with **consolidation** to remove idle or underused nodes and a disruption budget;
-    - a **GPU pool** (g6 family, spot preferred) for the model server and fine-tuning, labeled `workload=llm` and tainted `dedicated=llm:NoSchedule`, with consolidation limited so the model is not moved needlessly; created only if Phase 2 is built.
+    - a **GPU pool** (g6 family, spot preferred) for the model server (and, optionally, Phase 2's training container), labeled `workload=llm` and tainted `dedicated=llm:NoSchedule`, with consolidation limited so the model is not moved needlessly; created only if Phase 2 is built.
 - **Spot interruption handling** through an SQS queue fed by EventBridge, so pods move before AWS reclaims a node.
 - **Node settings** in the `EC2NodeClass`: AL2023 with a pinned AMI version tracked by Renovate, IMDSv2 with hop limit 1, encrypted root volumes, kubelet limits ([ADR 3004](3004-eks-component-hardening.md)), and the Cilium startup taint ([ADR 3003](3003-cilium-chaining-on-eks.md)).
 - **Cost alert:** `GPUNodeRunningLong` from OpenCost when a GPU node runs longer than expected.

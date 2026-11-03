@@ -1,6 +1,6 @@
 # Phase 3 design: russetleaf.com on EKS
 
-**Phase 3** builds **russetleaf.com**: the same WordPress site on the full AWS production design (EKS with Karpenter, RDS for MariaDB behind RDS Proxy with IAM authentication, ElastiCache, CloudFront, ALB and AWS WAF), brought up only for demos, with an always-on CloudFront edge that shows an offline page the rest of the time. It needs Phase 1 and is optional. **Phase 2 is optional for it:** without Phase 2, russetleaf.com runs WordPress only, and the AI parts below (the summarizer, gateway and GPU model on EKS, fine-tuning) are skipped.
+**Phase 3** builds **russetleaf.com**: the same WordPress site on the full AWS production design (EKS with Karpenter, RDS for MariaDB behind RDS Proxy with IAM authentication, ElastiCache, CloudFront, ALB and AWS WAF), brought up only for demos, with an always-on CloudFront edge that shows an offline page the rest of the time. It needs Phase 1 and is optional. **Phase 2 is optional for it:** without Phase 2, russetleaf.com runs WordPress only, and the AI parts below (the summarizer, gateway and GPU model on EKS) are skipped. Fine-tuning belongs to Phase 2 ([ADR 2005](../phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md)); its training container can optionally run on the GPU node pool here.
 
 - **Build plan:** [`plan.md`](plan.md)
 - **Decisions:** this phase's ADRs, in the `adr/` folder and listed in the [overview's index](../overview.md#architecture-decision-records)
@@ -123,18 +123,6 @@ The WordPress Rollout, Service, HPA and the rest of the base are the same for bo
 
 **In short:** in the cloud, the database trusts **IAM identities**, so the application has no secret at all; self-hosted, not every secret can be removed, so the design **minimizes, generates, isolates and rotates** them.
 
-## Fine-tuning on the GPU pool (if Phase 2 is built)
-
-This extends Phase 2's MLOps lifecycle with the one part that needs a GPU ([ADR 3002](adr/3002-fine-tuning-on-eks-gpu.md)).
-
-### Fine-tuning pipeline (distillation)
-
-- **Goal:** improve the small self-hosted model by **fine-tuning** it (LoRA) on high-quality example summaries, then compare it with the base model.
-- **Training data:** curated summaries from the feedback loop and the evaluation set, plus summaries from a stronger **teacher** model. **Check the teacher's terms first:** some model providers' terms restrict using their outputs to train other models. An **open-weights teacher** (e.g. a larger open model run on the GPU) avoids the question.
-- **The pipeline**, defined as an **Argo Workflows** template in `russetleaf-llm-summarizer/training/` and run on **EKS's GPU NodePool** during an AWS session (spot GPU; a few dollars per run): fetch the versioned dataset (DVC) → fine-tune (LoRA) → **evaluate against the base model** on the evaluation set (including the adversarial cases) → convert to GGUF → **register** in MLflow as a `local-summarizer` version with its scores → if it beats the champion, propose it as the **challenger**.
-- **Deployment:** the challenger enters the gateway **canary** at home; online evaluation compares it with the champion; promotion to champion is a reviewed pull request.
-- **Retraining triggers:** online quality dropping, enough new feedback accumulating, or a new base model.
-
 ## Demo operations
 
 ### Demo noise control (russetleaf.com)
@@ -248,7 +236,6 @@ These are approximate prices for **us-east-1**, on demand unless noted, for a sm
 | ACM certificates | public certificates | $0 |
 | SES | low email volume ($0.10 per 1,000) | <$1 |
 | Amazon SQS + EventBridge | summary queue + dead-letter queue, KEDA polling, Karpenter interruption queue (within free tiers) | <$1 |
-| Fine-tuning runs (spot GPU) | A few hours per run during AWS sessions | a few $ per run |
 | Amazon Bedrock | ~10–20 new or edited posts/month plus CI evaluation runs, on Haiku and Nova (~$1 per 1M input tokens, ~$5 per 1M output for Haiku; Nova less) | ~$1–$2 |
 | LiteLLM, ARC runners, KEDA, Argo Rollouts, Kyverno, Falco, Trivy Operator, OpenCost, Karpenter, Prometheus/Grafana | run on the existing worker nodes | $0 |
 | kube-bench | One Job per node pool, every demo (in `demo-up`) | $0 |

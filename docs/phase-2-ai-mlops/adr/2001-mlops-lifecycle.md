@@ -3,9 +3,11 @@
 - **Status:** Accepted; fine-tuning split out to [ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)
 - **Date:** 2026-11-01
 - **Applies to:** `russetleaf-llm-summarizer`, the LLM gateway and the self-hosted model, on both sites
-- **Phase:** 2. Fine-tuning is in Phase 3 ([ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)).
+- **Phase:** 2, including fine-tuning ([ADR 2005](2005-fine-tuning-on-a-rented-gpu.md)).
 
 > **Update ([ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)):** the project is now built in three phases ([ADR 1037](../../phase-1-russetleaf-dev/adr/1037-project-phases.md)). This ADR is Phase 2's. **Fine-tuning** (the distillation pipeline and deploying a fine-tuned challenger) needs a GPU, so it moved to Phase 3 and is recorded in [ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md); the rest of the lifecycle below runs at home in Phase 2.
+
+> **Update ([ADR 2005](2005-fine-tuning-on-a-rented-gpu.md)):** fine-tuning is back in Phase 2, on a rented spot GPU in AWS, with drift-triggered retraining proposals; the note below about Phase 3 is superseded.
 
 ## Context
 
@@ -56,4 +58,4 @@ The summary pipeline already had strong **inference-side** practices (often call
 ## Open items
 
 - Phase 2 steps 4.4–4.7: MLflow, guardrails, online evaluation, feedback and DVC.
-- Fine-tuning and the challenger: see [ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md) (Phase 3 steps 4.5 and 4.6).
+- Fine-tuning, the challenger and drift-triggered retraining: see [ADR 2005](2005-fine-tuning-on-a-rented-gpu.md) (Phase 2 steps 4.8–4.10).

@@ -12,6 +12,7 @@
 - **`rl-home-cp02` becomes the dedicated LLM node** (label `workload=llm`, taint `dedicated=llm:NoSchedule`) running llama.cpp, with the CI runners next to it.
 - AWS resources in russetleaf-home: the **SQS** summary queue and dead-letter queue, **Bedrock** access with a budget, the **model mirror bucket**, and staging equivalents.
 - WordPress changes in `russetleaf-wordpress`: the **summary-queue must-use plugin**, the `wordpress_posts_without_summary` metric and its alert, the **AI summary box** in the theme, and the summarizer's application password.
+- **Model training:** fine-tuning on a rented spot GPU in AWS, a fine-tuned challenger served at home, and retraining proposed when drift or quality alerts persist ([ADR 2005](adr/2005-fine-tuning-on-a-rented-gpu.md)).
 - Platform additions: KEDA, LiteLLM, MLflow and Argo Workflows, plus the AI rows in Phase 1's shared sections (policies, network rules, Falco rules, tracing, alerts, SLOs, costs); see [AI components in the shared platform](#ai-components-in-the-shared-platform).
 
 ## Architecture
@@ -99,7 +100,7 @@ The summary pipeline covers the **whole machine-learning lifecycle**, not just i
 ```mermaid
 flowchart LR
   fb["Feedback and<br/>production samples"] --> data[("DVC-versioned<br/>datasets")]
-  data --> train["Fine-tuning<br/>(Phase 3: spot GPU on EKS)"]
+  data --> train["Fine-tuning<br/>(rented spot GPU)"]
   train --> evalb["Evaluation<br/>against the base"]
   evalb --> reg["MLflow model registry<br/>champion / challenger"]
   reg --> prod["Production<br/>gateway canary → champion"]
@@ -134,9 +135,15 @@ Post content is untrusted input, so the summarizer treats it as data:
 - **Grafana** shows quality and drift trends per model and prompt version; **Alertmanager** sends `SummaryQualityDegraded` and `InputDriftDetected` to `#rl-mlops`.
 - A sustained drop starts the response: compare the champion and challenger in the evaluation set, roll back routing ([ADR 1016](../phase-1-russetleaf-dev/adr/1016-rollback-strategy.md)), or trigger retraining.
 
-### Fine-tuning (in Phase 3)
+### Fine-tuning pipeline (distillation)
 
-Fine-tuning the self-hosted model needs a GPU, which the home lab does not have, so the **fine-tuning pipeline and deploying a fine-tuned challenger** belong to Phase 3 (the EKS GPU node pool); see the [Phase 3 design](../phase-3-russetleaf-com/design.md#fine-tuning-on-the-gpu-pool-if-phase-2-is-built) and [ADR 3002](../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md). Without Phase 3, the MLOps lifecycle here still covers evaluation, the registry, guardrails, online evaluation, drift and the feedback loop.
+- **Goal:** improve the small self-hosted model by **fine-tuning** it (LoRA) on high-quality example summaries, then compare it with the base model ([ADR 2005](adr/2005-fine-tuning-on-a-rented-gpu.md)).
+- **Where it runs:** the home lab has no GPU, so each run uses **one rented spot GPU instance** in the russetleaf-home account, started from a Terraform-managed launch template by the `train` workflow and terminated when the run ends (a few dollars per run). Its instance profile can only read the training data and write to the MLflow artifact bucket.
+- **Training data:** curated summaries from the feedback loop and the evaluation set, plus summaries from a stronger **teacher** model. **Check the teacher's terms first:** some model providers' terms restrict using their outputs to train other models. An **open-weights teacher** avoids the question.
+- **The pipeline** (`russetleaf-llm-summarizer/training/`, one container): fetch the versioned dataset (DVC) → fine-tune (LoRA) → **evaluate against the base model** on the evaluation set (including the adversarial cases) → convert to GGUF → **register** in MLflow as a `local-summarizer` version with its scores → if it beats the champion, propose it as the **challenger**.
+- **Deployment:** the challenger enters the gateway **canary** at home; online evaluation compares it with the champion; promotion to champion is a reviewed pull request.
+- **Drift-triggered retraining:** sustained drift or quality alerts (drift reports from **Evidently**), or enough new feedback, open a **retraining pull request** with the report and the proposed dataset version; merging it starts a training run. A person always decides.
+- **Phase 3 option:** the same container can run on the EKS GPU node pool instead.
 
 ### Data versioning and feedback
 
@@ -145,7 +152,7 @@ Fine-tuning the self-hosted model needs a GPU, which the home lab does not have,
 
 ### Cost
 
-MLflow, Argo Workflows and the online-evaluation job run on the home cluster (`rl-home-cp03` has the memory); the extra Bedrock calls for daily judging cost cents a month; each fine-tuning run costs **a few dollars** of spot GPU time on EKS.
+MLflow, Argo Workflows and the online-evaluation job run on the home cluster (`rl-home-cp03` has the memory); the extra Bedrock calls for daily judging cost cents a month; each fine-tuning run costs **a few dollars** of spot GPU time on EKS. Each fine-tuning run costs a few dollars of spot GPU time.
 
 ### Rolling back bad AI summaries
 
@@ -163,7 +170,7 @@ russetleaf-llm-summarizer/
   prompts/                  # versioned prompts + model settings (the version is recorded with each summary)
   guardrails/               # input delimiting, personal-data redaction, output validation
   data/                     # DVC-tracked datasets (evaluation, adversarial cases, training, feedback exports)
-  training/                 # Argo Workflows fine-tuning (LoRA distillation) pipeline: data → train → evaluate
+  training/                 # fine-tuning (LoRA distillation) container: data → train → evaluate → register; runs on a rented spot GPU
                             #   vs base → GGUF → register in MLflow
   online-eval/              # daily sampled scoring of production summaries + input-drift checks
   evals/
@@ -331,4 +338,4 @@ One trace then shows: a post is published → queued → picked up by the summar
 | LLM gateway | LiteLLM in-cluster, routing to **real Amazon Bedrock** and the self-hosted model | Same | ~$1–$2 (Bedrock tokens) |
 | Self-hosted model | llama.cpp (CPU build) on `rl-home-cp02`, CPU-limited to protect etcd | llama.cpp (CUDA build) on the Karpenter GPU NodePool | ~$2–$4 (electricity for `rl-home-cp02`) |
 | Prompt evaluation | GitHub Actions on ARC runners in the cluster | Same | (included above) |
-| MLOps lifecycle | MLflow, Argo Workflows, online evaluation, feedback, DVC (home cluster) | Fine-tuning runs on the spot GPU NodePool | ~$0 always on; a few $ per fine-tuning run |
+| MLOps lifecycle | MLflow, Argo Workflows, online evaluation with Evidently, feedback, DVC (home cluster); fine-tuning on a rented spot GPU | Optional: the same training on the spot GPU NodePool | ~$0 always on; a few $ per fine-tuning run |

@@ -1,6 +1,6 @@
 # Phase 3 build plan: russetleaf.com on EKS
 
-This is the step-by-step plan for **Phase 3**, described in the [Phase 3 design](design.md): russetleaf.com on the full AWS design, brought up only for demos. It **starts after Phase 1's Core tier is built**: it reuses Phase 1's repos, Terraform modules, base manifests, images, charts and CI, and adds only what is specific to AWS. **Phase 2 is optional:** Stage 4 (AI post summaries on EKS, the GPU model, fine-tuning) and the AI items elsewhere, marked *(if Phase 2 is built)*, are skipped without it.
+This is the step-by-step plan for **Phase 3**, described in the [Phase 3 design](design.md): russetleaf.com on the full AWS design, brought up only for demos. It **starts after Phase 1's Core tier is built**: it reuses Phase 1's repos, Terraform modules, base manifests, images, charts and CI, and adds only what is specific to AWS. **Phase 2 is optional:** Stage 4 (AI post summaries on EKS and the GPU model) and the AI items elsewhere, marked *(if Phase 2 is built)*, are skipped without it.
 
 Each step ends with a **test** that must pass before moving on. Unlike the home lab, most of this stack costs money while it runs (about **$1/hour**), so the plan builds it in layers and tears each layer down between sessions until the demo workflows (Stage 6) automate it.
 
@@ -39,10 +39,10 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the demo workflows, one rehearsed and **recorded demo**, and the docs. | 0.1–2.4, 3.1, 3.2, 6.1, 6.2, 6.3 | **~73–120** |
 | **Extended** | kube-bench and Kubescape on EKS, the security and cost reviews, and the EKS rollback drill. | 2.5, 5.1, 5.2, 6.1b | **~10–16** |
 | **Advanced** | Load, stress and spike tests for the capacity plan, EKS as a second spoke of the Argo CD hub, and the Istio ambient and Tetragon experiments. | 5.3, 5.4, 6.4, 6.5 | **~16–25** |
-| **AI on EKS** *(if Phase 2 is built)* | The summarizer and gateway on EKS, the GPU model server, evaluation and tracing on AWS (Extended); the fine-tuning pipeline and the fine-tuned challenger (Advanced). | 4.1–4.4 (Extended), 4.5, 4.6 (Advanced) | **~28–52** |
-| **Total** | | | **~127–213** (~99–161 without Phase 2) |
+| **AI on EKS** *(if Phase 2 is built)* | The summarizer and gateway on EKS, the GPU model server, and evaluation and tracing on AWS. | 4.1–4.4 (Extended) | **~8–17** |
+| **Total** | | | **~107–178** (~99–161 without Phase 2) |
 
-**Calendar time:** about **6–11 weeks at ~20 hours a week** for the whole plan (5–8 weeks without the AI steps), after Phase 1's Core tier is done (this plan depends on it). Allow for waiting: **SES production access**, and, if Phase 2 is built, the **GPU quota** request (days; submit it in step 0.1 well ahead) and **Bedrock model access** in the new account.
+**Calendar time:** about **5–9 weeks at ~20 hours a week** for the whole plan (5–8 weeks without the AI steps), after Phase 1's Core tier is done (this plan depends on it). Allow for waiting: **SES production access**, and, if Phase 2 is built, the **GPU quota** request (days; submit it in step 0.1 well ahead) and **Bedrock model access** in the new account.
 
 **Money:** the stack costs about **$1/hour** while running, so batch work into focused sessions and run `demo-down` at the end of each; record each session's cost in the checklist.
 
@@ -179,7 +179,7 @@ Record each answer in the [decision log](#decision-log).
 
 - Using the shared modules: Secrets Manager entries for russetleaf.com; *(if Phase 2 is built)* the summary SQS queue + dead-letter queue and Bedrock access (gateway role + budget alert).
 - **WAF web ACL** for the ALB (AWS managed rule groups: core rule set, known bad inputs, WordPress, IP reputation; rate limiting on `/wp-login.php`).
-- **Pod Identity associations** (one IAM role per service account, least privilege; the summarizer, LiteLLM, KEDA, llama.cpp and training roles only if Phase 2 is built): WordPress (media bucket, send to queue, SES send, **`rds-db:connect` on the proxy's `wordpress` user**), summarizer (read from queue), LiteLLM (Bedrock invoke on chosen models), External Secrets (russetleaf.com secrets), KEDA (queue attributes), ExternalDNS (the russetleaf.com zone), Load Balancer Controller, llama.cpp init container (model mirror bucket, read only), seed Job (read russetleaf.dev's backup and media buckets **in the russetleaf-home account**, granted by bucket policies there (and KMS key policies if those buckets use customer-managed keys), write russetleaf.com media bucket, `rds-db:connect` through the proxy), `db-setup` Job (read the RDS-managed master secret and the `wordpress` secret), **fine-tuning training role** (step 4.5: write to the MLflow artifact and DVC buckets in **russetleaf-home**, granted there by the `s3-mlops` module's cross-account bucket policy; read the training data), Falcosidekick/OpenCost if they need AWS APIs.
+- **Pod Identity associations** (one IAM role per service account, least privilege; the summarizer, LiteLLM, KEDA, and llama.cpp roles only if Phase 2 is built): WordPress (media bucket, send to queue, SES send, **`rds-db:connect` on the proxy's `wordpress` user**), summarizer (read from queue), LiteLLM (Bedrock invoke on chosen models), External Secrets (russetleaf.com secrets), KEDA (queue attributes), ExternalDNS (the russetleaf.com zone), Load Balancer Controller, llama.cpp init container (model mirror bucket, read only), seed Job (read russetleaf.dev's backup and media buckets **in the russetleaf-home account**, granted by bucket policies there (and KMS key policies if those buckets use customer-managed keys), write russetleaf.com media bucket, `rds-db:connect` through the proxy), `db-setup` Job (read the RDS-managed master secret and the `wordpress` secret), Falcosidekick/OpenCost if they need AWS APIs.
 - SES SMTP credentials (or an IAM role for an SES API plugin) in Secrets Manager, the **Google OAuth client** secret for russetleaf.com (a separate client from russetleaf.dev's, redirect URL `https://russetleaf.com/...`, created in the Google Cloud console), and the **Slack bot token** entry for russetleaf.com (same bot, separate entry so the sites stay independent).
 - **`alerting` module:** SNS topics; CloudWatch alarms for the ALB (5xx rate, target response time), RDS (CPU, free storage, connections, replica lag) and ElastiCache (memory, evictions), created and destroyed with the demo stack; Amazon Q Developer channel configurations for `#rl-com-alerts`, `#rl-critical` and `#rl-costs` (the Slack workspace is authorized once in the AWS console, then managed in Terraform).
 
@@ -311,17 +311,7 @@ Record each answer in the [decision log](#decision-log).
 
 **Test:** one trace covers the whole pipeline and shows which model answered and each step's duration; traces from a demo are still viewable after `demo-down` (they are in the always-on trace bucket); no span contains post text, prompts or summaries.
 
-### Step 4.5: Fine-tuning pipeline (distillation) on the GPU NodePool
-
-**Do:** install Argo Workflows on EKS (`platform/argo-workflows/overlays/aws`) and run the `russetleaf-llm-summarizer/training/` workflow on the **spot GPU NodePool** during an AWS session: pull the DVC-versioned training set; **LoRA fine-tune** the 3B base model; **evaluate against the base** on the evaluation set (including the adversarial cases); convert to GGUF; **register** the result in the home MLflow as a `local-summarizer` version with its scores and lineage (the training role gets a narrow cross-account write grant to the MLflow artifact and DVC buckets in russetleaf-home); propose it as **challenger** if it beats the base. Before generating training data with a teacher model, **check the provider's terms**; use an open-weights teacher if in doubt. See the Phase 2 design's [MLOps lifecycle](../phase-2-ai-mlops/design.md#mlops-lifecycle).
-
-**Test:** a complete run finishes on a spot GPU node, registers a model version with its metrics, dataset version and Git commit in MLflow, and produces an evaluation report against the base; the run's cost is recorded in the checklist and [ADR 2001](../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md).
-
-### Step 4.6: Deploy a fine-tuned challenger (at home)
-
-**Do:** after step 4.5 has produced a registered fine-tuned `local-summarizer` version that beats the base model, deploy it to `rl-home-cp02` as the **challenger**: llama.cpp loads it from the model mirror bucket (fed from the registry), the gateway sends it a canary share of summaries, and online evaluation compares it with the champion. Promote it (MLflow alias plus a `russetleaf-gitops` routing pull request) only if it holds up for a week; update `MODEL_CARD.md`.
-
-**Test:** the challenger serves its canary share; online evaluation shows champion-versus-challenger scores side by side; promotion or rejection is recorded in MLflow, the model card and the decision log.
+*Optional:* if training should run in the cluster rather than on a rented instance, run Phase 2's training container ([ADR 2005](../phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md)) on the GPU NodePool during a demo session; the steps for it are in Phase 2.
 
 ## Stage 5: Security and cost review
 
@@ -438,8 +428,6 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 | 4.2 GPU model server | Extended | 4–7 | ☐ | | | | | | |
 | 4.3 Evaluation on AWS | Extended | 1–3 | ☐ | | | | | | |
 | 4.4 End-to-end tracing | Extended | 1–3 | ☐ | | | | | | |
-| 4.5 Fine-tuning pipeline | Advanced | 16–28 | ☐ | | | | | | |
-| 4.6 Fine-tuned challenger (at home) | Advanced | 4–7 | ☐ | | | | | | |
 | 5.1 Security review | Extended | 4–6 | ☐ | | | | | | |
 | 5.2 Cost review | Extended | 2–3 | ☐ | | | | | | |
 | 5.3 Istio ambient experiment (optional) | Advanced | 3–5 | ☐ | | | | | | |

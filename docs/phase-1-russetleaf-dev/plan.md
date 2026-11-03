@@ -260,12 +260,13 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 | [1039 Bootstrap through Talos inline manifests](adr/1039-bootstrap-through-talos-inline-manifests.md) | 2.2, 3.1 | — | — |
 | [1040 Lab network and WireGuard](adr/1040-lab-network-and-wireguard.md) | 0.3, 2.2 | — | — |
 | [1041 Naming convention](adr/1041-naming-convention.md) | 0.3, 2.2 | — | 1.4, 2.3 |
-| [2001 MLOps lifecycle](../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | — | 4.4–4.7 | 4.5, 4.6 |
+| [2001 MLOps lifecycle](../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | — | 4.4–4.10 | — |
 | [2002 Summary pipeline architecture](../phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | — | 2.1–2.5 | 4.1 |
 | [2003 Self-hosted model on `rl-home-cp02`](../phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | — | 1.3, 3.1, 3.2 | 4.2 |
 | [2004 Agentic AI delivery](../phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md) | — | 1.1b, 5.3 | 0.3 |
+| [2005 Fine-tuning on a rented GPU](../phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md) | — | 1.2, 4.6, 4.8–4.10 | — |
 | [3001 kube-bench on EKS only](../phase-3-russetleaf-com/adr/3001-kube-bench-eks-only.md) | 7.2 | — | 2.5 |
-| [3002 Fine-tuning on the EKS GPU pool](../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md) | — | — | 4.5, 4.6 |
+| [3002 Fine-tuning on the EKS GPU pool (superseded by 2005)](../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md) | — | — | 4.2 (optional) |
 | [3003 Cilium chaining on EKS](../phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md) | — | — | 1.4 |
 | [3004 EKS component hardening](../phase-3-russetleaf-com/adr/3004-eks-component-hardening.md) | — | — | 1.4, 2.5, 5.1 |
 | [3005 EKS access and audit logs](../phase-3-russetleaf-com/adr/3005-eks-access-and-audit-logs.md) | — | — | 1.4, 1.7 |

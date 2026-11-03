@@ -7,8 +7,8 @@ RussetLeaf is a portfolio project: a production-grade WordPress platform built t
 | Phase | What it builds | Needs | Design | Plan | Decisions |
 |---|---|---|---|---|---|
 | **1. russetleaf.dev** | WordPress on a three-node, highly available Talos cluster at home, running 24/7: GitOps, platform services, security, observability, staging and promotion, disaster recovery, and the AWS Organization it uses | — | [design](phase-1-russetleaf-dev/design.md) | [plan](phase-1-russetleaf-dev/plan.md) | [ADRs](#architecture-decision-records) |
-| **2. AI summaries and MLOps** | AI-generated post summaries on russetleaf.dev: an event-driven summarizer, an LLM gateway (Bedrock plus a self-hosted model on `rl-home-cp02`), an evaluation gate, MLflow, guardrails, online evaluation and drift monitoring, feedback and data versioning | Phase 1 | [design](phase-2-ai-mlops/design.md) | [plan](phase-2-ai-mlops/plan.md) | [ADRs](#architecture-decision-records) |
-| **3. russetleaf.com** | The same site on the full AWS production design (EKS, Karpenter, RDS with RDS Proxy, ElastiCache, CloudFront, ALB, AWS WAF), brought up only for demos, with an always-on offline page; plus GPU fine-tuning if Phase 2 is built | Phase 1 (Phase 2 optional) | [design](phase-3-russetleaf-com/design.md) | [plan](phase-3-russetleaf-com/plan.md) | [ADRs](#architecture-decision-records) |
+| **2. AI summaries and MLOps** | AI-generated post summaries on russetleaf.dev: an event-driven summarizer, an LLM gateway (Bedrock plus a self-hosted model on `rl-home-cp02`), an evaluation gate, MLflow, guardrails, online evaluation and drift monitoring, feedback and data versioning, and fine-tuning on a rented GPU with drift-triggered retraining | Phase 1 | [design](phase-2-ai-mlops/design.md) | [plan](phase-2-ai-mlops/plan.md) | [ADRs](#architecture-decision-records) |
+| **3. russetleaf.com** | The same site on the full AWS production design (EKS, Karpenter, RDS with RDS Proxy, ElastiCache, CloudFront, ALB, AWS WAF), brought up only for demos, with an always-on offline page | Phase 1 (Phase 2 optional) | [design](phase-3-russetleaf-com/design.md) | [plan](phase-3-russetleaf-com/plan.md) | [ADRs](#architecture-decision-records) |
 
 The reasoning for this split is in [ADR 1037](phase-1-russetleaf-dev/adr/1037-project-phases.md).
 
@@ -240,7 +240,7 @@ What each phase builds and shows. Phase 1 on its own is a complete project; Phas
 
 - **Generative AI run like production software:** Bedrock integration with least-privilege IAM, event-driven scaling to zero, a dead-letter queue, and cost controls, with the same code running on both clusters.
 - **Model serving on Kubernetes:** a self-hosted model on dedicated nodes (labels, taints, tolerations, node selectors), behind an LLM gateway with routing, fallback, canary splits, rate limits and budgets, so no single model provider is a dependency.
-- **The full MLOps lifecycle:** MLflow experiment tracking and model registry with lineage, guardrails against prompt injection and personal-data leaks, online evaluation and drift alerts, a LoRA fine-tuning (distillation) pipeline on a spot GPU (Phase 3) with evaluation against the base model, DVC-versioned data, and an editor feedback loop.
+- **The full MLOps lifecycle:** MLflow experiment tracking and model registry with lineage, guardrails against prompt injection and personal-data leaks, online evaluation and drift alerts, a LoRA fine-tuning (distillation) pipeline on a rented spot GPU with evaluation against the base model, drift-triggered retraining proposals, DVC-versioned data, and an editor feedback loop.
 - **A standalone MLOps repo (`russetleaf-llm-summarizer`):** versioned prompts, an evaluation set, a CI gate that compares every model and blocks changes that lower summary quality, releases gated on evaluation, a model card, a published Helm chart, and a local demo anyone can run. It is the repo to read first for the AI and MLOps roles.
 - **LLM monitoring:** token, latency, error, fallback and cost metrics per model and prompt version, plus model-server throughput, in Prometheus and Grafana, with alerts.
 
@@ -267,11 +267,11 @@ Each phase's plan tiers every step as **Core** (a complete, working, secure plat
 | Plan | Core | Extended | Advanced | Total |
 |---|---|---|---|---|
 | [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~169–275 | ~72–127 | ~89–144 | **~330–546** |
-| [Phase 2: AI summaries and MLOps](phase-2-ai-mlops/plan.md#priorities-and-time-estimates) (optional) | ~50–86 | ~32–53 | ~6–10 | **~88–149** |
-| [Phase 3: russetleaf.com](phase-3-russetleaf-com/plan.md#priorities-and-time-estimates) (optional) | ~73–120 | ~18–33 | ~36–60 | **~127–213** |
-| **Whole project** | ~292–481 | ~122–213 | ~131–214 | **~545–908** |
+| [Phase 2: AI summaries and MLOps](phase-2-ai-mlops/plan.md#priorities-and-time-estimates) (optional) | ~50–86 | ~32–53 | ~31–52 | **~113–191** |
+| [Phase 3: russetleaf.com](phase-3-russetleaf-com/plan.md#priorities-and-time-estimates) (optional) | ~73–120 | ~18–33 | ~16–25 | **~107–178** |
+| **Whole project** | ~292–481 | ~122–213 | ~136–221 | **~550–915** |
 
-Phase 3's figures include its AI steps (about 28–52 hours), which only apply if Phase 2 is built; without them Phase 3 is about **99–161 hours**.
+Phase 3's figures include its AI steps (about 8–17 hours), which only apply if Phase 2 is built; without them Phase 3 is about **99–161 hours**.
 
 **Calendar time at about 20 hours a week:**
 
@@ -279,8 +279,8 @@ Phase 3's figures include its AI steps (about 28–52 hours), which only apply i
 |---|---|---|
 | Phase 1, Core tier | ~169–275 | 9–14 weeks |
 | Phase 1, everything | ~330–546 | 17–27 weeks (4–6.5 months) |
-| Phases 1 and 2 | ~418–695 | 21–35 weeks (5–8 months) |
-| All three phases | ~545–908 | 27–46 weeks (6–11 months; 12–21 months at 10 hours a week) |
+| Phases 1 and 2 | ~443–737 | 22–37 weeks (5–9 months) |
+| All three phases | ~550–915 | 28–46 weeks (6–11 months; 13–21 months at 10 hours a week) |
 
 Phase 1 is built with AI assistance in conversation; Phases 2 and 3 are built with AI coding agents under [ADR 2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md), with Phase 1's actual hours as the baseline for measuring the difference. Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar. A finished Phase 1 is worth more than three unfinished phases.
 
@@ -405,7 +405,7 @@ russetleaf-gitops/
     sloth/                  # SLO rule generation (Sloth) and SLO dashboards
     chaos-mesh/             # Chaos Mesh and scheduled experiments
     k6-operator/            # k6 Operator for distributed in-cluster load tests (scripts in perf/)
-    argo-workflows/         # Argo Workflows (online evaluation, data export, the fine-tuning pipeline on EKS)
+    argo-workflows/         # Argo Workflows (online evaluation, data export, retraining proposals)
     llm-gateway/            # LiteLLM + routing config: model list, fallbacks, canary weights, budgets
     llm-serving/            # llama.cpp model server, tolerations/node selector;
                             #   home: CPU build on rl-home-cp02, aws: CUDA build on the GPU NodePool
@@ -442,8 +442,8 @@ russetleaf-infra/
                             #   EventBridge, SNS and Amazon Q Developer
   modules/                  # reusable modules shared by both environments
     s3-media/               # media bucket, versioning, IAM policy
-    s3-mlops/               # MLflow artifact and DVC data buckets (versioning, encryption, cross-account write
-                            #   grant for the EKS training role)
+    s3-mlops/               # MLflow artifact and DVC data buckets (versioning, encryption; written by the
+                            #   training instance's narrow role)
     s3-logs/                # Loki log and Tempo trace buckets: encryption, lifecycle matching retention, IAM policy
     s3-backups/             # database backup bucket: versioning, encryption, lifecycle rules, IAM policy
     sqs-queue/              # queue + dead-letter queue + alarms
@@ -663,6 +663,7 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [2002](phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
 | [2003](phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | Self-hosted model on rl-home-cp02 (CPU llama.cpp), dedicated by taint | 2 |
 | [2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md) | Agentic AI delivery, with least-privilege access and measured results | 2 |
+| [2005](phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md) | Fine-tuning on a rented spot GPU, with drift-triggered retraining | 2 |
 | [3001](phase-3-russetleaf-com/adr/3001-kube-bench-eks-only.md) | kube-bench on EKS only; Talos checked with its own hardening checks and Trivy Operator | 3 |
 | [3002](phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md) | Fine-tuning on the EKS GPU node pool, with the challenger served at home | 3 |
 | [3003](phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md) | Cilium on EKS in chaining mode with the VPC CNI | 3 |

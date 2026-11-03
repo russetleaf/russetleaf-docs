@@ -1,6 +1,6 @@
 # ADR 3002: Fine-tuning on the EKS GPU node pool, with the challenger served at home
 
-- **Status:** Accepted (split from [ADR 2001](../../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md))
+- **Status:** Superseded by [ADR 2005](../../phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md) (fine-tuning moved to Phase 2, on a rented spot GPU); this pipeline remains an option for Phase 3
 - **Date:** 2026-11-02
 - **Applies to:** `russetleaf-llm-summarizer/training/`, the EKS GPU NodePool, the home MLflow registry and llama.cpp
 - **Phase:** 3 (needs Phase 2)
@@ -37,6 +37,5 @@
 
 ## Open items
 
-- Phase 3 step 4.5: the pipeline; record the first run's cost and its scores against the base.
-- Phase 3 step 4.6: deploy the challenger at home and decide on promotion.
+- ~~Phase 3 steps 4.5 and 4.6~~: moved to Phase 2 steps 4.8–4.10 ([ADR 2005](../../phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md)).
 - Confirm the teacher model's terms before generating training data.
