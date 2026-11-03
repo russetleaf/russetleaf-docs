@@ -278,6 +278,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 | [3006 On-demand demo stack and always-on edge](../phase-3-russetleaf-com/adr/3006-on-demand-demo-stack.md) | — | — | 1.2, 5.1 |
 | [3007 RDS for MariaDB behind RDS Proxy](../phase-3-russetleaf-com/adr/3007-rds-mariadb-with-rds-proxy.md) | — | — | 1.6, 3.1 |
 | [3008 Karpenter node pools](../phase-3-russetleaf-com/adr/3008-karpenter-node-pools.md) | — | — | 1.5, 2.3 |
+| [3009 Edge WAF on CloudFront's Free plan](../phase-3-russetleaf-com/adr/3009-edge-waf-on-cloudfront-free-plan.md) | — | — | 1.2, 1.7, 4.1 |
 
 - Add a pre-commit or CI secret scan (`gitleaks`) to every repo, scan each repo's **full history**, and then **make the repos public** ([ADR 1030](adr/1030-github-actions-ci.md)); turn on **secret scanning with push protection**.
 - **GitHub organization settings** in `russetleaf-infra/envs/github/` (Terraform's GitHub provider): default workflow token **read-only**, only verified or allow-listed Actions, branch protection and required reviews, environments, secret scanning with push protection.

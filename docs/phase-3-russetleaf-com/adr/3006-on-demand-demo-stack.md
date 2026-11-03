@@ -32,7 +32,7 @@ The full AWS design (EKS, RDS Multi-AZ with RDS Proxy, ElastiCache, NAT Gateways
 
 ## When to revisit
 
-- russetleaf.com needs to be always on, or to hold user data: move WAF to CloudFront, consider a warm standby, and revisit [ADR 1018](../../phase-1-russetleaf-dev/adr/1018-disaster-recovery.md)'s AWS items.
+- russetleaf.com needs to be always on, or to hold user data: move the full WAF rule set to CloudFront (the Pro plan; [ADR 3009](3009-edge-waf-on-cloudfront-free-plan.md)), consider a warm standby, and revisit [ADR 1018](../../phase-1-russetleaf-dev/adr/1018-disaster-recovery.md)'s AWS items.
 
 ## Open items
 

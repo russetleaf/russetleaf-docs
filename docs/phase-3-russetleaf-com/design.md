@@ -36,7 +36,7 @@ flowchart LR
 ```mermaid
 flowchart TB
   subgraph edge["Always on: envs/aws-edge (~$1/month)"]
-    r53["Route 53"] --> cf["CloudFront"]
+    r53["Route 53"] --> cf["CloudFront + AWS WAF<br/>(flat-rate Free plan)"]
     cf -->|"/wp-content/uploads/*"| media[("S3 media bucket")]
     cf -->|"origin unreachable: 503"| offline[("S3 offline page<br/>points to russetleaf.dev")]
   end
@@ -64,7 +64,7 @@ flowchart TB
 - **CloudFront** in front of both the site and the S3 media. In this project CloudFront is **always on** (it costs almost nothing idle), so it can show an offline page when the demo stack is down; see [russetleaf.com between demos](#russetleafcom-between-demos).
 - **The ALB accepts only CloudFront traffic:** its security group allows only AWS's CloudFront origin-facing IP list, and a listener rule requires a secret header that CloudFront adds to every request.
 - **DNSSEC** on both domains: Cloudflare's one-click DNSSEC for russetleaf.dev, and Route 53 DNSSEC signing (with a KMS key, about $1/month) for russetleaf.com, with the DS records added at each registrar.
-- **AWS WAF** on the ALB. A 24/7 production site would usually put WAF on CloudFront instead; here it sits on the ALB so it exists (and costs money) only during demos.
+- **AWS WAF in two places** ([ADR 3009](adr/3009-edge-waf-on-cloudfront-free-plan.md)): on **CloudFront**, through its flat-rate **Free plan** ($0), a web ACL with five rules (core rule set, known bad inputs, IP reputation, a `/wp-login.php` rate limit, `/xmlrpc.php` blocked) protects the edge around the clock; on the **ALB**, during demos only, the full web ACL adds the WordPress, PHP and SQL database rule groups, which the Free plan does not include.
 
 ## Database access on AWS
 
@@ -216,7 +216,7 @@ These are approximate prices for **us-east-1**, on demand unless noted, for a sm
 | Application Load Balancer | 1 ALB + light LCU usage | ~$22 |
 | NAT Gateways | 3 (one per AZ) + light data processing; demos use 1 to save cost | ~$100 |
 | Public IPv4 addresses | ~6 (ALB + NAT), $0.005/hr each | ~$22 |
-| CloudFront | ~1 TB out / 10M requests (free tier or flat-rate plan) | $0–$15 |
+| CloudFront | ~1 TB out / 10M requests (on-demand pricing, or a flat-rate plan; the project uses the Free plan, [ADR 3009](adr/3009-edge-waf-on-cloudfront-free-plan.md)) | $0–$15 |
 | AWS WAF | 1 web ACL, 7 managed rule groups and 2 custom rules (if left running) | ~$15 |
 | S3 (media) | ~50 GB + requests, versioning on | ~$2 |
 | Secrets Manager | ~5 secrets | ~$2 |
@@ -256,7 +256,9 @@ The CloudFront distribution is set up like this:
 
 | Setting | Value |
 |---|---|
-| Default behavior (`*`) | Origin `origin.russetleaf.com` (the ALB), HTTPS only, all HTTP methods |
+| Pricing plan | **Flat-rate Free plan** ($0): CloudFront, the edge web ACL (five rules) and the Route 53 hosted zone ([ADR 3009](adr/3009-edge-waf-on-cloudfront-free-plan.md)) |
+| Default behavior (`*`) | Origin `origin.russetleaf.com` (the ALB), HTTPS only, all HTTP methods; **uncached** (managed `CachingDisabled` policy) with the managed **`AllViewerExceptHostHeader`** origin-request policy, so cookies and query strings reach WordPress on every path, including the admin and sign-in paths |
+| Response headers | AWS's managed **`SecurityHeadersPolicy`** (HSTS and the other security headers) |
 | `/wp-content/uploads/*` | Origin: the russetleaf.com media bucket (Origin Access Control) |
 | `/offline/*` | Origin: the offline-page bucket (Origin Access Control) |
 | Custom error responses | **502, 503, 504 → `/offline/index.html`**, returned with status **503** |
@@ -294,8 +296,7 @@ Each demo creates a new RDS instance, so content needs a plan:
 
 | Item | Est. monthly cost (USD) |
 |---|---|
-| Route 53 hosted zone + queries | ~$0.50 |
-| CloudFront (offline page traffic, within the free tier) | $0 |
+| CloudFront flat-rate Free plan (distribution, edge WAF, Route 53 hosted zone and queries) | $0 |
 | S3 (offline page + russetleaf.com media) | <$0.50 |
 | ACM certificates | $0 |
 | RDS final snapshot storage | <$0.25 |
@@ -359,7 +360,7 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 
 ### Admin sign-in
 
-- **CloudFront (russetleaf.com):** `/wp-login.php`, `/wp-admin/*` and the OIDC callback path go to the origin **uncached**, with cookies and query strings forwarded.
+- **CloudFront (russetleaf.com):** the default behavior is uncached and forwards cookies and query strings, so `/wp-login.php`, `/wp-admin/*` and the OIDC callback path need no separate behaviors ([ADR 3009](adr/3009-edge-waf-on-cloudfront-free-plan.md)).
 
 ### Logging
 

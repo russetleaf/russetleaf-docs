@@ -672,3 +672,4 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [3006](phase-3-russetleaf-com/adr/3006-on-demand-demo-stack.md) | russetleaf.com as an on-demand demo stack behind an always-on edge | 3 |
 | [3007](phase-3-russetleaf-com/adr/3007-rds-mariadb-with-rds-proxy.md) | RDS for MariaDB behind RDS Proxy, with IAM authentication | 3 |
 | [3008](phase-3-russetleaf-com/adr/3008-karpenter-node-pools.md) | Karpenter for EKS nodes | 3 |
+| [3009](phase-3-russetleaf-com/adr/3009-edge-waf-on-cloudfront-free-plan.md) | WAF at the edge on CloudFront's flat-rate Free plan, plus the full rule set on the ALB during demos | 3 |

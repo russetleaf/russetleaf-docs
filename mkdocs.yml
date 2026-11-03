@@ -139,6 +139,7 @@ nav:
           - "3006 russetleaf.com as an on-demand demo stack behind an always-on edge": phase-3-russetleaf-com/adr/3006-on-demand-demo-stack.md
           - "3007 RDS for MariaDB behind RDS Proxy, with IAM authentication": phase-3-russetleaf-com/adr/3007-rds-mariadb-with-rds-proxy.md
           - "3008 Karpenter for EKS nodes": phase-3-russetleaf-com/adr/3008-karpenter-node-pools.md
+          - "3009 WAF at the edge on CloudFront's flat-rate Free plan, plus the full rule set on the ALB during demos": phase-3-russetleaf-com/adr/3009-edge-waf-on-cloudfront-free-plan.md
   - Templates:
       - ADR template: adr/0000-template.md
       - Step spec template: specs/TEMPLATE.md
