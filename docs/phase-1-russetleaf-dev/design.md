@@ -689,11 +689,32 @@ IAM authentication does not exist for a self-hosted MariaDB, so the home lab rem
 
 - **MariaDB Operator generates the passwords** (for the `wordpress` user, the backup user and the root user) into **Kubernetes Secrets**, using its `User` and `Grant` resources. They are random, never typed, never in Git and never in Secrets Manager. (Check the operator version supports generating the Secret; otherwise a small Job creates a random Secret before the `User` is applied.)
 - **WordPress reads the generated Secret directly** (same namespace), so there is no External Secrets step for the database.
-- **Rotation:** every few months, delete the generated Secret's value and let it be regenerated (or use the operator's rotation feature, if the installed version has one), then restart WordPress through its Rollout. Done as a scheduled, tested procedure, not by hand.
+- **Rotation without downtime: two alternating users.** MariaDB has no way to give one user two valid passwords during a change, so WordPress has **two database users**, `wordpress_a` and `wordpress_b`, with identical grants and their own operator-generated Secrets. WordPress reads whichever is **active** from a `wordpress-db-active` Secret. Rotation gives the inactive user a new password, switches WordPress to it, and only then changes the old user's password, so a valid login exists at every moment. The **rotation job** (below) does this every quarter.
 - **TLS on every connection:** TLS turned on in MariaDB Operator (certificates from cert-manager's internal CA) and **required by the server** (`require_secure_transport = ON`, TLS 1.2 or later), so WordPress, replication, the backup user and the operator itself can only connect over TLS; `REQUIRE SSL` on the users as a second layer. Credentials and data never cross the network in clear text, even inside the cluster ([ADR 1043](adr/1043-database-encryption.md)).
 - **Encrypted at rest:** the database volumes lie on Talos's TPM-sealed encrypted partition; backups use a customer-managed KMS key.
 - **Staging** has its own MariaDB with its own generated passwords; nothing is shared with production.
 - **Optional later:** fully passwordless at home with **client certificates** (MariaDB's `REQUIRE X509`, certificates issued by cert-manager). Confirm MariaDB Operator supports certificate-based users before planning on it.
+
+### russetleaf.dev: Valkey ACL users
+
+The home Valkey is reachable only from WordPress (CiliumNetworkPolicy), but a policy mistake, or anything that gets past it, would otherwise give full read and write access to the cache, including the ability to rewrite cached posts and options. Valkey therefore also requires a password, as a second layer:
+
+- **ACL users, not one shared password:** the `default` user is **disabled**; **`wordpress`** may use the data commands the object-cache plugin needs, including `FLUSHDB` (for `wp cache flush`), but no administrative commands (`CONFIG`, `DEBUG`, `MODULE`, `ACL`, replication); **`exporter`** has only what redis_exporter reads (`INFO`, `PING`, `SLOWLOG`, `LATENCY`, `CLIENT LIST` and similar); **`admin`** has everything, and is used only for recovery and forensics (for example the `valkey-cli --rdb` cache dump in the compromised-container runbook).
+- **Generated in the cluster, never in AWS:** an `ExternalSecret` uses **External Secrets' `Password` generator** to create the three passwords, and renders Valkey's ACL file from them with a template. Nothing outside the cluster needs these passwords, so they are not in Secrets Manager or Git, and nobody types them. After a rebuild they are simply generated again. The `ExternalSecret` has `refreshInterval: 0`, so passwords change only when the rotation job asks.
+- **Each client gets only its own key:** WordPress reads only the `wordpress` password, and the exporter sidecar only the `exporter` one.
+- **If authentication fails,** the Redis Object Cache plugin's graceful mode (`WP_REDIS_GRACEFUL`, on by default) falls back to the database, so a password mismatch makes the site slower, not unavailable. The `wordpress_object_cache_hit_ratio` alert catches it.
+- **russetleaf.com** uses ElastiCache's AUTH token instead, regenerated on every `demo-up` (see the Phase 3 design).
+
+### russetleaf.dev: the rotation job
+
+A **`secret-rotation` CronJob** (`platform/secret-rotation/`) rotates the passwords that the cluster generates for itself, **quarterly and automatically**, so the schedule does not depend on anyone remembering it:
+
+1. **MariaDB `wordpress` user:** give the inactive user (say `wordpress_b`) a new password by deleting its generated Secret so the operator creates a new one (check that the operator version applies a changed password to the database; otherwise the job runs `ALTER USER` itself), and confirm a login with it works. Copy its credentials into `wordpress-db-active`, restart WordPress (its Rollout from step 6.2, a Deployment before that), and wait until it is healthy. Confirm no sessions remain for `wordpress_a`, then give `wordpress_a` a new password too, so the old one is useless wherever it may have been copied.
+2. **MariaDB backup user:** regenerate its Secret; the next scheduled backup uses the new password, and the backup-age alert catches a failure.
+3. **Valkey:** trigger the `ExternalSecret` to regenerate (the `force-sync` annotation), restart Valkey (it starts empty, as after any restart), then restart WordPress so it picks up the new `wordpress` password. Between the two restarts, WordPress runs without the cache.
+4. **Report:** post the result to `#rl-deploys`. A failed run, or no successful run for 100 days, fires **`SecretRotationFailed`** in `#rl-security`.
+
+The job's ServiceAccount may only read and update the named Secrets, annotate the one `ExternalSecret` and restart the named workloads; it is on the expected-readers list of the `KubeUnexpectedSecretRead` audit alert. Argo CD **ignores the restart annotations** (`ignoreDifferences` on `kubectl.kubernetes.io/restartedAt` and the Rollout's `restartAt`), so self-heal does not undo a rotation. Running the job by hand rotates everything at once, which is also the **first response to a leak** of any of these passwords (`credential-leak.md`). The MariaDB root password is managed by the operator and rotated only if the installed version supports it; record which in [ADR 1043](adr/1043-database-encryption.md).
 
 ## Admin sign-in with Google
 

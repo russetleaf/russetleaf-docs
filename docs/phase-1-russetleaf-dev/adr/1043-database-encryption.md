@@ -69,6 +69,7 @@ Cilium's WireGuard encryption already protects pod traffic between home nodes, b
 ## Open items
 
 - Phase 1 step 4.5: server-wide TLS, replication TLS, user requirements, the encrypted-volume check and the tests.
+- Phase 1 step 4.5: whether the installed MariaDB Operator applies a changed generated password to the database by itself (otherwise the rotation job runs `ALTER USER`), and whether it can rotate the root password; see the design's [rotation job](../design.md#russetleafdev-the-rotation-job).
 - Phase 1 step 2.3: the customer-managed key for the database backup bucket.
 - Phase 2 step 4.4: TLS for MLflow's database.
 - Phase 3 step 1.6: the RDS key, the TLS settings and the tests.

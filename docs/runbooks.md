@@ -95,7 +95,7 @@ One runbook per alert, named after it. Each group is written in the step that ad
 | Group | Examples | Written in |
 |---|---|---|
 | Platform health, Cilium and Hubble | etcd, `ArgoCDAppOutOfSync`, certificate expiry, `CiliumAgentNotReady`, `HubblePolicyDropsSpike`, site down | [Phase 1 step 4.4](phase-1-russetleaf-dev/plan.md#step-44-monitoring) |
-| Database, cache and backups | Database down, replication, backup older than expected, Valkey memory near its limit | [Phase 1 step 4.5](phase-1-russetleaf-dev/plan.md#step-45-database-and-cache) |
+| Database, cache and backups | Database down, replication, backup older than expected, Valkey memory near its limit, `SecretRotationFailed` | [Phase 1 step 4.5](phase-1-russetleaf-dev/plan.md#step-45-database-and-cache) |
 | Logging and Kubernetes audit | `LokiIngestionErrors`, `KubeExecIntoProdPod`, `KubeUnexpectedSecretRead`, `KubeAuditLogMissing` | [Phase 1 step 4.6](phase-1-russetleaf-dev/plan.md#step-46-logging-loki--alloy) |
 | Break-glass | `KubeBreakGlassAdminUsed` | [Phase 1 step 4.7](phase-1-russetleaf-dev/plan.md#step-47-cluster-access-oidc-sign-in-roles-and-sso) |
 | WordPress | `WordPressCronBacklog` and the chart's other alerts | [Phase 1 step 5.2](phase-1-russetleaf-dev/plan.md#step-52-wordpress-chart-and-deployment-russetleaf-gitopsappswordpress) |
