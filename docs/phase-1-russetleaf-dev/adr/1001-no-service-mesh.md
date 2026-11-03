@@ -27,6 +27,7 @@ Do not run a service mesh. Cover a mesh's benefits with tools already in the des
 
 - **Istio, sidecar mode:** a proxy in every pod (roughly 50–100 MB each) plus `istiod` (~300–500 MB). Did not fit `rl-home-cp01`'s memory on the original two-node cluster; still a large share of the three-node cluster's memory ([ADR 1020](1020-three-node-ha-home-cluster.md)).
 - **Istio, ambient mode:** no per-pod proxies; a small proxy per node plus optional layer-7 "waypoint" proxies. Much lighter, but still a few hundred MB, a second policy system overlapping Cilium's, specific settings to run alongside Cilium, and more to upgrade and debug.
+- **Amazon VPC Lattice:** service-to-service networking across VPCs and accounts, with discovery, authentication policies and routing, without sidecars; suited to many teams' services spread over accounts, while russetleaf.com is one cluster in one VPC, where Cilium already handles service traffic, policies and visibility, and it does not cover the home cluster.
 - **Linkerd:** lighter than Istio, but the same overlap with Cilium and the same small benefit at this scale.
 - **Cilium's own mutual authentication:** not used, as it adds little over WireGuard plus layer-7 policies for four services.
 

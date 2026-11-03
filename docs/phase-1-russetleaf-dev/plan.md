@@ -400,9 +400,10 @@ The cluster is **highly available for a single node failure** (three etcd member
 - `russetleaf-infra/envs/dr/`: in the Backup account, **S3 Object Lock** buckets in **us-west-2** (30-day retention, governance mode at first), versioned and **KMS-encrypted**, with objects deleted after 35 days once their lock ends; **replication** rules (with write-only roles) from the Terraform state bucket (russetleaf-infra) and the MariaDB backup and media buckets (russetleaf-home). (CloudTrail logs are already isolated in the Log Archive account.)
 - A **daily repo-mirror** workflow (`git bundle` of each repo) uploading to the backup account through a write-only OIDC role.
 - **Weekly etcd snapshots:** a CronJob using Talos's API access from Kubernetes (the narrow `os:etcd:backup` role) runs `talosctl etcd snapshot` and uploads the snapshot to the KMS-encrypted database backup bucket (which replicates to the Backup account), readable only by the backup role and break-glass access, since snapshots contain every Secret; an alert if the last snapshot is more than 8 days old.
+- **A copy outside AWS** ([ADR 1018](adr/1018-disaster-recovery.md)): a Cloudflare **R2 bucket** with a **bucket lock** rule (30 days; objects deleted after 35) in `envs/home` (Cloudflare provider, where it supports the lock rule; otherwise set once by hand and recorded), an R2 token limited to that bucket in Secrets Manager, and a daily CronJob that encrypts the latest MariaDB dump and etcd snapshot with **`age`** (public key only in the cluster) and uploads them with `rclone`. Put the `age` private key in the break-glass kit.
 - Add the **Talos secrets bundle** and talosconfig (from step 2.2) to the break-glass kit.
 
-**Test:** a new MariaDB backup appears in the backup account within minutes; a manual run of the etcd snapshot CronJob produces a snapshot there too; deleting or overwriting it there **fails** (Object Lock); restoring a MariaDB backup **from the backup account's copy** into a scratch instance works; a repo can be cloned from its latest bundle.
+**Test:** a new MariaDB backup appears in the backup account within minutes; a manual run of the etcd snapshot CronJob produces a snapshot there too; the R2 bucket receives encrypted copies that cannot be deleted before their lock ends, and a dump restored from R2 with the break-glass `age` key, without any AWS access, loads into a scratch MariaDB; deleting or overwriting it there **fails** (Object Lock); restoring a MariaDB backup **from the backup account's copy** into a scratch instance works; a repo can be cloned from its latest bundle.
 
 ## Stage 3: GitOps foundation (`russetleaf-gitops`)
 
@@ -907,6 +908,7 @@ These keep russetleaf.dev healthy once it is running. Add each as a calendar rem
 | Node-failure drill | Quarterly | Take one node offline (alternating nodes); confirm failover and record the timings |
 | Rollback drill | Monthly (staging); quarterly (Talos, Cilium, Kyverno locally) | Follow a rollback runbook end to end and time it; fix the runbook if anything differed |
 | Restore from the backup account | Quarterly | Restore a MariaDB backup from the backup account's locked copy into a scratch instance |
+| Restore from the copy outside AWS | Quarterly | Restore a MariaDB dump from the encrypted Cloudflare R2 copy with the break-glass `age` key, without AWS access |
 | Full disaster drill | Yearly | Rebuild russetleaf.dev using only the break-glass kit and off-account backups; record the time |
 | Check the break-glass kit | Every 6 months | Logins work, recovery codes are valid, the printed copy is current; the talosconfigs' client certificates are not near expiry |
 | Renew talosconfigs | Yearly (their client certificates last a year) | Generate new day-to-day and break-glass talosconfigs; update the kit ([ADR 1035](adr/1035-platform-security.md)) |

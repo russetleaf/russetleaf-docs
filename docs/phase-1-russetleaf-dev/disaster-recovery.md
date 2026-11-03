@@ -14,11 +14,11 @@ This plan covers recovering from losses bigger than a single bad change or faile
 | Documentation and planning | `russetleaf-docs` (GitHub; issues and the Projects board stay on GitHub) | Repo mirror in the backup account | 90 days | The documents, yes; issues only from GitHub |
 | Images and charts | GHCR | None needed | — | Yes, rebuilt from the mirrored source |
 | Terraform state | S3 state bucket (us-east-1, **russetleaf-infra** account) | **Replicated** to the backup account (us-west-2, Object Lock) | 30-day lock, versions kept 90 days | Partly (state can be re-imported, but slowly) |
-| russetleaf.dev database | MariaDB backups in S3 (us-east-1), every 6 hours | **Replicated** to the backup account (Object Lock) | 30-day lock | No |
+| russetleaf.dev database | MariaDB backups in S3 (us-east-1), every 6 hours | **Replicated** to the backup account (Object Lock), plus a daily **`age`-encrypted copy in Cloudflare R2** (bucket lock), outside AWS | 30-day lock | No |
 | russetleaf.com database *(Phase 3)* | RDS snapshots (us-east-1) | A **logical dump** taken at every `demo-down`, written to the russetleaf.com backup bucket and **replicated** to the backup account | 30-day lock | No (or re-seed from russetleaf.dev) |
 | Media (both sites) | S3 media buckets (us-east-1) | **Replicated** to the backup account (Object Lock) | 30-day lock | No |
 | CloudTrail logs | Organization trail in the **Log Archive** account's Object Lock bucket (separate from every workload account) | Already isolated; optionally replicated to us-west-2 | 30-day lock (longer retention by lifecycle) | No |
-| Cluster state (etcd snapshots; contain every Secret) | Weekly snapshots in the KMS-encrypted backup bucket (russetleaf-home), readable only by the backup role | **Replicated** to the Backup account (Object Lock) | 30-day lock | Partly (GitOps rebuilds workloads; the snapshot speeds recovery) |
+| Cluster state (etcd snapshots; contain every Secret) | Weekly snapshots in the KMS-encrypted backup bucket (russetleaf-home), readable only by the backup role | **Replicated** to the Backup account (Object Lock), plus an **`age`-encrypted copy in Cloudflare R2** (bucket lock) | 30-day lock | Partly (GitOps rebuilds workloads; the snapshot speeds recovery) |
 | Talos machine secrets, talosconfig (and the disk-encryption recovery procedure for each node's TPM) | Terraform state; the workstation | Break-glass kit | Until rotated | No (losing them means rebuilding the cluster from scratch) |
 | Secrets in Secrets Manager | The workload accounts (russetleaf-home; russetleaf-com in Phase 3) | Most are **regenerated** rather than copied (see below) | — | Mostly yes |
 | Account access (root logins, MFA recovery codes) | Password manager | Break-glass kit, including a printed copy | Until changed | No |
@@ -52,6 +52,7 @@ Kept in the password manager, with a **printed copy** of the starred items store
 - Talos secrets bundle (`secrets.yaml`), the `os:admin` talosconfig, and the Talos-generated **break-glass admin kubeconfig** (use of it raises an alert)
 - Where every backup is (this document's table), and the order of recovery (below)
 - Slack workspace owner login
+- The **`age` private key** for the encrypted backup copies in Cloudflare R2
 
 ## Scenarios
 
@@ -63,7 +64,7 @@ Kept in the password manager, with a **printed copy** of the starred items store
 | **Workstation lost** | None | Hours | Set up a new workstation ([workstation setup](plan.md#local-workstation-setup-ubuntu-2404)); restore talosconfig, kubeconfig and logins from the break-glass kit; rotate anything that was stored only on the old machine. |
 | **A workload account compromised** (russetleaf-home or russetleaf-com) | Up to the last replicated copy | 1–3 days | From the management and Security Tooling accounts: move the account into the **Suspended OU** (a deny-all SCP), revoke its sessions and keys, review the organization CloudTrail (Log Archive) and GuardDuty/Security Hub findings. If data was deleted or encrypted, restore from the **Backup** account. Rotate every secret and key; re-create Secrets Manager entries; re-apply Terraform. The logs, backups and security tooling are in other accounts, so they are intact. |
 | **A workload account lost** (closed, locked) | Up to the last replicated copy | Days | Create a replacement account in the Organization (`envs/org`); re-apply `bootstrap/` and the environment; restore data from the Backup account; regenerate secrets. |
-| **Management account compromised or lost** | Up to the last replicated copy | Days | The worst case: recover access through AWS Support using the break-glass kit; the member accounts, logs and backups keep running meanwhile. If the Organization cannot be recovered, create a new management account and move the member accounts into a new Organization. |
+| **Management account compromised or lost** | Up to the last replicated copy | Days | The worst case: recover access through AWS Support using the break-glass kit; the member accounts, logs and backups keep running meanwhile. If the Organization cannot be recovered, create a new management account and move the member accounts into a new Organization. If AWS access is lost entirely, rebuild in new accounts and restore the database and etcd from the **encrypted copies in Cloudflare R2** (the `age` key is in the break-glass kit). |
 | **AWS region outage** (us-east-1) | None, or up to the last replicated copy | Hours to wait, or a day to move | Usually wait it out (russetleaf.dev keeps running at home, though S3 media calls fail, and with Phase 2 also SQS and Bedrock). For a long outage, re-point the home site's buckets and queue to us-west-2 using the replicated copies. |
 | **GitHub account or repos lost** | Commits since the last daily mirror | Hours | Restore the repos from the bundles in the backup account to a new GitHub account (or another Git host); update Argo CD's repo URLs, the OIDC trust (new repo identities) and Kyverno's signing identities; rebuild and re-sign images. |
 | **Cloudflare account lost** | None | Hours | New account; re-apply the Cloudflare parts of `envs/home` (tunnel, DNS, Access, rules); move russetleaf.dev's name servers. |
@@ -90,6 +91,7 @@ Kept in the password manager, with a **printed copy** of the starred items store
 |---|---|---|
 | Restore a MariaDB backup into a scratch instance | Monthly | Backups are usable |
 | Restore a MariaDB backup **from the backup account's copy** | Quarterly | The off-account copies are usable and access works |
+| Restore a MariaDB backup **from the encrypted Cloudflare R2 copy**, using the `age` key from the break-glass kit | Quarterly | The copy outside AWS is usable without any AWS access |
 | **Full "home lab destroyed" rebuild**, using only the break-glass kit and the backups (on a local Talos-in-Docker cluster, or the real nodes during a maintenance window) | Yearly | The whole plan works; record the actual time |
 | *(Phase 3)* Restore russetleaf.com's database from the latest logical dump in the backup account | Once (then yearly) | The AWS-side copy works |
 | Check the break-glass kit (logins work, recovery codes valid, printed copy current) | Every 6 months | Access can be recovered |

@@ -226,6 +226,7 @@ These are approximate prices for **us-east-1**, on demand unless noted, for a sm
 | ACM certificates | public certificates | $0 |
 | SES | low email volume ($0.10 per 1,000) | <$1 |
 | Amazon SQS + EventBridge | Karpenter's interruption queue (within free tiers) | <$1 |
+| Route 53 Resolver DNS Firewall | One allow-list rule group on the VPC; queries at demo volume | <$1 |
 | Argo Rollouts, Kyverno, Falco, Trivy Operator, OpenCost, Karpenter, Prometheus/Grafana | run on the existing worker nodes | $0 |
 | kube-bench | One Job per node pool, every demo (in `demo-up`) | $0 |
 | Loki log storage (S3) | 14-day retention, demo-hours volume | <$1 |
