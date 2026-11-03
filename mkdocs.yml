@@ -122,6 +122,7 @@ nav:
           - "2003 Self-hosted model on rl-home-cp02 (CPU llama.cpp), dedicated by taint": phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md
           - "2004 Agentic AI delivery, with least-privilege access and measured results": phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md
           - "2005 Fine-tuning on a rented spot GPU, with drift-triggered retraining": phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md
+          - "2006 A read-only AI operations assistant with kagent": phase-2-ai-mlops/adr/2006-ai-operations-assistant.md
   - "Phase 3: russetleaf.com":
       - Design: phase-3-russetleaf-com/design.md
       - Plan: phase-3-russetleaf-com/plan.md

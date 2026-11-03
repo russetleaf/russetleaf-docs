@@ -22,8 +22,8 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 |---|---|---|---|
 | **Core** | A working, evaluated and secured summary pipeline: the repo, the agents' workspace and guardrails, AWS resources, `rl-home-cp02` as the LLM node, the WordPress side, KEDA, the gateway, the summarizer, its release and monitoring, the evaluation set, runners and gate, security for the new components, and the docs. | 1.1–1.4, 2.1–2.5, 4.1–4.3, 5.1, 5.3 | **~50–86** |
 | **Extended** | The full MLOps lifecycle: the AI burst test, the self-hosted model and gateway routing, MLflow tracking and registry, guardrails, online evaluation and drift, and observability and operations for the AI components. | 2.6, 3.1, 3.2, 4.4–4.6, 5.2 | **~32–53** |
-| **Advanced** | The feedback loop and data versioning (DVC); fine-tuning on a rented GPU, the fine-tuned challenger, and drift-triggered retraining. | 4.7–4.10 | **~31–52** |
-| **Total** | | | **~113–191** |
+| **Advanced** | The feedback loop and data versioning (DVC); fine-tuning on a rented GPU, the fine-tuned challenger, and drift-triggered retraining; the AI operations assistant (kagent). | 4.7–4.10, 5.2b | **~39–64** |
+| **Total** | | | **~121–203** |
 
 **Calendar time:** about **6–10 weeks at ~20 hours a week** (2–3.5 months at ~10), after Phase 1's Core tier. Allow a few days for Bedrock model access.
 
@@ -52,6 +52,7 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 **Do** ([ADR 2004](adr/2004-agentic-ai-delivery.md)):
 
 - **Agent instructions:** an `AGENTS.md` in `russetleaf-llm-summarizer`, `russetleaf-gitops`, `russetleaf-wordpress` and `russetleaf-docs` (the project's conventions, how to run each repo's checks, and what an agent must not do), and a `CLAUDE.md` in each that imports it.
+- **Claude Code** is the coding agent ([ADR 2004](adr/2004-agentic-ai-delivery.md)): install it on the workstation with the permission settings below, and add the **Claude Code GitHub Action** to `russetleaf-llm-summarizer` and `russetleaf-gitops` for small tasks that come back as pull requests (read-only token defaults; it can never merge).
 - **Permission settings** for the agent tool: allow the repo's local tools and tests; deny reading `.env` files, kubeconfigs with write access, talosconfigs and credential files; deny `terraform apply`, `kubectl apply` against the home cluster, `git push` to `main`, and `gh pr merge`.
 - **Identities:** a read-only kubeconfig for agents (the `read-only` role from Phase 1 step 4.7, short-lived), and no AWS credentials in agent sessions.
 - **Sandbox:** a documented local environment per repo (Docker Compose demo, kind with LocalStack and the mock LLM) that an agent can create and destroy on its own.
@@ -254,9 +255,21 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 **Test:** publishing a post produces **one trace** covering WordPress → the queue message → the summarizer → the gateway → the model call → saving the summary, showing which model answered, with no post text, prompts or summaries in any span; OpenCost shows the LLM namespace's cost; the re-summarize drill restores the earlier summaries; with `rl-home-cp02` off, summaries still arrive through Bedrock.
 
+### Step 5.2b: AI operations assistant (kagent)
+
+**Do** ([ADR 2006](adr/2006-ai-operations-assistant.md)):
+
+- `platform/kagent/`: kagent (version pinned) on `rl-home-cp01`, with its tool servers for Kubernetes, Prometheus, Loki, Argo CD and Cilium only; tools that change anything are not installed. Check the current resource names and tool list in kagent's documentation.
+- **Model:** a model configuration pointing at the **LiteLLM gateway**, with its own key, a small daily budget and rate limits.
+- **Permissions:** service accounts bound to the **read-only** role, with no access to Secrets; Kyverno, Pod Security and a default-deny network policy like any platform namespace (egress only to the API server, Prometheus, Loki, Argo CD and the gateway).
+- **Alert triage:** an Alertmanager webhook receiver sends critical (and selected warning) alerts to an assistant agent, which posts a **triage note** (likely cause, evidence, suggested next steps from the runbook) in the alert's Slack thread, labeled as AI-generated.
+- **Incident scenarios:** a small evaluation set replayed in staging (a crash-looping pod, an out-of-memory kill, a failing probe, a network-policy drop, a bad canary), with each diagnosis scored as correct, partly correct or wrong; repeated after model or prompt changes.
+
+**Test:** each incident scenario produces a triage note in Slack; at least four of the five diagnoses are correct or partly correct; the assistant's service account cannot read a Secret or change any resource (checked with `kubectl auth can-i`); its requests appear in the audit log; its spend shows on the LLM dashboard and stops at the budget.
+
 ### Step 5.3: Documentation
 
-**Do:** finish ADRs [2001](adr/2001-mlops-lifecycle.md), [2002](adr/2002-summary-pipeline-architecture.md) and [2003](adr/2003-self-hosted-model-on-cp02.md) (resolve their open items); update the Phase 2 design wherever the build differed; add the LLM dashboard, an evaluation report and an MLflow run to the hub README's screenshots; add the AI pipeline to the hub README's architecture diagram; optionally an article on evaluation gates for LLMs.
+**Do:** finish ADRs [2001](adr/2001-mlops-lifecycle.md), [2002](adr/2002-summary-pipeline-architecture.md), [2003](adr/2003-self-hosted-model-on-cp02.md), [2004](adr/2004-agentic-ai-delivery.md), [2005](adr/2005-fine-tuning-on-a-rented-gpu.md) and [2006](adr/2006-ai-operations-assistant.md) (resolve their open items); update the Phase 2 design wherever the build differed; add the LLM dashboard, an evaluation report and an MLflow run to the hub README's screenshots; add the AI pipeline to the hub README's architecture diagram; optionally an article on evaluation gates for LLMs.
 
 Also write **an account of building Phase 2 with agents** (`docs/agentic-delivery-phase-2.md` in `russetleaf-docs`, and optionally an article): what agents did, the guardrails, the review findings, and actual hours compared with the estimates and with similar Phase 1 work, using the checklist's **Done by** and **Review findings** columns ([ADR 2004](adr/2004-agentic-ai-delivery.md)).
 
@@ -300,6 +313,7 @@ Also write **an account of building Phase 2 with agents** (`docs/agentic-deliver
 | 4.10 Drift-triggered retraining | Advanced | 2–4 | ☐ | | | | | | |
 | 5.1 Security for the AI components | Core | 4–7 | ☐ | | | | | | |
 | 5.2 Observability and operations for AI | Extended | 5–8 | ☐ | | | | | | |
+| 5.2b AI operations assistant (kagent) | Advanced | 8–12 | ☐ | | | | | | |
 | 5.3 Documentation | Core | 2–4 | ☐ | | | | | | |
 
 ## Decision log

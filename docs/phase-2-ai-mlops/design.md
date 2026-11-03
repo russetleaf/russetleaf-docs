@@ -13,7 +13,7 @@
 - AWS resources in russetleaf-home: the **SQS** summary queue and dead-letter queue, **Bedrock** access with a budget, the **model mirror bucket**, and staging equivalents.
 - WordPress changes in `russetleaf-wordpress`: the **summary-queue must-use plugin**, the `wordpress_posts_without_summary` metric and its alert, the **AI summary box** in the theme, and the summarizer's application password.
 - **Model training:** fine-tuning on a rented spot GPU in AWS, a fine-tuned challenger served at home, and retraining proposed when drift or quality alerts persist ([ADR 2005](adr/2005-fine-tuning-on-a-rented-gpu.md)).
-- Platform additions: KEDA, LiteLLM, MLflow and Argo Workflows, plus the AI rows in Phase 1's shared sections (policies, network rules, Falco rules, tracing, alerts, SLOs, costs); see [AI components in the shared platform](#ai-components-in-the-shared-platform).
+- Platform additions: KEDA, LiteLLM, MLflow, Argo Workflows and kagent (an AI operations assistant), plus the AI rows in Phase 1's shared sections (policies, network rules, Falco rules, tracing, alerts, SLOs, costs); see [AI components in the shared platform](#ai-components-in-the-shared-platform).
 
 ## Architecture
 
@@ -215,6 +215,15 @@ Design choices that make it stand on its own:
 | SQS must-use plugin that queues posts | `russetleaf-wordpress` |
 
 The self-hosted model is not a special case: its deployment is ordinary platform config in `russetleaf-gitops`, on a dedicated node defined in `russetleaf-infra`, and its quality is judged in `russetleaf-llm-summarizer` alongside the Bedrock models.
+
+## AI operations assistant (kagent)
+
+Alongside the agents that help build the project ([ADR 2004](adr/2004-agentic-ai-delivery.md)), Phase 2 runs one agent that helps **operate** it ([ADR 2006](adr/2006-ai-operations-assistant.md)):
+
+- **kagent** in the home cluster, with read-only tools for Kubernetes, Prometheus, Loki, Argo CD and Cilium.
+- Its model calls go through the **LiteLLM gateway**, with its own key, budget and rate limits, so its cost appears on the LLM dashboards.
+- When an important alert fires, it investigates and posts a **triage note** in the alert's Slack thread: likely cause, evidence and suggested next steps from the runbook. It never changes anything; the operator decides.
+- Its diagnoses are checked against a small set of **incident scenarios** in staging, like the summarizer's evaluation gate.
 
 ## AI components in the shared platform
 

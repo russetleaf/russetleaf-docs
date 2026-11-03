@@ -13,6 +13,7 @@ Agents speed up work that has fast, objective checks (code, Terraform, manifests
 
 ## Decision
 
+- **Tools:** **Claude Code** as the coding agent, used interactively on the workstation, where its permission settings enforce the rules below; and the **Claude Code GitHub Action** for small, well-specified tasks that run in CI and return as pull requests. Instructions live in `AGENTS.md`, a format most coding agents read, so the choice of tool can change without rewriting them. Agents that **operate** the cluster, rather than build it, are a separate decision ([ADR 2006](2006-ai-operations-assistant.md)).
 - **Scope:** agents may write and change code, Terraform, manifests, policies, tests and documentation, and run local tools and tests. They **may not** apply infrastructure changes, merge pull requests, change GitHub or AWS settings, or read secrets.
 - **One step per agent session, with the step spec as the contract:** the operator writes or approves the step's spec ([`docs/specs/TEMPLATE.md`](../../specs/TEMPLATE.md)) first; its acceptance criteria tell the agent when it is done; the agent works on a branch and opens a pull request.
 - **Sandbox first:** agents iterate against local environments (kind or Talos in Docker, LocalStack, the mock LLM, the Docker Compose demo), never against production.
@@ -29,6 +30,7 @@ Agents speed up work that has fast, objective checks (code, Terraform, manifests
 ## Alternatives considered
 
 - **No agents (conversation only, as in Phase 1):** lowest risk, but slower on code-heavy work, and it does not build or show experience with agentic tooling.
+- **A general personal-assistant agent** (e.g. OpenClaw): broad access to the machine it runs on and community skills, a poor fit for a workstation that holds cluster and AWS credentials.
 - **Agents with broad access** (admin credentials, able to apply and merge): fastest, but one confused or injected agent can damage the cluster or the AWS accounts; not acceptable for infrastructure.
 - **Agents only in CI** (e.g. bots that open pull requests): safe and auditable, but limited to narrow tasks; interactive agent sessions with local tools cover far more of the work.
 
@@ -44,6 +46,8 @@ Agents speed up work that has fast, objective checks (code, Terraform, manifests
 - Agent tooling gains reliable, auditable permission controls for live environments: consider letting agents run read-only diagnostics on the cluster during incidents.
 
 ## Open items
+
+- Phase 2 step 1.1b: also install the Claude Code GitHub Action in the Phase 2 repos, with the same read-only defaults and pull-request-only output.
 
 - Phase 2 step 1.1b: agent workspace, identities and `AGENTS.md`; step 5.3: the write-up.
 - Phase 3 step 0.3: the plan-only AWS role for agents.

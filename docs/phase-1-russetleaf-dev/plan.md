@@ -265,6 +265,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 | [2003 Self-hosted model on `rl-home-cp02`](../phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | — | 1.3, 3.1, 3.2 | — |
 | [2004 Agentic AI delivery](../phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md) | — | 1.1b, 5.3 | 0.3 |
 | [2005 Fine-tuning on a rented GPU](../phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md) | — | 1.2, 4.6, 4.8–4.10 | — |
+| [2006 AI operations assistant](../phase-2-ai-mlops/adr/2006-ai-operations-assistant.md) | — | 5.2b | — |
 | [3001 kube-bench on EKS only](../phase-3-russetleaf-com/adr/3001-kube-bench-eks-only.md) | 7.2 | — | 2.5 |
 | [3002 Fine-tuning on the EKS GPU pool (superseded by 2005)](../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md) | — | — | — |
 | [3003 Cilium chaining on EKS](../phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md) | — | — | 1.4 |
