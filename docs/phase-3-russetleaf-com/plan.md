@@ -36,12 +36,12 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the demo workflows, one rehearsed and **recorded demo**, and the docs. | 0.1–2.4, 3.1, 3.2, 5.1, 5.2, 5.3 | **~73–121** |
-| **Extended** | kube-bench and Kubescape on EKS, the security and cost reviews, and the EKS rollback and forensics drills. | 2.5, 4.1, 4.2, 5.1b, 5.1c | **~13–21** |
+| **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the demo workflows, one rehearsed and **recorded demo**, and the docs. | 0.1–2.4, 3.1, 3.2, 5.1, 5.2, 5.3 | **~74–123** |
+| **Extended** | kube-bench and Kubescape on EKS, the security and cost reviews, and the EKS rollback and forensics drills. | 2.5, 4.1, 4.2, 5.1b, 5.1c | **~14–22** |
 | **Advanced** | Load, stress and spike tests for the capacity plan, EKS as a second spoke of the Argo CD hub, and the Istio ambient and Tetragon experiments. | 4.3, 4.4, 5.4, 5.5 | **~16–25** |
-| **Total** | | | **~102–167** |
+| **Total** | | | **~104–170** |
 
-**Calendar time:** about **5–8 weeks at ~20 hours a week** for the whole plan, after Phase 1's Core tier is done (this plan depends on it). Allow for waiting: **SES production access** in the new account.
+**Calendar time:** about **5–9 weeks at ~20 hours a week** for the whole plan, after Phase 1's Core tier is done (this plan depends on it). Allow for waiting: **SES production access** in the new account.
 
 **Money:** the stack costs about **$0.70 an hour** while running, so batch work into focused sessions and run `demo-down` at the end of each; record each session's cost in the checklist.
 
@@ -281,7 +281,9 @@ Record each answer in the [decision log](#decision-log).
 
 **Do:** run an OWASP **ZAP baseline scan** against russetleaf.com (through CloudFront) and check the **security headers** (e.g. with `curl -I` and a header-checking tool); confirm and document the **component hardening checks** for EKS ([ADR 1031](../phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md): envelope encryption with the customer-managed key and endpoint access in `aws eks describe-cluster`, PSA labels with pinned versions on every namespace, no service-account token on WordPress pods, kubelet read-only port refused); **Security Hub** shows russetleaf-com with no unexplained critical or high findings (record the score; optionally turn on **Inspector** for the EKS nodes during this demo); no instance allows IMDSv1; the ALB rejects non-CloudFront traffic; RDS, RDS Proxy and Valkey are not reachable from outside the VPC; DNS Firewall's blocked lookups are reviewed in the Resolver query logs (only expected blocks); no application holds a database password (IAM tokens through the proxy), and the master password is RDS-managed and rotating; no pod has an AWS key (Pod Identity everywhere); the [ADR 1034](../phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md) checks pass on EKS (a fork bomb stops at the PID limit, a CronJob created by hand raises the persistence alarm, Kyverno rejects a Role with `impersonate`, the exfiltration test is blocked); the [ADR 1036](../phase-1-russetleaf-dev/adr/1036-compliance-frameworks-and-privacy.md) checks pass on russetleaf.com (the privacy notice is linked, the no-cookies check passes, and GuardDuty's EKS finding types are in the ATT&CK map); the [ADR 1035](../phase-1-russetleaf-dev/adr/1035-platform-security.md) checks pass on EKS (Kyverno's three admission replicas spread across zones, the ValidatingAdmissionPolicy backstops present, metrics-server and Prometheus verifying the kubelets' certificates, the enabled admission plugins recorded from AWS's documentation for the version, and the cluster PKI noted as AWS's responsibility); access entries match [ADR 1033](../phase-1-russetleaf-dev/adr/1033-identity-and-access.md) (no unexpected cluster-admin, authentication mode API only) and the demo's audit logs reached the Log Archive bucket; platform namespaces are default-deny; GuardDuty shows the EKS cluster under audit-log monitoring, with any findings explained (and `aws guardduty create-sample-findings` for EKS reaching `#rl-security`); AWS WAF blocks requests to `/xmlrpc.php` and rate-limits `/wp-login.php`, at both the edge (Free plan web ACL) and the ALB; the edge ACL is attached and the Route 53 zone shows under the plan ([ADR 3009](adr/3009-edge-waf-on-cloudfront-free-plan.md)); pod traffic between nodes is encrypted (WireGuard), or the ADR explains why not; CiliumNetworkPolicies enforce (from a WordPress pod, `curl https://example.com` is blocked; `hubble observe --verdict DROPPED` shows only expected drops); Kyverno enforces; Falco alerts fire on EKS (repeat the home lab's `kubectl exec` test); Trivy Operator reports; kube-bench and Kubescape reports committed for this demo; a **Prowler** run (the `russetleaf-infra` workflow from Phase 1 step 7.5, triggered by hand) with the demo stack up, covering EKS, RDS, ElastiCache, the ALB and the rest of `envs/aws`, with findings fixed in Terraform or explained (fill in the AWS open item in [ADR 1007](../phase-1-russetleaf-dev/adr/1007-prowler-not-threatmapper.md)).
 
-**Test:** a written checklist in `docs/` with each item checked.
+Also add the **AWS WAF steps** to the `under-attack.md` and `emergency-vulnerability.md` runbooks from Phase 1 step 7.14 ([ADR 1046](../phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md)): a tighter rate-based rule and a custom block rule on the edge and ALB web ACLs, made through a Terraform change, or in an emergency through the console, recorded in the incident thread and brought back into Terraform the same day.
+
+**Test:** a written checklist in `docs/` with each item checked; during this demo, a custom block rule added by following the emergency-vulnerability runbook blocks a test request at the edge, and is then removed through Terraform.
 
 ### Step 4.2: Cost review
 
@@ -310,8 +312,9 @@ Record each answer in the [decision log](#decision-log).
 - **`demo-up`:** `terraform apply` in `envs/aws`; wait for Argo CD to sync; wait until russetleaf.com returns 200; resume the russetleaf.com heartbeat check; **run the kube-bench Jobs** (one per node pool), wait for them to finish, collect their JSON and text output as workflow artifacts, compare with `docs/security/kube-bench-accepted.yaml`, commit the summary to `docs/security/` (through a pull request on `russetleaf-gitops`), and post pass/fail/warn counts to `#rl-security`, flagging new failures; post the start time (e.g. as a tag on the VPC) and "russetleaf.com demo started" to `#rl-com-alerts`.
 - **`demo-down`:** take a **logical dump** of the RDS database (a one-off Job through RDS Proxy) into the russetleaf.com backup bucket, which replicates to the backup account (see the [disaster recovery plan](../phase-1-russetleaf-dev/disaster-recovery.md)); create an Alertmanager **silence** for `site=com` and pause the russetleaf.com heartbeat check; suspend Argo CD auto-sync; delete the Applications in reverse order; wait until the ALB, the `origin` record and the Karpenter nodes are gone (with timeouts); `terraform destroy` in `envs/aws`; confirm russetleaf.com returns the 503 offline page and no tagged demo resources remain; post "russetleaf.com demo stopped" (with the run time) to `#rl-com-alerts`.
 - **Safety net:** a scheduled workflow (hourly) that alerts `#rl-costs` and `#rl-critical` (and optionally runs `demo-down`) if the demo stack has been up longer than a set limit (e.g. 6 hours).
+- **Runbook** `docs/runbooks/demo-teardown-stuck.md` in `russetleaf-infra` ([ADR 1046](../phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md)): what `demo-down` waits for and why it hangs (an ALB or target groups left by the Load Balancer Controller, network interfaces left by the VPC CNI, Karpenter nodes not terminating, finalizers on Ingresses or NodeClaims, security groups still referenced); finding leftovers by the `Stack` tag (the Resource Groups Tagging API) and deleting them in dependency order; when to re-run `terraform destroy`; and confirming the cost has stopped. Add it to the [runbook index](../runbooks.md).
 
-**Test:** run `demo-up` and `demo-down` end to end twice without manual steps (each `demo-up` producing a kube-bench summary pull request and a `#rl-security` message), and confirm the teardown produces **no** alert noise in Slack (only the "stopped" message); force the safety net by lowering the limit.
+**Test:** run `demo-up` and `demo-down` end to end twice without manual steps (each `demo-up` producing a kube-bench summary pull request and a `#rl-security` message), and confirm the teardown produces **no** alert noise in Slack (only the "stopped" message); force the safety net by lowering the limit; a tagged test resource left outside Terraform before `demo-down` is reported by the workflow's final check, then found and removed by following the stuck-teardown runbook.
 
 ### Step 5.1b: Rollback drill on EKS
 
@@ -397,11 +400,11 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 | 2.5 kube-bench + Kubescape scan | Extended | 2–3 | ☐ | | | | | | |
 | 3.1 WordPress AWS overlay | Core | 5–9 | ☐ | | | | | | |
 | 3.2 Seed + snapshot cycle | Core | 3–5 | ☐ | | | | | | |
-| 4.1 Security review | Extended | 4–6 | ☐ | | | | | | |
+| 4.1 Security review | Extended | 5–7 | ☐ | | | | | | |
 | 4.2 Cost review | Extended | 2–3 | ☐ | | | | | | |
 | 4.3 Istio ambient experiment (optional) | Advanced | 3–5 | ☐ | | | | | | |
 | 4.4 Tetragon enforcement (optional) | Advanced | 3–5 | ☐ | | | | | | |
-| 5.1 Demo workflows | Core | 5–8 | ☐ | | | | | | |
+| 5.1 Demo workflows | Core | 6–10 | ☐ | | | | | | |
 | 5.1b Rollback drill on EKS | Extended | 2–4 | ☐ | | | | | | |
 | 5.1c Forensic hold + forensics drill on EKS | Extended | 3–5 | ☐ | | | | | | |
 | 5.2 Rehearsal + recording | Core | 3–5 | ☐ | | | | | | |

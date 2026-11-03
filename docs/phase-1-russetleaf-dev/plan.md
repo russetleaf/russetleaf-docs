@@ -24,20 +24,20 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, privacy basics (GDPR), and the docs. Finished on its own, this is a complete platform. | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 5.12, 6.1, 6.3, 9.2 | **~169–275** |
-| **Extended** | Hardening, operations and evidence: progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure, disaster and forensics drills). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.13, 9.1 | **~77–135** |
+| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting with an incident process, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, privacy basics (GDPR), and the docs. Finished on its own, this is a complete platform. | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 5.12, 6.1, 6.3, 9.2 | **~174–284** |
+| **Extended** | Hardening, operations and evidence: progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure, cold-start, disaster, forensics and incident drills, with their runbooks). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.14, 9.1 | **~88–154** |
 | **Advanced** | Reliability and platform practices: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management with a local spoke cluster, chaos experiments and postmortems, a threat model and control matrix, strategy documents, public writing, and a custom seccomp profile for WordPress. | 7.7, 8.1–8.9 | **~89–144** |
-| **Total** | | | **~335–554** |
+| **Total** | | | **~351–582** |
 
 **Calendar time** (Phase 1 only):
 
 | Hours per week | Core | + Extended | + Advanced (everything) |
 |---|---|---|---|
-| ~10 | 4–7 months | 6–9 months | 8–13 months |
-| ~20 | 9–14 weeks | 12–20 weeks | 17–28 weeks |
-| ~40 | 4–7 weeks | 6–10 weeks | 8–14 weeks |
+| ~10 | 4–7 months | 6–10 months | 8–14 months |
+| ~20 | 9–14 weeks | 13–22 weeks | 18–29 weeks |
+| ~40 | 4–7 weeks | 7–11 weeks | 9–15 weeks |
 
-The optional later phases add about **146–243 hours** (Phase 2) and **102–167 hours** (Phase 3); see the [overview](../overview.md#build-plans-priorities-and-effort).
+The optional later phases add about **146–243 hours** (Phase 2) and **104–170 hours** (Phase 3); see the [overview](../overview.md#build-plans-priorities-and-effort).
 
 **Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to explain its trade-offs**.
 
@@ -264,6 +264,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 | [1043 Database encryption and TLS](adr/1043-database-encryption.md) | 2.3, 4.5 | 4.4 | 1.6 |
 | [1044 Cilium Gateway API](adr/1044-cilium-gateway-api.md) | 4.3, 6.2, 7.9 | — | — |
 | [1045 Container forensics](adr/1045-container-forensics.md) | 7.13 | — | 5.1c |
+| [1046 Incident response and runbook index](adr/1046-incident-response-and-runbook-index.md) | 2.4, 4.2, 4.4, 4.7, 5.8, 7.8, 7.10, 7.11, 7.14 | 2.2 | 4.1, 5.1 |
 | [2001 MLOps lifecycle](../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | — | 4.4–4.10 | — |
 | [2002 Summary pipeline architecture](../phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | — | 2.1–2.5 | — |
 | [2003 Self-hosted model on `rl-home-cp02`](../phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | — | 1.3, 3.1, 3.2 | — |
@@ -390,8 +391,9 @@ The cluster is **highly available for a single node failure** (three etcd member
 - **Weekly scheduled** drift-check plan.
 - **Repo hygiene:** `.pre-commit-config.yaml` with the **pre-commit-terraform** hooks plus gitleaks; **terraform-docs** generating module READMEs; `.terraform.lock.hcl` with hashes for Linux and the workstation (`terraform providers lock -platform=...`); **GitHub secret scanning with push protection** on (the repo is public from step 1.1).
 - Applies to `envs/home` stay **local** for now (the Talos provider needs the home network); they can move to in-cluster runners after step 5.5.
+- **Runbook** `docs/runbooks/terraform-state.md` in `russetleaf-infra` ([ADR 1046](adr/1046-incident-response-and-runbook-index.md)): a stuck state lock (how to confirm no apply is running before releasing it), drift reported by the weekly plan (bring the change into Terraform, or revert it), and restoring an earlier state version from the state bucket's versioning (or the Backup account's copy). Add it to the [runbook index](../runbooks.md).
 
-**Test:** a pull request with a harmless change shows passing checks, a plan comment and an Infracost comment; a deliberately insecure change (e.g. a public bucket) fails Checkov; an untagged resource fails the custom tag policy; an invalid instance type fails tflint; after merge, the apply waits for approval in the `apply` environment and applies the saved plan.
+**Test:** a pull request with a harmless change shows passing checks, a plan comment and an Infracost comment; a deliberately insecure change (e.g. a public bucket) fails Checkov; an untagged resource fails the custom tag policy; an invalid instance type fails tflint; after merge, the apply waits for approval in the `apply` environment and applies the saved plan; following the state runbook, a lock left by an interrupted apply in a test workspace is released safely, and an earlier state version restored into a scratch workspace plans cleanly.
 
 ### Step 2.5: Disaster recovery copies
 
@@ -438,8 +440,9 @@ Check `kubectl top nodes` after each step.
 
 - `platform/cert-manager/`: **cert-manager** and **trust-manager**, with an **internal CA** (a self-signed root issuing an intermediate, used by a ClusterIssuer); copy the root to the break-glass kit; trust-manager distributes the CA bundle to namespaces that need it. See [ADR 1028](adr/1028-internal-pki.md).
 - **Bootstrap credential:** External Secrets needs one AWS key to start. Create it once by hand as a Kubernetes Secret from the Terraform output (document the exact command in the README, never commit it). Everything else comes from Secrets Manager.
+- **Credential inventory and leak runbook** ([ADR 1046](adr/1046-incident-response-and-runbook-index.md)): `docs/runbooks/credential-leak.md`, starting with a table of every credential that is not a short-lived session: the External Secrets bootstrap key and the scoped IAM keys, Cloudflare API tokens and the tunnel credentials, the Slack bot token and webhooks, the heartbeat URL, the Google OAuth client secrets, GitHub tokens and the ARC runner app key, the `age` key, the Talos secrets bundle, talosconfigs and admin kubeconfig, and the internal CA root. For each: where it lives, what it can reach, how to **revoke** it, how to **replace** it, and what breaks in between. The response for any leak is **revoke first, then investigate** (CloudTrail, the audit logs and the provider's own logs for use of the credential). The Talos client certificates **cannot be revoked**, so a leak of the admin kubeconfig or `os:admin` talosconfig means rotating the CAs (step 7.2). Each later step that creates a credential adds its row. Add the runbook to the [runbook index](../runbooks.md).
 
-**Test:** an `ExternalSecret` for a test value creates a Kubernetes Secret; changing the value in Secrets Manager updates it within the refresh interval; a test `Certificate` is issued by the internal CA and verifies against the distributed bundle.
+**Test:** an `ExternalSecret` for a test value creates a Kubernetes Secret; changing the value in Secrets Manager updates it within the refresh interval; a test `Certificate` is issued by the internal CA and verifies against the distributed bundle; following the leak runbook, one scoped IAM key is revoked and replaced, the old key is refused, and nothing using it broke for longer than the runbook says.
 
 ### Step 4.3: Gateway and the Cloudflare Tunnel
 
@@ -465,8 +468,10 @@ Check `kubectl top nodes` after each step.
 - **External uptime check** for `https://russetleaf.dev` (Phase 3 adds russetleaf.com, expecting 200 or the 503 offline page).
 - **Alerts as code:** a starter set of `PrometheusRule`s (site down, pod crash-looping, node memory high, disk filling, certificate/tunnel down, and **`KubeAPIRequestsRejected`** when the API server's Priority and Fairness rejects requests; [ADR 1034](adr/1034-kubernetes-threat-model-coverage.md)), each with `severity`, `summary`, `description` and `runbook_url`; a runbook for each in `docs/runbooks/`, written from `docs/runbooks/TEMPLATE.md`; `promtool test rules` in `russetleaf-gitops` CI.
 - **Runbook structure:** every runbook follows `docs/runbooks/TEMPLATE.md` in `russetleaf-gitops`: a short header (alert name, severity, components, related ADRs), then **Summary**, **Symptoms**, **Impact**, **Checks** (the exact commands and queries), **Likely causes**, **Fixes** (each with its risk, whether it is reversible, and whether it is a Git change or a command), **Escalation** and **Related** (dashboards, postmortems). The consistent structure makes runbooks quick to follow under pressure, and lets Phase 2's AI assistant find and cite the right fix ([ADR 2007](../phase-2-ai-mlops/adr/2007-ai-diagnosis-and-remediation-proposals.md)).
+- **Runbook index:** `docs/runbooks/README.md` in `russetleaf-gitops` points to the [runbook index](../runbooks.md) on the docs site, which is the only list of runbooks; each step that writes a runbook turns its entry there into a link ([ADR 1046](adr/1046-incident-response-and-runbook-index.md)).
+- **Incident process** (`docs/runbooks/incident-response.md`; [ADR 1046](adr/1046-incident-response-and-runbook-index.md)): the severity levels (SEV1: site down, data at risk or a confirmed security incident; SEV2: degraded, redundancy lost or a security signal to investigate; SEV3: no user impact) and how they map to the alert severities; declaring an incident with a message in `#rl-critical` whose thread is the timeline; the order of work (stabilize, preserve evidence, recover, hand off); the hand-offs to the breach runbook, credential rotation and a postmortem (required for SEV1 and SEV2).
 
-**Test:** Grafana shows node and pod dashboards for all three nodes, plus the Cilium and Hubble dashboards with live data; Prometheus' targets page lists the Cilium agent, operator and Hubble endpoints as up; a test critical alert appears in both `#rl-critical` and `#rl-dev-alerts` with a working runbook link; stopping Alertmanager for longer than the heartbeat period makes the heartbeat service post to `#rl-critical`; a broken alert rule fails `promtool` in CI.
+**Test:** Grafana shows node and pod dashboards for all three nodes, plus the Cilium and Hubble dashboards with live data; Prometheus' targets page lists the Cilium agent, operator and Hubble endpoints as up; a test critical alert appears in both `#rl-critical` and `#rl-dev-alerts` with a working runbook link; stopping Alertmanager for longer than the heartbeat period makes the heartbeat service post to `#rl-critical`; a broken alert rule fails `promtool` in CI; a short tabletop of a SEV2 (one node down) followed through the incident runbook produces a thread that could serve as a postmortem timeline.
 
 ### Step 4.5: Database and cache
 
@@ -509,8 +514,9 @@ Check `kubectl top nodes` after each step.
 - **Break-glass:** the Talos-generated admin kubeconfig goes into the break-glass kit only and is removed from the workstation; a Loki rule **`KubeBreakGlassAdminUsed`** fires in `#rl-security` whenever the admin certificate's identity appears in the audit log.
 - **Talos access:** a day-to-day talosconfig with the **`os:reader`** role; the `os:admin` talosconfig moves to the break-glass kit.
 - **SSO** through Dex for **Argo CD** (its RBAC mapped to the same groups; local admin disabled) and **Grafana** (roles mapped from groups); Backstage uses it when added in step 8.3.
+- **Lost-access runbook** (`docs/runbooks/lost-access.md`; [ADR 1046](adr/1046-incident-response-and-runbook-index.md)): what fails when Dex, Google sign-in or Cloudflare Access is down (kubectl, Argo CD, Grafana); when using break-glass is justified; how to use the admin kubeconfig and the `os:admin` talosconfig from the kit; that `KubeBreakGlassAdminUsed` is expected and acknowledged in the incident thread; and what to do afterwards (restore sign-in, return the credentials to the kit, and rotate them through the CA rotation runbook, step 7.2, if they left the kit's control). Add it to the [runbook index](../runbooks.md).
 
-**Test:** `kubectl` prompts for Google sign-in and the operator login can restart a Deployment but cannot read a Secret or change a ClusterRole; a Google account outside the allowed group is refused; Argo CD and Grafana sign in through Dex with the right role and their local admin logins are off; using the break-glass kubeconfig works and fires `KubeBreakGlassAdminUsed`; `talosctl` with the daily talosconfig can read logs but not reboot a node.
+**Test:** `kubectl` prompts for Google sign-in and the operator login can restart a Deployment but cannot read a Secret or change a ClusterRole; a Google account outside the allowed group is refused; Argo CD and Grafana sign in through Dex with the right role and their local admin logins are off; with Dex scaled to zero, the operator regains access by following the lost-access runbook, the break-glass kubeconfig works and fires `KubeBreakGlassAdminUsed`, and the runbook's after-use steps are completed; `talosctl` with the daily talosconfig can read logs but not reboot a node.
 
 ## Stage 5: WordPress
 
@@ -619,7 +625,7 @@ Check `kubectl top nodes` after each step.
 - **Edge layer:** a Cloudflare Access application covering `/wp-admin/*` and `/wp-login.php` on russetleaf.dev and staging, using Google.
 - **CiliumNetworkPolicy:** allow WordPress → Google's login endpoints by DNS name.
 - **ci:** a mock OIDC provider (e.g. Dex) in the kind cluster, with a test that signs in through it.
-- **Break-glass:** a documented `wp-cli` procedure (a one-off Job) to recover admin access without re-enabling passwords; add it to `docs/runbooks/`.
+- **Break-glass:** a documented `wp-cli` procedure (a one-off Job) to recover admin access without re-enabling passwords, in `docs/runbooks/wordpress-admin-access.md`, listed in the [runbook index](../runbooks.md).
 - Finish [ADR 1008](adr/1008-google-sign-in-for-admins.md) with the plugin chosen.
 
 **Test:** visiting `/wp-admin` from outside first requires a Cloudflare Access Google login; an allowed Google account then signs in to WordPress with no password; a Google account not on the allow-list is refused; a username/password login attempt is rejected; a REST API request with an application password still works; the ci sign-in test passes; the break-glass procedure works in staging.
@@ -801,7 +807,9 @@ Review the policy reports, fix violations, then switch to **enforce**.
 
 Record each drill's time in the decision log and compare it with the expected times.
 
-**Test:** every runbook has been followed at least once in a drill; each rollback restored a working state within its expected time (or the runbook was corrected).
+Also write `docs/runbooks/upgrade-talos-kubernetes.md` ([ADR 1046](adr/1046-incident-response-and-runbook-index.md)) from the procedure in [Ongoing operations](#ongoing-operations-after-the-build): backups first (etcd snapshot, on-demand MariaDB backup), the local rehearsal, one node at a time in the set order, the health checks between nodes (etcd members, the virtual IP, Cilium, MariaDB replication, the site), then `talosctl upgrade-k8s`, and the **stop conditions** that switch to the rollback runbooks. Add all of this step's runbooks to the [runbook index](../runbooks.md).
+
+**Test:** every runbook has been followed at least once in a drill; each rollback restored a working state within its expected time (or the runbook was corrected); the first Talos patch upgrade after this step is done by following the upgrade runbook, and anything it missed is added.
 
 ### Step 7.9: CrowdSec
 
@@ -813,13 +821,20 @@ Record each drill's time in the decision log and compare it with the expected ti
 
 **Do:** simulate "the home lab is destroyed": using **only** the break-glass kit, the GitHub repos (or their mirrors) and the backups in the backup account, rebuild russetleaf.dev on a local Talos-in-Docker cluster (or on the real nodes during a maintenance window), following the bootstrap order in the [disaster recovery plan](disaster-recovery.md). Time each step, and fix the plan wherever it was wrong or incomplete.
 
-**Test:** russetleaf.dev's content (posts and media) is fully restored from the off-account copies; the total time is recorded in the [disaster recovery plan](disaster-recovery.md) and [ADR 1018](adr/1018-disaster-recovery.md).
+Then write and rehearse **`docs/runbooks/etcd-recovery.md`** ([ADR 1046](adr/1046-incident-response-and-runbook-index.md)) for the "two nodes fail at once" scenario: confirm quorum is really lost; take a snapshot from a surviving member if one still answers (`talosctl etcd snapshot`), otherwise fetch the latest weekly snapshot from the backup bucket; recover with `talosctl bootstrap --recover-from=<snapshot>` on one node; reset and rejoin the others; then check the virtual IP, Argo CD and MariaDB. Rehearse it on a three-node Talos-in-Docker cluster by stopping two nodes for good. Link it from the disaster recovery plan's scenario and add it to the [runbook index](../runbooks.md).
+
+**Test:** russetleaf.dev's content (posts and media) is fully restored from the off-account copies; the total time is recorded in the [disaster recovery plan](disaster-recovery.md) and [ADR 1018](adr/1018-disaster-recovery.md); in the etcd rehearsal, the cluster comes back from the snapshot with its workloads, and the time from "quorum lost" to "API answering" is recorded.
 
 ### Step 7.11: Node-failure drills
 
 **Do:** with the site under light load (e.g. a `k6` script), take each node offline in turn: first a clean shutdown, then **pulling its power cable**. Watch the API (virtual IP), the site (uptime check and Grafana), the database (MariaDB failover) and the alerts in Slack; bring the node back and confirm it rejoins cleanly. Record the impact and timings in [ADR 1014](adr/1014-availability-levels.md) and the decision log.
 
-**Test:** with any one node down, the site keeps serving (brief errors at most during failover), the API stays reachable, the database fails over and rebuilds its replica afterwards, and the expected alerts fire and clear.
+Then write and rehearse two runbooks ([ADR 1046](adr/1046-incident-response-and-runbook-index.md)), and add both to the [runbook index](../runbooks.md):
+
+- **`docs/runbooks/replace-node.md`:** remove the node's etcd member (`talosctl etcd remove-member`) and its Kubernetes Node object; reset the machine (`talosctl reset`) or prepare the new one (BIOS settings, Secure Boot, the TPM, which seals a fresh disk-encryption key); apply its configuration from `russetleaf-infra/envs/home`; check that it rejoins etcd, gets its labels back, and that MariaDB rebuilds its replica. Rehearse it for real on one node during a maintenance window.
+- **`docs/runbooks/cold-start.md`:** all three nodes lose power together, or are shut down for planned power work (the shutdown order, then the checks as power returns): the nodes boot by themselves (BIOS power-on after AC loss) and unlock their disks; then check, in order, etcd health and the virtual IP, Cilium, Argo CD, **MariaDB** (exactly one primary, the replica replicating; what to do if the operator cannot decide), Valkey, cloudflared and the uptime check. Rehearse it by cutting power to all three nodes at once during a maintenance window.
+
+**Test:** with any one node down, the site keeps serving (brief errors at most during failover), the API stays reachable, the database fails over and rebuilds its replica afterwards, and the expected alerts fire and clear; a node reset with `talosctl reset` rejoins by following the replace-node runbook; after a full power cut, the site returns by following the cold-start runbook, with no lost database writes beyond those in flight, and the time to recovery is recorded in the decision log.
 
 ### Step 7.12: Stress, spike and soak tests (home)
 
@@ -837,6 +852,20 @@ Record each drill's time in the decision log and compare it with the expected ti
 - **Runbook** `docs/runbooks/compromised-container.md` in `russetleaf-gitops`, following the runbook template: freeze (Argo CD auto-sync and self-heal off on the root app, then the affected app), contain (quarantine label, remove the ReplicaSet's selector label so the pod is orphaned and replaced, cordon the node), capture (process memory with `gcore`, sockets, a short `talosctl pcap`, processes and open files, the writable layer and `emptyDir` volumes, pod YAML, events, image digest, `dmesg`), export the logs from Loki for the incident window (Falco, Hubble flows and DNS records, the workload's logs), hash and upload everything with a notes file, then hand off to the personal-data breach runbook, secret rotation and a postmortem. Include the steps for a **gVisor pod** (`runsc debug`, `runsc checkpoint`) and for a suspected **node** compromise (capture first, then disconnect the node's network cable). Leave a marked section for the EKS steps (Phase 3 step 5.1c). Link the runbook from the runbooks of every Falco, audit and GuardDuty alert that can mean a compromised container.
 
 **Test:** a **drill in staging**: send a request to the staging WordPress pod with a unique marker string in its URL, then trigger a Falco allow-list alert in the pod (`kubectl exec <pod> -- sleep 600`) and write a file to `/tmp`; follow the runbook end to end. Afterwards: the marker string is found in the captured memory (`grep -a <marker>` on the core files); the `sleep` process and the `/tmp` file appear in the captured process list and writable layer; the quarantined pod can reach nothing (`hubble observe --verdict DROPPED` shows its attempts) while a replacement serves staging; Argo CD did not revert the quarantine during the drill; every file in the evidence bucket matches its recorded hash, and deleting one is refused by Object Lock; creating the toolkit pod raised `KubeWorkloadCreatedOutsideArgoCD`. Repeat the memory capture on a gVisor runner pod (or record why it does not work). Record the time from alert to evidence uploaded in the decision log (aim for under 30 minutes), and fix the runbook wherever it was wrong.
+
+### Step 7.14: Incident runbooks and tabletop drills
+
+**Do:** write the remaining incident runbooks in `russetleaf-gitops/docs/runbooks/` ([ADR 1046](adr/1046-incident-response-and-runbook-index.md)), each from the runbook template and added to the [runbook index](../runbooks.md):
+
+- **`emergency-change.md`:** changing the cluster when the Git path is down or too slow, **only in a SEV1**: turn off auto-sync on the root Application and the affected one; make the change as `platform-admin`, posting each command in the incident thread (the outside-Argo-CD audit alerts are expected); within **24 hours**, a pull request that records or reverts the change, then auto-sync back on.
+- **`wordpress-compromise.md`:** signs (an unknown admin, unexpected content or settings changes, a `KubeUnexpectedSecretRead`); preserve first (an on-demand MariaDB backup kept in the evidence bucket, plus the compromised-container runbook if a pod is involved); remove the attacker's access (unknown users removed with `wp-cli`, the admin allow-list and the Cloudflare Access policy checked, **WordPress keys and salts rotated** so every session ends); restore content from a backup taken before the compromise, re-applying the erasure log; then the breach runbook.
+- **`emergency-vulnerability.md`:** a vulnerability being exploited, or with a public exploit, and no fix yet: a **Cloudflare WAF custom rule** blocking the vulnerable path or parameter (a temporary block for the exploit until a fix exists); disabling the feature or removing the plugin through the normal fast path (ci, staging, promotion); maintenance mode as the last resort; removing the WAF rule once the fix is released. Phase 3 step 4.1 adds AWS WAF.
+- **`supply-chain-compromise.md`:** a compromised workflow, action, dependency, ARC runner or signing identity: pause the promotion workflows and disable the affected workflow; find every affected image digest from the attestations and SBOMs; pin Kyverno's image verification to known-good digests or a narrower signing identity; revoke the GitHub tokens and runner registrations, and rebuild the runners; rebuild and re-sign from a known-good commit; then the credential-leak runbook for every secret the pipeline could read.
+- **`under-attack.md`:** a bot flood or DDoS: Cloudflare's **"I'm Under Attack"** security level through a configuration rule for the affected hostname (not the whole zone), tighter rate limits, and blocks by network or country where justified; check CrowdSec's bans; watch the origin's load; the conditions for switching back. Phase 3 step 4.1 adds AWS WAF.
+
+Then run two **tabletop exercises** (talking a scenario through against the runbooks, without touching production), each recorded as a postmortem in `docs/postmortems/` ([ADR 1023](adr/1023-reliability-practice.md)): "a scoped AWS key is found in a public commit" and "a bad release breaks the site while GitHub is down".
+
+**Test:** in staging: a WAF custom rule from the emergency-vulnerability runbook blocks a test request to the chosen path while other pages load; an emergency change made by the runbook (with Argo CD's sync off) raises the expected alerts, and the reconciling pull request returns the app to `Synced`; a rogue admin and an injected post created with `wp-cli` are removed by following the compromise runbook, and a browser session from before the salt rotation is signed out; the under-attack configuration rule challenges a `k6` burst against the staging hostname but not production; Kyverno rejects an image signed by an identity other than the one the supply-chain runbook pins; both tabletops have postmortems with action items, and every runbook gap they found is fixed.
 
 ## Stage 8: Engineering practices
 
@@ -923,6 +952,11 @@ These keep russetleaf.dev healthy once it is running. Add each as a calendar rem
 | Restore from the backup account | Quarterly | Restore a MariaDB backup from the backup account's locked copy into a scratch instance |
 | Restore from the copy outside AWS | Quarterly | Restore a MariaDB dump from the encrypted Cloudflare R2 copy with the break-glass `age` key, without AWS access |
 | Full disaster drill | Yearly | Rebuild russetleaf.dev using only the break-glass kit and off-account backups; record the time |
+| Incident tabletop | Twice a year | Talk a scenario through against the runbooks (e.g. a leaked credential, or GitHub down during an outage); write it up as a postmortem and fix any runbook gaps ([ADR 1046](adr/1046-incident-response-and-runbook-index.md)) |
+| Cold-start drill | Yearly | Cut power to all three nodes during a maintenance window and follow `docs/runbooks/cold-start.md`; record the time until the site is back |
+| Control-plane recovery rehearsal | Yearly | Follow `docs/runbooks/etcd-recovery.md` on a local Talos-in-Docker cluster with two of its three nodes stopped |
+| Credential revoke-and-replace | Yearly | Follow `docs/runbooks/credential-leak.md` for one credential from the inventory; confirm the old one is refused |
+| Review the runbook index | Quarterly | Check the [runbook index](../runbooks.md) against the runbooks folders: every runbook listed, every alert with a runbook, rehearsal dates current |
 | Check the break-glass kit | Every 6 months | Logins work, recovery codes are valid, the printed copy is current; the talosconfigs' client certificates are not near expiry |
 | Renew talosconfigs | Yearly (their client certificates last a year) | Generate new day-to-day and break-glass talosconfigs; update the kit ([ADR 1035](adr/1035-platform-security.md)) |
 | Review the record of processing and ATT&CK map | Quarterly, and when a component or plugin is added | Update `docs/privacy/record-of-processing.md`, the processors list and `docs/security/attack-coverage.md` ([ADR 1036](adr/1036-compliance-frameworks-and-privacy.md)) |
@@ -975,16 +1009,16 @@ Phase 1 builds most of what these need: the shared Terraform modules, the base m
 | 2.1 Terraform bootstrap | Core | 3–5 | ☐ | | | | |
 | 2.2 Talos cluster | Core | 13–19 | ☐ | | | | |
 | 2.3 AWS + Cloudflare resources | Core | 6–9 | ☐ | | | | |
-| 2.4 `russetleaf-infra` CI | Core | 4–6 | ☐ | | | | |
+| 2.4 `russetleaf-infra` CI | Core | 5–8 | ☐ | | | | |
 | 2.5 Disaster recovery copies | Extended | 3–6 | ☐ | | | | |
 | 3.1 GitOps structure + Argo CD | Core | 6–10 | ☐ | | | | |
 | 4.1 Storage | Core | 1–2 | ☐ | | | | |
-| 4.2 Secrets + internal certificates | Core | 4–6 | ☐ | | | | |
+| 4.2 Secrets + internal certificates | Core | 6–9 | ☐ | | | | |
 | 4.3 Gateway + tunnel | Core | 3–6 | ☐ | | | | |
-| 4.4 Monitoring + Slack alerting | Core | 8–12 | ☐ | | | | |
+| 4.4 Monitoring + Slack alerting | Core | 9–14 | ☐ | | | | |
 | 4.5 MariaDB + backups + Valkey | Core | 6–10 | ☐ | | | | |
 | 4.6 Logging (Loki + Alloy) | Core | 7–11 | ☐ | | | | |
-| 4.7 Cluster access (OIDC, roles, SSO) | Core | 6–10 | ☐ | | | | |
+| 4.7 Cluster access (OIDC, roles, SSO) | Core | 7–12 | ☐ | | | | |
 | 5.1 WordPress image | Core | 15–23 | ☐ | | | | |
 | 5.2 WordPress deployment | Core | 9–15 | ☐ | | | | |
 | 5.3 Image promotion | Core | 2–4 | ☐ | | | | |
@@ -1009,12 +1043,13 @@ Phase 1 builds most of what these need: the shared Terraform modules, the base m
 | 7.5 AWS account posture (Prowler) | Extended | 2–4 | ☐ | | | | |
 | 7.6 Version-age report | Extended | 2–3 | ☐ | | | | |
 | 7.7 Custom seccomp profile (optional) | Advanced | 3–6 | ☐ | | | | |
-| 7.8 Rollback runbooks and drills | Extended | 5–8 | ☐ | | | | |
+| 7.8 Rollback runbooks and drills | Extended | 6–10 | ☐ | | | | |
 | 7.9 CrowdSec | Extended | 3–5 | ☐ | | | | |
-| 7.10 First full disaster drill | Extended | 6–10 | ☐ | | | | |
-| 7.11 Node-failure drills | Extended | 3–6 | ☐ | | | | |
+| 7.10 First full disaster drill + etcd recovery | Extended | 8–13 | ☐ | | | | |
+| 7.11 Node-failure, replacement + cold-start drills | Extended | 5–10 | ☐ | | | | |
 | 7.12 Stress, spike and soak tests | Extended | 5–8 | ☐ | | | | |
 | 7.13 Compromised-container runbook + forensics drill | Extended | 5–8 | ☐ | | | | |
+| 7.14 Incident runbooks + tabletop drills | Extended | 6–10 | ☐ | | | | |
 | 9.1 Keyless AWS access | Extended | 5–10 | ☐ | | | | |
 | 9.2 Docs + go public | Core | 6–10 | ☐ | | | | |
 | 8.1 SLOs and error budgets | Advanced | 10–15 | ☐ | | | | |

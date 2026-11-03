@@ -1,9 +1,11 @@
 # ADR 1016: Rollback strategy: Git revert by default, automatic canary rollback, back up before schema changes
 
-- **Status:** Accepted
+- **Status:** Accepted; updated by [ADR 1046](1046-incident-response-and-runbook-index.md)
 - **Date:** 2026-11-01
 - **Applies to:** both sites
 - **Phase:** 1. Later: Phase 2 adds model-routing rollback and re-summarizing; Phase 3 adds the demo-stack and edge rollbacks.
+
+> **Update ([ADR 1046](1046-incident-response-and-runbook-index.md)):** when the Git path is unavailable (GitHub down, Argo CD broken) or too slow to contain an attack, a **SEV1** may change the cluster directly through the `emergency-change.md` runbook: auto-sync off for the affected apps, every command recorded in the incident thread, and a pull request that records or reverts the change within 24 hours.
 
 ## Context
 

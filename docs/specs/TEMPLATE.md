@@ -50,6 +50,7 @@ Copied from the step's **Test** in the plan, made specific (commands, expected o
 
 - What could go wrong, and how to tell.
 - How to undo it (see the rollback strategy and its runbooks).
+- Runbooks this step writes or changes; update their entries in the runbook index.
 
 ## Outcome
 

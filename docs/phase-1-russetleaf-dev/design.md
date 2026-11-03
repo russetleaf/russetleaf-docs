@@ -928,6 +928,17 @@ A cluster cannot report that it is completely down, so two outside checks back u
 - **Every alert must be actionable.** If nobody would act on it, it is a dashboard panel, not an alert. A monthly review removes or tunes noisy alerts.
 - Alertmanager's routing config lives in `platform/monitoring/` (with `overlays/home` and `overlays/aws` setting the site-specific receivers).
 
+### Incident response and runbooks
+
+Alerts start the response; the incident process and runbooks carry it through. The reasoning is recorded in [ADR 1046](adr/1046-incident-response-and-runbook-index.md).
+
+- **Severity levels:** **SEV1** (site down, data at risk, or a confirmed security incident; act now), **SEV2** (degraded, redundancy lost, or a security signal to investigate; act the same day), **SEV3** (no user impact). SEV1 and SEV2 get a postmortem.
+- **The incident thread:** an incident is declared with a message in `#rl-critical`; its thread is the timeline (every command, finding and decision), and becomes the postmortem's timeline.
+- **Order of work:** stabilize, preserve evidence (for security incidents, before anything is deleted), recover, then hand off to the breach runbook, credential rotation and the postmortem.
+- **Emergency changes outside GitOps:** only in a SEV1 when GitHub or Argo CD is down, or too slow to contain an attack. Auto-sync is turned off for the affected apps, every command is posted in the thread, and a pull request records or reverts the change within 24 hours.
+- **Runbooks for incidents, not only alerts:** credential leaks, lost access, etcd recovery, node replacement, a full power cut, WordPress compromise, an exploited vulnerability with no fix, a supply-chain compromise and a bot flood, alongside the alert and rollback runbooks.
+- **One index:** every runbook, in every repo, is listed on the docs site's [Runbooks](../runbooks.md) page, with the step that writes it and how it is rehearsed.
+
 ### Cost
 
 **$0.** Slack's free plan, the heartbeat service and the uptime checker's free plans, Amazon Q Developer in chat applications, and SNS at this volume are all free.

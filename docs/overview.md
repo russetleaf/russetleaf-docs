@@ -266,19 +266,19 @@ Each phase's plan tiers every step as **Core** (a complete, working, secure plat
 
 | Plan | Core | Extended | Advanced | Total |
 |---|---|---|---|---|
-| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~169–275 | ~77–135 | ~89–144 | **~335–554** |
+| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~174–284 | ~88–154 | ~89–144 | **~351–582** |
 | [Phase 2: AI summaries and MLOps](phase-2-ai-mlops/plan.md#priorities-and-time-estimates) (optional) | ~50–86 | ~32–53 | ~64–104 | **~146–243** |
-| [Phase 3: russetleaf.com](phase-3-russetleaf-com/plan.md#priorities-and-time-estimates) (optional) | ~73–121 | ~13–21 | ~16–25 | **~102–167** |
-| **Whole project** | ~292–482 | ~122–209 | ~169–273 | **~583–964** |
+| [Phase 3: russetleaf.com](phase-3-russetleaf-com/plan.md#priorities-and-time-estimates) (optional) | ~74–123 | ~14–22 | ~16–25 | **~104–170** |
+| **Whole project** | ~298–493 | ~134–229 | ~169–273 | **~601–995** |
 
 **Calendar time at about 20 hours a week:**
 
 | Scope | Hours | Calendar |
 |---|---|---|
-| Phase 1, Core tier | ~169–275 | 9–14 weeks |
-| Phase 1, everything | ~335–554 | 17–28 weeks (4–6.5 months) |
-| Phases 1 and 2 | ~481–797 | 24–40 weeks (6–9 months) |
-| All three phases | ~583–964 | 29–48 weeks (7–11 months; 13–22 months at 10 hours a week) |
+| Phase 1, Core tier | ~174–284 | 9–14 weeks |
+| Phase 1, everything | ~351–582 | 18–29 weeks (4–7 months) |
+| Phases 1 and 2 | ~497–825 | 25–41 weeks (6–10 months) |
+| All three phases | ~601–995 | 30–50 weeks (7–12 months; 14–23 months at 10 hours a week) |
 
 Phase 1 is built with AI assistance in conversation; Phases 2 and 3 are built with AI coding agents under [ADR 2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md), with Phase 1's actual hours as the baseline for measuring the difference. Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar. A finished Phase 1 is worth more than three unfinished phases.
 
@@ -326,7 +326,8 @@ russetleaf-gitops/
                             # (project docs live in russetleaf-docs; these are the operational docs
                             #   that change with this repo's code)
     runbooks/               # one page per alert (what it means, how to check, how to fix), plus
-                            #   rollback-<layer>.md runbooks
+                            #   rollback-<layer>.md and incident runbooks; README.md points to
+                            #   the runbook index on the docs site
     slos/                   # SLO definitions (Sloth) and the error-budget policy
     chaos/                  # chaos experiment hypotheses and results
     performance/            # load, stress, spike and soak test results (Phase 2: AI burst); production baselines
@@ -658,6 +659,7 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [1043](phase-1-russetleaf-dev/adr/1043-database-encryption.md) | Database encryption at rest and TLS on every connection | 1 |
 | [1044](phase-1-russetleaf-dev/adr/1044-cilium-gateway-api.md) | Cilium's Gateway API for traffic into the home cluster (ingress-nginx is retired) | 1 |
 | [1045](phase-1-russetleaf-dev/adr/1045-container-forensics.md) | Preserve evidence from a compromised container before containing and rebuilding it | 1 |
+| [1046](phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md) | Incident response, incident runbooks and one runbook index | 1 |
 | [2001](phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback | 2 |
 | [2002](phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
 | [2003](phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | Self-hosted model on rl-home-cp02 (CPU llama.cpp), dedicated by taint | 2 |
