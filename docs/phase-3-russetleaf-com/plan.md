@@ -214,7 +214,6 @@ Record each answer in the [decision log](#decision-log).
 
 **Do:** `platform/karpenter/`: `EC2NodeClass` (a **`Name` tag** of `rl-use1-wk`, per [ADR 1041](../phase-1-russetleaf-dev/adr/1041-naming-convention.md); AL2023 with a **pinned AMI version**, tracked by Renovate rather than "latest", so node images only change through a reviewed pull request; subnets and security groups by tag, encrypted gp3 root volume, **IMDSv2 required with a hop limit of 1** so pods cannot reach the node's instance credentials; kubelet settings for `systemReserved`, `kubeReserved`, hard eviction thresholds and the **per-pod PID limit** from [ADR 1034](../phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md), set through the EC2NodeClass's kubelet settings or AL2023 node configuration, whichever the installed Karpenter version supports); **general NodePool** (spot + on-demand, several instance families, consolidation on, disruption budget). The NodePool adds the **startup taint** `node.cilium.io/agent-not-ready=true:NoExecute`, so no pod is scheduled on a new node until Cilium is running there.
 
-
 **Test:** scaling a test Deployment up adds nodes, scaling down removes them; new nodes only accept pods once Cilium is ready (the startup taint is removed); simulate a spot interruption (e.g. AWS FIS or by hand) and watch Karpenter replace the node.
 
 ### Step 2.4: Shared platform services on AWS
