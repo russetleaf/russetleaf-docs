@@ -330,6 +330,31 @@ The goal of process allow-listing is "**only these programs may run in this cont
 
 The lists are kept in Git next to the rules, and **tested**: starting any unlisted process in each workload must raise an alert. When an image legitimately starts a new program (e.g. after an update), the release pull request updates the list.
 
+### Compromised containers
+
+Detection (Falco, the audit alerts, GuardDuty, Hubble) says a container is compromised; the response then has to **preserve the evidence before the container is rebuilt**. Left alone, the platform destroys it: deleting the pod loses its memory and files, Argo CD's self-heal reverts a quarantine, and logs expire after 7 days. The reasoning is recorded in [ADR 1045](adr/1045-container-forensics.md).
+
+**One runbook for both sites** (`docs/runbooks/compromised-container.md` in `russetleaf-gitops`), linked from every alert runbook that can mean a compromised container:
+
+| Stage | What happens |
+|---|---|
+| **Freeze** | Argo CD auto-sync and self-heal off (the root app first, then the affected app) |
+| **Contain** | Label the pod `rl/quarantine=true`, which a pre-staged Cilium **deny** policy cuts off; remove its ReplicaSet's selector label so it leaves the Service and a clean replacement starts; cordon the node. The pod is **not** deleted |
+| **Capture** | Most volatile first, from a privileged toolkit pod on the same node: process memory (`gcore`), network state and a short packet capture, processes and open files, the writable layer and `emptyDir` volumes, the pod's YAML, events and image digest |
+| **Export** | Falco alerts, Hubble flows and DNS records and the workload's logs from Loki for the incident window, before retention removes them; the audit-log time range noted (kept 1 year) |
+| **Hand off** | Hash and upload everything to the evidence bucket with a notes file; then the personal-data breach runbook, secret rotation and a postmortem; only then delete the pod and turn automation back on |
+
+**Prepared in advance**, since none of it can be fetched during an incident (Kyverno admits only signed images):
+
+- **`rl-forensics`**, a small toolkit image (`gdb`, `procps`, `iproute2`, `lsof`, `tcpdump`, `tar`), signed and attested like the WordPress image.
+- An empty **`forensics` namespace** with a Kyverno `PolicyException` for that image's digest only (`hostPID`, `privileged`, read-only `/var`); only `platform-admin` can create pods there, and each use raises `KubeWorkloadCreatedOutsideArgoCD`.
+- The **quarantine policy**, a `CiliumClusterwideNetworkPolicy` with `ingressDeny` and `egressDeny` rules, matching no pods until one is labeled.
+- An **evidence bucket** (`rl-forensic-evidence`) in the **Log Archive** account with Object Lock and 1-year retention, written from the workstation through a write-only permission set. Memory dumps can contain personal data, so it is in the record of processing.
+
+**Talos limits what can be collected:** no shell or SSH (`talosctl` and the toolkit pod instead), signed kernel modules only (so no whole-node memory capture), and disks sealed to each node's TPM (so no disk images; files are copied from the running node). **gVisor** pods are captured with gVisor's own tools (`runsc debug`, `runsc checkpoint`). If a **node** is suspected, it is disconnected from the network after capture; etcd keeps quorum with the other two.
+
+*On russetleaf.com (Phase 3):* whole-node memory with AVML, an EBS snapshot, an isolation security group, Karpenter's `do-not-disrupt` annotation, and a **forensic hold** that stops `demo-down` from destroying the evidence; see the [Phase 3 design](../phase-3-russetleaf-com/design.md#compromised-containers).
+
 ### Infrastructure and configuration scanning (Checkov)
 
 **Checkov** (free, open source, no account needed) is the project's scanner for infrastructure-as-code and configuration. Snyk is not used: it is a commercial platform whose free tier limits monthly scans, and it would overlap with Checkov (configuration) and Trivy (images and dependencies) without adding coverage.

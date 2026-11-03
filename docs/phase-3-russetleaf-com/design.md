@@ -336,6 +336,18 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 
 - **EKS:** audit logs go to **CloudWatch** (already planned), and **GuardDuty's EKS audit-log monitoring** flags known attack patterns automatically. **CloudWatch Logs metric filters** for the persistence alerts (`KubeWorkloadCreatedOutsideArgoCD`, `KubeAdmissionWebhookChanged`, `KubeTokenSecretCreated`) raise CloudWatch alarms to `#rl-security`, created and destroyed with the demo stack.
 
+### Compromised containers
+
+The shared runbook ([ADR 1045](../phase-1-russetleaf-dev/adr/1045-container-forensics.md); the Phase 1 design's [Compromised containers](../phase-1-russetleaf-dev/design.md#compromised-containers)) gains an EKS section:
+
+- **Hold the stack:** annotate the node `karpenter.sh/do-not-disrupt: "true"` so consolidation leaves it alone, and set the **forensic hold** (a `ForensicHold=true` tag set by the `forensic-hold` workflow). While it is set, `demo-down` refuses to run and the safety net alerts without tearing down. A held stack still costs about $0.70 an hour, so the hold is released as soon as capture is done.
+- **More can be captured than at home:** whole-node memory with **AVML** through **SSM Session Manager** (its policy attached to the node role only during an incident), uploaded straight to the evidence bucket, and an **EBS snapshot** of the node's volume, tagged `ForensicHold=true`.
+- **Isolate the node:** swap its security groups for an **isolation security group** with no rules, and turn on termination protection.
+- **Spot nodes** can be reclaimed with two minutes' warning, so memory is captured first.
+- **Logs already kept:** VPC flow logs and Resolver query logs in Log Archive, and EKS audit logs (1 year); the runbook records the time ranges.
+
+Built and rehearsed in Phase 3 step 5.1c.
+
 ### Runtime security and compliance scanning
 
 - **kube-bench** (EKS only; see [ADR 3001](adr/3001-kube-bench-eks-only.md)) audits the worker nodes against the **CIS Kubernetes Benchmark** with the **EKS profile**. It runs on **every demo**, as a step in the `demo-up` workflow (not a CronJob, since the cluster only lives a few hours):
