@@ -49,81 +49,78 @@ Everything is built and tested from the operator's Ubuntu 24.04 workstation, whi
 
 **Hardware:** 16 GB of RAM or more is recommended; a local kind or Talos-in-Docker cluster plus LocalStack and WordPress use about 4–6 GB. At least 40 GB of free disk for container images.
 
-### 1. Base packages
+### 1. Run the setup script
+
+The setup is a script in this repo, [`scripts/workstation/setup-ubuntu.sh`](https://github.com/smscully/russetleaf-docs/blob/main/scripts/workstation/setup-ubuntu.sh), rather than commands to copy: a new or replacement workstation (the [disaster recovery plan](disaster-recovery.md)'s "workstation lost" scenario) gets exactly the same setup, the script is safe to run again, and CI lints it with shellcheck. **Read it before running it:** it uses `sudo` and adds two signed apt repositories.
 
 ```bash
-sudo apt update
-sudo apt install -y git curl wget unzip jq make ca-certificates gnupg lsb-release \
-  python3 python3-venv shellcheck direnv wireguard-tools
+git clone https://github.com/smscully/russetleaf-docs.git
+cd russetleaf-docs
+scripts/workstation/setup-ubuntu.sh      # add --with-localstack for the optional LocalStack CLI
 ```
 
-### 2. Docker Engine (from Docker's own repository, not the snap)
+In order, it:
 
-```bash
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
-  https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
-  | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-sudo usermod -aG docker "$USER"     # then log out and back in
-```
+1. **Checks** that the machine runs Ubuntu 24.04, that it is not running as root, and that neither the Docker snap nor packages that conflict with Docker Engine are installed. If they are, it stops and says what to remove, rather than removing anything.
+2. Installs the **base packages** with apt.
+3. Adds **Docker's** signed apt repository and installs Docker Engine with the Buildx and Compose plugins (not the snap), then adds the user to the `docker` group.
+4. Raises the **file-watch limits** kind needs on Ubuntu (otherwise pods fail with "too many open files").
+5. Adds **mise's** signed apt repository and installs mise, so it is updated with the rest of the system, then adds the mise and direnv hooks to `~/.bashrc` (once, however often it runs).
+6. Installs **uv** globally with mise, and the **Python tools** with `uv tool install`.
 
-**kind needs higher file-watch limits** on Ubuntu (otherwise pods fail with "too many open files"):
+Afterwards, **log out and back in** (for the `docker` group), clone each repo, and run **`mise install`** in it.
 
-```bash
-echo -e "fs.inotify.max_user_watches=524288\nfs.inotify.max_user_instances=512" \
-  | sudo tee /etc/sysctl.d/99-kind.conf
-sudo sysctl --system
-```
+### 2. What gets installed
 
-### 3. CLI tools, pinned per repo with mise
+| Tool | Installed by | How it is used in the project |
+|---|---|---|
+| `git` | Setup script (apt) | Version control for all five repos, with SSH-signed commits |
+| `curl`, `wget` | Setup script (apt) | Downloads during setup; quick HTTP checks in tests and runbooks (security headers, the kubelet's `401`) |
+| `unzip` | Setup script (apt) | Unpacking downloaded archives |
+| `jq` | Setup script (apt) | Reading JSON from the AWS CLI, `kubectl` and Terraform output in scripts and runbooks |
+| `ca-certificates`, `gnupg` | Setup script (apt) | Verifying the signed Docker and mise apt repositories |
+| `python3`, `python3-venv` | Setup script (apt) | Building this docs site locally (MkDocs) and running this repo's tools (`plan_to_issues.py`, the reference and style checks) |
+| `shellcheck` | Setup script (apt) | Linting shell scripts, including these workstation scripts (also in CI) |
+| `direnv` | Setup script (apt) | Loading each repo's environment (`.envrc`: profiles and tokens from the password manager or Secrets Manager) on entering its folder |
+| `wireguard-tools` | Setup script (apt) | The WireGuard tunnel to the lab subnet (with NetworkManager; [Configuration](#4-configuration)) |
+| Docker Engine (`docker-ce`, `containerd.io`) | Setup script (Docker's apt repository) | Runs the local kind and Talos-in-Docker clusters, LocalStack, the local WordPress environment and container-based linters (PHP_CodeSniffer, PHPStan) |
+| Docker Buildx plugin | Setup script (Docker's apt repository) | Building the WordPress image (and the summarizer's in Phase 2) locally |
+| Docker Compose plugin | Setup script (Docker's apt repository) | The local environment in `compose.yaml` (WordPress, MariaDB, Valkey, LocalStack) |
+| `mise` | Setup script (mise's apt repository) | Installs every CLI tool below at the version pinned in each repo's `.mise.toml`, the same versions CI uses |
+| `uv` | Setup script (mise, global) | Installs the Python tools; Python development of the summarizer in Phase 2 |
+| `pre-commit` | Setup script (uv) | Git hooks in every repo: secret scan, YAML checks, and in `russetleaf-infra` the Terraform fmt, validate, tflint, terraform-docs and Checkov hooks |
+| `checkov` | Setup script (uv) | Scanning Terraform (source and plan), rendered Kubernetes manifests and Helm values for insecure settings (also in CI) |
+| `semgrep` | Setup script (uv) | Static analysis of the repos' code with open-source and project rules (also in CI) |
+| `ruff` | Setup script (uv) | Linting and formatting Python (this repo's tools; the summarizer in Phase 2) |
+| `pip-audit` | Setup script (uv) | Checking Python dependencies for known vulnerabilities (also in CI) |
+| `prowler` | Setup script (uv) | AWS account posture scans (CIS AWS Foundations) across every account; also monthly in CI ([ADR 1007](adr/1007-prowler-not-threatmapper.md)) |
+| `zizmor` | Setup script (uv) | Security linting of the GitHub Actions workflows (also in CI) |
+| `localstack` *(optional)* | Setup script (uv, with `--with-localstack`) | The LocalStack CLI; LocalStack itself runs in Docker as local stand-ins for S3, SQS and Secrets Manager |
+| `terraform` (1.10+) | Per repo (mise) | All infrastructure: AWS, Cloudflare and the Talos cluster (`russetleaf-infra`) |
+| `tflint` (with `tflint-ruleset-aws`) | Per repo (mise) | Terraform linting, including AWS-specific mistakes such as invalid instance types |
+| `terraform-docs` | Per repo (mise) | Generating the Terraform modules' READMEs |
+| `infracost` | Per repo (mise) | The cost difference of each Terraform change, commented on pull requests |
+| `talosctl` | Per repo (mise) | Managing the Talos nodes (home and local Talos-in-Docker): configuration, upgrades, etcd snapshots, logs, CA rotation; pinned to the cluster's version |
+| `kubectl` | Per repo (mise) | Working with every cluster; pinned within one minor version of the clusters |
+| `helm`, `kustomize` | Per repo (mise) | Rendering and testing the charts and overlays that Argo CD applies; emergency `helm rollback` for Cilium and Argo CD |
+| `kind` | Per repo (mise) | Local and ci test clusters |
+| `argocd` | Per repo (mise) | The Argo CD CLI: the staging workflow, debugging syncs, and pausing auto-sync in an incident |
+| `kubeconform`, `ct` (chart-testing) | Per repo (mise) | Schema-checking rendered manifests and linting and testing the charts (also in CI) |
+| `k6` | Per repo (mise) | Load, stress, spike and soak tests (scripts in `russetleaf-gitops/perf/`), run locally or through the k6 Operator |
+| `cilium`, `hubble` | Per repo (mise) | Cilium status and connectivity tests; Hubble flow queries (policy drops, DNS) |
+| `kyverno` | Per repo (mise) | Testing the Kyverno policies against manifests before they are deployed (also in CI) |
+| `cosign`, `syft`, `rekor-cli` | Per repo (mise) | Signing and verifying images, generating SBOMs, and looking up entries in the Rekor transparency log |
+| `trivy` | Per repo (mise) | Scanning images and dependencies for vulnerabilities, and the CIS Docker check |
+| `hadolint`, `container-structure-test` | Per repo (mise) | Linting the Dockerfiles, and checking the built images (no shell or download tools where expected, non-root user) |
+| `kubescape` | Per repo (mise) | On-demand cluster posture scans (NSA-CISA, MITRE ATT&CK, RBAC) ([ADR 1003](adr/1003-kubescape-cli-not-operator.md)) |
+| `gh` | Per repo (mise) | The GitHub CLI: authentication, pull requests, workflow runs, and creating the planning issues |
+| `awscli` (v2) | Per repo (mise) | The AWS CLI, signed in through IAM Identity Center |
+| `promtool` | Per repo (mise) | Testing the Prometheus alert rules (also in CI) |
+| `k9s`, `stern`, `kubectx` *(optional)* | Per repo (mise) | Day-to-day cluster work: a terminal UI, following logs across pods, switching contexts |
 
-Use **mise** to install the command-line tools, with the versions pinned in a `.mise.toml` file in each repo. The same file is used by CI (the `jdx/mise-action` GitHub Action), so the workstation and CI always run the same versions, and Renovate can keep them updated.
+### 3. Tool versions, pinned per repo with mise
 
-```bash
-curl https://mise.run | sh
-echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc
-echo 'eval "$(direnv hook bash)"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-Tools to pin (check each name with `mise registry | grep <tool>`; pin `kubectl` and `talosctl` to the cluster's versions):
-
-| Tool | Used for |
-|---|---|
-| `terraform` (1.10+), `tflint` (with `tflint-ruleset-aws`), `terraform-docs`, `infracost` | Infrastructure (`russetleaf-infra`) |
-| `talosctl` | Talos clusters (home and local Talos-in-Docker) |
-| `kubectl`, `helm`, `kustomize` | Kubernetes and charts |
-| `kind` | Local and ci test clusters |
-| `argocd` | Argo CD CLI (staging workflow, debugging) |
-| `k9s`, `stern`, `kubectx` | Day-to-day cluster work (optional but very useful) |
-| `kubeconform`, `chart-testing` (`ct`) | Manifest and chart validation |
-| `k6` | Load, stress, spike and soak tests (scripts in `russetleaf-gitops/perf/`; run locally or through the k6 Operator) |
-| `cilium`, `hubble` | Cilium status and connectivity tests; Hubble flow queries |
-| `kyverno` | Policy tests |
-| `cosign`, `syft`, `trivy`, `rekor-cli` | Image signing, SBOMs, scanning, transparency-log lookups |
-| `hadolint`, `container-structure-test`, `zizmor` | Dockerfile linting, built-image checks, GitHub Actions workflow security |
-| `kubescape` | On-demand cluster posture scans (NSA-CISA, MITRE ATT&CK, RBAC) |
-| `prowler` (installed with `uv`) | AWS account posture scans (CIS AWS Foundations); also runs in CI |
-| `gh` | GitHub CLI |
-| `awscli` (v2) | AWS |
-| `uv` | Python tooling (Checkov, pre-commit, LocalStack CLI; the summarizer in Phase 2) |
-| `promtool` (from Prometheus) | Testing alert rules |
-
-Python-based tools, installed with uv:
-
-```bash
-uv tool install pre-commit
-uv tool install checkov
-uv tool install semgrep
-uv tool install zizmor        # if not installed with mise
-uv tool install ruff
-uv tool install pip-audit
-uv tool install localstack      # optional: LocalStack CLI (LocalStack itself runs in Docker)
-```
+The tools marked "Per repo" are not installed by the setup script. Each repo pins their versions in a **`.mise.toml`**, and `mise install` inside the repo installs them. CI uses the same file (the `jdx/mise-action` GitHub Action), so the workstation and CI always run the same versions, and Renovate keeps the pins current. Check each tool's name with `mise registry | grep <tool>`, and pin `kubectl` and `talosctl` to the clusters' versions.
 
 PHP and Composer are not needed locally: the WordPress image installs plugins inside its Docker build, and the PHP linters (PHP_CodeSniffer with the WordPress Coding Standards, PHPStan) run in a container, locally and in CI.
 
@@ -139,9 +136,10 @@ PHP and Composer are not needed locally: the WordPress image installs plugins in
 
 ### 5. Check the setup
 
-Add a `scripts/check-tools.sh` to `russetleaf-gitops` that prints every tool's version and fails if one is missing. Then:
+[`scripts/workstation/check-tools.sh`](https://github.com/smscully/russetleaf-docs/blob/main/scripts/workstation/check-tools.sh) prints every tool's version and fails if a required one is missing. Run it with `--system` right after the setup script (before any repo is cloned), then without it inside each repo, after `mise install`, to check that repo's pinned tools as well. Then:
 
 ```bash
+scripts/workstation/check-tools.sh --system
 docker run --rm hello-world
 kind create cluster --name smoke && kubectl get nodes && kind delete cluster --name smoke
 talosctl cluster create --name local-smoke          # Talos in Docker
@@ -150,7 +148,7 @@ aws sts get-caller-identity --profile rl-home-admin
 gh auth status
 ```
 
-**Test:** all of the above succeed, and `scripts/check-tools.sh` reports every tool.
+**Test:** all of the above succeed; `check-tools.sh` reports every tool, inside each repo as well; and running `setup-ubuntu.sh` a second time changes nothing (no duplicate lines in `~/.bashrc` or apt sources).
 
 ## Stage 0: Prerequisites and decisions
 
