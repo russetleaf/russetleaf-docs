@@ -76,6 +76,8 @@ nav:
       - Disaster recovery: phase-1-russetleaf-dev/disaster-recovery.md
       - Setup guides:
           - AWS management account: phase-1-russetleaf-dev/setup/aws-management-account.md
+          - Slack and outside monitoring: phase-1-russetleaf-dev/setup/slack-and-monitoring.md
+          - Lab network and WireGuard: phase-1-russetleaf-dev/setup/lab-network.md
       - Decisions:
           - "1001 No service mesh (Istio not used)": phase-1-russetleaf-dev/adr/1001-no-service-mesh.md
           - "1002 Media on S3, code in the image (not EFS)": phase-1-russetleaf-dev/adr/1002-s3-media-not-efs.md
