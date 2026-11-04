@@ -266,19 +266,19 @@ Each phase's plan tiers every step as **Core** (a complete, working, secure plat
 
 | Plan | Core | Extended | Advanced | Total |
 |---|---|---|---|---|
-| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~176–287 | ~93–161 | ~89–144 | **~358–592** |
+| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~177–289 | ~93–161 | ~89–144 | **~359–594** |
 | [Phase 2: AI summaries and MLOps](phase-2-ai-mlops/plan.md#priorities-and-time-estimates) (optional) | ~50–86 | ~33–54 | ~64–104 | **~147–244** |
 | [Phase 3: russetleaf.com](phase-3-russetleaf-com/plan.md#priorities-and-time-estimates) (optional) | ~74–123 | ~14–22 | ~16–25 | **~104–170** |
-| **Whole project** | ~300–496 | ~140–237 | ~169–273 | **~609–1006** |
+| **Whole project** | ~301–498 | ~140–237 | ~169–273 | **~610–1008** |
 
 **Calendar time at about 20 hours a week:**
 
 | Scope | Hours | Calendar |
 |---|---|---|
-| Phase 1, Core tier | ~176–287 | 9–14 weeks |
-| Phase 1, everything | ~358–592 | 18–30 weeks (4–7 months) |
-| Phases 1 and 2 | ~505–836 | 25–42 weeks (6–10 months) |
-| All three phases | ~609–1006 | 30–50 weeks (7–12 months; 14–23 months at 10 hours a week) |
+| Phase 1, Core tier | ~177–289 | 9–14 weeks |
+| Phase 1, everything | ~359–594 | 18–30 weeks (4–7 months) |
+| Phases 1 and 2 | ~506–838 | 25–42 weeks (6–10 months) |
+| All three phases | ~610–1008 | 30–50 weeks (7–12 months; 14–23 months at 10 hours a week) |
 
 Phase 1 is built with AI assistance in conversation; Phases 2 and 3 are built with AI coding agents under [ADR 2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md), with Phase 1's actual hours as the baseline for measuring the difference. Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar. A finished Phase 1 is worth more than three unfinished phases.
 
@@ -583,14 +583,23 @@ russetleaf-docs/
   README.md                 # project hub: what it is, the phases, links to the docs site and every repo
   mkdocs.yml                # docs site: navigation, theme, Mermaid diagrams, strict link checking
   requirements-docs.txt     # pinned MkDocs and Material versions
+  AGENTS.md                 # instructions for people and coding agents: conventions, the bash standard, checks
+  CLAUDE.md                 # imports AGENTS.md, so every Claude Code session starts with it
+  .claude/settings.json     # Claude Code hook: checks a shell file right after Claude edits it
+  .pre-commit-config.yaml   # shellcheck, shfmt, the bash standard and the doc checks on every commit
   .github/workflows/docs.yml  # markdownlint and a strict build on pull requests; publish to GitHub Pages on main
+  .github/workflows/bash-checks.yml  # reusable: the bash standard's checks, called by every repo
   .markdownlint-cli2.yaml   # the Markdown rules that matter for how the site renders
   tools/plan_to_issues.py   # creates milestones, labels and one issue per step from a phase's plan and roadmap
   tools/check_doc_links.py  # CI check: ADR and document references must be links
   tools/check_doc_style.py  # CI check: no second person or contractions outside code and quotes
+  tools/check_bash_style.py # the bash standard's structure checks (pre-commit, the hook and CI)
+  tools/claude_bash_hook.py # the Claude Code hook: runs the bash checks on an edited shell file
+  scripts/lib/              # common.sh (the shared bash library) and bats-helpers.bash; other repos copy them
+  scripts/templates/        # the starter script and its bats test, for every new script
   scripts/workstation/      # setup-ubuntu.sh (sets up the operator's workstation) and check-tools.sh
-                            #   (reports every tool's version), sharing lib/common.sh; tests/ holds
-                            #   the bats tests and the fresh-Ubuntu end-to-end test (CI)
+                            #   (reports every tool's version); tests/ holds the bats tests and the
+                            #   fresh-Ubuntu end-to-end test (CI)
   docs/
     index.md                # docs site home page
     overview.md             # this document
@@ -664,6 +673,7 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [1045](phase-1-russetleaf-dev/adr/1045-container-forensics.md) | Preserve evidence from a compromised container before containing and rebuilding it | 1 |
 | [1046](phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md) | Incident response, incident runbooks and one runbook index | 1 |
 | [1047](phase-1-russetleaf-dev/adr/1047-in-cluster-credentials-and-rotation.md) | The home cluster's own passwords are generated in the cluster and rotated automatically | 1 |
+| [1048](phase-1-russetleaf-dev/adr/1048-bash-script-standard.md) | One bash script standard for every repo, enforced by checks and agent instructions | 1 |
 | [2001](phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback | 2 |
 | [2002](phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
 | [2003](phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | Self-hosted model on rl-home-cp02 (CPU llama.cpp), dedicated by taint | 2 |

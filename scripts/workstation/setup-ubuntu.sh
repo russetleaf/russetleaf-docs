@@ -29,7 +29,7 @@ function init_script() {
   readonly SCRIPT_NAME="${0##*/}"
   readonly APT_PACKAGES=(
     git curl wget unzip jq ca-certificates gnupg
-    python3 python3-venv shellcheck direnv wireguard-tools procps
+    python3 python3-venv shellcheck shfmt bats direnv wireguard-tools procps
   )
   readonly DOCKER_PACKAGES=(
     docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
@@ -46,10 +46,10 @@ function init_script() {
   readonly OS_RELEASE="${RL_OS_RELEASE:-/etc/os-release}"
 
   # Exit codes (any other non-zero code is that of a failed command)
-  readonly ERR_USAGE=64          # Invalid option
-  readonly ERR_UNSUPPORTED=69    # Not Ubuntu 24.04
-  readonly ERR_ROOT=77           # Run as root
-  readonly ERR_CONFLICT=78       # Docker snap or conflicting packages installed
+  readonly ERR_USAGE=64       # Invalid option
+  readonly ERR_UNSUPPORTED=69 # Not Ubuntu 24.04
+  readonly ERR_ROOT=77        # Run as root
+  readonly ERR_CONFLICT=78    # Docker snap or conflicting packages installed
 
   # Global variables
   no_color="false"
@@ -353,8 +353,8 @@ EOF
 ########################################
 function main() {
   init_script
-  # shellcheck source=lib/common.sh
-  source "${SCRIPT_DIR}/lib/common.sh"
+  # shellcheck source=../lib/common.sh
+  source "${SCRIPT_DIR}/../lib/common.sh"
   install_traps
   parse_params "$@"
   init_colors "${no_color}"

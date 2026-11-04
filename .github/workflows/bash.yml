@@ -1,0 +1,28 @@
+name: bash
+
+# This repo's own bash checks, through the reusable workflow every repo calls.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/**"
+      - "tools/check_bash_style.py"
+      - "tools/claude_bash_hook.py"
+      - ".github/workflows/bash.yml"
+      - ".github/workflows/bash-checks.yml"
+  pull_request:
+    paths:
+      - "scripts/**"
+      - "tools/check_bash_style.py"
+      - "tools/claude_bash_hook.py"
+      - ".github/workflows/bash.yml"
+      - ".github/workflows/bash-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    uses: ./.github/workflows/bash-checks.yml
+    with:
+      standard-ref: ${{ github.sha }}

@@ -12,6 +12,7 @@ Design, plans, roadmap and architecture decisions for **RussetLeaf**, a producti
 - `docs/phase-1-russetleaf-dev/`, `docs/phase-2-ai-mlops/`, `docs/phase-3-russetleaf-com/`: each phase's `design.md`, `plan.md`, roadmap and `adr/`
 - [`docs/specs/TEMPLATE.md`](docs/specs/TEMPLATE.md): the short spec written before each build step
 - [`tools/plan_to_issues.py`](tools/plan_to_issues.py): creates the GitHub milestones and one issue per step from a phase's plan and roadmap
+- [`docs/standards/bash.md`](docs/standards/bash.md): the bash script standard every repo follows, with [`AGENTS.md`](AGENTS.md) (read by every Claude Code session through `CLAUDE.md`)
 - [`scripts/workstation/`](scripts/workstation/): `setup-ubuntu.sh` sets up an Ubuntu 24.04 workstation for the project, and `check-tools.sh` reports every tool's version (see the plan's workstation setup)
 
 ## The repositories

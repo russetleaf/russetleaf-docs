@@ -1,9 +1,11 @@
 # ADR 2004: Agentic AI delivery, with least-privilege access and measured results
 
-- **Status:** Accepted
+- **Status:** Accepted; updated by [ADR 1048](../../phase-1-russetleaf-dev/adr/1048-bash-script-standard.md)
 - **Date:** 2026-11-02
 - **Applies to:** how Phases 2 and 3 are built: the repos, the home cluster, the AWS accounts and the GitHub organization
 - **Phase:** 2 (first used here). Phase 3 applies it to AWS infrastructure.
+
+> **Update ([ADR 1048](../../phase-1-russetleaf-dev/adr/1048-bash-script-standard.md)):** the `AGENTS.md` and `CLAUDE.md` files start in **Phase 1** (in `russetleaf-docs` now, and in each code repo from step 1.1), carrying the bash script standard, so every Claude Code session already starts with the project's rules.
 
 ## Context
 

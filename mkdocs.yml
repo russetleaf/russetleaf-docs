@@ -67,6 +67,8 @@ nav:
   - Home: index.md
   - Overview: overview.md
   - Runbooks: runbooks.md
+  - Standards:
+      - Bash scripts: standards/bash.md
   - "Phase 1: russetleaf.dev":
       - Design: phase-1-russetleaf-dev/design.md
       - Plan: phase-1-russetleaf-dev/plan.md
@@ -120,6 +122,7 @@ nav:
           - "1045 Preserve evidence from a compromised container before containing and rebuilding it": phase-1-russetleaf-dev/adr/1045-container-forensics.md
           - "1046 Incident response, incident runbooks and one runbook index": phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md
           - "1047 The home cluster's own passwords are generated in the cluster and rotated automatically": phase-1-russetleaf-dev/adr/1047-in-cluster-credentials-and-rotation.md
+          - "1048 One bash script standard for every repo, enforced by checks and agent instructions": phase-1-russetleaf-dev/adr/1048-bash-script-standard.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md

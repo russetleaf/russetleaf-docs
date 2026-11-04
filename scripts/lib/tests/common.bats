@@ -1,10 +1,12 @@
 #!/usr/bin/env bats
+# shellcheck source-path=SCRIPTDIR
 #
 # common.bats
 #
 # Tests for lib/common.sh: messages, colors, and error and signal handling.
 
-load helpers
+# shellcheck source=SCRIPTDIR/../bats-helpers.bash
+source "${BATS_TEST_DIRNAME}/../bats-helpers.bash"
 
 @test "messages are printed as text, never as a format string" {
   run bash -c "source '${COMMON}'; log_warn 'Disk 100% full'"

@@ -23,12 +23,12 @@ function init_script() {
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   readonly SCRIPT_DIR
   readonly SCRIPT_NAME="${0##*/}"
-  readonly VERSION_TIMEOUT=15    # Seconds to wait for a tool's version command
+  readonly VERSION_TIMEOUT=15 # Seconds to wait for a tool's version command
   readonly VERSION_PATTERN='[0-9]+\.[0-9]+(\.[0-9]+)?'
 
   # Exit codes
-  readonly ERR_MISSING=1         # A required tool is missing
-  readonly ERR_USAGE=64          # Invalid option
+  readonly ERR_MISSING=1 # A required tool is missing
+  readonly ERR_USAGE=64  # Invalid option
 
   # Global variables
   no_color="false"
@@ -172,6 +172,8 @@ function check_base_packages() {
   check_tool gpg required gpg --version
   check_tool python3 required python3 --version
   check_tool shellcheck required shellcheck --version
+  check_tool shfmt required shfmt --version
+  check_tool bats required bats --version
   check_tool direnv required direnv version
   check_tool wg required wg --version
 }
@@ -292,8 +294,8 @@ function report() {
 ########################################
 function main() {
   init_script
-  # shellcheck source=lib/common.sh
-  source "${SCRIPT_DIR}/lib/common.sh"
+  # shellcheck source=../lib/common.sh
+  source "${SCRIPT_DIR}/../lib/common.sh"
   install_traps
   parse_params "$@"
   init_colors "${no_color}"

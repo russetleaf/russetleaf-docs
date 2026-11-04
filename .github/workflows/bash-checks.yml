@@ -1,0 +1,61 @@
+name: bash checks
+
+# Reusable workflow: the bash script standard's checks (docs/standards/bash.md), for
+# every RussetLeaf repo. A repo calls it with:
+#
+#   jobs:
+#     bash:
+#       uses: smscully/russetleaf-docs/.github/workflows/bash-checks.yml@<commit>
+#       with:
+#         standard-ref: <the same commit>
+#
+# It runs shellcheck, shfmt and the style checker on the calling repo's tracked shell
+# files, runs its bats tests, and fails if the repo's copies of the shared files
+# (scripts/lib/common.sh, scripts/lib/bats-helpers.bash, tools/check_bash_style.py,
+# tools/claude_bash_hook.py) differ from the ones here.
+on:
+  workflow_call:
+    inputs:
+      standard-ref:
+        description: Commit of russetleaf-docs to take the checker and the shared library from (the same commit as the uses line)
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  bash:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Check out the standard (russetleaf-docs)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: smscully/russetleaf-docs
+          ref: ${{ inputs.standard-ref }}
+          path: .standard
+          persist-credentials: false
+      - name: Install shfmt and bats
+        run: sudo apt-get update && sudo apt-get install -y shfmt bats
+      - name: shellcheck
+        run: git ls-files -z '*.sh' '*.bash' '*.bats' | xargs -0 -r shellcheck -x
+      - name: shfmt (layout)
+        run: git ls-files -z '*.sh' '*.bash' | xargs -0 -r shfmt -d -i 2 -ci
+      - name: Bash script standard
+        run: python3 .standard/tools/check_bash_style.py
+      - name: The shared files match russetleaf-docs
+        if: github.repository != 'smscully/russetleaf-docs'
+        run: |
+          for file in scripts/lib/common.sh scripts/lib/bats-helpers.bash \
+            tools/check_bash_style.py tools/claude_bash_hook.py; do
+            if [[ -f "${file}" ]] && ! diff -u ".standard/${file}" "${file}"; then
+              echo "::error file=${file}::${file} differs from russetleaf-docs; copy it from there instead of editing it here"
+              exit 1
+            fi
+          done
+      - name: bats tests
+        run: git ls-files -z '*.bats' | xargs -0 -r bats

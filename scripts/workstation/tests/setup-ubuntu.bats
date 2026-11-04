@@ -1,4 +1,6 @@
 #!/usr/bin/env bats
+# Stub bodies are single-quoted on purpose: they run later, inside the stub
+# shellcheck disable=SC2016
 #
 # setup-ubuntu.bats
 #

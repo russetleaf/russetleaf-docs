@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/tools/claude_bash_hook.py\"",
+            "timeout": 200,
+            "statusMessage": "Checking the shell file against the bash script standard"
+          }
+        ]
+      }
+    ]
+  }
+}

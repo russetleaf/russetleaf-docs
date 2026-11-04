@@ -28,10 +28,75 @@ function init_script() {
   readonly TEST_USER="tester"
   readonly TEST_HOME="/home/${TEST_USER}"
   readonly SNAPSHOT_DIR="/tmp/setup-snapshots"
+  readonly SCRIPT_NAME="${0##*/}"
 
   # Exit codes
-  readonly ERR_TEST_FAILED=1     # The setup script failed a check
-  readonly ERR_NOT_CONTAINER=77  # Not running as root in a container
+  readonly ERR_TEST_FAILED=1    # The setup script failed a check
+  readonly ERR_NOT_CONTAINER=77 # Not running as root in a container
+  readonly ERR_USAGE=64         # Invalid option
+
+  # Global variables
+  no_color="false"
+  verbose="false"
+}
+
+########################################
+# Parse script parameters
+# Globals:
+#   no_color, verbose (set)
+# Arguments:
+#   $@ (optional): Options passed to the script
+########################################
+function parse_params() {
+  local param
+
+  while [[ $# -gt 0 ]]; do
+    param="$1"
+    shift
+    case "${param}" in
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      -n | --no-color)
+        no_color="true"
+        ;;
+      -v | --verbose)
+        verbose="true"
+        ;;
+      *)
+        die "${ERR_USAGE}" "invalid option: ${param} (see ${SCRIPT_NAME} --help)"
+        ;;
+    esac
+  done
+}
+
+########################################
+# Usage
+# Arguments:
+#   None
+# Outputs:
+#   Writes usage instructions to stdout
+########################################
+function usage() {
+  cat <<EOF
+Usage: ${SCRIPT_NAME} [-h|--help] [-n|--no-color] [-v|--verbose]
+
+Tests setup-ubuntu.sh end to end on a fresh Ubuntu 24.04. Run it only as root inside
+a throwaway container (see the header of this file for the docker command).
+
+Available options:
+  -h|--help       Display help
+  -n|--no-color   Turn off text colors
+  -v|--verbose    Trace every command
+
+Exit codes:
+  0    The setup script passed every check
+  1    The setup script failed a check
+  64   Invalid option
+  77   Not running as root in a container
+  Any other non-zero code is that of the command that failed.
+EOF
 }
 
 ########################################
@@ -176,14 +241,18 @@ function run_check_tools() {
 ########################################
 # Main function
 # Arguments:
-#   None
+#   $@ (optional): Options passed to the script
 ########################################
 function main() {
   init_script
-  # shellcheck source=../lib/common.sh
-  source "${WORKSTATION_DIR}/lib/common.sh"
+  # shellcheck source=../../lib/common.sh
+  source "${WORKSTATION_DIR}/../lib/common.sh"
   install_traps
-  init_colors "false"
+  parse_params "$@"
+  init_colors "${no_color}"
+  if [[ "${verbose}" == "true" ]]; then
+    enable_trace
+  fi
 
   check_container
   prepare_container

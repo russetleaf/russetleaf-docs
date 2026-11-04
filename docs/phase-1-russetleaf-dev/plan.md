@@ -24,10 +24,10 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting with an incident process, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, privacy basics (GDPR), and the docs. Finished on its own, this is a complete platform. | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 5.12, 6.1, 6.3, 9.2 | **~176–287** |
+| **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting with an incident process, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, privacy basics (GDPR), and the docs. Finished on its own, this is a complete platform. | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 5.12, 6.1, 6.3, 9.2 | **~177–289** |
 | **Extended** | Hardening, operations and evidence: progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure, cold-start, disaster, forensics and incident drills, with their runbooks). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.14, 9.1 | **~93–161** |
 | **Advanced** | Reliability and platform practices: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management with a local spoke cluster, chaos experiments and postmortems, a threat model and control matrix, strategy documents, public writing, and a custom seccomp profile for WordPress. | 7.7, 8.1–8.9 | **~89–144** |
-| **Total** | | | **~358–592** |
+| **Total** | | | **~359–594** |
 
 **Calendar time** (Phase 1 only):
 
@@ -68,7 +68,7 @@ In order, it:
 5. Adds **mise's** signed apt repository and installs mise, so it is updated with the rest of the system, then adds the mise and direnv hooks to `~/.bashrc` (once, however often it runs).
 6. Installs **uv** globally with mise, and the **Python tools** with `uv tool install`.
 
-Both workstation scripts take `--help` (options and exit codes), `--verbose` (trace every command) and `--no-color`; colors are also off when `NO_COLOR` is set or the output is not a terminal. They share `scripts/workstation/lib/common.sh` for messages and for error and signal handling: a failed command is reported with its line number, and Ctrl+C or a `kill` stops the script instead of letting it carry on.
+Both workstation scripts take `--help` (options and exit codes), `--verbose` (trace every command) and `--no-color`; colors are also off when `NO_COLOR` is set or the output is not a terminal. They follow the [bash script standard](../standards/bash.md), and share `scripts/lib/common.sh` for messages and for error and signal handling: a failed command is reported with its line number, and Ctrl+C or a `kill` stops the script instead of letting it carry on.
 
 **Tested in CI** (the `workstation scripts` workflow, on every change to the scripts and weekly): **bats** tests in `scripts/workstation/tests/` cover the options, exit codes, checks before installing, messages, and error and signal handling, using stub commands so they never install anything; and `fresh-ubuntu-test.sh` runs the setup script on a **fresh Ubuntu 24.04 container**, twice, failing if the second run changes anything, then runs `check-tools.sh --system`. The weekly run catches outside changes (a rotated signing key, a renamed package) before the next real setup does.
 
@@ -86,6 +86,8 @@ Afterwards, **log out and back in** (for the `docker` group), clone each repo, a
 | `python3`, `python3-venv` | Setup script (apt) | Building this docs site locally (MkDocs) and running this repo's tools (`plan_to_issues.py`, the reference and style checks) |
 | `procps` | Setup script (apt) | `sysctl`, which the setup script uses to set kind's file-watch limits (already on most Ubuntu installs) |
 | `shellcheck` | Setup script (apt) | Linting shell scripts, including these workstation scripts (also in CI) |
+| `shfmt` | Setup script (apt) | Checking the layout of shell scripts (two-space indents) against the [bash script standard](../standards/bash.md) (also in pre-commit and CI) |
+| `bats` | Setup script (apt) | Running the shell scripts' tests (also in CI) |
 | `direnv` | Setup script (apt) | Loading each repo's environment (`.envrc`: profiles and tokens from the password manager or Secrets Manager) on entering its folder |
 | `wireguard-tools` | Setup script (apt) | The WireGuard tunnel to the lab subnet (with NetworkManager; [Configuration](#4-configuration)) |
 | Docker Engine (`docker-ce`, `containerd.io`) | Setup script (Docker's apt repository) | Runs the local kind and Talos-in-Docker clusters, LocalStack, the local WordPress environment and container-based linters (PHP_CodeSniffer, PHPStan) |
@@ -269,6 +271,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 | [1045 Container forensics](adr/1045-container-forensics.md) | 7.13 | — | 5.1c |
 | [1046 Incident response and runbook index](adr/1046-incident-response-and-runbook-index.md) | 2.4, 4.2, 4.4, 4.7, 5.8, 7.8, 7.10, 7.11, 7.14 | 2.2 | 4.1, 5.1 |
 | [1047 In-cluster credentials and rotation](adr/1047-in-cluster-credentials-and-rotation.md) | 4.5, 5.2, 7.8 | — | — |
+| [1048 Bash script standard](adr/1048-bash-script-standard.md) | 1.1 | — | — |
 | [2001 MLOps lifecycle](../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | — | 4.4–4.10 | — |
 | [2002 Summary pipeline architecture](../phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | — | 2.1–2.5 | — |
 | [2003 Self-hosted model on `rl-home-cp02`](../phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | — | 1.3, 3.1, 3.2 | — |
@@ -292,10 +295,11 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 - Add **Checkov** to every repo's CI from the start, scanning the **GitHub Actions workflows** (unpinned actions, over-broad `permissions`, script injection), with a `.checkov.yaml` per repo. Later steps add each repo's other targets (Terraform, manifests, Dockerfiles, charts). Skips must carry a reason. See [Infrastructure and configuration scanning](design.md#infrastructure-and-configuration-scanning-checkov).
 - Add **Renovate** to every repo (Helm charts, Terraform providers, base images, GitHub Actions, `.mise.toml`, and later Composer and Python lock files), with a shared configuration following the Phase 1 design's [Update strategy](design.md#update-strategy): a weekly schedule (security updates immediately), grouping per platform component, **auto-merge for patch updates** of platform charts, CLI tools and GitHub Actions once CI passes, the **Dependency Dashboard**, and custom version rules for Talos and Kubernetes versions in Terraform.
 - In `russetleaf-docs`: confirm the **docs site** builds and publishes (GitHub Pages, from the `docs` workflow), at **`docs.russetleaf.dev`** (set up on 2026-11-02 with hand-made Cloudflare records; step 2.3 imports them into Terraform); keep its README as the project hub (what the project is, the phases, links to the site and all repos). Give each code repo a README linking to the site, and a pull-request template with a "docs updated?" checkbox.
+- **The bash script standard in every code repo** ([ADR 1048](adr/1048-bash-script-standard.md); [the standard](../standards/bash.md)): an **`AGENTS.md`** (the repo's conventions and checks, including the bash section from this repo's `AGENTS.md`) with a **`CLAUDE.md`** that imports it (`@AGENTS.md`), so every Claude Code session in the repo starts with the rules; copies of `scripts/lib/`, `tools/check_bash_style.py` and `tools/claude_bash_hook.py` from `russetleaf-docs`; a **`.pre-commit-config.yaml`** with the shellcheck, shfmt and bash-standard hooks (added to the repo's other hooks); **`.claude/settings.json`** with the PostToolUse hook; and a CI job calling the reusable **`bash-checks.yml`** workflow from `russetleaf-docs`, pinned to a commit. Run `pre-commit install` in each clone.
 
 - **Track the plan on GitHub:** run `tools/plan_to_issues.py --phase-dir docs/phase-1-russetleaf-dev --repo <owner>/russetleaf-docs` (a dry run), check its output, then run it again with `--apply` to create the roadmap's milestones, the labels and one issue per step. Create a public **GitHub Projects** board with these issues (and later issues from the code repos), a **Roadmap** view grouped by milestone, and fields for estimate and actual hours.
 
-**Test:** each repo is public with a clean `gitleaks` history scan and push protection on; each repo has protected `main`, the secret scan and Checkov run on a test pull request (a workflow with `permissions: write-all` fails Checkov), and Renovate opens its onboarding pull request. The Projects board shows one issue per step in the roadmap's milestones, and running the script again creates nothing new.
+**Test:** each repo is public with a clean `gitleaks` history scan and push protection on; each repo has protected `main`, the secret scan and Checkov run on a test pull request (a workflow with `permissions: write-all` fails Checkov), and Renovate opens its onboarding pull request; in each code repo, a deliberately non-compliant script (copied from the template, with its header block removed) fails pre-commit and the `bash-checks` job, and an edited copy of `scripts/lib/common.sh` fails the drift check. The Projects board shows one issue per step in the roadmap's milestones, and running the script again creates nothing new.
 
 ## Stage 2: Infrastructure (`russetleaf-infra`)
 
@@ -1016,7 +1020,7 @@ Phase 1 builds most of what these need: the shared Terraform modules, the base m
 | 0.1 Accounts, tools, budget | Core | 4–8 | ☐ | | | | |
 | 0.2 Decisions | Core | 1–2 | ☐ | | | | |
 | 0.3 Home network segmentation | Core | 2–4 | ☐ | | | | |
-| 1.1 Repos | Core | 4–7 | ☐ | | | | |
+| 1.1 Repos | Core | 5–9 | ☐ | | | | |
 | 2.0 AWS Organization and accounts (SRA) | Core | 6–10 | ☐ | | | | |
 | 2.0b Organization security services | Core | 4–8 | ☐ | | | | |
 | 2.1 Terraform bootstrap | Core | 3–5 | ☐ | | | | |
