@@ -4,7 +4,7 @@ site_url: https://docs.russetleaf.dev/
 repo_url: https://github.com/smscully/russetleaf-docs
 repo_name: smscully/russetleaf-docs
 edit_uri: edit/main/docs/
-copyright: Steven Scully
+copyright: 'Copyright &copy; 2026 Steven Scully &middot; Licensed under the <a href="https://github.com/smscully/russetleaf-docs/blob/main/LICENSE">GNU GPL v3.0</a>'
 
 theme:
   name: material

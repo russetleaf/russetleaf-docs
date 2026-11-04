@@ -7,6 +7,8 @@
 # Tests for setup-ubuntu.sh's options and its checks before changing anything. They
 # use an isolated PATH without sudo or apt, so a failing test cannot install
 # anything. The installation itself is tested by fresh-ubuntu-test.sh, in CI.
+#
+# This program is licensed under the terms of the GNU General Public License v3.0.
 
 load helpers
 

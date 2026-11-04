@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# This program is licensed under the terms of the GNU General Public License v3.0.
 """Claude Code PostToolUse hook: check a shell file right after Claude writes or edits it.
 
 Reads the hook's JSON from stdin. If the file is a *.sh, *.bash or *.bats file in this

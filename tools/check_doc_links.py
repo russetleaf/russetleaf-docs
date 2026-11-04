@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# This program is licensed under the terms of the GNU General Public License v3.0.
 """Check that references to ADRs and other documents are links.
 
 Fails (exit 1) on:

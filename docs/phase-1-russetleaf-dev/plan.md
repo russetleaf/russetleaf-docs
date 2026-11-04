@@ -219,7 +219,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 **Do:**
 
 - Create **`russetleaf-gitops`**, **`russetleaf-infra`** and **`russetleaf-wordpress`** (`russetleaf-llm-summarizer` is created in Phase 2). The project documentation stays in this repo, **`russetleaf-docs`** ([ADR 1038](adr/1038-documentation-repo-and-site.md)).
-- In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a `LICENSE` if public, branch protection on `main` (pull requests and passing checks required).
+- In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a **GPL v3.0 `LICENSE`** (the same text as `russetleaf-docs`, matching the license line every script carries; WordPress's own code is licensed GPLv2 or later, which allows the project's theme and plugins to be GPL v3, and third-party plugins keep their own licenses), branch protection on `main` (pull requests and passing checks required).
 - In `russetleaf-docs`: the design, plans, roadmap, ADRs and spec template already exist (ADR template in the [ADR template](../adr/0000-template.md)). Record the big step 0.2 decisions as ADRs (the next number in the phase, e.g. 1045) and link them from the decision log. Operational docs (runbooks, SLO definitions, performance and security reports, Talos hardening notes) go in `docs/` of the repo that produces or uses them, mostly `russetleaf-gitops`. Each ADR's **Open items** are finished in these steps:
 
 | ADR | Phase 1 steps | Phase 2 steps | Phase 3 steps |
@@ -299,7 +299,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 
 - **Track the plan on GitHub:** run `tools/plan_to_issues.py --phase-dir docs/phase-1-russetleaf-dev --repo <owner>/russetleaf-docs` (a dry run), check its output, then run it again with `--apply` to create the roadmap's milestones, the labels and one issue per step. Create a public **GitHub Projects** board with these issues (and later issues from the code repos), a **Roadmap** view grouped by milestone, and fields for estimate and actual hours.
 
-**Test:** each repo is public with a clean `gitleaks` history scan and push protection on; each repo has protected `main`, the secret scan and Checkov run on a test pull request (a workflow with `permissions: write-all` fails Checkov), and Renovate opens its onboarding pull request; in each code repo, a deliberately non-compliant script (copied from the template, with its header block removed) fails pre-commit and the `bash-checks` job, and an edited copy of `scripts/lib/common.sh` fails the drift check. The Projects board shows one issue per step in the roadmap's milestones, and running the script again creates nothing new.
+**Test:** each repo is public with a clean `gitleaks` history scan and push protection on, and GitHub shows its license as GPL-3.0; each repo has protected `main`, the secret scan and Checkov run on a test pull request (a workflow with `permissions: write-all` fails Checkov), and Renovate opens its onboarding pull request; in each code repo, a deliberately non-compliant script (copied from the template, with its header block removed) fails pre-commit and the `bash-checks` job, and an edited copy of `scripts/lib/common.sh` fails the drift check. The Projects board shows one issue per step in the roadmap's milestones, and running the script again creates nothing new.
 
 ## Stage 2: Infrastructure (`russetleaf-infra`)
 

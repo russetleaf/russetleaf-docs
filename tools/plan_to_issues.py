@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# This program is licensed under the terms of the GNU General Public License v3.0.
 """Create GitHub milestones, labels and one issue per step from a phase's plan and roadmap.
 
 Reads a phase's `plan.md` (steps, tiers, estimates, tests) and `roadmap.md`

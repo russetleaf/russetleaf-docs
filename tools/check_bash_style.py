@@ -4,7 +4,7 @@
 Checks what shellcheck (correctness) and shfmt (layout) do not:
 
 Every script and library:
-  - a file header naming the file ("# <file name>") and the license line
+  - a file header naming the file ("# <file name>") and the GPL v3.0 license line
   - every function written as `function name() {`, directly below a header block
     (a "########################################" line, comment lines, another one)
 
@@ -28,7 +28,7 @@ import sys
 from pathlib import Path
 
 RULE = '#' * 40
-LICENSE = 'This program is licensed under the terms of'
+LICENSE = '# This program is licensed under the terms of the GNU General Public License v3.0.'
 FUNCTION_DEF = re.compile(r'^\s*function\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(\)\s*\{')
 BARE_FUNCTION_DEF = re.compile(r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\(\)\s*\{')
 REQUIRED_FUNCTIONS = ('init_script', 'parse_params', 'usage', 'main')
@@ -79,8 +79,8 @@ def check_file_header(path, lines):
     problems = []
     if not any(line.strip() == f'# {path.name}' for line in lines[:12]):
         problems.append((1, f'the file header must name the file ("# {path.name}")'))
-    if not any(LICENSE in line for line in lines[:40]):
-        problems.append((1, 'the file header must include the license line'))
+    if not any(line.strip() == LICENSE for line in lines[:40]):
+        problems.append((1, f'the file header must include the license line: "{LICENSE}"'))
     return problems
 
 

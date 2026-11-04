@@ -41,7 +41,7 @@ main "$@"
 |---|---|
 | `#!/usr/bin/env bash` on line 1, never `#!/bin/bash -i` | An interactive shell loads `~/.bashrc` and aliases, and behaves differently under cron and systemd |
 | `set -Eeuo pipefail` | Stop on a failed command, an unset variable or a failed pipeline, with the ERR trap inherited by functions |
-| A file header: the file name, a description, the license line | Says what the file is before anyone reads the code |
+| A file header: the file name, a description, and the GPL v3.0 license line (the repo's `LICENSE`) | Says what the file is before anyone reads the code |
 | Every function written as `function name() {`, directly below a header block (`########################################`, a description, then `Globals:`, `Arguments:`, `Outputs:` and `Returns:` as they apply) | One look at any function shows what it reads, changes and prints |
 | `init_script` first: constants (`readonly`, uppercase), named exit codes (`ERR_*`), then the global variables (lowercase) | Every value the script depends on is in one place |
 | `parse_params` with `-h`/`--help`, `-n`/`--no-color` and `-v`/`--verbose`, and any unknown option rejected with exit code 64 | Every script can be explored safely, and a typo never runs as if it were valid |

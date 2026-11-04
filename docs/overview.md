@@ -294,6 +294,8 @@ The project's code is split across four Git repositories, by **what each one con
 | **`russetleaf-wordpress`** | The **custom WordPress image**: plugins, themes, the SQS must-use plugin | Signed image + SBOM | Its own CI | Plugin, theme or WordPress updates |
 | **`russetleaf-llm-summarizer`** | The **standalone MLOps project**: summarizer code, prompts, evaluation set and gate, Helm chart, model card, local demo | Signed image + **Helm chart** (OCI), evaluation reports | Its own CI | Code, prompt or model-evaluation changes |
 
+**In every repo:** the same **GPL v3.0 `LICENSE`**, an `AGENTS.md` with a `CLAUDE.md` that imports it, and the bash standard's checks and shared files ([ADR 1048](phase-1-russetleaf-dev/adr/1048-bash-script-standard.md)), set up with the rest of each repo's guardrails in Phase 1 step 1.1.
+
 ### Why four repos instead of one
 
 - **Config is kept separate from code** (standard Argo CD practice). Argo CD watches only `russetleaf-gitops`, so building an image never triggers a deploy by accident, and every deploy is a reviewed commit in one place.

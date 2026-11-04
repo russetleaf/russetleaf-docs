@@ -4,6 +4,8 @@
 # common.bats
 #
 # Tests for lib/common.sh: messages, colors, and error and signal handling.
+#
+# This program is licensed under the terms of the GNU General Public License v3.0.
 
 # shellcheck source=SCRIPTDIR/../bats-helpers.bash
 source "${BATS_TEST_DIRNAME}/../bats-helpers.bash"

@@ -20,6 +20,10 @@ Every bash script follows the **[bash script standard](docs/standards/bash.md)**
 - **Plan estimates:** when a step's hours change, update its checklist row, the tier totals and calendar figures in the plan, the totals in the [overview](docs/overview.md) and [ADR 1037](docs/phase-1-russetleaf-dev/adr/1037-project-phases.md), and recompute the roadmap's milestone dates.
 - **Runbooks** are listed in the [runbook index](docs/runbooks.md), the only index ([ADR 1046](docs/phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md)). The step that writes a runbook turns its entry into a link.
 
+## License
+
+Everything in the repo is licensed under the GNU General Public License v3.0 (`LICENSE`). Every script, library, test and tool carries the line `# This program is licensed under the terms of the GNU General Public License v3.0.` in its header.
+
 ## Checks before finishing
 
 Run these, and fix anything they report:

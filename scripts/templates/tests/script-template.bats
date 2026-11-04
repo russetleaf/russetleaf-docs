@@ -8,6 +8,8 @@
 # Every script needs at least these: --help, an unknown option, and its own
 # behavior. Use run_isolated (scripts/lib/bats-helpers.bash) with stub commands for
 # anything that would install or change something.
+#
+# This program is licensed under the terms of the GNU General Public License v3.0.
 
 # shellcheck source=SCRIPTDIR/../../lib/bats-helpers.bash
 source "${BATS_TEST_DIRNAME}/../../lib/bats-helpers.bash"

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# This program is licensed under the terms of the GNU General Public License v3.0.
 """Check the documentation's writing style: no second person and no contractions.
 
 Fails (exit 1) on "you", "your", "yours", "yourself" or "yourselves", and on contractions

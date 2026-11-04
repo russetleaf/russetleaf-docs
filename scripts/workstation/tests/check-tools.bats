@@ -6,6 +6,8 @@
 #
 # Tests for check-tools.sh, using stub commands on an isolated PATH, so the results
 # do not depend on what is installed on the machine running the tests.
+#
+# This program is licensed under the terms of the GNU General Public License v3.0.
 
 load helpers
 
