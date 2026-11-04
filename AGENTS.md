@@ -2,6 +2,14 @@
 
 This repo holds the RussetLeaf project's documentation (published at https://docs.russetleaf.dev), planning, ADRs and shared tooling. These instructions apply to anyone working here, people and coding agents alike; `CLAUDE.md` imports this file so Claude Code reads it at the start of every session. The rules for coding agents in later phases are in [ADR 2004](docs/phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md).
 
+## Working in the repo
+
+- **Fix related gaps in the same piece of work.** When a change shows that other documents are now outdated, or reveals a small related gap, fix them in the same change rather than leaving them as suggestions for later. Ask first only when the fix needs a decision the operator has not made.
+- **Record decisions** in the phase plan's [decision log](docs/phase-1-russetleaf-dev/plan.md#decision-log) (date, decision, reason), and significant ones as ADRs.
+- **Stage only the files the change touched** (`git add <paths>`, never `git add -A` or `git add .`), because another session or person may have unrelated work in progress in the same clone, and check `git diff --cached` before committing. Commits are signed; the commit message describes everything in it.
+- **Keep private details out of the repo:** it is public, so no secrets, AWS account or Organization IDs, personal email addresses or phone numbers. Write placeholders such as `<name>+rl-management@<domain>`, and keep real values in the password manager.
+- **No judgments of skill levels** (such as "junior", "intermediate" or "advanced") about people or their work in any file.
+
 ## Bash scripts
 
 Every bash script follows the **[bash script standard](docs/standards/bash.md)** ([ADR 1048](docs/phase-1-russetleaf-dev/adr/1048-bash-script-standard.md)), without exception and without needing to be asked:
@@ -17,9 +25,10 @@ Every bash script follows the **[bash script standard](docs/standards/bash.md)**
 - **Writing style:** third person ("the operator"), no second person, no contractions; instructions in the imperative. See "Writing style" and "References are links" in the [overview](docs/overview.md).
 - **References are links:** every mention of an ADR or an existing document is a Markdown link; files that do not exist yet appear as plain paths.
 - **ADRs:** take the next free number in the phase, start from the [ADR template](docs/adr/0000-template.md), and add the ADR to the index in the [overview](docs/overview.md), the `nav` in `mkdocs.yml` and the ADR table in the [Phase 1 plan](docs/phase-1-russetleaf-dev/plan.md). An ADR that changes an earlier one adds an "Update" note to it.
+- **Plan format:** keep each step's heading as `### Step <n>: <title>`, with **Do:** and **Test:** paragraphs and a matching progress-checklist row (`| <n> <name> | <tier> | <low>–<high> | ...`), because `tools/plan_to_issues.py` builds the GitHub issues and milestones from them; after editing a plan, run it as a dry run (`tools/plan_to_issues.py --phase-dir docs/phase-1-russetleaf-dev --repo <owner>/russetleaf-docs`) to confirm it still parses.
 - **Plan estimates:** when a step's hours change, update its checklist row, the tier totals and calendar figures in the plan, the totals in the [overview](docs/overview.md) and [ADR 1037](docs/phase-1-russetleaf-dev/adr/1037-project-phases.md), and recompute the roadmap's milestone dates.
 - **Setup guides:** every procedure done by hand (console steps, accounts, hardware) gets a step-by-step guide in `docs/phase-<n>-<site>/setup/<topic>.md` before it is done, so the work is documented in the repo rather than only remembered. Each guide lists what to have ready, names each setting rather than every click (consoles change), ends with checks that match the plan step's test, and is linked from that step and from the `Setup guides` section of the `nav` in `mkdocs.yml`. When the real procedure differs from a guide, fix the guide. Examples: [AWS management account](docs/phase-1-russetleaf-dev/setup/aws-management-account.md), [Slack and outside monitoring](docs/phase-1-russetleaf-dev/setup/slack-and-monitoring.md), [lab network](docs/phase-1-russetleaf-dev/setup/lab-network.md).
-- **Runbooks** are listed in the [runbook index](docs/runbooks.md), the only index ([ADR 1046](docs/phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md)). The step that writes a runbook turns its entry into a link.
+- **Runbooks** are listed in the [runbook index](docs/runbooks.md), the only index ([ADR 1046](docs/phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md)). A planned runbook appears there as a plain path with the status **Planned**; the step that writes it turns the path into a link, sets the status to **Written** and records the date of its first rehearsal, and later drills update that date. A new runbook gets an entry in the index in the same change that plans it.
 
 ## License
 
@@ -34,5 +43,7 @@ pre-commit run --all-files     # shellcheck, shfmt, bash standard, doc reference
 bats -r scripts                # the scripts' tests
 mkdocs build --strict          # broken links and anchors (in a venv with requirements-docs.txt)
 ```
+
+CI also runs **markdownlint** (`.markdownlint-cli2.yaml`: blank lines around headings, lists, tables and code blocks; four-space nested lists; no trailing spaces or repeated blank lines). It needs Node.js, which the workstation does not install, so follow those rules while writing and check the CI result after pushing.
 
 Install the hooks once per clone with `pre-commit install`. The tools come from `scripts/workstation/setup-ubuntu.sh`.
