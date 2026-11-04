@@ -143,19 +143,30 @@ PHP and Composer are not needed locally: the WordPress image installs plugins in
 
 ### 5. Check the setup
 
-[`scripts/workstation/check-tools.sh`](https://github.com/smscully/russetleaf-docs/blob/main/scripts/workstation/check-tools.sh) prints every tool's version and fails if a required one is missing. Run it with `--system` right after the setup script (before any repo is cloned), then without it inside each repo, after `mise install`, to check that repo's pinned tools as well. Then:
+[`scripts/workstation/check-tools.sh`](https://github.com/smscully/russetleaf-docs/blob/main/scripts/workstation/check-tools.sh) prints every tool's version and fails if a required one is missing. Run it with `--system` right after the setup script (before any repo is cloned), then without it inside each repo, after `mise install`, to check that repo's pinned tools as well.
+
+**Now** (step 0.1), after logging out and back in for the `docker` group:
 
 ```bash
 scripts/workstation/check-tools.sh --system
 docker run --rm hello-world
-kind create cluster --name smoke && kubectl get nodes && kind delete cluster --name smoke
-talosctl cluster create --name local-smoke          # Talos in Docker
-talosctl cluster destroy --name local-smoke
-aws sts get-caller-identity --profile rl-home-admin
 gh auth status
 ```
 
-**Test:** all of the above succeed; `check-tools.sh` reports every tool, inside each repo as well; and running `setup-ubuntu.sh` a second time changes nothing (no duplicate lines in `~/.bashrc` or apt sources).
+**Later**, once the tools and accounts they need exist:
+
+```bash
+# Step 1.1, inside a new repo after `mise install` (kind and talosctl come from its .mise.toml):
+scripts/workstation/check-tools.sh
+kind create cluster --name smoke && kubectl get nodes && kind delete cluster --name smoke
+talosctl cluster create --name local-smoke          # Talos in Docker
+talosctl cluster destroy --name local-smoke
+
+# Step 2.0, once IAM Identity Center and the `aws configure sso` profiles exist:
+aws sts get-caller-identity --profile rl-home-admin
+```
+
+**Test:** the "now" checks pass in step 0.1, the step 1.1 checks pass in each new repo, and the AWS check passes in step 2.0; running `setup-ubuntu.sh` a second time changes nothing (no duplicate lines in `~/.bashrc` or apt sources).
 
 ## Stage 0: Prerequisites and decisions
 
@@ -173,7 +184,7 @@ gh auth status
 - **Slack:** create the project workspace and the channels from the Phase 1 design ([Alerting and notifications](design.md#alerting-and-notifications-slack)): `#rl-critical`, `#rl-dev-alerts`, `#rl-com-alerts`, `#rl-deploys`, `#rl-security`, `#rl-mlops`, `#rl-costs`, `#rl-staging`. Create the custom Slack app ("russetleaf-bot") with a bot token allowed to post to those channels, and install the **GitHub** app for Slack. Turn on phone notifications for `#rl-critical` only.
 - **Outside monitoring accounts** (free plans): a heartbeat service (e.g. healthchecks.io) and an uptime checker (e.g. UptimeRobot or Better Stack), both posting to Slack.
 
-**Test:** the workstation checks pass; a test message from the bot token (`curl` to Slack's `chat.postMessage`) appears in `#rl-dev-alerts`.
+**Test:** the workstation checks that can run now pass (`check-tools.sh --system`, `docker run --rm hello-world` and `gh auth status`; see [Check the setup](#5-check-the-setup)); a test message from the bot token (`curl` to Slack's `chat.postMessage`) appears in `#rl-dev-alerts`.
 
 ### Step 0.2: Decisions to make before writing code
 
@@ -299,9 +310,10 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 - **A GitLab mirror of every code repo**, as `russetleaf-docs` already has: a private GitLab project per repo, and the same `gitlab-sync` workflow (the action pinned by commit, a read-only `contents: read` token on the GitHub side) pushing to it on every push to `main`. Each repo has its own GitLab personal access token (named after the repo, `write_repository` only, 12-month expiry) in its `GITLAB_PAT` secret, with `GITLAB_URL` and `GITLAB_USERNAME`; add each token to the credential inventory (step 4.2). This gives a copy outside both GitHub and AWS that is never more than one push behind ([disaster recovery plan](disaster-recovery.md)).
 - **The bash script standard in every code repo** ([ADR 1048](adr/1048-bash-script-standard.md); [the standard](../standards/bash.md)): an **`AGENTS.md`** (the repo's conventions and checks, including the bash section from this repo's `AGENTS.md`) with a **`CLAUDE.md`** that imports it (`@AGENTS.md`), so every Claude Code session in the repo starts with the rules; copies of `scripts/lib/`, `tools/check_bash_style.py` and `tools/claude_bash_hook.py` from `russetleaf-docs`; a **`.pre-commit-config.yaml`** with the shellcheck, shfmt and bash-standard hooks (added to the repo's other hooks); **`.claude/settings.json`** with the PostToolUse hook; and a CI job calling the reusable **`bash-checks.yml`** workflow from `russetleaf-docs`, pinned to a commit. Run `pre-commit install` in each clone.
 
+- **Finish the workstation checks:** in each new repo, run `mise install`, then `scripts/workstation/check-tools.sh` (with a copy of the script, or from `russetleaf-docs`) and the kind and Talos-in-Docker smoke tests from [Check the setup](#5-check-the-setup).
 - **Track the plan on GitHub:** run `tools/plan_to_issues.py --phase-dir docs/phase-1-russetleaf-dev --repo <owner>/russetleaf-docs` (a dry run), check its output, then run it again with `--apply` to create the roadmap's milestones, the labels and one issue per step. Create a public **GitHub Projects** board with these issues (and later issues from the code repos), a **Roadmap** view grouped by milestone, and fields for estimate and actual hours.
 
-**Test:** each repo is public with a clean `gitleaks` history scan and push protection on, and GitHub shows its license as GPL-3.0; a push to `main` appears in the repo's GitLab mirror within minutes; each repo has protected `main`, the secret scan and Checkov run on a test pull request (a workflow with `permissions: write-all` fails Checkov), and Renovate opens its onboarding pull request; in each code repo, a deliberately non-compliant script (copied from the template, with its header block removed) fails pre-commit and the `bash-checks` job, and an edited copy of `scripts/lib/common.sh` fails the drift check. The Projects board shows one issue per step in the roadmap's milestones, and running the script again creates nothing new.
+**Test:** in each repo, `check-tools.sh` reports every pinned tool and the kind and Talos-in-Docker smoke clusters start and are deleted; each repo is public with a clean `gitleaks` history scan and push protection on, and GitHub shows its license as GPL-3.0; a push to `main` appears in the repo's GitLab mirror within minutes; each repo has protected `main`, the secret scan and Checkov run on a test pull request (a workflow with `permissions: write-all` fails Checkov), and Renovate opens its onboarding pull request; in each code repo, a deliberately non-compliant script (copied from the template, with its header block removed) fails pre-commit and the `bash-checks` job, and an edited copy of `scripts/lib/common.sh` fails the drift check. The Projects board shows one issue per step in the roadmap's milestones, and running the script again creates nothing new.
 
 ## Stage 2: Infrastructure (`russetleaf-infra`)
 
@@ -321,7 +333,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 - Update the break-glass kit: the management account's root access and the Identity Center logins (member accounts no longer have root credentials).
 - **State:** the state bucket does not exist until step 2.1, so `envs/org` starts with **local state** (kept out of Git, backed up in the password manager); step 2.1 moves it to the S3 backend (`terraform init -migrate-state`) and deletes the local copy.
 
-**Test:** sign-in to every account through Identity Center works with MFA; a test action blocked by an SCP fails (e.g. creating a resource in eu-west-1, or disabling GuardDuty in russetleaf-home); member accounts show no root credentials; the effective AI services opt-out policy shows every service opted out in each account; configuring a chat channel in a different Slack workspace is refused; an untagged resource is flagged by the tag policy; **in the policy test account**, a bucket given a deliberately public bucket policy still **refuses** a request from an identity outside the Organization (RCP), and a plain HTTP request is refused; after the RCPs reach the real OUs, replication to the Backup account and the organization CloudTrail delivery to Log Archive still work; moving the policy test account into **Suspended** blocks every action in it, and moving it back restores access.
+**Test:** sign-in to every account through Identity Center works with MFA, and from the workstation `aws sts get-caller-identity --profile rl-home-admin` (profiles from `aws configure sso`) returns the russetleaf-home account; a test action blocked by an SCP fails (e.g. creating a resource in eu-west-1, or disabling GuardDuty in russetleaf-home); member accounts show no root credentials; the effective AI services opt-out policy shows every service opted out in each account; configuring a chat channel in a different Slack workspace is refused; an untagged resource is flagged by the tag policy; **in the policy test account**, a bucket given a deliberately public bucket policy still **refuses** a request from an identity outside the Organization (RCP), and a plain HTTP request is refused; after the RCPs reach the real OUs, replication to the Backup account and the organization CloudTrail delivery to Log Archive still work; moving the policy test account into **Suspended** blocks every action in it, and moving it back restores access.
 
 ### Step 2.0b: Organization security services
 

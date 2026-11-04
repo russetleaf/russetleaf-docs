@@ -215,6 +215,14 @@ function check_docker() {
 #   None
 ########################################
 function check_python_tools() {
+  local uv_path
+
+  # uv is a mise tool, so it is on the PATH only in shells that run
+  # `mise activate`; ask mise where it is in other shells (scripts, CI)
+  if ! command -v uv >/dev/null 2>&1 && uv_path="$(mise which uv 2>/dev/null)"; then
+    PATH="${uv_path%/*}:${PATH}"
+  fi
+
   section "mise and the Python tools (uv)"
   check_tool mise required mise --version
   check_tool uv required uv --version

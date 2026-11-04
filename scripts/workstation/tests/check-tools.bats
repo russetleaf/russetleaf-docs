@@ -76,6 +76,31 @@ setup() {
   [[ "${output}" == *"1 required tool(s) missing"* ]]
 }
 
+@test "uv installed by mise but not on the PATH is found through mise" {
+  stub_system_tools
+  mkdir -p "${BATS_TEST_TMPDIR}/mise-uv"
+  mv "${BIN}/uv" "${BATS_TEST_TMPDIR}/mise-uv/uv"
+  stub_script mise "case \"\$1\" in
+  which) echo '${BATS_TEST_TMPDIR}/mise-uv/uv' ;;
+  *) echo 'mise 2026.11.1' ;;
+esac"
+  run_isolated "${CHECK}" --system
+  [ "${status}" -eq 0 ]
+  [[ "${output}" =~ uv\ +1\.2\.3 ]]
+}
+
+@test "uv missing from both the PATH and mise is reported" {
+  stub_system_tools
+  rm "${BIN}/uv"
+  stub_script mise 'case "$1" in
+  which) exit 1 ;;
+  *) echo "mise 2026.11.1" ;;
+esac'
+  run_isolated "${CHECK}" --system
+  [ "${status}" -eq 1 ]
+  [[ "${output}" =~ uv\ +MISSING ]]
+}
+
 @test "a missing Docker plugin counts as missing" {
   stub_system_tools
   stub_script docker 'case "$1" in
