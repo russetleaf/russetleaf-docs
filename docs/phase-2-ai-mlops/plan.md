@@ -43,7 +43,7 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 ### Step 1.1: The `russetleaf-llm-summarizer` repo
 
-**Do:** create **`russetleaf-llm-summarizer`** the same way as the Phase 1 repos (Phase 1 step 1.1): README, `.gitignore`, the GPL v3.0 `LICENSE`, branch protection, gitleaks with a full-history scan, then **make it public** with secret scanning and push protection; **OpenSSF Scorecard**, **zizmor**, **dependency review**, **Checkov** (workflows first) and **Renovate** (Python lock file, base images, GitHub Actions, `.mise.toml`). Add the GitHub organization settings for it in `russetleaf-infra/envs/github/`. Layout: `src/`, `prompts/`, `evals/`, `guardrails/`, `chart/`, `ci/`, `demo/`, `online-eval/` (see the [Phase 2 design](design.md#repository-russetleaf-llm-summarizer)).
+**Do:** create **`russetleaf-llm-summarizer`** the same way as the Phase 1 repos (Phase 1 step 1.1): README, `.gitignore`, the GPL v3.0 `LICENSE`, its GitLab mirror, branch protection, gitleaks with a full-history scan, then **make it public** with secret scanning and push protection; **OpenSSF Scorecard**, **zizmor**, **dependency review**, **Checkov** (workflows first) and **Renovate** (Python lock file, base images, GitHub Actions, `.mise.toml`). Add the GitHub organization settings for it in `russetleaf-infra/envs/github/`. Layout: `src/`, `prompts/`, `evals/`, `guardrails/`, `chart/`, `ci/`, `demo/`, `online-eval/` (see the [Phase 2 design](design.md#repository-russetleaf-llm-summarizer)).
 
 **Test:** the repo is public with a clean history scan and push protection on; a test pull request runs the secret scan and Checkov; Renovate opens its onboarding pull request.
 

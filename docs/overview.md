@@ -228,7 +228,7 @@ What each phase builds and shows. Phase 1 on its own is a complete project; Phas
 - **CI on GitHub in every repo:** Terraform checks and plans in `russetleaf-infra`; manifest validation and Kyverno policy tests in `russetleaf-gitops`; image builds with SBOMs, scans and signing in `russetleaf-wordpress` (and, from Phase 2, `russetleaf-llm-summarizer`, with its prompt evaluation gate). Reviewers see all of it without the AWS stack running.
 - **A highly available home cluster:** three Talos control-plane nodes with a virtual IP, replicated MariaDB with automatic failover, workloads spread across nodes, rolling upgrades without downtime, and recorded node-failure drills (unplug a node, the site stays up).
 - **An AWS Security Reference Architecture foundation:** separate management, security tooling, log archive, backup, infrastructure and workload accounts; SCP guardrails and RCPs forming a data perimeter; centralized root access management; Identity Center with MFA; organization-wide Security Hub, GuardDuty, Config, Access Analyzer and CloudTrail, all in Terraform; and a Well-Architected review.
-- **Disaster recovery beyond a single account:** immutable, cross-account and cross-region copies (S3 Object Lock) encrypted with the Backup account's own keys, monthly copies kept 12 months for damage found late, a copy outside AWS, daily repo mirrors, every copy checked daily for freshness, a break-glass kit, a written plan with recovery objectives, scenarios (including a compromised cluster) and a bootstrap order, and restore drills for every kind of copy plus a yearly full rebuild.
+- **Disaster recovery beyond a single account:** immutable, cross-account and cross-region copies (S3 Object Lock) encrypted with the Backup account's own keys, monthly copies kept 12 months for damage found late, a copy outside AWS, daily repo mirrors plus a GitLab mirror of every repo on every push, every copy checked daily for freshness, a break-glass kit, a written plan with recovery objectives, scenarios (including a compromised cluster) and a bootstrap order, and restore drills for every kind of copy plus a yearly full rebuild.
 - **Incident response:** severity levels with an incident thread as the timeline, a narrow rule for emergency changes when GitOps is down, about forty runbooks in one index (security incidents, recovery, rollback and alerts), evidence capture from a compromised container before it is rebuilt, and tabletop exercises ([ADR 1045](phase-1-russetleaf-dev/adr/1045-container-forensics.md), [ADR 1046](phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md)).
 - **Tested tooling and one bash standard:** the workstation is set up by a script that CI runs twice on a fresh Ubuntu 24.04 every week, and every bash script in every repo follows one standard, with bats tests and checks at commit time, after every edit by Claude, and in CI ([ADR 1048](phase-1-russetleaf-dev/adr/1048-bash-script-standard.md)).
 - **A defined rollback strategy:** decision rules (roll back first), Git revert as the default, automatic canary rollback, backups before database schema changes, recovery paths for Cilium, Kyverno and Argo CD, `prevent_destroy` on stateful infrastructure, and regular rollback drills (Phase 2 adds re-summarizing bad AI output).
@@ -272,19 +272,19 @@ Each phase's plan tiers every step as **Core** (a complete, working, secure plat
 
 | Plan | Core | Extended | Advanced | Total |
 |---|---|---|---|---|
-| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~177–289 | ~93–161 | ~89–144 | **~359–594** |
+| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~177–290 | ~93–161 | ~89–144 | **~359–595** |
 | [Phase 2: AI summaries and MLOps](phase-2-ai-mlops/plan.md#priorities-and-time-estimates) (optional) | ~50–86 | ~33–54 | ~64–104 | **~147–244** |
 | [Phase 3: russetleaf.com](phase-3-russetleaf-com/plan.md#priorities-and-time-estimates) (optional) | ~74–123 | ~14–22 | ~16–25 | **~104–170** |
-| **Whole project** | ~301–498 | ~140–237 | ~169–273 | **~610–1008** |
+| **Whole project** | ~301–499 | ~140–237 | ~169–273 | **~610–1009** |
 
 **Calendar time at about 20 hours a week:**
 
 | Scope | Hours | Calendar |
 |---|---|---|
-| Phase 1, Core tier | ~177–289 | 9–14 weeks |
-| Phase 1, everything | ~359–594 | 18–30 weeks (4–7 months) |
-| Phases 1 and 2 | ~506–838 | 25–42 weeks (6–10 months) |
-| All three phases | ~610–1008 | 30–50 weeks (7–12 months; 14–23 months at 10 hours a week) |
+| Phase 1, Core tier | ~177–290 | 9–14 weeks |
+| Phase 1, everything | ~359–595 | 18–30 weeks (4–7 months) |
+| Phases 1 and 2 | ~506–839 | 25–42 weeks (6–10 months) |
+| All three phases | ~610–1009 | 30–50 weeks (7–12 months; 14–23 months at 10 hours a week) |
 
 Phase 1 is built with AI assistance in conversation; Phases 2 and 3 are built with AI coding agents under [ADR 2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md), with Phase 1's actual hours as the baseline for measuring the difference. Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar. A finished Phase 1 is worth more than three unfinished phases.
 
@@ -300,7 +300,7 @@ The project's code is split across four Git repositories, by **what each one con
 | **`russetleaf-wordpress`** | The **custom WordPress image**: plugins, themes, the SQS must-use plugin | Signed image + SBOM | Its own CI | Plugin, theme or WordPress updates |
 | **`russetleaf-llm-summarizer`** | The **standalone MLOps project**: summarizer code, prompts, evaluation set and gate, Helm chart, model card, local demo | Signed image + **Helm chart** (OCI), evaluation reports | Its own CI | Code, prompt or model-evaluation changes |
 
-**In every repo:** the same **GPL v3.0 `LICENSE`** (only the RussetLeaf name and logo are reserved, in `brand/` folders; [ADR 1049](phase-1-russetleaf-dev/adr/1049-licensing.md)), an `AGENTS.md` with a `CLAUDE.md` that imports it, and the bash standard's checks and shared files ([ADR 1048](phase-1-russetleaf-dev/adr/1048-bash-script-standard.md)), set up with the rest of each repo's guardrails in Phase 1 step 1.1.
+**In every repo:** the same **GPL v3.0 `LICENSE`** (only the RussetLeaf name and logo are reserved, in `brand/` folders; [ADR 1049](phase-1-russetleaf-dev/adr/1049-licensing.md)), a **GitLab mirror** updated on every push (a copy outside GitHub and AWS), an `AGENTS.md` with a `CLAUDE.md` that imports it, and the bash standard's checks and shared files ([ADR 1048](phase-1-russetleaf-dev/adr/1048-bash-script-standard.md)), set up with the rest of each repo's guardrails in Phase 1 step 1.1.
 
 ### Why four repos instead of one
 
@@ -577,7 +577,7 @@ Work **infrastructure first, then code, then config**, so nothing is deployed be
 1. `russetleaf-infra/bootstrap`: apply locally to create the Terraform state bucket and the GitHub OIDC roles.
 2. `russetleaf-infra/envs/home`: apply locally (over WireGuard to the lab network) to create the Talos cluster on all three nodes, the Cloudflare tunnel and DNS for russetleaf.dev, and the AWS resources used from home. Save the kubeconfig and talosconfig it produces somewhere safe (not in Git).
 3. Cilium, Argo CD and the root Application come up with the cluster (Talos inline manifests). Add `platform/cilium/` and `platform/argocd/` so Argo CD adopts them, then remove them from the inline manifests (`bootstrap_inline_manifests = false`; set it back to `true` for any later fresh bootstrap, [ADR 1039](phase-1-russetleaf-dev/adr/1039-bootstrap-through-talos-inline-manifests.md)). From then on, Argo CD manages everything else, including itself.
-4. Add the secrets the cluster needs to AWS Secrets Manager (WordPress admin and application passwords; **not** the database or Valkey passwords, which are generated in the cluster ([ADR 1047](phase-1-russetleaf-dev/adr/1047-in-cluster-credentials-and-rotation.md)); Cloudflare tunnel token, scoped IAM keys for home until keyless OIDC access, Phase 1 step 9.1, is done); External Secrets syncs them in.
+4. Add the secrets the cluster needs to AWS Secrets Manager (the WordPress application passwords for the REST API, but **no admin password**: admins sign in with Google, and the first install's random admin password is never stored ([ADR 1008](phase-1-russetleaf-dev/adr/1008-google-sign-in-for-admins.md)); **not** the database or Valkey passwords, which are generated in the cluster ([ADR 1047](phase-1-russetleaf-dev/adr/1047-in-cluster-credentials-and-rotation.md)); Cloudflare tunnel token, scoped IAM keys for home until keyless OIDC access, Phase 1 step 9.1, is done); External Secrets syncs them in.
 
 **russetleaf.com always-on edge (once):**
 

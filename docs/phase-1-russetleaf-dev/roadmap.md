@@ -7,7 +7,7 @@ The milestones for building [Phase 1](plan.md), with target dates, and the actua
 - **Start:** planning on Monday, November 2, 2026; building from **Tuesday, November 3**.
 - **Pace:** about **60 hours a week**, worked as **10 hours a day, six days a week**, with **Saturdays off**.
 - **Fixed dates:** `rl-home-cp03` (the 16 GB server) and the ER605 lab router arrive by November 4, so **November 3–4** are for the preliminaries the servers need (accounts and tools, decisions, the lab network, the repos, the AWS accounts and the Terraform state bucket), and **November 5–6** are for the servers: the cluster up on the 5th, hardening and tests on the 6th.
-- **Time-boxing M1:** its steps are estimated at 21–38 hours against 20 available, so only what the servers need is done on November 3–4; the rest (the repos' full CI guardrails, from step 1.1) is finished after November 6 and counted in M3's dates.
+- **Time-boxing M1:** its steps are estimated at 21–39 hours against 20 available, so only what the servers need is done on November 3–4; the rest (the repos' full CI guardrails, from step 1.1) is finished after November 6 and counted in M3's dates.
 - **Order after that:** the Core tier first (in plan order), then the Extended steps, then the Advanced steps, as the plan recommends.
 - **Estimates:** the plan's focused-hour ranges (expect ±50%). **Target** is the date at the midpoint of the estimates; **latest** is the date at the high end.
 - **Not included:** holidays (Thanksgiving, late December), days lost to waiting (AWS approvals, DNS), and the drop in pace that long stretches of 10-hour days usually bring. Plan around the **latest** dates.
@@ -16,14 +16,14 @@ The milestones for building [Phase 1](plan.md), with target dates, and the actua
 
 | Milestone | Steps | Est. hours | Target | Latest | Actual | Actual hours |
 |---|---|---|---|---|---|---|
-| **M1 Foundations** | 0.1–0.3, 1.1, 2.0, 2.1 | 21–38 | Wed, Nov 4, 2026 | Wed, Nov 4, 2026 | | |
+| **M1 Foundations** | 0.1–0.3, 1.1, 2.0, 2.1 | 21–39 | Wed, Nov 4, 2026 | Wed, Nov 4, 2026 | | |
 | **M2 Cluster up** | 2.2 | 13–19 | Fri, Nov 6, 2026 | Fri, Nov 6, 2026 | | |
-| **M3 AWS, GitOps and platform services** | 2.0b, 2.3, 2.4, 3.1, 4.1–4.7 | 62–102 | Wed, Nov 18, 2026 | Fri, Nov 20, 2026 | | |
+| **M3 AWS, GitOps and platform services** | 2.0b, 2.3, 2.4, 3.1, 4.1–4.7 | 62–102 | Wed, Nov 18, 2026 | Sun, Nov 22, 2026 | | |
 | **M4 WordPress live with staging and promotion** | 5.1–5.7, 5.10, 5.12 | 54–91 | Thu, Nov 26, 2026 | Wed, Dec 2, 2026 | | |
-| **M5 Core tier complete and published** | 6.1, 6.3, 9.2 | 27–39 | Mon, Nov 30, 2026 | Sun, Dec 6, 2026 | | |
+| **M5 Core tier complete and published** | 6.1, 6.3, 9.2 | 27–39 | Mon, Nov 30, 2026 | Mon, Dec 7, 2026 | | |
 | **M6 Production hardening and operations** | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.14, 9.1 | 93–161 | Tue, Dec 15, 2026 | Fri, Dec 25, 2026 | | |
 | **M7 Advanced practices; Phase 1 complete** | 7.7, 8.1–8.9 | 89–144 | Tue, Dec 29, 2026 | Mon, Jan 11, 2027 | | |
-| **Total** | | **359–594** | | | | |
+| **Total** | | **359–595** | | | | |
 
 **The first four days:**
 

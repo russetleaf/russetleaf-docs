@@ -20,10 +20,10 @@ Everyday availability targets are in [ADR 1014](adr/1014-availability-levels.md)
 
 | Asset | Primary location | Independent copy | Retention of the copy | Rebuildable instead? |
 |---|---|---|---|---|
-| Infrastructure | `russetleaf-infra` (GitHub) | Repo mirror in the backup account | Daily bundles for 35 days; monthly bundles for 12 months | Yes, from Terraform |
-| Deployed configuration | `russetleaf-gitops` (GitHub) | Repo mirror in the backup account | Daily for 35 days; monthly for 12 months | Yes, from GitOps |
-| Application code | `russetleaf-wordpress` (and `russetleaf-llm-summarizer` from Phase 2) (GitHub) | Repo mirrors in the backup account | Daily for 35 days; monthly for 12 months | Yes |
-| Documentation and planning | `russetleaf-docs` (GitHub; issues and the Projects board stay on GitHub) | Repo mirror in the backup account; also **mirrored to GitLab on every push** (the `gitlab-sync` workflow), a copy outside GitHub and AWS | Daily for 35 days; monthly for 12 months; GitLab always current | The documents, yes; issues only from GitHub |
+| Infrastructure | `russetleaf-infra` (GitHub) | Repo mirror in the backup account; **mirrored to GitLab** on every push | Daily bundles for 35 days; monthly bundles for 12 months; GitLab always current | Yes, from Terraform |
+| Deployed configuration | `russetleaf-gitops` (GitHub) | Repo mirror in the backup account; **mirrored to GitLab** on every push | Daily for 35 days; monthly for 12 months; GitLab always current | Yes, from GitOps |
+| Application code | `russetleaf-wordpress` (and `russetleaf-llm-summarizer` from Phase 2) (GitHub) | Repo mirrors in the backup account; **mirrored to GitLab** on every push | Daily for 35 days; monthly for 12 months; GitLab always current | Yes |
+| Documentation and planning | `russetleaf-docs` (GitHub; issues and the Projects board stay on GitHub) | Repo mirror in the backup account; **mirrored to GitLab** on every push | Daily for 35 days; monthly for 12 months; GitLab always current | The documents, yes; issues only from GitHub |
 | Images and charts | GHCR | None needed | — | Yes, rebuilt from the mirrored source |
 | Terraform state | S3 state bucket (us-east-1, **russetleaf-infra** account) | **Replicated** to the backup account (us-west-2, Object Lock); the source bucket also keeps old versions for 90 days | 30-day lock, deleted after 35 days; monthly copies for 12 months | Partly (state can be re-imported, but slowly) |
 | russetleaf.dev database | MariaDB backups in S3 (us-east-1), every 6 hours | **Replicated** to the backup account (Object Lock), plus a daily **`age`-encrypted copy in Cloudflare R2** (bucket lock), outside AWS | 30-day lock, deleted after 35 days; monthly copies for 12 months | No |
@@ -66,13 +66,15 @@ A copy that silently stopped arriving is found only when it is needed, so each o
 
 A scheduled GitHub Actions workflow (daily) creates a `git bundle` of each of the five repos (including `russetleaf-docs`) and uploads it to a bucket in the backup account, using an OIDC role that can only **write** new objects. Images and charts are not copied: they are rebuilt from the mirrored source.
 
+Every repo is also **mirrored to GitLab on every push** to `main`, by a `gitlab-sync` workflow with a per-repo GitLab token. That copy sits outside both GitHub and AWS and is never more than one push behind, so it is the first place to restore from if GitHub is lost; the bundles in the backup account are the fallback, with history GitLab may not keep (for example after a force-push).
+
 ## Break-glass kit
 
 Kept in the password manager, with a **printed copy** of the starred items stored somewhere safe at home and ideally a second location (e.g. with a family member).
 
 - ★ AWS: the **management account's** root email, password and **MFA recovery** (member accounts have no root credentials: centralized root access management); the IAM Identity Center admin and break-glass logins
 - ★ GitHub: account login and **recovery codes**
-- ★ GitLab (the mirror of `russetleaf-docs`): account login and **recovery codes**
+- ★ GitLab (the mirrors of every repo): account login and **recovery codes**
 - ★ Cloudflare: account login and recovery codes
 - ★ Google: account recovery (for the Google Cloud project and Google sign-in)
 - ★ Domain registrar logins for russetleaf.com and russetleaf.dev
@@ -101,7 +103,7 @@ The step-by-step runbooks for these scenarios (etcd recovery, node replacement, 
 | **A workload account lost** (closed, locked) | Up to the last replicated copy | Days | Create a replacement account in the Organization (`envs/org`); re-apply `bootstrap/` and the environment; restore data from the Backup account; regenerate secrets. |
 | **Management account compromised or lost** | Up to the last replicated copy | Days | The worst case: recover access through AWS Support using the break-glass kit; the member accounts, logs and backups keep running meanwhile. If the Organization cannot be recovered, create a new management account and move the member accounts into a new Organization. If AWS access is lost entirely, rebuild in new accounts and restore the database and etcd from the **encrypted copies in Cloudflare R2** (the `age` key is in the break-glass kit). |
 | **AWS region outage** (us-east-1) | None, or up to the last replicated copy | Hours to wait, or a day to move | Usually wait it out (russetleaf.dev keeps running at home, though S3 media calls fail, and with Phase 2 also SQS and Bedrock). For a long outage, re-point the home site's buckets and queue to us-west-2 using the replicated copies. |
-| **GitHub account or repos lost** | Commits since the last daily mirror (none for `russetleaf-docs`, mirrored to GitLab on every push) | Hours | Restore the repos from the bundles in the backup account to a new GitHub account (or another Git host); update Argo CD's repo URLs, the OIDC trust (new repo identities) and Kyverno's signing identities; rebuild and re-sign images. |
+| **GitHub account or repos lost** | None (every repo is mirrored to GitLab on every push; the daily bundles are the fallback) | Hours | Restore the repos from their GitLab mirrors (or, if those are lost too, from the bundles in the backup account) to a new GitHub account, or keep working from GitLab; update Argo CD's repo URLs, the OIDC trust (new repo identities) and Kyverno's signing identities; rebuild and re-sign images. |
 | **Cloudflare account lost** | None | Hours | New account; re-apply the Cloudflare parts of `envs/home` (tunnel, DNS, Access, rules); move russetleaf.dev's name servers. |
 | **Domain lost or expired** | None | Days (registrar process) | Recover through the registrar; keep auto-renew on and the registrar login in the break-glass kit to prevent this. |
 | **A namespace, volume or resource deleted by mistake** | Up to 6 hours of database changes, if a database volume was deleted | Minutes (objects); up to an hour (data) | Let Argo CD recreate the objects from Git; restore any lost data from its backup; **do not** restore an etcd snapshot, which would rewind the whole cluster. Follow `restore-deleted-resources.md`. |
