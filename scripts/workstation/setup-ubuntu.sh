@@ -7,7 +7,8 @@ set -Eeuo pipefail
 # Sets up an Ubuntu 24.04 workstation for RussetLeaf: the base packages, Docker
 # Engine (from Docker's repository, not the snap), kind's file-watch limits, mise
 # and direnv with their shell hooks, and the Python tools installed with uv. Safe to
-# run again: each step checks or overwrites its own files instead of appending.
+# run again: each step checks or overwrites its own files instead of appending. A
+# rerun also upgrades the packages it installs, if newer versions exist.
 #
 # The per-repo CLI tools (terraform, kubectl, talosctl, ...) are installed later by
 # `mise install` in each repo, from the versions pinned in its .mise.toml.
