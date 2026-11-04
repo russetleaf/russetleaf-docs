@@ -174,9 +174,9 @@ aws sts get-caller-identity --profile rl-home-admin
 
 **Do:**
 
-- Accounts: AWS: a **new, dedicated management account** (its own email address, root MFA on) for the AWS Organization in step 2.0, which creates **every other account, including russetleaf-home, new** inside it ([ADR 1019](adr/1019-aws-multi-account-sra.md)). The operator's older AWS Organization, from a 2022 project, is not used and stays separate; GitHub; Cloudflare (russetleaf.dev zone).
+- Accounts: AWS: a **new, dedicated management account** (its own email address, root MFA on) for the AWS Organization in step 2.0, created by following the [AWS management account setup guide](setup/aws-management-account.md) (part 1), which creates **every other account, including russetleaf-home, new** inside it ([ADR 1019](adr/1019-aws-multi-account-sra.md)). The operator's older AWS Organization, from a 2022 project, is not used and stays separate; GitHub; Cloudflare (russetleaf.dev zone).
 - Set up the workstation: see [Local workstation setup](#local-workstation-setup-ubuntu-2404).
-- Create an **AWS Budget** with an email alert at about $25/month, in the **new management account** (by hand in the console is fine; consolidated billing then covers every account step 2.0 creates, and Terraform takes the budget over in step 2.0).
+- Create an **AWS Budget** with an email alert at about $25/month, in the **new management account** (part 1 of the guide) (by hand in the console is fine; consolidated billing then covers every account step 2.0 creates, and Terraform takes the budget over in step 2.0).
 - Pick an AWS region for the home lab's AWS resources (e.g. `us-east-1`) and use it everywhere.
 
 - **SaaS account hardening** ([ADR 1032](adr/1032-defense-in-depth.md)): **passkeys or hardware security keys** on GitHub, Cloudflare, Google, Slack, the registrars and AWS Identity Center; **registrar lock** on russetleaf.com and russetleaf.dev; Cloudflare **API tokens scoped** to the zones and permissions each job needs.
@@ -321,7 +321,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 
 **Do** (`russetleaf-infra/envs/org/`, applied locally with the new management account), following the Phase 1 design's [AWS account structure](design.md#aws-account-structure-and-best-practices-security-reference-architecture) and [ADR 1019](adr/1019-aws-multi-account-sra.md):
 
-- **Bootstrap by hand, once** (in the management account's console, signed in as root with MFA): create the **Organization** and enable **IAM Identity Center** (an organization instance can only be enabled in the console), create the operator's Identity Center user with MFA and a bootstrap **admin permission set** assigned to the management account, then sign in from the workstation with `aws configure sso` as `rl-mgmt-admin`. Terraform imports these and manages everything after; the root user gets no access keys, ever.
+- **Bootstrap by hand, once** (in the management account's console, signed in as root with MFA), following part 2 of the [AWS management account setup guide](setup/aws-management-account.md): create the **Organization** and enable **IAM Identity Center** (an organization instance can only be enabled in the console), create the operator's Identity Center user with MFA and a bootstrap **admin permission set** assigned to the management account, then sign in from the workstation with `aws configure sso` as `rl-mgmt-admin`. Terraform imports these and manages everything after; the root user gets no access keys, ever.
 - Create the **Organization's structure** from the dedicated management account; **OUs**: Security, Infrastructure, Workloads, plus **Policy Staging** (with an empty **policy test** account) and **Suspended** (a deny-all SCP, normally empty).
 - **Accounts:** create **Security Tooling**, **Log Archive** and **Backup** (Security OU), and **russetleaf-infra** (Infrastructure OU), and **russetleaf-home** (Workloads OU), all new accounts created by the Organization. (russetleaf-com is created in Phase 3.)
 - **IAM Identity Center:** permission sets for admin, read-only and break-glass, MFA required; assign the operator per account.
