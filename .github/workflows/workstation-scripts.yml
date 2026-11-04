@@ -1,0 +1,57 @@
+name: workstation scripts
+
+# Tests scripts/workstation: the bats tests on every change, and setup-ubuntu.sh
+# end to end on a fresh Ubuntu 24.04 container. The weekly run catches changes
+# outside this repo (signing keys, package names, tool releases) that would break
+# the setup script without any commit here.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/workstation/**"
+      - ".github/workflows/workstation-scripts.yml"
+  pull_request:
+    paths:
+      - "scripts/workstation/**"
+      - ".github/workflows/workstation-scripts.yml"
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workstation-scripts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bats:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y bats
+      - name: Run the tests
+        run: bats --print-output-on-failure scripts/workstation/tests
+
+  fresh-ubuntu:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Run setup-ubuntu.sh twice in a fresh Ubuntu 24.04 container
+        env:
+          # Read-only token; lets mise download tools from GitHub without rate limits
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >
+          docker run --rm --privileged
+          --env GITHUB_TOKEN
+          --volume "${GITHUB_WORKSPACE}:/repo:ro"
+          ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
+          /repo/scripts/workstation/tests/fresh-ubuntu-test.sh

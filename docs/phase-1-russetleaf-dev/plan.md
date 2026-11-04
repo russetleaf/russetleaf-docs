@@ -70,6 +70,8 @@ In order, it:
 
 Both workstation scripts take `--help` (options and exit codes), `--verbose` (trace every command) and `--no-color`; colors are also off when `NO_COLOR` is set or the output is not a terminal. They share `scripts/workstation/lib/common.sh` for messages and for error and signal handling: a failed command is reported with its line number, and Ctrl+C or a `kill` stops the script instead of letting it carry on.
 
+**Tested in CI** (the `workstation scripts` workflow, on every change to the scripts and weekly): **bats** tests in `scripts/workstation/tests/` cover the options, exit codes, checks before installing, messages, and error and signal handling, using stub commands so they never install anything; and `fresh-ubuntu-test.sh` runs the setup script on a **fresh Ubuntu 24.04 container**, twice, failing if the second run changes anything, then runs `check-tools.sh --system`. The weekly run catches outside changes (a rotated signing key, a renamed package) before the next real setup does.
+
 Afterwards, **log out and back in** (for the `docker` group), clone each repo, and run **`mise install`** in it.
 
 ### 2. What gets installed
@@ -82,6 +84,7 @@ Afterwards, **log out and back in** (for the `docker` group), clone each repo, a
 | `jq` | Setup script (apt) | Reading JSON from the AWS CLI, `kubectl` and Terraform output in scripts and runbooks |
 | `ca-certificates`, `gnupg` | Setup script (apt) | Verifying the signed Docker and mise apt repositories |
 | `python3`, `python3-venv` | Setup script (apt) | Building this docs site locally (MkDocs) and running this repo's tools (`plan_to_issues.py`, the reference and style checks) |
+| `procps` | Setup script (apt) | `sysctl`, which the setup script uses to set kind's file-watch limits (already on most Ubuntu installs) |
 | `shellcheck` | Setup script (apt) | Linting shell scripts, including these workstation scripts (also in CI) |
 | `direnv` | Setup script (apt) | Loading each repo's environment (`.envrc`: profiles and tokens from the password manager or Secrets Manager) on entering its folder |
 | `wireguard-tools` | Setup script (apt) | The WireGuard tunnel to the lab subnet (with NetworkManager; [Configuration](#4-configuration)) |

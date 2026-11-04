@@ -28,7 +28,7 @@ function init_script() {
   readonly SCRIPT_NAME="${0##*/}"
   readonly APT_PACKAGES=(
     git curl wget unzip jq ca-certificates gnupg
-    python3 python3-venv shellcheck direnv wireguard-tools
+    python3 python3-venv shellcheck direnv wireguard-tools procps
   )
   readonly DOCKER_PACKAGES=(
     docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
@@ -41,6 +41,8 @@ function init_script() {
   readonly KEYRING_DIR="/etc/apt/keyrings"
   readonly SOURCES_DIR="/etc/apt/sources.list.d"
   readonly BASHRC="${HOME}/.bashrc"
+  # The tests point this at a fake file, to check the Ubuntu 24.04 requirement
+  readonly OS_RELEASE="${RL_OS_RELEASE:-/etc/os-release}"
 
   # Exit codes (any other non-zero code is that of a failed command)
   readonly ERR_USAGE=64          # Invalid option
@@ -125,7 +127,7 @@ EOF
 ########################################
 # Check the machine before changing anything
 # Globals:
-#   DOCKER_CONFLICTS, ERR_* (read)
+#   DOCKER_CONFLICTS, OS_RELEASE, ERR_* (read)
 # Arguments:
 #   None
 ########################################
@@ -137,7 +139,7 @@ function preflight() {
   fi
 
   # shellcheck source=/dev/null
-  . /etc/os-release
+  . "${OS_RELEASE}"
   if [[ "${ID:-}" != "ubuntu" || "${VERSION_ID:-}" != "24.04" ]]; then
     die "${ERR_UNSUPPORTED}" "this script is for Ubuntu 24.04 (found ${PRETTY_NAME:-an unknown system})"
   fi
@@ -234,7 +236,7 @@ function install_docker() {
 
   log_step "Docker Engine (from Docker's repository)"
   arch="$(dpkg --print-architecture)"
-  # VERSION_CODENAME comes from /etc/os-release, read in preflight
+  # VERSION_CODENAME comes from the os-release file, read in preflight
   add_apt_repo docker https://download.docker.com/linux/ubuntu/gpg "${KEYRING_DIR}/docker.asc" \
     "deb [arch=${arch} signed-by=${KEYRING_DIR}/docker.asc] https://download.docker.com/linux/ubuntu ${VERSION_CODENAME} stable"
   apt_get update
