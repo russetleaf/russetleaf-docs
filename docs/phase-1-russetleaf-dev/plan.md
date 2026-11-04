@@ -134,7 +134,7 @@ PHP and Composer are not needed locally: the WordPress image installs plugins in
 ### 4. Configuration
 
 - **Git:** set the Git user name and email; authenticate with `gh auth login` (SSH); turn on **commit signing** with the SSH key (`git config --global gpg.format ssh` and `user.signingkey`), and upload the key to GitHub as a signing key.
-- **AWS:** after step 2.0, sign in through **IAM Identity Center (SSO)**, with one profile per account and permission set (e.g. `rl-mgmt-admin`, `rl-security-admin`, `rl-home-admin`, `rl-com-admin`, `rl-infra-admin`, and read-only variants), created with `aws configure sso`; sign in with `aws sso login --sso-session russetleaf`. Until then, use the existing account's admin login. Keep **no long-lived AWS access keys** on the workstation.
+- **AWS:** after step 2.0, sign in through **IAM Identity Center (SSO)**, with one profile per account and permission set (e.g. `rl-mgmt-admin`, `rl-security-admin`, `rl-home-admin`, `rl-com-admin`, `rl-infra-admin`, and read-only variants), created with `aws configure sso`; sign in with `aws sso login --sso-session russetleaf`. Until then, AWS work happens only in the management account's console (the budget alert in step 0.1, the Identity Center bootstrap in step 2.0). Keep **no long-lived AWS access keys** on the workstation: the current `default` profile signs in to the older 2022 Organization with an IAM user's keys and is not used for RussetLeaf.
 - **Cloudflare and Slack tokens:** do not put them in `~/.bashrc`. Use per-repo **direnv** files (`.envrc`, listed in `.gitignore`) that load them from a password manager CLI or from AWS Secrets Manager on entering the repo folder.
 - **WireGuard to the lab** (after step 0.3): import the client profile exported from the ER605 into NetworkManager (`nmcli connection import type wireguard file rl-lab.conf`, or Settings → Network → VPN), with **AllowedIPs `10.10.0.0/24`** only, so only lab traffic goes through the tunnel and other internet use does not. Bring it up with `nmcli connection up rl-lab` when working on the cluster; `kubectl` and `talosctl` reach the cluster's virtual IP (`10.10.0.10`) through it.
 - **Cluster access files:** keep kubeconfig contexts named clearly (`rl-home`, `kind-ci`, `rl-local`) and talosconfig at `~/.talos/config`, both with `chmod 600`. Back them up in the password manager. (If they are lost, they can be regenerated from the Talos machine secrets in Terraform state.)
@@ -174,9 +174,9 @@ aws sts get-caller-identity --profile rl-home-admin
 
 **Do:**
 
-- Accounts: AWS: the **existing account** (which becomes `russetleaf-home`) plus a **new, dedicated management account** (its own email address, root MFA on) for the AWS Organization in step 2.0; GitHub; Cloudflare (russetleaf.dev zone).
+- Accounts: AWS: a **new, dedicated management account** (its own email address, root MFA on) for the AWS Organization in step 2.0, which creates **every other account, including russetleaf-home, new** inside it ([ADR 1019](adr/1019-aws-multi-account-sra.md)). The operator's older AWS Organization, from a 2022 project, is not used and stays separate; GitHub; Cloudflare (russetleaf.dev zone).
 - Set up the workstation: see [Local workstation setup](#local-workstation-setup-ubuntu-2404).
-- Create an **AWS Budget** with an email alert at about $25/month (by hand in the console is fine; Terraform takes over in step 2.0).
+- Create an **AWS Budget** with an email alert at about $25/month, in the **new management account** (by hand in the console is fine; consolidated billing then covers every account step 2.0 creates, and Terraform takes the budget over in step 2.0).
 - Pick an AWS region for the home lab's AWS resources (e.g. `us-east-1`) and use it everywhere.
 
 - **SaaS account hardening** ([ADR 1032](adr/1032-defense-in-depth.md)): **passkeys or hardware security keys** on GitHub, Cloudflare, Google, Slack, the registrars and AWS Identity Center; **registrar lock** on russetleaf.com and russetleaf.dev; Cloudflare **API tokens scoped** to the zones and permissions each job needs.
@@ -321,8 +321,9 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 
 **Do** (`russetleaf-infra/envs/org/`, applied locally with the new management account), following the Phase 1 design's [AWS account structure](design.md#aws-account-structure-and-best-practices-security-reference-architecture) and [ADR 1019](adr/1019-aws-multi-account-sra.md):
 
-- Create the **Organization** from the dedicated management account; **OUs**: Security, Infrastructure, Workloads, plus **Policy Staging** (with an empty **policy test** account) and **Suspended** (a deny-all SCP, normally empty).
-- **Accounts:** create **Security Tooling**, **Log Archive** and **Backup** (Security OU), and **russetleaf-infra** (Infrastructure OU); **invite the existing account** and move it into Workloads as **russetleaf-home**. (russetleaf-com is created in Phase 3.)
+- **Bootstrap by hand, once** (in the management account's console, signed in as root with MFA): create the **Organization** and enable **IAM Identity Center** (an organization instance can only be enabled in the console), create the operator's Identity Center user with MFA and a bootstrap **admin permission set** assigned to the management account, then sign in from the workstation with `aws configure sso` as `rl-mgmt-admin`. Terraform imports these and manages everything after; the root user gets no access keys, ever.
+- Create the **Organization's structure** from the dedicated management account; **OUs**: Security, Infrastructure, Workloads, plus **Policy Staging** (with an empty **policy test** account) and **Suspended** (a deny-all SCP, normally empty).
+- **Accounts:** create **Security Tooling**, **Log Archive** and **Backup** (Security OU), and **russetleaf-infra** (Infrastructure OU), and **russetleaf-home** (Workloads OU), all new accounts created by the Organization. (russetleaf-com is created in Phase 3.)
 - **IAM Identity Center:** permission sets for admin, read-only and break-glass, MFA required; assign the operator per account.
 - **SCPs** (attached to the Policy Staging OU first, then to the real OUs): deny leaving the Organization; deny disabling CloudTrail, GuardDuty, Config, Security Hub and Access Analyzer; allow only us-east-1 and us-west-2 (global services excepted); deny member-account root actions; deny IAM users and access keys except a named exception for the home cluster's scoped-key users in russetleaf-home; protect the Log Archive and Backup buckets.
 - **RCPs** (the same rollout): S3, KMS, SQS and Secrets Manager accessible only by the Organization's identities; AWS service principals only when acting for the Organization (`aws:SourceOrgID`); TLS required; STS role assumption only by the Organization's identities or the design's federation (GitHub OIDC, Identity Center).
@@ -1098,4 +1099,4 @@ Phase 1 builds most of what these need: the shared Terraform modules, the base m
 
 | Date | Decision | Reason |
 |---|---|---|
-| | | |
+| 2026-11-04 | AWS: a **new Organization** with **every account created new**, including russetleaf-home, rather than inviting the existing account ([ADR 1019](adr/1019-aws-multi-account-sra.md)) | The existing account is already the management account of a 2022 Organization from an earlier project (which would have to be dismantled before it could join another) and holds no RussetLeaf resources, so there is nothing to migrate |

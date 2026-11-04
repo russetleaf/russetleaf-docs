@@ -1,6 +1,6 @@
 # ADR 1019: Multi-account AWS structure aligned with the AWS Security Reference Architecture
 
-- **Status:** Accepted; RCPs, Suspended and Policy Staging OUs, and declarative policies added 2026-11-03
+- **Status:** Accepted; RCPs, Suspended and Policy Staging OUs, and declarative policies added 2026-11-03; russetleaf-home created new instead of invited, 2026-11-04
 - **Date:** 2026-11-01
 - **Applies to:** all AWS usage by both sites
 - **Phase:** 1 (the Organization and all accounts except russetleaf-com). Later: Phase 3 creates russetleaf-com.
@@ -12,7 +12,7 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 
 ## Decision
 
-- **Accounts and OUs:** Management (dedicated, new); Security OU: Security Tooling, Log Archive, Backup; Infrastructure OU: russetleaf-infra (Terraform state and CI entry points); Workloads OU: russetleaf-home (the existing account) and russetleaf-com. Two further OUs from AWS's recommended structure, normally empty: **Policy Staging** (new SCPs and RCPs are attached here first, with a test account, before the real OUs) and **Suspended** (a deny-all SCP; moving a compromised account here is the first containment step).
+- **Accounts and OUs:** Management (dedicated, new); Security OU: Security Tooling, Log Archive, Backup; Infrastructure OU: russetleaf-infra (Terraform state and CI entry points); Workloads OU: russetleaf-home and russetleaf-com. **Every account is created new by the Organization**, russetleaf-home included. Two further OUs from AWS's recommended structure, normally empty: **Policy Staging** (new SCPs and RCPs are attached here first, with a test account, before the real OUs) and **Suspended** (a deny-all SCP; moving a compromised account here is the first containment step).
 - **Guardrails:** SCPs (no leaving the Organization; no disabling security services; us-east-1 and us-west-2 only; no member-account root actions; no IAM users or access keys except a named exception for the home cluster's scoped keys; Log Archive and Backup buckets protected); **resource control policies (RCPs)** forming a data perimeter (below); **declarative policies** for EC2 settings; centralized root access management; IAM Identity Center with MFA; tag policies; alternate security contacts; per-account and consolidated budgets.
 - **Resource control policies (RCPs)** on every OU, limiting who can access the Organization's resources whatever their own resource policies say:
     - **Organization-only access:** S3, KMS, SQS and Secrets Manager resources can be accessed only by identities in the Organization (`aws:PrincipalOrgID`).
@@ -46,13 +46,16 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 - **AWS Trusted Advisor beyond its free checks:** the core checks (S3 bucket permissions, open security-group ports, root MFA, public EBS and RDS snapshots, service limits) are available in every account at no cost and need no setup; the full checks and the organization view need a Business support plan (about $100 a month at least, more than the project's AWS bill), and Security Hub, Prowler and AWS Budgets already cover their security and cost findings.
 - **A shared-services account for everything non-workload** (state, logs and backups together): fewer accounts, but mixes concerns the SRA deliberately separates.
 
+- **Inviting the existing account as russetleaf-home** (the earlier plan): would keep the account and its history, but that account is already the **management account of its own Organization** (created in 2022 for an earlier project, with three member accounts). It could join another Organization only after removing or closing those accounts and deleting its Organization, and it holds no RussetLeaf resources, so there is nothing to bring across.
+- **Reusing that 2022 Organization** (its management account as RussetLeaf's): no new management account, but it would inherit years of unrelated resources, IAM users with long-lived keys and an old SCP, in the one account that is meant to run nothing.
+
 ## Consequences
 
 - Each site, the logs, the backups and the security tooling are isolated; a compromised workload account cannot delete logs or backups, and cannot turn off security services (SCPs).
 - A **data perimeter**: SCPs limit what the Organization's identities can do, and RCPs limit who can reach its resources, so a mistaken bucket or key policy cannot expose data outside the Organization.
 - About **$5–15/month** more (Security Hub, Config, KMS), included in the home lab's always-on total of about **$14–33/month** (with `rl-home-cp03`'s electricity from [ADR 1020](1020-three-node-ha-home-cluster.md); see the Phase 1 design's cost table).
 - More moving parts: cross-account access for state, replication and the seed Job; per-account CI roles; per-account quotas; SES access per account (and Bedrock model access in russetleaf-home, Phase 2).
-- Restructuring the existing account into the Organization happens early (before most resources exist), which keeps the move simple.
+- Nothing is migrated: every account starts empty inside the Organization, under its guardrails from the first day. The operator's older AWS Organization (from a 2022 project) stays separate and is not part of RussetLeaf; it is cleaned up or closed on its own schedule.
 - A credible, SRA-shaped AWS foundation to show and discuss.
 
 ## When to revisit
@@ -64,7 +67,7 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 
 ## Open items
 
-- Phase 1 step 2.0: create the management account, the Organization, OUs (including Policy Staging and Suspended), accounts, SCPs, RCPs, declarative policies, Identity Center, tag policies and root access management; move the existing account in.
+- Phase 1 step 2.0: create the management account, the Organization, OUs (including Policy Staging and Suspended), accounts, SCPs, RCPs, declarative policies, Identity Center, tag policies and root access management, with every account (russetleaf-home included) created new; the Organization and Identity Center are first enabled by hand in the console, then imported into Terraform.
 - Confirm when building: the services RCPs support (S3, STS, KMS, SQS and Secrets Manager at the time of writing; AWS may have added more), the condition keys used, and the declarative policy attributes.
 - Phase 1 step 2.0b: the security services in Security Tooling; first Security Hub score recorded.
 - Phase 1 step 2.4: Access Analyzer policy checks in the Terraform pipeline.
