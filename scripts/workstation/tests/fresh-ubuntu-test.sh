@@ -59,7 +59,10 @@ function prepare_container() {
   log_step "Preparing the container"
   DEBIAN_FRONTEND=noninteractive apt-get update
   DEBIAN_FRONTEND=noninteractive apt-get install -y sudo
-  useradd --create-home --shell /bin/bash "${TEST_USER}"
+  # In the sudo group (the normal Ubuntu admin rule, which asks for a password) and
+  # with a NOPASSWD rule: the two together are what made `sudo -v` fail on a real
+  # workstation, so the test keeps both
+  useradd --create-home --shell /bin/bash --groups sudo "${TEST_USER}"
   printf '%s ALL=(ALL) NOPASSWD:ALL\n' "${TEST_USER}" >"/etc/sudoers.d/${TEST_USER}"
   chmod 0440 "/etc/sudoers.d/${TEST_USER}"
 }

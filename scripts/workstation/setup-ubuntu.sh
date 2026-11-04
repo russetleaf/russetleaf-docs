@@ -157,8 +157,10 @@ function preflight() {
     die "${ERR_CONFLICT}" "packages that conflict with Docker Engine are installed; remove them first with: sudo apt-get remove ${conflicts[*]}"
   fi
 
-  # Ask for the sudo password once, at the start
-  sudo -v
+  # Ask for the sudo password once, at the start. Not `sudo -v`: by default it asks
+  # for a password unless every sudoers rule for the user is NOPASSWD, even when a
+  # NOPASSWD rule would let the commands themselves run without one.
+  sudo true
 }
 
 ########################################
