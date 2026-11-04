@@ -117,7 +117,7 @@ function run_setup() {
 }
 
 ########################################
-# Check that each shell hook is in ~/.bashrc exactly once
+# Check that each line the setup script adds to ~/.bashrc is there exactly once
 # Globals:
 #   ERR_TEST_FAILED, TEST_HOME (read)
 # Arguments:
@@ -127,7 +127,9 @@ function check_bashrc() {
   local hook count
 
   log_step "Shell hooks in ~/.bashrc"
-  for hook in 'eval "$(mise activate bash)"' 'eval "$(direnv hook bash)"'; do
+  # shellcheck disable=SC2016  # the hooks are matched as literal text
+  for hook in 'eval "$(mise activate bash)"' 'eval "$(direnv hook bash)"' \
+    '[[ ":${PATH}:" == *":${HOME}/.local/bin:"* ]] || export PATH="${HOME}/.local/bin:${PATH}"'; do
     count="$(grep -cxF -- "${hook}" "${TEST_HOME}/.bashrc" || true)"
     if [[ "${count}" -ne 1 ]]; then
       die "${ERR_TEST_FAILED}" "expected '${hook}' once in ~/.bashrc, found it ${count} times"

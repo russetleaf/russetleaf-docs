@@ -262,8 +262,8 @@ function set_kind_limits() {
 }
 
 ########################################
-# Install mise from its signed apt repository, and add the mise and direnv hooks to
-# ~/.bashrc
+# Install mise from its signed apt repository, and add the mise and direnv hooks,
+# and ~/.local/bin on the PATH, to ~/.bashrc
 # Globals:
 #   BASHRC, KEYRING_DIR (read)
 # Arguments:
@@ -284,6 +284,9 @@ function install_mise() {
   append_once 'eval "$(mise activate bash)"' "${BASHRC}"
   # shellcheck disable=SC2016
   append_once 'eval "$(direnv hook bash)"' "${BASHRC}"
+  # uv installs the Python tools into ~/.local/bin
+  # shellcheck disable=SC2016
+  append_once '[[ ":${PATH}:" == *":${HOME}/.local/bin:"* ]] || export PATH="${HOME}/.local/bin:${PATH}"' "${BASHRC}"
 }
 
 ########################################
@@ -313,7 +316,6 @@ function install_python_tools() {
       mise exec -- uv tool install "${tool}"
     fi
   done
-  mise exec -- uv tool update-shell >/dev/null
 }
 
 ########################################

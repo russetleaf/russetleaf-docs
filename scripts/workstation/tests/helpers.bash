@@ -8,8 +8,12 @@
 # a mistake fails the test (command not found) instead of touching the machine.
 
 SCRIPTS_DIR="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
+# Used by the .bats files that load this file
+# shellcheck disable=SC2034
 SETUP="${SCRIPTS_DIR}/setup-ubuntu.sh"
+# shellcheck disable=SC2034
 CHECK="${SCRIPTS_DIR}/check-tools.sh"
+# shellcheck disable=SC2034
 COMMON="${SCRIPTS_DIR}/lib/common.sh"
 
 ########################################
