@@ -68,6 +68,8 @@ In order, it:
 5. Adds **mise's** signed apt repository and installs mise, so it is updated with the rest of the system, then adds the mise and direnv hooks to `~/.bashrc` (once, however often it runs).
 6. Installs **uv** globally with mise, and the **Python tools** with `uv tool install`.
 
+Both workstation scripts take `--help` (options and exit codes), `--verbose` (trace every command) and `--no-color`; colors are also off when `NO_COLOR` is set or the output is not a terminal. They share `scripts/workstation/lib/common.sh` for messages and for error and signal handling: a failed command is reported with its line number, and Ctrl+C or a `kill` stops the script instead of letting it carry on.
+
 Afterwards, **log out and back in** (for the `docker` group), clone each repo, and run **`mise install`** in it.
 
 ### 2. What gets installed

@@ -589,7 +589,8 @@ russetleaf-docs/
   tools/check_doc_links.py  # CI check: ADR and document references must be links
   tools/check_doc_style.py  # CI check: no second person or contractions outside code and quotes
   scripts/workstation/      # setup-ubuntu.sh (sets up the operator's workstation) and check-tools.sh
-                            #   (reports every tool's version); shellcheck runs on them in CI
+                            #   (reports every tool's version), sharing lib/common.sh; shellcheck
+                            #   runs on them in CI
   docs/
     index.md                # docs site home page
     overview.md             # this document
