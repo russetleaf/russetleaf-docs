@@ -37,3 +37,7 @@ mkdocs build --strict # what CI runs: fails on broken links and anchors
 ```
 
 Planned and built with the help of Claude (Anthropic's AI assistant); every decision is reviewed and owned by the author.
+
+## License
+
+Licensed under the GNU General Public License v3.0: see [`LICENSE`](LICENSE). It covers everything in this repo: the documentation, the scripts and the tools.
