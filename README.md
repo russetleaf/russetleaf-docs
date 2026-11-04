@@ -40,4 +40,4 @@ Planned and built with the help of Claude (Anthropic's AI assistant); every deci
 
 ## License
 
-Licensed under the GNU General Public License v3.0: see [`LICENSE`](LICENSE). It covers everything in this repo: the documentation, the scripts and the tools.
+Licensed under the GNU General Public License v3.0: see [`LICENSE`](LICENSE). It covers everything in this repo: the documentation, the scripts and the tools. The one exception is the RussetLeaf **name and logo**, which are reserved (copyright Steven Scully, all rights reserved) and kept only in `brand/` folders; forks may use everything else, under a name and logo of their own ([ADR 1049](docs/phase-1-russetleaf-dev/adr/1049-licensing.md)).

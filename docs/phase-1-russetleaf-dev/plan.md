@@ -219,7 +219,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 **Do:**
 
 - Create **`russetleaf-gitops`**, **`russetleaf-infra`** and **`russetleaf-wordpress`** (`russetleaf-llm-summarizer` is created in Phase 2). The project documentation stays in this repo, **`russetleaf-docs`** ([ADR 1038](adr/1038-documentation-repo-and-site.md)).
-- In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a **GPL v3.0 `LICENSE`** (the same text as `russetleaf-docs`, matching the license line every script carries; WordPress's own code is licensed GPLv2 or later, which allows the project's theme and plugins to be GPL v3, and third-party plugins keep their own licenses), branch protection on `main` (pull requests and passing checks required).
+- In each: a README stub, `.gitignore` (Terraform state, `.terraform/`, kubeconfig, talosconfig, `.env`), a **GPL v3.0 `LICENSE`** (the same text as `russetleaf-docs`, matching the license line every script carries, with the README's License section naming the one exception, the reserved brand assets in `brand/` ([ADR 1049](adr/1049-licensing.md)); WordPress's own code is licensed GPLv2 or later, which allows the project's theme and plugins to be GPL v3, and third-party plugins keep their own licenses), branch protection on `main` (pull requests and passing checks required).
 - In `russetleaf-docs`: the design, plans, roadmap, ADRs and spec template already exist (ADR template in the [ADR template](../adr/0000-template.md)). Record the big step 0.2 decisions as ADRs (the next number in the phase, e.g. 1045) and link them from the decision log. Operational docs (runbooks, SLO definitions, performance and security reports, Talos hardening notes) go in `docs/` of the repo that produces or uses them, mostly `russetleaf-gitops`. Each ADR's **Open items** are finished in these steps:
 
 | ADR | Phase 1 steps | Phase 2 steps | Phase 3 steps |
@@ -272,6 +272,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 | [1046 Incident response and runbook index](adr/1046-incident-response-and-runbook-index.md) | 2.4, 4.2, 4.4, 4.7, 5.8, 7.8, 7.10, 7.11, 7.14 | 2.2 | 4.1, 5.1 |
 | [1047 In-cluster credentials and rotation](adr/1047-in-cluster-credentials-and-rotation.md) | 4.5, 5.2, 7.8 | — | — |
 | [1048 Bash script standard](adr/1048-bash-script-standard.md) | 1.1 | — | — |
+| [1049 Licensing](adr/1049-licensing.md) | 1.1, 5.10 | — | — |
 | [2001 MLOps lifecycle](../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | — | 4.4–4.10 | — |
 | [2002 Summary pipeline architecture](../phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | — | 2.1–2.5 | — |
 | [2003 Self-hosted model on `rl-home-cp02`](../phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | — | 1.3, 3.1, 3.2 | — |
@@ -652,12 +653,12 @@ Check `kubectl top nodes` after each step.
 **Do:** as described in the Phase 1 design's [Site design and branding](design.md#site-design-and-branding) and [ADR 1025](adr/1025-site-design-in-git.md):
 
 - Write a short **design brief** (audience, tone, colors, the russet-leaf idea, a few reference sites).
-- **Logo design:** create the RussetLeaf logo (a mark plus wordmark) as **SVG**, with Claude writing the SVG directly or an image generator for concepts followed by vectorizing; derive the **favicon set**, site icon, Apple touch icon and **Open Graph image**, and a color **palette** from it; store them in `russetleaf-wordpress/brand/`. Check generator terms, AI-image copyright limits and a quick trademark search for "RussetLeaf" before publishing.
+- **Logo design:** create the RussetLeaf logo (a mark plus wordmark) as **SVG**, with Claude writing the SVG directly or an image generator for concepts followed by vectorizing; derive the **favicon set**, site icon, Apple touch icon and **Open Graph image**, and a color **palette** from it; store them in `russetleaf-wordpress/brand/`, with a `brand/README.md` stating that the logo and the files derived from it are reserved and not covered by the GPL ([ADR 1049](adr/1049-licensing.md)). Check generator terms, AI-image copyright limits and a quick trademark search for "RussetLeaf" before publishing.
 - With Claude, generate the **`russetleaf` block theme** from the brief: `theme.json` (palette from the logo, typography, spacing, dark-mode variant), templates (home, post, page, archive, 404) and patterns (hero, post cards, "about this project" linking the repos and ADRs). Iterate locally (Docker Compose) with screenshots.
-- **Export** with the Create Block Theme plugin (locally only) into `russetleaf-wordpress/themes/russetleaf/`, and make it the active theme in the chart values.
+- **Export** with the Create Block Theme plugin (locally only) into `russetleaf-wordpress/themes/russetleaf/`, and make it the active theme in the chart values. The Dockerfile copies the icons from `brand/` into the theme at build time; the theme's templates and patterns refer to the logo file and never inline its SVG, so the GPL theme does not contain the reserved logo.
 - A **`lock-site-editor`** must-use plugin removing template and global-style editing in production.
 
-**Test:** russetleaf.dev and staging show the custom theme, logo, icons and share image (check a link preview); in production, the Site Editor cannot change templates or styles; the theme comes entirely from the image (no design data in the database).
+**Test:** russetleaf.dev and staging show the custom theme, logo, icons and share image (check a link preview); in production, the Site Editor cannot change templates or styles; the theme comes entirely from the image (no design data in the database); `git grep` finds the logo's SVG markup only under `brand/`.
 
 ### Step 5.11: Front-end quality gates
 

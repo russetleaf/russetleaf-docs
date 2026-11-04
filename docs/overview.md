@@ -294,7 +294,7 @@ The project's code is split across four Git repositories, by **what each one con
 | **`russetleaf-wordpress`** | The **custom WordPress image**: plugins, themes, the SQS must-use plugin | Signed image + SBOM | Its own CI | Plugin, theme or WordPress updates |
 | **`russetleaf-llm-summarizer`** | The **standalone MLOps project**: summarizer code, prompts, evaluation set and gate, Helm chart, model card, local demo | Signed image + **Helm chart** (OCI), evaluation reports | Its own CI | Code, prompt or model-evaluation changes |
 
-**In every repo:** the same **GPL v3.0 `LICENSE`**, an `AGENTS.md` with a `CLAUDE.md` that imports it, and the bash standard's checks and shared files ([ADR 1048](phase-1-russetleaf-dev/adr/1048-bash-script-standard.md)), set up with the rest of each repo's guardrails in Phase 1 step 1.1.
+**In every repo:** the same **GPL v3.0 `LICENSE`** (only the RussetLeaf name and logo are reserved, in `brand/` folders; [ADR 1049](phase-1-russetleaf-dev/adr/1049-licensing.md)), an `AGENTS.md` with a `CLAUDE.md` that imports it, and the bash standard's checks and shared files ([ADR 1048](phase-1-russetleaf-dev/adr/1048-bash-script-standard.md)), set up with the rest of each repo's guardrails in Phase 1 step 1.1.
 
 ### Why four repos instead of one
 
@@ -500,7 +500,8 @@ russetleaf-wordpress/
   themes/
     russetleaf/             # the project's block theme (theme.json, templates, patterns), exported from local
                             #   design work with Create Block Theme
-  brand/                    # logo (source SVG), favicon set, site and touch icons, Open Graph image, palette
+  brand/                    # logo (source SVG), favicon set, site and touch icons, Open Graph image, palette;
+                            #   reserved, not GPL (brand/README.md says so)
   mu-plugins/
     harden-users/           # blocks anonymous user enumeration (author archives, REST users endpoint)
     security-headers/       # CSP (report-only, then enforced) and other headers not set at the edge
@@ -676,6 +677,7 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [1046](phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md) | Incident response, incident runbooks and one runbook index | 1 |
 | [1047](phase-1-russetleaf-dev/adr/1047-in-cluster-credentials-and-rotation.md) | The home cluster's own passwords are generated in the cluster and rotated automatically | 1 |
 | [1048](phase-1-russetleaf-dev/adr/1048-bash-script-standard.md) | One bash script standard for every repo, enforced by checks and agent instructions | 1 |
+| [1049](phase-1-russetleaf-dev/adr/1049-licensing.md) | GPL v3.0 for code and documentation; the RussetLeaf name and logo reserved | 1 |
 | [2001](phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback | 2 |
 | [2002](phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
 | [2003](phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | Self-hosted model on rl-home-cp02 (CPU llama.cpp), dedicated by taint | 2 |

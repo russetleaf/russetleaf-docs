@@ -22,7 +22,7 @@ Every bash script follows the **[bash script standard](docs/standards/bash.md)**
 
 ## License
 
-Everything in the repo is licensed under the GNU General Public License v3.0 (`LICENSE`). Every script, library, test and tool carries the line `# This program is licensed under the terms of the GNU General Public License v3.0.` in its header.
+Everything in the repo is licensed under the GNU General Public License v3.0 (`LICENSE`). Every script, library, test and tool carries the line `# This program is licensed under the terms of the GNU General Public License v3.0.` in its header. The exception is the RussetLeaf **name and logo** ([ADR 1049](docs/phase-1-russetleaf-dev/adr/1049-licensing.md)): reserved, kept only in `brand/` folders, and never copied or inlined (for example as SVG in a template) anywhere else.
 
 ## Checks before finishing
 

@@ -4,7 +4,7 @@ site_url: https://docs.russetleaf.dev/
 repo_url: https://github.com/smscully/russetleaf-docs
 repo_name: smscully/russetleaf-docs
 edit_uri: edit/main/docs/
-copyright: 'Copyright &copy; 2026 Steven Scully &middot; Licensed under the <a href="https://github.com/smscully/russetleaf-docs/blob/main/LICENSE">GNU GPL v3.0</a>'
+copyright: 'Copyright &copy; 2026 Steven Scully &middot; Licensed under the <a href="https://github.com/smscully/russetleaf-docs/blob/main/LICENSE">GNU GPL v3.0</a>, except the RussetLeaf name and logo, which are reserved'
 
 theme:
   name: material
@@ -123,6 +123,7 @@ nav:
           - "1046 Incident response, incident runbooks and one runbook index": phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md
           - "1047 The home cluster's own passwords are generated in the cluster and rotated automatically": phase-1-russetleaf-dev/adr/1047-in-cluster-credentials-and-rotation.md
           - "1048 One bash script standard for every repo, enforced by checks and agent instructions": phase-1-russetleaf-dev/adr/1048-bash-script-standard.md
+          - "1049 GPL v3.0 for code and documentation; the RussetLeaf name and logo reserved": phase-1-russetleaf-dev/adr/1049-licensing.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md

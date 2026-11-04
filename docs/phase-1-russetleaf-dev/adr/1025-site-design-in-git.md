@@ -1,9 +1,11 @@
 # ADR 1025: A custom block theme built into the image; Site Editor locked in production
 
-- **Status:** Accepted
+- **Status:** Accepted; updated by [ADR 1049](1049-licensing.md)
 - **Date:** 2026-11-01
 - **Applies to:** both sites (the same WordPress image)
 - **Phase:** 1. Later: Phase 2 adds the AI summary box.
+
+> **Update ([ADR 1049](1049-licensing.md)):** the logo and the files derived from it are **reserved** (all rights reserved), not GPL like the rest of the repos; they stay in `brand/`, and the theme refers to the logo file instead of inlining it.
 
 ## Context
 

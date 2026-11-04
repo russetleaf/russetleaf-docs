@@ -775,6 +775,7 @@ Modern WordPress **block themes** are styled through `theme.json` (colors, typog
 - **Derived assets:** favicon set, WordPress site icon, Apple touch icon, and an **Open Graph share image** for links on social media, all generated from the SVG; the theme's **palette is derived from the logo**.
 - **Checks before public use:** the image generator's **commercial-use terms** (if one was used); that purely AI-generated images may not be protectable by copyright in some jurisdictions; and a quick **trademark search** for "RussetLeaf".
 - Brand assets live in `russetleaf-wordpress/brand/` (source SVG, exported icons, the palette).
+- **Not GPL:** the logo and everything derived from it are **reserved** (all rights reserved), unlike the rest of the repos, which are GPL v3.0; `brand/README.md` says so. The image build copies the icons from `brand/` into the theme, and the theme refers to the logo file rather than inlining its SVG. The palette and the theme stay GPL. The reasoning is recorded in [ADR 1049](adr/1049-licensing.md).
 
 ### Front-end quality gates
 
