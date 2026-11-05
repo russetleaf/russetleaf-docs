@@ -12,7 +12,10 @@ Have these ready:
 
 - **A new email address** for the account's root user, used for nothing else. An alias of the operator's mailbox works, for example `<name>+rl-management@<domain>`: the mail still arrives, but the address is unique to this account.
 - **Bitwarden open** (the project's password manager), with a new entry for the account, so the root password is generated there and never typed or reused.
-- **Two MFA devices** for root: two hardware security keys, or one key and a passkey ([ADR 1032](../adr/1032-defense-in-depth.md)). The second is the backup, kept apart from the first.
+- **Two MFA devices** for root: two hardware security keys, or one key and a passkey ([ADR 1032](../adr/1032-defense-in-depth.md)). The second is the backup, kept apart from the first, so losing one (or the phone holding it) never locks the account; without a working device, the only way back in is AWS's slower root account recovery.
+    - **A passkey on the operator's phone** works as one of the two. Pair it with a **hardware security key** as the backup, kept with the printed break-glass kit rather than on the same key ring or in the same bag as the phone.
+    - **Not in Bitwarden:** Bitwarden can store passkeys, but it also holds the root password, so a root passkey there would put both factors in one vault.
+    - **Not an authenticator app as the only factor:** a code from an app (TOTP) works with AWS, but it can be phished, unlike a passkey or security key. If the phone's MFA is an authenticator app, the hardware key becomes the main factor and the app its backup.
 - **A payment card and a phone** for AWS's identity check (a small temporary charge, then an SMS or voice call). The advanced sign-up below requires a payment method.
 
 ## Part 1: create the account (step 0.1)
