@@ -14,7 +14,7 @@ Have these ready:
 - **Bitwarden open** (the project's password manager), with a new entry for the account, so the root password is generated there and never typed or reused.
 - **Two MFA devices** for root (decision log, 2026-11-05), so losing one (or the phone holding it) never locks the account:
     - **Google Authenticator on the operator's phone, the main factor,** used at each root sign-in. Turn off its **cloud sync** (use the app without signing in to a Google account, or sign out of it in the app's settings), so the codes exist only on the phone rather than also in the Google account.
-    - **A YubiKey, the backup,** registered as a security key and kept in the **safe** with the printed break-glass kit ([break-glass kit setup guide](break-glass-kit.md)). The same YubiKey holds the project's GPG key; its security-key (FIDO2) and OpenPGP functions are separate and do not affect each other.
+    - **A YubiKey, the backup,** registered as a security key and kept in the **safe** with the printed break-glass kit ([break-glass kit setup guide](break-glass-kit.md)).
     - **The accepted risk:** AWS accepts any registered device at sign-in, so a code from an app (TOTP) makes root phishable: a fake sign-in page can pass the password and code on to AWS straight away, which it cannot do with a security key. Root is signed in to only a few times, and only through **Bitwarden's autofill**: if Bitwarden does not offer the root login on a page, the address is wrong.
     - **Not in Bitwarden:** Bitwarden can store passkeys and authenticator codes, but it also holds the root password, so a root factor there would put both factors in one vault.
     - **No recovery codes:** AWS has none for root MFA. With both devices lost, AWS's recovery checks the root email address and then calls the account's phone number, so both must stay current. **Do not save the authenticator's secret key** (the QR code shown during setup) as a backup: a copy of it is a third factor, and the YubiKey already covers a lost phone.
@@ -91,6 +91,6 @@ Terraform manages the Organization from step 2.0, but it needs a way to sign in 
 ## If something goes wrong
 
 - **Lost the phone:** get the YubiKey from the safe, sign in with it, remove the Google Authenticator device, and register the app on the new phone right away (sync off). Do the same for the Identity Center passkey.
-- **Lost the YubiKey:** sign in with Google Authenticator, remove the YubiKey, and register a new one; restore the GPG key onto it as well ([break-glass kit setup guide](break-glass-kit.md#if-something-goes-wrong)).
+- **Lost the YubiKey:** sign in with Google Authenticator, remove the YubiKey, and register a new one.
 - **Lost both MFA devices:** on the root sign-in page, choose **Troubleshoot MFA**, then **Sign in using alternative factors**. AWS sends a link to the root email address, then calls the phone number on the account. There are no recovery codes, which is why the root email address and the phone number are kept current in the break-glass kit. If neither works, contact AWS Support.
 - **The management account is compromised or lost:** follow the [disaster recovery plan](../disaster-recovery.md#scenarios) ("Management account compromised or lost").

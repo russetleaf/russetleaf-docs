@@ -74,6 +74,7 @@ nav:
       - Plan: phase-1-russetleaf-dev/plan.md
       - Roadmap: phase-1-russetleaf-dev/roadmap.md
       - Disaster recovery: phase-1-russetleaf-dev/disaster-recovery.md
+      - Improvements after go-live: phase-1-russetleaf-dev/improvements.md
       - Setup guides:
           - AWS management account: phase-1-russetleaf-dev/setup/aws-management-account.md
           - Break-glass kit and GPG key: phase-1-russetleaf-dev/setup/break-glass-kit.md

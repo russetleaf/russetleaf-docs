@@ -44,7 +44,7 @@ flowchart LR
 - **ADR numbers start with their phase:** 1001 upwards for Phase 1, 2001 upwards for Phase 2, 3001 upwards for Phase 3. They are unique across the project and do not change once used; the [index](#architecture-decision-records) lists them all. The template is [`adr/0000-template.md`](adr/0000-template.md).
 - **Writing style:** third person throughout; "the operator" is the person who builds and runs the platform. Instructions in the plans and runbooks use the imperative ("Install X"). No contractions, except inside quoted text such as commands, code or test inputs. Pre-commit and CI enforce this with `tools/check_doc_style.py`; a line that must break the rule can end with `<!-- style: allow -->`.
 - **References are links:** every mention of an ADR or another document is a link, written as [ADR 1032](phase-1-russetleaf-dev/adr/1032-defense-in-depth.md); only files that do not exist yet (such as future runbooks) appear as plain paths. Pre-commit and CI enforce this with `tools/check_doc_links.py`.
-- **Phase 1** also has the [disaster recovery plan](phase-1-russetleaf-dev/disaster-recovery.md), and **setup guides** for every procedure done by hand (accounts, consoles, hardware), such as the [AWS management account](phase-1-russetleaf-dev/setup/aws-management-account.md), [Slack](phase-1-russetleaf-dev/setup/slack-and-monitoring.md) and the [lab network](phase-1-russetleaf-dev/setup/lab-network.md); each ends with checks matching its plan step.
+- **Phase 1** also has the [disaster recovery plan](phase-1-russetleaf-dev/disaster-recovery.md), the [improvements list](phase-1-russetleaf-dev/improvements.md) (work deliberately put off, reviewed after go-live and quarterly), and **setup guides** for every procedure done by hand (accounts, consoles, hardware), such as the [AWS management account](phase-1-russetleaf-dev/setup/aws-management-account.md), [Slack](phase-1-russetleaf-dev/setup/slack-and-monitoring.md) and the [lab network](phase-1-russetleaf-dev/setup/lab-network.md); each ends with checks matching its plan step.
 - **Runbooks:** every runbook in every repo is listed in the [runbook index](runbooks.md), with the step that writes it and how it is rehearsed ([ADR 1046](phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md)).
 - **Standards:** the [bash script standard](standards/bash.md) for every script in every repo, enforced by pre-commit, a Claude Code hook and CI ([ADR 1048](phase-1-russetleaf-dev/adr/1048-bash-script-standard.md)).
 - **Instructions for people and agents:** each repo's `AGENTS.md` (imported by its `CLAUDE.md`, so every Claude Code session starts with it) states the repo's conventions and checks.
@@ -272,19 +272,19 @@ Each phase's plan tiers every step as **Core** (a complete, working, secure plat
 
 | Plan | Core | Extended | Advanced | Total |
 |---|---|---|---|---|
-| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~177–290 | ~93–161 | ~89–144 | **~359–595** |
+| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~177–290 | ~95–167 | ~89–144 | **~361–601** |
 | [Phase 2: AI summaries and MLOps](phase-2-ai-mlops/plan.md#priorities-and-time-estimates) (optional) | ~50–86 | ~33–54 | ~64–104 | **~147–244** |
 | [Phase 3: russetleaf.com](phase-3-russetleaf-com/plan.md#priorities-and-time-estimates) (optional) | ~74–123 | ~14–22 | ~16–25 | **~104–170** |
-| **Whole project** | ~301–499 | ~140–237 | ~169–273 | **~610–1009** |
+| **Whole project** | ~301–499 | ~142–243 | ~169–273 | **~612–1015** |
 
 **Calendar time at about 20 hours a week:**
 
 | Scope | Hours | Calendar |
 |---|---|---|
 | Phase 1, Core tier | ~177–290 | 9–14 weeks |
-| Phase 1, everything | ~359–595 | 18–30 weeks (4–7 months) |
-| Phases 1 and 2 | ~506–839 | 25–42 weeks (6–10 months) |
-| All three phases | ~610–1009 | 30–50 weeks (7–12 months; 14–23 months at 10 hours a week) |
+| Phase 1, everything | ~361–601 | 18–30 weeks (4–7 months) |
+| Phases 1 and 2 | ~508–845 | 25–42 weeks (6–10 months) |
+| All three phases | ~612–1015 | 30–50 weeks (7–12 months; 14–23 months at 10 hours a week) |
 
 Phase 1 is built with AI assistance in conversation; Phases 2 and 3 are built with AI coding agents under [ADR 2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md), with Phase 1's actual hours as the baseline for measuring the difference. Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar. A finished Phase 1 is worth more than three unfinished phases.
 
@@ -625,7 +625,7 @@ russetleaf-docs/
     runbooks.md             # the runbook index: every runbook in every repo
     standards/              # bash.md, the bash script standard
     adr/0000-template.md    # ADR template (numbers: 1001+ Phase 1, 2001+ Phase 2, 3001+ Phase 3)
-    phase-1-russetleaf-dev/ # design.md, plan.md, roadmap.md, disaster-recovery.md, adr/
+    phase-1-russetleaf-dev/ # design.md, plan.md, roadmap.md, disaster-recovery.md, improvements.md, adr/
     phase-2-ai-mlops/       # design.md, plan.md, adr/
     phase-3-russetleaf-com/ # design.md, plan.md, adr/
     specs/                  # one short spec per step (TEMPLATE.md; phase-1/, phase-2/, phase-3/)

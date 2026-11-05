@@ -8,7 +8,7 @@ The milestones for building [Phase 1](plan.md), with target dates, and the actua
 - **Pace:** about **60 hours a week**, worked as **10 hours a day, six days a week**, with **Saturdays off**.
 - **Fixed dates:** `rl-home-cp03` (the 16 GB server) and the ER605 lab router arrive by November 4, so **November 3–4** are for the preliminaries the servers need (accounts and tools, decisions, the lab network, the repos, the AWS accounts and the Terraform state bucket), and **November 5–6** are for the servers: the cluster up on the 5th, hardening and tests on the 6th.
 - **Time-boxing M1:** its steps are estimated at 21–39 hours against 20 available, so only what the servers need is done on November 3–4; the rest (the repos' full CI guardrails, from step 1.1) is finished after November 6 and counted in M3's dates.
-- **Order after that:** the Core tier first (in plan order), then the Extended steps, then the Advanced steps, as the plan recommends.
+- **Order after that:** the Core tier first (in plan order), then step 9.3 (the post go-live review of the [improvements list](improvements.md)), then the other Extended steps, then the Advanced steps, as the plan recommends.
 - **Estimates:** the plan's focused-hour ranges (expect ±50%). **Target** is the date at the midpoint of the estimates; **latest** is the date at the high end.
 - **Not included:** holidays (Thanksgiving, late December), days lost to waiting (AWS approvals, DNS), and the drop in pace that long stretches of 10-hour days usually bring. Plan around the **latest** dates.
 
@@ -21,9 +21,9 @@ The milestones for building [Phase 1](plan.md), with target dates, and the actua
 | **M3 AWS, GitOps and platform services** | 2.0b, 2.3, 2.4, 3.1, 4.1–4.7 | 62–102 | Wed, Nov 18, 2026 | Sun, Nov 22, 2026 | | |
 | **M4 WordPress live with staging and promotion** | 5.1–5.7, 5.10, 5.12 | 54–91 | Thu, Nov 26, 2026 | Wed, Dec 2, 2026 | | |
 | **M5 Core tier complete and published** | 6.1, 6.3, 9.2 | 27–39 | Mon, Nov 30, 2026 | Mon, Dec 7, 2026 | | |
-| **M6 Production hardening and operations** | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.14, 9.1 | 93–161 | Tue, Dec 15, 2026 | Fri, Dec 25, 2026 | | |
-| **M7 Advanced practices; Phase 1 complete** | 7.7, 8.1–8.9 | 89–144 | Tue, Dec 29, 2026 | Mon, Jan 11, 2027 | | |
-| **Total** | | **359–595** | | | | |
+| **M6 Production hardening and operations** | 9.3, 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.14, 9.1 | 95–167 | Tue, Dec 15, 2026 | Fri, Dec 25, 2026 | | |
+| **M7 Advanced practices; Phase 1 complete** | 7.7, 8.1–8.9 | 89–144 | Tue, Dec 29, 2026 | Tue, Jan 12, 2027 | | |
+| **Total** | | **361–601** | | | | |
 
 **The first four days:**
 
@@ -41,7 +41,7 @@ What each milestone shows when it is done:
 - **M3:** the organization's security services, the home AWS and Cloudflare resources, the Terraform pipeline, the repos' CI guardrails, Argo CD managing everything; storage, secrets and certificates, ingress through the tunnel, monitoring and alerting, MariaDB and Valkey, logging, and OIDC sign-in.
 - **M4:** russetleaf.dev live on the custom image and theme, with ci tests, on-demand staging, promotion and the privacy basics.
 - **M5:** Kyverno and network policies enforced, the docs polished, and the project published as a finished Core tier. **First portfolio milestone.**
-- **M6:** progressive delivery, sandboxing, runtime security, cost and tracing, keyless AWS access, and the rollback, node-failure and disaster drills.
+- **M6:** the post go-live review of the improvements list, progressive delivery, sandboxing, runtime security, cost and tracing, keyless AWS access, and the rollback, node-failure and disaster drills.
 - **M7:** SLOs and error budgets, DORA metrics, Backstage and a second service, the threat model and control matrix, chaos and postmortems, strategy documents, fleet management, and public writing.
 
 ## Tracking and reporting

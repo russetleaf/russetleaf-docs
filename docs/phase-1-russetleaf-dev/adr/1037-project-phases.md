@@ -32,7 +32,7 @@ Build in **three phases**, each complete and demonstrable on its own, with its o
 
 ## Consequences
 
-- A complete, publishable project after Phase 1 (about 359–595 hours, or 177–290 for its Core tier).
+- A complete, publishable project after Phase 1 (about 361–601 hours, or 177–290 for its Core tier).
 - Phases 2 and 3 can be skipped, reordered or done years apart without leaving half-built work.
 - Some integration work is repeated per phase (policies, network rules, monitoring for new components), adding roughly 15–25 hours overall.
 - Phase 1's design mentions later phases only in short notes; the details live in their own design documents.
