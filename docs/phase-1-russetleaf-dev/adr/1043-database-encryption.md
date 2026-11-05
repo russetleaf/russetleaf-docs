@@ -50,7 +50,7 @@ Cilium's WireGuard encryption already protects pod traffic between home nodes, b
 
 - **TLS required per user only (the previous design):** misses replication, operator and tooling connections, and depends on each user being created correctly.
 - **Relying on Cilium WireGuard instead of database TLS:** encrypts traffic between nodes but not between pods on the same node, and is a network-layer control that the database cannot verify.
-- **Client-side encryption of backups** (e.g. `age` before upload): protects even against a compromised AWS account, but adds key handling to every restore and staging refresh; the customer-managed key, the separate Backup account and Object Lock cover the realistic threats.
+- **Client-side encryption of backups** (e.g. GPG before upload): protects even against a compromised AWS account, but adds key handling to every restore and staging refresh; the customer-managed key, the separate Backup account and Object Lock cover the realistic threats.
 - **S3-managed keys (SSE-S3) for backups:** free and automatic, but any identity with S3 read access can read the dumps; a customer-managed key adds a second, separately controlled permission.
 
 ## Consequences

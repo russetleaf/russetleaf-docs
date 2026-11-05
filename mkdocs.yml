@@ -76,6 +76,7 @@ nav:
       - Disaster recovery: phase-1-russetleaf-dev/disaster-recovery.md
       - Setup guides:
           - AWS management account: phase-1-russetleaf-dev/setup/aws-management-account.md
+          - Break-glass kit and GPG key: phase-1-russetleaf-dev/setup/break-glass-kit.md
           - Slack and outside monitoring: phase-1-russetleaf-dev/setup/slack-and-monitoring.md
           - Lab network and WireGuard: phase-1-russetleaf-dev/setup/lab-network.md
       - Decisions:

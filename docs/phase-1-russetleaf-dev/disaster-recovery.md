@@ -26,14 +26,14 @@ Everyday availability targets are in [ADR 1014](adr/1014-availability-levels.md)
 | Documentation and planning | `russetleaf-docs` (GitHub; issues and the Projects board stay on GitHub) | Repo mirror in the backup account; **mirrored to GitLab** on every push | Daily for 35 days; monthly for 12 months; GitLab always current | The documents, yes; issues only from GitHub |
 | Images and charts | GHCR | None needed | — | Yes, rebuilt from the mirrored source |
 | Terraform state | S3 state bucket (us-east-1, **russetleaf-infra** account) | **Replicated** to the backup account (us-west-2, Object Lock); the source bucket also keeps old versions for 90 days | 30-day lock, deleted after 35 days; monthly copies for 12 months | Partly (state can be re-imported, but slowly) |
-| russetleaf.dev database | MariaDB backups in S3 (us-east-1), every 6 hours | **Replicated** to the backup account (Object Lock), plus a daily **`age`-encrypted copy in Cloudflare R2** (bucket lock), outside AWS | 30-day lock, deleted after 35 days; monthly copies for 12 months | No |
+| russetleaf.dev database | MariaDB backups in S3 (us-east-1), every 6 hours | **Replicated** to the backup account (Object Lock), plus a daily **GPG-encrypted copy in Cloudflare R2** (bucket lock), outside AWS | 30-day lock, deleted after 35 days; monthly copies for 12 months | No |
 | russetleaf.com database *(Phase 3)* | RDS snapshots (us-east-1) | A **logical dump** taken at every `demo-down`, written to the russetleaf.com backup bucket and **replicated** to the backup account | 30-day lock | No (or re-seed from russetleaf.dev) |
 | Media (both sites) | S3 media buckets (us-east-1) | **Replicated** to the backup account (Object Lock) | 30-day lock, deleted after 35 days; monthly copies for 12 months | No |
 | CloudTrail logs | Organization trail in the **Log Archive** account's Object Lock bucket (separate from every workload account) | Already isolated; optionally replicated to us-west-2 | 30-day lock (longer retention by lifecycle) | No |
-| Cluster state (etcd snapshots; contain every Secret) | Weekly snapshots in the KMS-encrypted backup bucket (russetleaf-home), readable only by the backup role | **Replicated** to the Backup account (Object Lock), plus an **`age`-encrypted copy in Cloudflare R2** (bucket lock) | 30-day lock, deleted after 35 days; **no** monthly copies (each holds every Secret, and an old snapshot is no use for recovery) | Not needed for a rebuild, which uses GitOps; used only to recover a lost control plane (`etcd-recovery.md`), never after a compromise |
+| Cluster state (etcd snapshots; contain every Secret) | Weekly snapshots in the KMS-encrypted backup bucket (russetleaf-home), readable only by the backup role | **Replicated** to the Backup account (Object Lock), plus a **GPG-encrypted copy in Cloudflare R2** (bucket lock) | 30-day lock, deleted after 35 days; **no** monthly copies (each holds every Secret, and an old snapshot is no use for recovery) | Not needed for a rebuild, which uses GitOps; used only to recover a lost control plane (`etcd-recovery.md`), never after a compromise |
 | Talos machine secrets, talosconfig (and the disk-encryption recovery procedure for each node's TPM) | Terraform state; the workstation | Break-glass kit | Until rotated | No (losing them means rebuilding the cluster from scratch) |
 | Secrets in Secrets Manager | The workload accounts (russetleaf-home; russetleaf-com in Phase 3) | Most are **regenerated** rather than copied (see below) | — | Mostly yes |
-| Account access (root logins, MFA recovery codes) | Bitwarden (the password manager) | Break-glass kit, including a printed copy | Until changed | No |
+| Account access (root logins, recovery codes, MFA device notes) | Bitwarden (the password manager) | Break-glass kit: a printed copy in the safe, and a GPG-encrypted copy in Google Drive and OneDrive | Until changed | No |
 | Logs and traces (Loki, Tempo) | S3 | None (short-lived operational data) | — | Not needed |
 | Kubernetes objects (everything Argo CD deploys) | The cluster | `russetleaf-gitops` and its mirror (above) | 90 days | **Yes**, re-synced by Argo CD; no cluster-level backup tool ([ADR 1018](adr/1018-disaster-recovery.md)) |
 | Metrics (Prometheus, 15 days) | Local volume on `rl-home-cp03` | None | — | Not needed (history is lost on a rebuild) |
@@ -70,20 +70,26 @@ Every repo is also **mirrored to GitLab on every push** to `main`, by a `gitlab-
 
 ## Break-glass kit
 
-Kept in **Bitwarden** (the project's password manager), with a **printed copy** of the starred items stored somewhere safe at home and ideally a second location (e.g. with a family member).
+Kept in three places, so that losing any two of them still leaves a way back in (decision log, 2026-11-05); how the copies are made and kept current is in the [break-glass kit setup guide](setup/break-glass-kit.md):
 
-- ★ AWS: the **management account's** root email, password and **MFA recovery** (member accounts have no root credentials: centralized root access management); the IAM Identity Center admin and break-glass logins
+- **Bitwarden** (the project's password manager), the working copy.
+- A **printed copy** of the starred items in the **safe** at home, with the **YubiKey** (the AWS root user's backup MFA device, and the holder of the project's GPG key) and a USB stick with the GPG key's backup. The safe therefore holds the root password and an MFA device together, which is accepted for a home safe.
+- A **GPG-encrypted copy** of the kit file in **Google Drive** and **OneDrive**, encrypted with a **passphrase only** (not to the YubiKey's key, which could be lost with the safe). The operator memorizes the passphrase and keeps it out of Bitwarden and the cloud; a sealed copy with a trusted person is optional. This copy covers losing the home and Bitwarden access together.
+
+The kit holds:
+
+- ★ AWS: the **management account's** account ID, root email and password, and its **MFA devices** (Google Authenticator on the operator's phone, the YubiKey in the safe). AWS has no recovery codes for root MFA: with both devices lost, its recovery checks the root email address and calls the account's phone number, so both must stay current ([setup guide](setup/aws-management-account.md#if-something-goes-wrong)). Member accounts have no root credentials (centralized root access management). Also the IAM Identity Center admin and break-glass logins
 - ★ GitHub: account login and **recovery codes**
 - ★ GitLab (the mirrors of every repo): account login and **recovery codes**
 - ★ Cloudflare: account login and recovery codes
 - ★ Google: account recovery (for the Google Cloud project and Google sign-in)
 - ★ Domain registrar logins for russetleaf.com and russetleaf.dev
-- ★ **Bitwarden's own recovery details:** the account email, the master password (never stored in Bitwarden itself) and the **two-step login recovery code**. Bitwarden's optional **emergency access** (a paid feature) can also let a trusted person reach the vault after a waiting period, which fits the second copy above.
+- ★ **Bitwarden's own recovery details:** the account email, the master password (never stored in Bitwarden itself) and the **two-step login recovery code**. Bitwarden's optional **emergency access** (a paid feature) can also let a trusted person reach the vault after a waiting period.
 - The **lab router** (ER605) admin login, its configuration backup, and the WireGuard client profile
 - Talos secrets bundle (`secrets.yaml`), the `os:admin` talosconfig, and the Talos-generated **break-glass admin kubeconfig** (use of it raises an alert)
 - Where every backup is (this document's table), and the order of recovery (below)
 - Slack workspace owner login
-- The **`age` private key** for the encrypted backup copies in Cloudflare R2
+- ★ The project's **GPG key**, which decrypts the backup copies in Cloudflare R2: it lives on the **YubiKey**; the kit holds its fingerprint, its passphrase, the YubiKey's PINs, and a passphrase-protected **export of the secret key** (also printed with `paperkey` for the safe)
 - The **internal CA root** (certificate and key) from cert-manager ([ADR 1028](adr/1028-internal-pki.md))
 - Logins for the **outside monitoring services** (the heartbeat service behind the dead man's switch, and the uptime checker), so monitoring can be repaired when the cluster is down
 
@@ -101,7 +107,7 @@ The step-by-step runbooks for these scenarios (etcd recovery, node replacement, 
 | **Workstation lost** | None | Hours | Set up a new workstation ([workstation setup](plan.md#local-workstation-setup-ubuntu-2404)); restore talosconfig, kubeconfig and logins from the break-glass kit; rotate anything that was stored only on the old machine. |
 | **A workload account compromised** (russetleaf-home or russetleaf-com) | Up to the last replicated copy | 1–3 days | From the management and Security Tooling accounts: move the account into the **Suspended OU** (a deny-all SCP), revoke its sessions and keys, review the organization CloudTrail (Log Archive) and GuardDuty/Security Hub findings. If data was deleted or encrypted, restore from the **Backup** account. Rotate every secret and key; re-create Secrets Manager entries; re-apply Terraform. The logs, backups and security tooling are in other accounts, so they are intact. |
 | **A workload account lost** (closed, locked) | Up to the last replicated copy | Days | Create a replacement account in the Organization (`envs/org`); re-apply `bootstrap/` and the environment; restore data from the Backup account; regenerate secrets. |
-| **Management account compromised or lost** | Up to the last replicated copy | Days | The worst case: recover access through AWS Support using the break-glass kit (or, for lost MFA devices, the root user's account recovery; see the [setup guide](setup/aws-management-account.md#if-something-goes-wrong)); the member accounts, logs and backups keep running meanwhile. If the Organization cannot be recovered, create a new management account and move the member accounts into a new Organization. If AWS access is lost entirely, rebuild in new accounts and restore the database and etcd from the **encrypted copies in Cloudflare R2** (the `age` key is in the break-glass kit). |
+| **Management account compromised or lost** | Up to the last replicated copy | Days | The worst case: recover access through AWS Support using the break-glass kit (or, for lost MFA devices, the root user's account recovery; see the [setup guide](setup/aws-management-account.md#if-something-goes-wrong)); the member accounts, logs and backups keep running meanwhile. If the Organization cannot be recovered, create a new management account and move the member accounts into a new Organization. If AWS access is lost entirely, rebuild in new accounts and restore the database and etcd from the **encrypted copies in Cloudflare R2** (the GPG key is on the YubiKey, with backups in the break-glass kit). |
 | **AWS region outage** (us-east-1) | None, or up to the last replicated copy | Hours to wait, or a day to move | Usually wait it out (russetleaf.dev keeps running at home, though S3 media calls fail, and with Phase 2 also SQS and Bedrock). For a long outage, re-point the home site's buckets and queue to us-west-2 using the replicated copies. |
 | **GitHub account or repos lost** | None (every repo is mirrored to GitLab on every push; the daily bundles are the fallback) | Hours | Restore the repos from their GitLab mirrors (or, if those are lost too, from the bundles in the backup account) to a new GitHub account, or keep working from GitLab; update Argo CD's repo URLs, the OIDC trust (new repo identities) and Kyverno's signing identities; rebuild and re-sign images. |
 | **Cloudflare account lost** | None | Hours | New account; re-apply the Cloudflare parts of `envs/home` (tunnel, DNS, Access, rules); move russetleaf.dev's name servers. |
@@ -131,7 +137,7 @@ The step-by-step runbooks for these scenarios (etcd recovery, node replacement, 
 |---|---|---|
 | Restore a MariaDB backup into a scratch instance | Monthly | Backups are usable |
 | Restore a MariaDB backup **from the backup account's copy**, signed in **only** to the Backup account (no access to russetleaf-home or its keys) | Quarterly | The off-account copies are readable without the account they protect against |
-| Restore a MariaDB backup **from the encrypted Cloudflare R2 copy**, using the `age` key from the break-glass kit | Quarterly | The copy outside AWS is usable without any AWS access |
+| Restore a MariaDB backup **from the encrypted Cloudflare R2 copy**, using the GPG key on the YubiKey | Quarterly | The copy outside AWS is usable without any AWS access |
 | **Full "home lab destroyed" rebuild**, using only the break-glass kit and the backups (on a local Talos-in-Docker cluster, or the real nodes during a maintenance window) | Yearly | The whole plan works; record the actual time |
 | *(Phase 3)* Restore russetleaf.com's database from the latest logical dump in the backup account | Once (then yearly) | The AWS-side copy works |
 | Recover a deleted staging namespace from Git and backups (`restore-deleted-resources.md`) | Quarterly, with the rollback drills | A deletion is recoverable without a cluster backup tool |
@@ -140,6 +146,6 @@ The step-by-step runbooks for these scenarios (etcd recovery, node replacement, 
 | Make one copy late on purpose (pause the R2 job) | Yearly | `BackupCopiesStale` fires |
 | Control-plane recovery (`etcd-recovery.md`, on a local Talos-in-Docker cluster) | Yearly | Quorum loss is recoverable |
 | Full power cut (`cold-start.md`) | Yearly | The cluster and database come back on their own, or by the checklist |
-| Check the break-glass kit (logins work, recovery codes valid, printed copy current) | Every 6 months | Access can be recovered |
+| Check the break-glass kit (logins work, recovery codes valid, printed copy current, both encrypted cloud copies decrypt with the memorized passphrase, the GPG key not near expiry) | Every 6 months | Access can be recovered |
 
 Each drill's result and time are recorded in the decision log; this document is updated whenever a drill finds something wrong.

@@ -170,6 +170,8 @@ function check_base_packages() {
   check_tool unzip required unzip -v
   check_tool jq required jq --version
   check_tool gpg required gpg --version
+  check_tool paperkey required paperkey --version
+  check_tool ykman required ykman --version
   check_tool python3 required python3 --version
   check_tool shellcheck required shellcheck --version
   check_tool shfmt required shfmt --version

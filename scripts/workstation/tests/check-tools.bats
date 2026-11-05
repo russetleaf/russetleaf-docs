@@ -12,7 +12,7 @@
 load helpers
 
 SYSTEM_TOOLS=(
-  git curl wget unzip jq gpg python3 shellcheck shfmt bats direnv wg
+  git curl wget unzip jq gpg paperkey ykman python3 shellcheck shfmt bats direnv wg
   mise bw uv pre-commit checkov semgrep ruff pip-audit prowler zizmor
 )
 
