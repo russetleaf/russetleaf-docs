@@ -47,6 +47,7 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 - **A shared-services account for everything non-workload** (state, logs and backups together): fewer accounts, but mixes concerns the SRA deliberately separates.
 
 - **Inviting the existing account as russetleaf-home** (the earlier plan): would keep the account and its history, but that account is already the **management account of its own Organization** (created in 2022 for an earlier project, with three member accounts). It could join another Organization only after removing or closing those accounts and deleting its Organization, and it holds no RussetLeaf resources, so there is nothing to bring across.
+- **AWS Billing Transfer** (another Organization's management account, such as the 2022 one, pays RussetLeaf's consolidated bill): one card for both, but Cost Anomaly Detection does not work for a transferred bill, Budgets and Cost Explorer show only pro forma costs (without credits), the transfer can start only on the first of a month, and RussetLeaf's billing would depend permanently on an Organization outside the project. Consolidated billing within the Organization already gives one bill for every RussetLeaf account.
 - **Reusing that 2022 Organization** (its management account as RussetLeaf's): no new management account, but it would inherit years of unrelated resources, IAM users with long-lived keys and an old SCP, in the one account that is meant to run nothing.
 
 ## Consequences
