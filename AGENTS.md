@@ -7,7 +7,7 @@ This repo holds the RussetLeaf project's documentation (published at https://doc
 - **Fix related gaps in the same piece of work.** When a change shows that other documents are now outdated, or reveals a small related gap, fix them in the same change rather than leaving them as suggestions for later. Ask first only when the fix needs a decision the operator has not made.
 - **Record decisions** in the phase plan's [decision log](docs/phase-1-russetleaf-dev/plan.md#decision-log) (date, decision, reason), and significant ones as ADRs.
 - **Stage only the files the change touched** (`git add <paths>`, never `git add -A` or `git add .`), because another session or person may have unrelated work in progress in the same clone, and check `git diff --cached` before committing. Commits are signed; the commit message describes everything in it.
-- **Keep private details out of the repo:** it is public, so no secrets, AWS account or Organization IDs, personal email addresses or phone numbers. Write placeholders such as `<name>+rl-management@<domain>`, and keep real values in the password manager.
+- **Keep private details out of the repo:** it is public, so no secrets, AWS account or Organization IDs, personal email addresses or phone numbers. Write placeholders such as `<name>+rl-management@<domain>`, and keep real values in Bitwarden, the project's password manager.
 - **No judgments of skill levels** (such as "junior", "intermediate" or "advanced") about people or their work in any file.
 
 ## Bash scripts

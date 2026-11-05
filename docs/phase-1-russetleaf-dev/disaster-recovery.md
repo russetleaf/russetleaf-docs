@@ -33,7 +33,7 @@ Everyday availability targets are in [ADR 1014](adr/1014-availability-levels.md)
 | Cluster state (etcd snapshots; contain every Secret) | Weekly snapshots in the KMS-encrypted backup bucket (russetleaf-home), readable only by the backup role | **Replicated** to the Backup account (Object Lock), plus an **`age`-encrypted copy in Cloudflare R2** (bucket lock) | 30-day lock, deleted after 35 days; **no** monthly copies (each holds every Secret, and an old snapshot is no use for recovery) | Not needed for a rebuild, which uses GitOps; used only to recover a lost control plane (`etcd-recovery.md`), never after a compromise |
 | Talos machine secrets, talosconfig (and the disk-encryption recovery procedure for each node's TPM) | Terraform state; the workstation | Break-glass kit | Until rotated | No (losing them means rebuilding the cluster from scratch) |
 | Secrets in Secrets Manager | The workload accounts (russetleaf-home; russetleaf-com in Phase 3) | Most are **regenerated** rather than copied (see below) | — | Mostly yes |
-| Account access (root logins, MFA recovery codes) | Password manager | Break-glass kit, including a printed copy | Until changed | No |
+| Account access (root logins, MFA recovery codes) | Bitwarden (the password manager) | Break-glass kit, including a printed copy | Until changed | No |
 | Logs and traces (Loki, Tempo) | S3 | None (short-lived operational data) | — | Not needed |
 | Kubernetes objects (everything Argo CD deploys) | The cluster | `russetleaf-gitops` and its mirror (above) | 90 days | **Yes**, re-synced by Argo CD; no cluster-level backup tool ([ADR 1018](adr/1018-disaster-recovery.md)) |
 | Metrics (Prometheus, 15 days) | Local volume on `rl-home-cp03` | None | — | Not needed (history is lost on a rebuild) |
@@ -70,7 +70,7 @@ Every repo is also **mirrored to GitLab on every push** to `main`, by a `gitlab-
 
 ## Break-glass kit
 
-Kept in the password manager, with a **printed copy** of the starred items stored somewhere safe at home and ideally a second location (e.g. with a family member).
+Kept in **Bitwarden** (the project's password manager), with a **printed copy** of the starred items stored somewhere safe at home and ideally a second location (e.g. with a family member).
 
 - ★ AWS: the **management account's** root email, password and **MFA recovery** (member accounts have no root credentials: centralized root access management); the IAM Identity Center admin and break-glass logins
 - ★ GitHub: account login and **recovery codes**
@@ -78,7 +78,7 @@ Kept in the password manager, with a **printed copy** of the starred items store
 - ★ Cloudflare: account login and recovery codes
 - ★ Google: account recovery (for the Google Cloud project and Google sign-in)
 - ★ Domain registrar logins for russetleaf.com and russetleaf.dev
-- ★ Password manager's own emergency kit
+- ★ **Bitwarden's own recovery details:** the account email, the master password (never stored in Bitwarden itself) and the **two-step login recovery code**. Bitwarden's optional **emergency access** (a paid feature) can also let a trusted person reach the vault after a waiting period, which fits the second copy above.
 - The **lab router** (ER605) admin login, its configuration backup, and the WireGuard client profile
 - Talos secrets bundle (`secrets.yaml`), the `os:admin` talosconfig, and the Talos-generated **break-glass admin kubeconfig** (use of it raises an alert)
 - Where every backup is (this document's table), and the order of recovery (below)
@@ -113,7 +113,7 @@ The step-by-step runbooks for these scenarios (etcd recovery, node replacement, 
 
 ## Bootstrap order from zero
 
-1. **Access:** password manager → break-glass kit → AWS (management account, then IAM Identity Center into the others), GitHub, Cloudflare, Google, registrar.
+1. **Access:** Bitwarden (from the printed copy if needed) → break-glass kit → AWS (management account, then IAM Identity Center into the others), GitHub, Cloudflare, Google, registrar.
 2. **Code:** restore the five repos (including `russetleaf-docs`) (from GitHub, or the mirrors in the backup account).
 3. **Terraform state:** use the russetleaf-infra state bucket, or copy it back from the Backup account.
 4. **Account foundations:** apply `russetleaf-infra/envs/org/` (Organization, accounts, SCPs, Identity Center) and `envs/security/` (CloudTrail, GuardDuty, Security Hub, Config), then `bootstrap/` (state bucket, CI roles).

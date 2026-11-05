@@ -6,7 +6,8 @@ set -Eeuo pipefail
 #
 # Sets up an Ubuntu 24.04 workstation for RussetLeaf: the base packages, Docker
 # Engine (from Docker's repository, not the snap), kind's file-watch limits, mise
-# and direnv with their shell hooks, and the Python tools installed with uv. Safe to
+# and direnv with their shell hooks, the Bitwarden CLI, and the Python tools installed
+# with uv. Safe to
 # run again: each step checks or overwrites its own files instead of appending. A
 # rerun also upgrades the packages it installs, if newer versions exist.
 #
@@ -105,7 +106,8 @@ function usage() {
 Usage: ${SCRIPT_NAME} [-h|--help] [-l|--with-localstack] [-n|--no-color] [-v|--verbose]
 
 Sets up an Ubuntu 24.04 workstation for RussetLeaf: base packages, Docker Engine,
-kind's file-watch limits, mise and direnv, and the Python tools (with uv).
+kind's file-watch limits, mise and direnv, the Bitwarden CLI (bw), and the Python
+tools (with uv).
 Run it as a normal user; it uses sudo where needed. Safe to run again.
 
 Available options:
@@ -293,6 +295,17 @@ function install_mise() {
 }
 
 ########################################
+# Install the Bitwarden CLI (bw) globally with mise, which verifies the release's
+# checksum. The desktop app is installed separately (see the plan's workstation setup).
+# Arguments:
+#   None
+########################################
+function install_bitwarden_cli() {
+  log_step "The Bitwarden CLI (bw)"
+  mise use --global bitwarden@latest
+}
+
+########################################
 # Install uv globally with mise, then the Python tools with uv
 # Globals:
 #   UV_TOOLS, with_localstack (read)
@@ -367,6 +380,7 @@ function main() {
   install_docker
   set_kind_limits
   install_mise
+  install_bitwarden_cli
   install_python_tools
   print_next_steps
 }

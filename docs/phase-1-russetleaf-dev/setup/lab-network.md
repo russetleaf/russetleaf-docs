@@ -13,7 +13,7 @@ The ER605's web interface changes between firmware versions. These steps name ea
 ## Before starting
 
 - The **ER605 (v2)**: check the label underneath says hardware version **V2** (WireGuard needs it), the **TL-SG105** switch (`rl-home-sw01`), and network cables.
-- The **workstation**, with `wireguard-tools` installed (the [workstation setup script](../plan.md#1-run-the-setup-script) installs it), and the **password manager** open.
+- The **workstation**, with `wireguard-tools` installed (the [workstation setup script](../plan.md#1-run-the-setup-script) installs it), and **Bitwarden** (the project's password manager) open.
 - A **laptop** (or any spare device) that can be plugged into the lab switch, for the checks at the end.
 - The **MAC addresses** of the three nodes' network ports (on a label, or in each machine's BIOS), for the address reservations.
 

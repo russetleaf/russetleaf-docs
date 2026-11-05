@@ -210,21 +210,24 @@ function check_docker() {
 }
 
 ########################################
-# Check mise, uv and the Python tools
+# Check mise, the Bitwarden CLI, uv and the Python tools
 # Arguments:
 #   None
 ########################################
 function check_python_tools() {
-  local uv_path
+  local tool tool_path
 
-  # uv is a mise tool, so it is on the PATH only in shells that run
-  # `mise activate`; ask mise where it is in other shells (scripts, CI)
-  if ! command -v uv >/dev/null 2>&1 && uv_path="$(mise which uv 2>/dev/null)"; then
-    PATH="${uv_path%/*}:${PATH}"
-  fi
+  # uv and bw are global mise tools, so they are on the PATH only in shells
+  # that run `mise activate`; ask mise where they are in other shells (scripts, CI)
+  for tool in uv bw; do
+    if ! command -v "${tool}" >/dev/null 2>&1 && tool_path="$(mise which "${tool}" 2>/dev/null)"; then
+      PATH="${tool_path%/*}:${PATH}"
+    fi
+  done
 
-  section "mise and the Python tools (uv)"
+  section "mise, the Bitwarden CLI and the Python tools (uv)"
   check_tool mise required mise --version
+  check_tool bw required bw --version
   check_tool uv required uv --version
   check_tool pre-commit required pre-commit --version
   check_tool checkov required checkov --version

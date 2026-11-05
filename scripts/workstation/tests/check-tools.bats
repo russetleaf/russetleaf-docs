@@ -13,7 +13,7 @@ load helpers
 
 SYSTEM_TOOLS=(
   git curl wget unzip jq gpg python3 shellcheck shfmt bats direnv wg
-  mise uv pre-commit checkov semgrep ruff pip-audit prowler zizmor
+  mise bw uv pre-commit checkov semgrep ruff pip-audit prowler zizmor
 )
 
 ########################################
@@ -87,6 +87,20 @@ esac"
   run_isolated "${CHECK}" --system
   [ "${status}" -eq 0 ]
   [[ "${output}" =~ uv\ +1\.2\.3 ]]
+}
+
+@test "the Bitwarden CLI installed by mise but not on the PATH is found through mise" {
+  stub_system_tools
+  mkdir -p "${BATS_TEST_TMPDIR}/mise-bw"
+  mv "${BIN}/bw" "${BATS_TEST_TMPDIR}/mise-bw/bw"
+  stub_script mise "case \"\$1 \$2\" in
+  'which bw') echo '${BATS_TEST_TMPDIR}/mise-bw/bw' ;;
+  'which '*) exit 1 ;;
+  *) echo 'mise 2026.11.1' ;;
+esac"
+  run_isolated "${CHECK}" --system
+  [ "${status}" -eq 0 ]
+  [[ "${output}" =~ bw\ +1\.2\.3 ]]
 }
 
 @test "uv missing from both the PATH and mise is reported" {

@@ -6,7 +6,7 @@ Slack's and the services' web pages change over time. These steps name each sett
 
 ## Before starting
 
-- The **password manager** open, with entries ready for Slack, the bot token, the heartbeat service and the uptime checker.
+- **Bitwarden** (the project's password manager) open, with entries ready for Slack, the bot token, the heartbeat service and the uptime checker.
 - The **Slack app** on the operator's phone, for the `#rl-critical` notifications.
 - An authenticator app, passkey or security key for each account's two-factor sign-in ([ADR 1032](../adr/1032-defense-in-depth.md)).
 
