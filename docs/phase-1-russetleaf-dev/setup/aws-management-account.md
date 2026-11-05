@@ -13,11 +13,11 @@ Have these ready:
 - **A new email address** for the account's root user, used for nothing else. An alias of the operator's mailbox works, for example `<name>+rl-management@<domain>`: the mail still arrives, but the address is unique to this account.
 - **The password manager open**, with a new entry for the account, so the root password is generated there and never typed or reused.
 - **Two MFA devices** for root: two hardware security keys, or one key and a passkey ([ADR 1032](../adr/1032-defense-in-depth.md)). The second is the backup, kept apart from the first.
-- **A payment card and a phone** for AWS's identity check (a small temporary charge, then an SMS or voice call).
+- **A payment card and a phone** for AWS's identity check (a small temporary charge, then an SMS or voice call). The advanced sign-up below requires a payment method.
 
 ## Part 1: create the account (step 0.1)
 
-1. **Sign up** at AWS's "Create an AWS account" page, with the new email address and **`russetleaf-management`** as the account name. Enter the code AWS emails to confirm the address.
+1. **Sign up with "Sign up for AWS (advanced)"**, not the simplified "Sign up for AWS (new)" experience: the simplified one creates no root user, has AWS manage the Organization's SCPs and RCPs, and does not offer IAM Access Analyzer, all of which the design needs ([ADR 1019](../adr/1019-aws-multi-account-sra.md)). Use the new email address and **`russetleaf-management`** as the account name, and enter the code AWS emails to confirm the address.
 2. **Root password:** generate a long random password in the password manager and paste it in.
 3. **Contact information:** choose the **Personal** account type, and enter the operator's name, address and phone number.
 4. **Payment and identity:** add the card, then complete the SMS or voice check.
