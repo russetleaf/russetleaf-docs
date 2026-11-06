@@ -7,7 +7,7 @@
 
 ## Context
 
-The project's own code and documentation are GPL v3.0 ([ADR 1049](1049-licensing.md)), and it is published to show how a platform is built. Most of its tools are open source, but a review on 2026-11-06 found some that are not, or that have moved away from open source:
+The project's own code and documentation are GPL v3.0 ([ADR 1049](1049-licensing.md)), and it is published so others can read and reuse how the platform is built. Most of its tools are open source, but a review on 2026-11-06 found some that are not, or that have moved away from open source:
 
 - **Terraform** moved to HashiCorp's source-available Business Source License in 2023; **OpenTofu** is the open-source fork.
 - **Semgrep** moved features from its free Community Edition into its paid product in late 2024, and put its maintained rules under a license that is not open source; **Opengrep** is the open-source fork of the engine, maintained by several security companies.
@@ -45,7 +45,7 @@ There was no rule for choosing between an open-source tool and one that is not, 
 ## Alternatives considered
 
 - **No rule; judge each tool when it is chosen:** less process, but it is how Terraform and Semgrep were picked without their licenses being weighed.
-- **Open source only, with no exceptions:** consistent, but it would mean self-hosting the code host, chat and sign-in, and giving up the AWS services the design is built to show.
+- **Open source only, with no exceptions:** consistent, but it would mean self-hosting the code host, chat and sign-in, and giving up the AWS services the design is built on.
 - **Keep the switched tools until they cause a problem** (as improvements for after go-live): less work now, but every config, workflow and runbook written in the meantime would have to be changed later; nothing using them exists yet.
 
 ## Consequences

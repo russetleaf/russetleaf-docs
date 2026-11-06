@@ -30,7 +30,7 @@ At home, MariaDB runs in the cluster with operator-generated passwords (Phase 1)
 
 - **Aurora MySQL:** Aurora does not offer MariaDB; switching engines would break the shared backups.
 - **Direct IAM authentication to RDS, without a proxy:** AWS recommends it only for low connection rates; WordPress's connection pattern needs the proxy.
-- **MariaDB in the EKS cluster** (as at home): cheaper, but hides the managed-database design the AWS site is meant to show.
+- **MariaDB in the EKS cluster** (as at home): cheaper, but gives up the managed database's Multi-AZ failover, automated backups and IAM authentication, which the AWS design relies on.
 
 ## Consequences
 

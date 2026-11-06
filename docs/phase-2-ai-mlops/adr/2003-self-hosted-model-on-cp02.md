@@ -19,7 +19,7 @@ The gateway ([ADR 2002](2002-summary-pipeline-architecture.md)) needs a fallback
 
 ## Alternatives considered
 
-- **Bedrock only:** simpler and better quality, but no fallback during Bedrock outages or throttling, and no model-serving work to show.
+- **Bedrock only:** simpler and better quality, but no fallback during Bedrock outages or throttling, and a dependence on one provider for every summary.
 - **Running the model on `rl-home-cp03`:** more CPU and memory, but `rl-home-cp03` already carries most of the platform; mixing them makes both less predictable.
 - **Ollama:** friendlier, but less control over the server and metrics than llama.cpp directly.
 - **A cheap GPU card or a GPU mini PC at home:** much faster, but extra hardware cost and power; revisit if the AI work grows.

@@ -33,7 +33,7 @@ The cluster already runs **Cilium** with kube-proxy replacement ([ADR 1027](1027
 ## Consequences
 
 - One component fewer at home: networking, policy, observability and ingress all come from Cilium.
-- The Gateway API is the current Kubernetes standard for ingress, which is worth showing.
+- The Gateway API is the current Kubernetes standard for ingress; the Ingress API is frozen and receives no new features.
 - Ingress at home now depends on Cilium, already the highest-risk component ([ADR 1016](1016-rollback-strategy.md)); its manual-sync and `helm rollback` recovery path covers this too.
 - The two sites differ: `HTTPRoute`s at home, an `Ingress` on AWS; the chart handles both.
 

@@ -196,7 +196,7 @@ Which compliance frameworks the project follows, and how, recorded in [ADR 1036]
 
 ## Project highlights
 
-What each phase builds and shows. Phase 1 on its own is a complete project; Phases 2 and 3 add to it.
+What each phase builds. Phase 1 on its own is a complete project; Phases 2 and 3 add to it.
 
 ### Phase 1: russetleaf.dev
 

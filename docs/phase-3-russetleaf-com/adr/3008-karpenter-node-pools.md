@@ -19,7 +19,7 @@ EKS nodes cost money by the hour, demos are short, and traffic during a load tes
 ## Alternatives considered
 
 - **Cluster Autoscaler with managed node groups:** the older, widely used option, but slower, tied to node group definitions, and weaker at mixing instance types and spot.
-- **EKS Auto Mode:** AWS manages Karpenter-style provisioning itself; simpler, but hides the configuration this project is meant to show, and adds a per-node management fee.
+- **EKS Auto Mode:** AWS manages Karpenter-style provisioning itself; simpler, but moves node configuration (instance families, spot use, consolidation) out of the project's code and review, and adds a per-node management fee.
 - **Fargate:** no nodes to manage, but no DaemonSets (Falco, Cilium, Alloy), and less control.
 
 ## Consequences

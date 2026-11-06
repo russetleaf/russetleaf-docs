@@ -30,7 +30,7 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 ## Alternatives considered
 
 - **Single account (the previous design):** simplest and cheapest, but a compromise or mistake can reach everything; no separation of security tooling and logs from workloads; does not match the SRA.
-- **AWS Control Tower:** sets up a similar landing zone automatically, with guardrails and account vending, but adds managed resources and costs, and hides much of what this project wants to show in OpenTofu. A good choice for a team; OpenTofu-managed Organizations shows the same structure explicitly.
+- **AWS Control Tower:** sets up a similar landing zone automatically, with guardrails and account vending, but adds managed resources and costs, and keeps much of the landing zone's configuration outside the project's code and review. A good choice for a team; an OpenTofu-managed Organization defines the same structure explicitly, in version control.
 - **The lean option** (account structure and free guardrails only, without Security Hub and Config): saves about $5–15/month, but loses continuous posture checks and the central findings view the SRA is built around.
 - **Amazon Macie** (discovers sensitive data in S3 and flags bucket exposure): the only sensitive data is already known and located (commenters' emails and password hashes in the database dumps), and is protected by a customer-managed key, lifecycle limits, Object Lock and CloudTrail data events ([ADR 1043](1043-database-encryption.md), [ADR 1042](1042-s3-versioning-lifecycle-and-storage-classes.md)); Macie would mostly confirm the record of processing, at a per-GB scanning cost. Added if russetleaf.com becomes always-on or holds user data (below).
 - **AWS Security Lake** (collects CloudTrail, VPC flow logs, Route 53 resolver logs, Security Hub findings and EKS audit logs from every account into one S3 data lake in the OCSF format, for Athena or a SIEM): the important logs are already centralized (the organization trail, Config history, flow logs and EKS audit logs in Log Archive; findings in Security Hub; Kubernetes events in Loki), and nothing in the design consumes OCSF; it would add per-GB ingestion and normalization costs and a second copy of the same data.
@@ -57,7 +57,7 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 - About **$5–15/month** more (Security Hub, Config, KMS), included in the home lab's always-on total of about **$14–33/month** (with `rl-home-cp03`'s electricity from [ADR 1020](1020-three-node-ha-home-cluster.md); see the Phase 1 design's cost table).
 - More moving parts: cross-account access for state, replication and the seed Job; per-account CI roles; per-account quotas; SES access per account (and Bedrock model access in russetleaf-home, Phase 2).
 - Nothing is migrated: every account starts empty inside the Organization, under its guardrails from the first day. The operator's older AWS Organization (from a 2022 project) stays separate and is not part of RussetLeaf; it is cleaned up or closed on its own schedule.
-- A credible, SRA-shaped AWS foundation to show and discuss.
+- An AWS foundation that follows the Security Reference Architecture, so it can be checked against AWS's own guidance.
 
 ## When to revisit
 

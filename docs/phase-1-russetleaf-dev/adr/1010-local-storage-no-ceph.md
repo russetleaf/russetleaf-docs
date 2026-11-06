@@ -35,7 +35,7 @@
 
 ## When to revisit
 
-- A third node (or more) with spare disks and enough memory (e.g. three mini PCs with 32 GB each): Rook-Ceph or Longhorn becomes realistic and worth showing.
+- A third node (or more) with spare disks and enough memory (e.g. three mini PCs with 32 GB each): Rook-Ceph or Longhorn becomes realistic.
 - A requirement for a recovery point of minutes rather than hours: add MariaDB binary-log shipping to S3 (point-in-time recovery) or replication.
 - Workloads that need shared (read-write-many) volumes in the cluster.
 

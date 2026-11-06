@@ -36,7 +36,7 @@ zensical serve          # http://localhost:8000
 zensical build --strict # what CI runs: fails on broken links and anchors
 ```
 
-Planned and built with the help of Claude (Anthropic's AI assistant); every decision is reviewed and owned by the author.
+Planned and built with the help of Claude (Anthropic's AI assistant); every decision is reviewed and owned by the project's maintainer.
 
 ## License
 

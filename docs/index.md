@@ -26,4 +26,4 @@ The live site it runs is **[russetleaf.dev](https://russetleaf.dev)**.
 - Written as Markdown in the [`russetleaf-docs`](https://github.com/smscully/russetleaf-docs) repo, reviewed in pull requests, and published here by GitHub Actions; the build fails on any broken link.
 - Diagrams are written as code (Mermaid, following the C4 model) next to the text they illustrate.
 - Each build step starts with a short spec and ends with its actual hours and what changed; each milestone ends with a short retro.
-- Planned and built with the help of Claude (Anthropic's AI assistant); every decision is reviewed and owned by the author.
+- Planned and built with the help of Claude (Anthropic's AI assistant); every decision is reviewed and owned by the project's maintainer.

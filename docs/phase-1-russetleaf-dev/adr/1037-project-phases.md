@@ -11,7 +11,7 @@ The project had grown to two sites and one design document: russetleaf.dev at ho
 
 ## Decision
 
-Build in **three phases**, each complete and demonstrable on its own, with its own design, build plan and decisions:
+Build in **three phases**, each complete and usable on its own, with its own design, build plan and decisions:
 
 | Phase | Builds | Needs |
 |---|---|---|
