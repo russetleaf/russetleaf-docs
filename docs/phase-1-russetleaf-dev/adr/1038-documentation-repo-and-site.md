@@ -1,11 +1,13 @@
 # ADR 1038: Separate documentation repo, published as a docs site
 
-- **Status:** Accepted; updated by [ADR 1046](1046-incident-response-and-runbook-index.md)
+- **Status:** Accepted; updated by [ADR 1046](1046-incident-response-and-runbook-index.md) and [ADR 1053](1053-open-source-tools-by-default.md)
 - **Date:** 2026-11-02
 - **Applies to:** the project documentation and planning, across all repos
 - **Phase:** 1 (all phases add their documents here)
 
 > **Update ([ADR 1046](1046-incident-response-and-runbook-index.md)):** runbooks still live with their code, but the docs site's [Runbooks](../../runbooks.md) page is the **one index** of every runbook in every repo; `russetleaf-gitops/docs/runbooks/README.md` points to it.
+
+> **Update ([ADR 1053](1053-open-source-tools-by-default.md)):** the site is built with **Zensical** (MIT), the successor to MkDocs and Material for MkDocs from the same team, because Material for MkDocs reaches end of life on May 5, 2027. Zensical reads the same `mkdocs.yml`, and `zensical build --strict` fails on broken pages and anchors as before.
 
 ## Context
 
@@ -41,5 +43,5 @@ The documentation (overview, phase designs, plans and roadmaps, the ADRs, step s
 
 ## Open items
 
-- ~~Set up `docs.russetleaf.dev`~~: done 2026-11-02 (records added by hand; imported into Terraform in Phase 1 step 2.3).
+- ~~Set up `docs.russetleaf.dev`~~: done 2026-11-02 (records added by hand; imported into OpenTofu in Phase 1 step 2.3).
 - Phase 1 step 1.1: add the README links and pull-request templates in the code repos, and create the issues and Projects board here.

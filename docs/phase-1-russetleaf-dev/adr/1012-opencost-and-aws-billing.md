@@ -25,7 +25,7 @@ The design used OpenCost on both clusters (with Kubecost as an optional alternat
 - **Reports:**
     - a **weekly OpenCost allocation summary** for the home cluster, from a scheduled workflow on the in-cluster runners
     - a **per-demo actual-cost report** from **Cost Explorer** (grouped by `Site` and `Stack`), run daily because of Cost Explorer's ~24-hour lag, comparing actual cost per demo hour with the ~$0.70/hour estimate
-- **Activate the cost allocation tags** with Terraform (`aws_ce_cost_allocation_tag`) in `russetleaf-infra/envs/org/`, in the management account (where they apply organization-wide).
+- **Activate the cost allocation tags** with OpenTofu (`aws_ce_cost_allocation_tag`) in `russetleaf-infra/envs/org/`, in the management account (where they apply organization-wide).
 
 ## Alternatives considered
 

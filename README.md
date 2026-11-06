@@ -21,7 +21,7 @@ Design, plans, roadmap and architecture decisions for **RussetLeaf**, a producti
 |---|---|
 | `russetleaf-docs` (this repo) | Project documentation, planning issues and the docs site |
 | `russetleaf-gitops` | What runs on the clusters (Argo CD's source of truth), plus runbooks and operational docs |
-| `russetleaf-infra` | Terraform for AWS, Cloudflare and the Talos cluster |
+| `russetleaf-infra` | OpenTofu for AWS, Cloudflare and the Talos cluster |
 | `russetleaf-wordpress` | The custom WordPress image and its Helm chart |
 | `russetleaf-llm-summarizer` | The AI summarizer and its MLOps pipeline (Phase 2) |
 
@@ -32,8 +32,8 @@ The code repos are created in Phase 1 step 1.1 (and Phase 2 step 1.1).
 ```sh
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements-docs.txt
-mkdocs serve          # http://127.0.0.1:8000
-mkdocs build --strict # what CI runs: fails on broken links and anchors
+zensical serve          # http://localhost:8000
+zensical build --strict # what CI runs: fails on broken links and anchors
 ```
 
 Planned and built with the help of Claude (Anthropic's AI assistant); every decision is reviewed and owned by the author.

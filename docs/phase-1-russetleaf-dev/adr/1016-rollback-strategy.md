@@ -14,7 +14,7 @@ Rollback mechanisms existed in pieces (Argo Rollouts canaries, Git reverts, `tal
 - **Database schema changes:** WordPress core upgrades change the database structure on first run, so rolling back the image afterwards can break the site.
 - **Argo CD auto-sync:** a manual `argocd app rollback` is immediately overwritten by auto-sync.
 - **Components that rollback depends on:** a broken Cilium (networking) or Kyverno (admission) can prevent the fix from being deployed.
-- **Terraform:** a revert can still destroy or replace stateful resources.
+- **OpenTofu:** a revert can still destroy or replace stateful resources.
 - **AI summaries:** reverting a prompt or model leaves bad summaries already saved.
 - **Secrets:** a bad rotation needs a quick path back.
 - No decision rules, and no practice.
@@ -22,11 +22,11 @@ Rollback mechanisms existed in pieces (Argo Rollouts canaries, Git reverts, `tal
 ## Decision
 
 - **Rules:** roll back first and investigate after (user-facing errors not clearing within 5 minutes); fix forward only when rollback is riskier or the fix is trivial and ships within 15 minutes; record every rollback.
-- **Default mechanism: Git revert**, synced by Argo CD (applications, platform, configuration, model routing, Terraform).
+- **Default mechanism: Git revert**, synced by Argo CD (applications, platform, configuration, model routing, OpenTofu).
 - **Automatic rollback** for application releases through **Argo Rollouts** canary analysis.
 - **Schema changes:** CI labels releases that change WordPress's database version; the promotion workflow takes an **on-demand backup** (a manual RDS snapshot on AWS) before such a release can be merged; recovery is restore-and-roll-back or fix forward, decided within 15 minutes.
 - **High-risk components:** Cilium on manual sync with a workstation recovery path (`helm rollback`); Kyverno's webhooks exclude `kube-system`, `kyverno` and `argocd`, with an emergency webhook-removal procedure; Argo CD recoverable with `helm rollback`.
-- **Terraform:** `prevent_destroy` on stateful resources; reverts go through a reviewed saved plan, stopping on any destructive change to stateful resources.
+- **OpenTofu:** `prevent_destroy` on stateful resources; reverts go through a reviewed saved plan, stopping on any destructive change to stateful resources.
 - **Talos:** `talosctl rollback`; Kubernetes minor downgrades are not supported, so restore from the pre-upgrade etcd snapshot.
 - **EKS demo stack:** rebuild with previous versions; RDS point-in-time restore for data mistakes.
 - **Secrets:** fall back to Secrets Manager's `AWSPREVIOUS` version.

@@ -6,12 +6,11 @@ set -Eeuo pipefail
 #
 # Sets up an Ubuntu 24.04 workstation for RussetLeaf: the base packages, Docker
 # Engine (from Docker's repository, not the snap), kind's file-watch limits, mise
-# and direnv with their shell hooks, the Bitwarden CLI, and the Python tools installed
-# with uv. Safe to
-# run again: each step checks or overwrites its own files instead of appending. A
+# and direnv with their shell hooks, the Bitwarden CLI and Opengrep, and the Python
+# tools installed with uv. Safe to run again: each step checks or overwrites its own files instead of appending. A
 # rerun also upgrades the packages it installs, if newer versions exist.
 #
-# The per-repo CLI tools (terraform, kubectl, talosctl, ...) are installed later by
+# The per-repo CLI tools (tofu, kubectl, talosctl, ...) are installed later by
 # `mise install` in each repo, from the versions pinned in its .mise.toml.
 #
 # See "Local workstation setup" in docs/phase-1-russetleaf-dev/plan.md.
@@ -39,7 +38,7 @@ function init_script() {
   readonly DOCKER_CONFLICTS=(
     docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc
   )
-  readonly UV_TOOLS=(pre-commit checkov semgrep ruff pip-audit prowler zizmor)
+  readonly UV_TOOLS=(pre-commit checkov ruff pip-audit prowler zizmor)
   readonly KEYRING_DIR="/etc/apt/keyrings"
   readonly SOURCES_DIR="/etc/apt/sources.list.d"
   readonly BASHRC="${HOME}/.bashrc"
@@ -55,7 +54,6 @@ function init_script() {
   # Global variables
   no_color="false"
   verbose="false"
-  with_localstack="false"
   needs_relogin="false"
   current_user="$(id -un)"
 }
@@ -63,7 +61,7 @@ function init_script() {
 ########################################
 # Parse script parameters
 # Globals:
-#   no_color, verbose, with_localstack (set)
+#   no_color, verbose (set)
 # Arguments:
 #   $@ (optional): Options passed to the script
 ########################################
@@ -77,9 +75,6 @@ function parse_params() {
       -h | --help)
         usage
         exit 0
-        ;;
-      -l | --with-localstack)
-        with_localstack="true"
         ;;
       -n | --no-color)
         no_color="true"
@@ -103,16 +98,15 @@ function parse_params() {
 ########################################
 function usage() {
   cat <<EOF
-Usage: ${SCRIPT_NAME} [-h|--help] [-l|--with-localstack] [-n|--no-color] [-v|--verbose]
+Usage: ${SCRIPT_NAME} [-h|--help] [-n|--no-color] [-v|--verbose]
 
 Sets up an Ubuntu 24.04 workstation for RussetLeaf: base packages, Docker Engine,
-kind's file-watch limits, mise and direnv, the Bitwarden CLI (bw), and the Python
-tools (with uv).
+kind's file-watch limits, mise and direnv, the Bitwarden CLI (bw) and Opengrep, and
+the Python tools (with uv).
 Run it as a normal user; it uses sudo where needed. Safe to run again.
 
 Available options:
   -h|--help              Display help
-  -l|--with-localstack   Also install the LocalStack CLI
   -n|--no-color          Turn off text colors (also off when NO_COLOR is set,
                          or the output is not a terminal)
   -v|--verbose           Trace every command
@@ -306,9 +300,20 @@ function install_bitwarden_cli() {
 }
 
 ########################################
+# Install Opengrep (static analysis, the open-source fork of Semgrep) globally with
+# mise, which verifies the release's checksum
+# Arguments:
+#   None
+########################################
+function install_opengrep() {
+  log_step "Opengrep"
+  mise use --global opengrep@latest
+}
+
+########################################
 # Install uv globally with mise, then the Python tools with uv
 # Globals:
-#   UV_TOOLS, with_localstack (read)
+#   UV_TOOLS (read)
 # Arguments:
 #   None
 # Outputs:
@@ -320,9 +325,6 @@ function install_python_tools() {
   log_step "uv and the Python tools"
   # Each repo can still pin its own uv version in its .mise.toml
   mise use --global uv@latest
-  if [[ "${with_localstack}" == "true" ]]; then
-    tools+=(localstack)
-  fi
 
   installed="$(mise exec -- uv tool list 2>/dev/null || true)"
   for tool in "${tools[@]}"; do
@@ -381,6 +383,7 @@ function main() {
   set_kind_limits
   install_mise
   install_bitwarden_cli
+  install_opengrep
   install_python_tools
   print_next_steps
 }

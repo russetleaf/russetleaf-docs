@@ -11,18 +11,18 @@
 
 Phase 1 is built with AI assistance in conversation (Claude answers, drafts and reviews; the operator runs every command and makes every change), not with autonomous agents. Phases 2 and 3 are built with **AI coding agents** (for example Claude Code): agents that read the repo, edit files, run tools and tests, and iterate on their own until a task's checks pass.
 
-Agents speed up work that has fast, objective checks (code, Terraform, manifests, tests) and help less with hardware, waiting and debugging the live environment. They also bring risks a careful team manages: broad credentials, unreviewed changes, prompt injection through content the agent reads, and plausible-looking mistakes in security-sensitive configuration. Building Phases 2 and 3 this way, with Phase 1 as a baseline, shows how agents can be used safely on DevOps and MLOps work and what they change.
+Agents speed up work that has fast, objective checks (code, OpenTofu, manifests, tests) and help less with hardware, waiting and debugging the live environment. They also bring risks a careful team manages: broad credentials, unreviewed changes, prompt injection through content the agent reads, and plausible-looking mistakes in security-sensitive configuration. Building Phases 2 and 3 this way, with Phase 1 as a baseline, shows how agents can be used safely on DevOps and MLOps work and what they change.
 
 ## Decision
 
 - **Tools:** **Claude Code** as the coding agent, used interactively on the workstation, where its permission settings enforce the rules below; and the **Claude Code GitHub Action** for small, well-specified tasks that run in CI and return as pull requests. Instructions live in `AGENTS.md`, a format most coding agents read, so the choice of tool can change without rewriting them. Agents that **operate** the cluster, rather than build it, are a separate decision ([ADR 2006](2006-ai-operations-assistant.md)).
-- **Scope:** agents may write and change code, Terraform, manifests, policies, tests and documentation, and run local tools and tests. They **may not** apply infrastructure changes, merge pull requests, change GitHub or AWS settings, or read secrets.
+- **Scope:** agents may write and change code, OpenTofu, manifests, policies, tests and documentation, and run local tools and tests. They **may not** apply infrastructure changes, merge pull requests, change GitHub or AWS settings, or read secrets.
 - **One step per agent session, with the step spec as the contract:** the operator writes or approves the step's spec ([`docs/specs/TEMPLATE.md`](../../specs/TEMPLATE.md)) first; its acceptance criteria tell the agent when it is done; the agent works on a branch and opens a pull request.
-- **Sandbox first:** agents iterate against local environments (kind or Talos in Docker, LocalStack, the mock LLM, the Docker Compose demo), never against production.
+- **Sandbox first:** agents iterate against local environments (kind or Talos in Docker, Moto, the mock LLM, the Docker Compose demo), never against production.
 - **Least-privilege identities for agents:**
     - **GitHub:** commits on branches and pull requests only; branch protection requires the operator's review; no admin or settings access.
     - **Kubernetes (home):** the **read-only** role ([ADR 1033](../../phase-1-russetleaf-dev/adr/1033-identity-and-access.md)), with no access to Secrets, through its own short-lived kubeconfig.
-    - **AWS (Phase 3):** a **plan-only** role (read access plus the Terraform state lock), so an agent can run `terraform plan` but never `apply`; applies go through the human-approved `apply` environment.
+    - **AWS (Phase 3):** a **plan-only** role (read access plus the OpenTofu state lock), so an agent can run `tofu plan` but never `apply`; applies go through the human-approved `apply` environment.
     - **No secrets in the agent's context:** `.env` files, kubeconfigs with write access, talosconfigs and credentials are excluded through the agent's permission settings.
 - **Agent instructions in every repo:** an **`AGENTS.md`** (the conventions, how to run the checks, what the agent must not do), with a `CLAUDE.md` that imports it, so instructions are versioned and reviewed like code.
 - **Prompt-injection precautions:** agents do not fetch arbitrary web content while credentials are loaded; new dependencies, Actions and images an agent adds are reviewed and pinned like any other.

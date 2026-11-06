@@ -1,9 +1,11 @@
-# ADR 1013: Image supply chain: SLSA provenance, Semgrep for SAST, and the build pipeline's tools
+# ADR 1013: Image supply chain: SLSA provenance, Opengrep for SAST, and the build pipeline's tools
 
-- **Status:** Accepted
+- **Status:** Accepted; updated by [ADR 1053](1053-open-source-tools-by-default.md) (Opengrep instead of Semgrep, 2026-11-06)
 - **Date:** 2026-11-01
 - **Applies to:** `russetleaf-wordpress` and `russetleaf-llm-summarizer` (and Scorecard on all four repos)
 - **Phase:** 1 (`russetleaf-wordpress`). Later: Phase 2 builds `russetleaf-llm-summarizer` through the same pipeline.
+
+> **Update ([ADR 1053](1053-open-source-tools-by-default.md)):** SAST uses **Opengrep**, the open-source fork of Semgrep's engine, with the same rule syntax, because Semgrep moved features and its maintained rules away from open source. The rules are the project's own plus open rule sets. The reasoning below for Semgrep over CodeQL applies to Opengrep unchanged.
 
 ## Context
 

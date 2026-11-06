@@ -13,7 +13,7 @@ Load tests appeared only in passing (the gVisor comparison, light load during no
 
 - Six test types: **smoke, load, stress/breakpoint, spike, soak** and an **AI pipeline burst**, with defined places to run them (staging, quiet production windows, EKS during demos).
 - **k6** scripts in `russetleaf-gitops/perf/` with thresholds in code; the **k6 Operator** for distributed, in-cluster tests against the ingress; results to Prometheus and Grafana; summaries in `docs/performance/`.
-- **Edge tests** through Cloudflare or CloudFront only with a narrow, temporary WAF allow rule applied by Terraform.
+- **Edge tests** through Cloudflare or CloudFront only with a narrow, temporary WAF allow rule applied by OpenTofu.
 - A **performance regression gate** in `staging-test`: the **current production version and the candidate are load-tested back to back in staging** (same hardware, same conditions, minutes apart), each **three times**, comparing **medians**; more than about 20% slower, or over the error threshold, fails promotion. The gate **waits** while `rl-home-cp02` is busy with a summarization burst or a stress test is running, so shared-cluster load does not cause false failures.
 - Results feed the SLO targets, the capacity and cost plan, KEDA limits and Bedrock budget thresholds.
 
@@ -30,7 +30,7 @@ Load tests appeared only in passing (the gVisor comparison, light load during no
 - The breaking points, bottlenecks and recovery behavior of both sites and the AI pipeline are known and documented.
 - Promotions take a few minutes longer (the short load test).
 - Stress and soak tests use the home cluster heavily for a while; run them at quiet times, in staging where possible.
-- Temporary WAF exceptions must be removed reliably after edge tests (applied and removed by Terraform).
+- Temporary WAF exceptions must be removed reliably after edge tests (applied and removed by OpenTofu).
 
 ## When to revisit
 

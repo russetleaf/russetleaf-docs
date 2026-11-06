@@ -8,6 +8,7 @@ This repo holds the RussetLeaf project's documentation (published at https://doc
 - **Record deferred work** in the phase's improvements list ([Phase 1](docs/phase-1-russetleaf-dev/improvements.md)) in the same change that puts it off: whenever a cheaper option is chosen for now, a feature is left for later, or a tool is not yet tested, add a row with the reason and its trigger. The list is reviewed after go-live (Phase 1 step 9.3) and quarterly.
 - **Record decisions** in the phase plan's [decision log](docs/phase-1-russetleaf-dev/plan.md#decision-log) (date, decision, reason), and significant ones as ADRs.
 - **Stage only the files the change touched** (`git add <paths>`, never `git add -A` or `git add .`), because another session or person may have unrelated work in progress in the same clone, and check `git diff --cached` before committing. Commits are signed; the commit message describes everything in it.
+- **Open-source tools by default** ([ADR 1053](docs/phase-1-russetleaf-dev/adr/1053-open-source-tools-by-default.md)): when choosing a tool, prefer one under an OSI-approved open-source license. A tool that is not, or whose license changes, is either replaced by an open-source alternative or added to the ADR's exceptions with the reason it is kept.
 - **Keep private details out of the repo:** it is public, so no secrets, AWS account or Organization IDs, personal email addresses or phone numbers. Write placeholders such as `<name>+rl-management@<domain>`, and keep real values in Bitwarden, the project's password manager.
 - **No judgments of skill levels** (such as "junior", "intermediate" or "advanced") about people or their work in any file.
 
@@ -42,7 +43,7 @@ Run these, and fix anything they report:
 ```bash
 pre-commit run --all-files     # shellcheck, shfmt, bash standard, doc references, writing style
 bats -r scripts                # the scripts' tests
-mkdocs build --strict          # broken links and anchors (in a venv with requirements-docs.txt)
+zensical build --strict        # broken links and anchors (in a venv with requirements-docs.txt)
 ```
 
 CI also runs **markdownlint** (`.markdownlint-cli2.yaml`: blank lines around headings, lists, tables and code blocks; four-space nested lists; no trailing spaces or repeated blank lines). It needs Node.js, which the workstation does not install, so follow those rules while writing and check the CI result after pushing.

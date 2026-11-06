@@ -17,7 +17,7 @@
 
 - Use **local-path-provisioner** for all home persistent volumes.
 - Protect the one important piece of in-cluster state, the **MariaDB database**, with **logical backups to S3 every 6 hours** (instead of daily), giving a **recovery point of at most 6 hours** of lost posts and settings, and an alert if the last successful backup is more than 7 hours old.
-- Recover from a lost node by rebuilding from Git (Terraform, Argo CD) and restoring MariaDB from the latest backup.
+- Recover from a lost node by rebuilding from Git (OpenTofu, Argo CD) and restoring MariaDB from the latest backup.
 - **Do not use Ceph (Rook) or Longhorn.**
 
 ## Alternatives considered

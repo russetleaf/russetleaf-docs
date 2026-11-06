@@ -16,7 +16,8 @@ load helpers
   run "${SETUP}" --help
   [ "${status}" -eq 0 ]
   [[ "${output}" == *"Usage: setup-ubuntu.sh"* ]]
-  [[ "${output}" == *"--with-localstack"* ]]
+  [[ "${output}" == *"--no-color"* ]]
+  [[ "${output}" != *"localstack"* ]]
   [[ "${output}" == *"64   Invalid option"* ]]
   [[ "${output}" == *"78   The Docker snap or a conflicting package is installed"* ]]
 }

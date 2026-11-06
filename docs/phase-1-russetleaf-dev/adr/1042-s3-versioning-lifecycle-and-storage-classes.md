@@ -11,12 +11,12 @@ The buckets had versioning where it mattered and lifecycle rules that delete sho
 
 ## Decision
 
-- **Versioning** on every bucket whose data cannot be rebuilt: Terraform state, media, database backups, the Log Archive and Backup account buckets (Object Lock requires it), and the MLflow and DVC buckets. **Not** on buckets of short-lived, rebuildable data: Loki logs, Tempo traces, the offline page (kept in Git) and, in Phase 2, the model mirror bucket (refilled from the MLflow registry).
+- **Versioning** on every bucket whose data cannot be rebuilt: OpenTofu state, media, database backups, the Log Archive and Backup account buckets (Object Lock requires it), and the MLflow and DVC buckets. **Not** on buckets of short-lived, rebuildable data: Loki logs, Tempo traces, the offline page (kept in Git) and, in Phase 2, the model mirror bucket (refilled from the MLflow registry).
 - **Every versioned bucket expires old versions**, so versioning protects against mistakes without keeping every overwrite forever:
 
 | Bucket | Current objects | Old (noncurrent) versions | Storage class |
 |---|---|---|---|
-| Terraform state | Kept | Deleted after 90 days | Standard |
+| OpenTofu state | Kept | Deleted after 90 days | Standard |
 | Media (both sites) | Kept | Deleted after **90 days** | Standard |
 | Database backups | Deleted after 30 days | Deleted after 30 days | Standard |
 | Backup account copies (Object Lock, 30 days) | Deleted after **35 days** (after the lock ends) | Deleted after 1 day, once unlocked | Standard |

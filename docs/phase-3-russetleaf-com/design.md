@@ -77,10 +77,10 @@ flowchart LR
 
 - **WordPress has no database password.** On each new connection, a small **`db.php` drop-in** in the WordPress image creates a short-lived **IAM auth token** (valid 15 minutes) with the AWS SDK for PHP, using WordPress's **Pod Identity** role, and sends it in place of a password over **TLS**. Creating the token is a local signing step, not an AWS API call, and the drop-in reuses a token for several minutes.
 - **The IAM check happens at RDS Proxy.** The proxy is set to `iam_auth = REQUIRED` and `require_tls = true`. WordPress's role is allowed `rds-db:connect` on the proxy's `wordpress` user only.
-- **Behind the proxy, an ordinary database user.** The proxy logs in to RDS as `wordpress` with a password stored in **Secrets Manager**. Terraform sets it with an ephemeral random value through a write-only argument, so it never appears in Terraform state. Only the proxy's own IAM role (and the `db-setup` Job) can read it; no WordPress pod, person or Git repo ever holds it. It is **rotated automatically** by Secrets Manager's rotation for MariaDB (the proxy picks up the new value). See [ADR 3007](adr/3007-rds-mariadb-with-rds-proxy.md).
+- **Behind the proxy, an ordinary database user.** The proxy logs in to RDS as `wordpress` with a password stored in **Secrets Manager**. OpenTofu sets it with an ephemeral random value through a write-only argument, so it never appears in OpenTofu state. Only the proxy's own IAM role (and the `db-setup` Job) can read it; no WordPress pod, person or Git repo ever holds it. It is **rotated automatically** by Secrets Manager's rotation for MariaDB (the proxy picks up the new value). See [ADR 3007](adr/3007-rds-mariadb-with-rds-proxy.md).
 - **Why a proxy, not IAM straight to RDS:** WordPress opens a new database connection on almost every page request. AWS recommends direct IAM database authentication only for apps making fewer than about 200 new connections per second, and each IAM-checked connection costs a little extra time. RDS Proxy keeps a pool of connections open to the database, so WordPress's connection churn hits the proxy, not the database. It also hides Multi-AZ failovers from WordPress: a failover takes seconds instead of waiting for DNS to change.
 - **The master (admin) user:** `manage_master_user_password = true`, so **RDS generates the master password, stores it in Secrets Manager and rotates it**. Nobody chooses or sees it. It is used only by the one-off database setup Job (below) and for break-glass admin work.
-- **Creating the `wordpress` user:** the RDS instance is in private subnets, so Terraform (running in GitHub Actions) cannot reach it. A small, idempotent **`db-setup` Job** in `overlays/aws` (an Argo CD PreSync hook) reads the master secret and the `wordpress` secret, then runs `CREATE USER IF NOT EXISTS` and `GRANT ... ON wordpress.*`. Its own Pod Identity role reads only those two secrets, a network policy limits it to the RDS endpoint, and Argo CD deletes it once it succeeds. Because the user lives in the database, it survives demo teardowns in the final snapshot; the Job only does real work on the very first demo.
+- **Creating the `wordpress` user:** the RDS instance is in private subnets, so OpenTofu (running in GitHub Actions) cannot reach it. A small, idempotent **`db-setup` Job** in `overlays/aws` (an Argo CD PreSync hook) reads the master secret and the `wordpress` secret, then runs `CREATE USER IF NOT EXISTS` and `GRANT ... ON wordpress.*`. Its own Pod Identity role reads only those two secrets, a network policy limits it to the RDS endpoint, and Argo CD deletes it once it succeeds. Because the user lives in the database, it survives demo teardowns in the final snapshot; the Job only does real work on the very first demo.
 - **The seed Job** (seeding russetleaf.com from russetleaf.dev) connects the same way as WordPress: IAM token through the proxy, with `rds-db:connect` on its own Pod Identity role.
 
 ### Risk: confirm IAM tokens work from PHP first (with a fallback)
@@ -248,7 +248,7 @@ When the EKS demo stack is not running, **russetleaf.com must still answer** wit
 
 ### Mechanism: an always-on CloudFront edge with error fallback (recommended)
 
-Split the AWS Terraform into two root modules in `russetleaf-infra`:
+Split the AWS OpenTofu into two root modules in `russetleaf-infra`:
 
 - **`envs/aws-edge` (always on, ~$1/month):** the Route 53 hosted zone for russetleaf.com, ACM certificates, the CloudFront distribution, the S3 bucket holding the offline page, the russetleaf.com **media bucket**, and the secret header value CloudFront sends to the ALB.
 - **`envs/aws` (demo stack):** everything else (VPC, EKS, Karpenter, RDS, ElastiCache, WAF, SQS, ...). The ALB itself is created by the AWS Load Balancer Controller from the WordPress Ingress, and **ExternalDNS** creates the `origin.russetleaf.com` record pointing at it.
@@ -283,7 +283,7 @@ This also works for any HTTP method (logins and form posts get the offline page 
 
 Each demo creates a new RDS instance, so content needs a plan:
 
-- **Final snapshot on destroy (recommended):** set `skip_final_snapshot = false` on the RDS instance, and have the next `terraform apply` restore from the most recent snapshot. Posts, summaries and settings carry over. Snapshot storage costs a few cents a month for a site this size.
+- **Final snapshot on destroy (recommended):** set `skip_final_snapshot = false` on the RDS instance, and have the next `tofu apply` restore from the most recent snapshot. Posts, summaries and settings carry over. Snapshot storage costs a few cents a month for a site this size.
 - **Media is never lost:** the russetleaf.com media bucket lives in `envs/aws-edge`, so uploads survive between demos.
 - **Optional: seed from russetleaf.dev.** For the first demo, or to refresh russetleaf.com with the live site's content, run the **seed Job** (`russetleaf-gitops/apps/seed-from-dev/`, an Argo CD Application set to manual sync, AWS only). It:
     1. downloads the latest backup of russetleaf.dev from its S3 backup bucket (see [russetleaf.dev database backups](../phase-1-russetleaf-dev/design.md#russetleafdev-database-backups))
@@ -305,7 +305,7 @@ Each demo creates a new RDS instance, so content needs a plan:
 
 ### Short AWS demos
 
-The full AWS design costs roughly **$0.70 an hour** while running. Run `terraform apply` in `envs/aws`, record a walkthrough of russetleaf.com or take screenshots, then tear it down. The `demo-up` and `demo-down` GitHub Actions workflows in `russetleaf-infra` do this in the right order, and a scheduled safety-net workflow alerts (or tears down) if the stack is left running too long; see [Building it from scratch](../overview.md#building-it-from-scratch). The always-on edge (`envs/aws-edge`) is never destroyed, so russetleaf.com switches to its offline page automatically.
+The full AWS design costs roughly **$0.70 an hour** while running. Run `tofu apply` in `envs/aws`, record a walkthrough of russetleaf.com or take screenshots, then tear it down. The `demo-up` and `demo-down` GitHub Actions workflows in `russetleaf-infra` do this in the right order, and a scheduled safety-net workflow alerts (or tears down) if the stack is left running too long; see [Building it from scratch](../overview.md#building-it-from-scratch). The always-on edge (`envs/aws-edge`) is never destroyed, so russetleaf.com switches to its offline page automatically.
 
 | Demo time per month | Est. cost |
 |---|---|
@@ -315,7 +315,7 @@ The full AWS design costs roughly **$0.70 an hour** while running. Run `terrafor
 
 Together with the home lab (about $14–33 a month always on), the total is about **$30–50 a month** at 20 demo hours. If the AWS accounts are new, their free-tier credits can cover some of this.
 
-**Tip:** set an AWS Budget with an email alert (e.g. at $25) so a forgotten `terraform destroy` does not run up a bill. NAT Gateways and RDS are the most expensive items to leave running.
+**Tip:** set an AWS Budget with an email alert (e.g. at $25) so a forgotten `tofu destroy` does not run up a bill. NAT Gateways and RDS are the most expensive items to leave running.
 
 ## How russetleaf.com differs in the shared platform
 
@@ -398,7 +398,7 @@ Built and rehearsed in Phase 3 step 5.1c.
 |---|---|---|---|---|
 | **prod (AWS demo)** | russetleaf.com | The full production design, for demos | On demand | see the AWS costs |
 
-AWS has no separate staging: russetleaf.com is already temporary, its Terraform is checked with `plan`, `terraform test` and Checkov before each demo, and its application versions have already passed home staging and production.
+AWS has no separate staging: russetleaf.com is already temporary, its OpenTofu is checked with `plan`, `tofu test` and Checkov before each demo, and its application versions have already passed home staging and production.
 
 ### Cost alerts
 
@@ -435,6 +435,6 @@ AWS has no separate staging: russetleaf.com is already temporary, its Terraform 
 
 ### Running costs
 
-| Component | russetleaf.dev (home, 24/7) | russetleaf.com (AWS, Terraform in GitHub) | Est. monthly cost (USD) |
+| Component | russetleaf.dev (home, 24/7) | russetleaf.com (AWS, OpenTofu in GitHub) | Est. monthly cost (USD) |
 |---|---|---|---|
 | russetleaf.com always-on edge | n/a | Route 53 zone, CloudFront, offline page, media bucket, RDS snapshot (`envs/aws-edge`) | ~$1 |

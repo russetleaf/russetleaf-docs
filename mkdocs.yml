@@ -93,7 +93,7 @@ nav:
           - "1010 Local storage with S3 backups; no Ceph (Rook) or Longhorn": phase-1-russetleaf-dev/adr/1010-local-storage-no-ceph.md
           - "1011 Update strategy: Git-driven, risk-tiered updates with Renovate": phase-1-russetleaf-dev/adr/1011-update-strategy.md
           - "1012 OpenCost for in-cluster allocation, AWS billing for actual costs, and how cost alerts flow": phase-1-russetleaf-dev/adr/1012-opencost-and-aws-billing.md
-          - "1013 Image supply chain: SLSA provenance, Semgrep for SAST, and the build pipeline's tools": phase-1-russetleaf-dev/adr/1013-image-supply-chain.md
+          - "1013 Image supply chain: SLSA provenance, Opengrep for SAST, and the build pipeline's tools": phase-1-russetleaf-dev/adr/1013-image-supply-chain.md
           - "1014 Availability levels: home lab without HA; AWS designed for HA but run as a demo": phase-1-russetleaf-dev/adr/1014-availability-levels.md
           - "1015 Process allow-listing with Falco; AppArmor and SELinux not used; Tetragon and custom seccomp as optional extras": phase-1-russetleaf-dev/adr/1015-process-allow-listing.md
           - "1016 Rollback strategy: Git revert by default, automatic canary rollback, back up before schema changes": phase-1-russetleaf-dev/adr/1016-rollback-strategy.md
@@ -131,7 +131,9 @@ nav:
           - "1048 One bash script standard for every repo, enforced by checks and agent instructions": phase-1-russetleaf-dev/adr/1048-bash-script-standard.md
           - "1049 GPL v3.0 for code and documentation; the RussetLeaf name and logo reserved": phase-1-russetleaf-dev/adr/1049-licensing.md
           - "1050 AWS Secrets Manager with External Secrets, not HashiCorp Vault": phase-1-russetleaf-dev/adr/1050-secrets-manager-and-external-secrets.md
-          - "1051 Terraform for infrastructure as code, not CloudFormation, CDK, Pulumi or OpenTofu": phase-1-russetleaf-dev/adr/1051-terraform-for-infrastructure-as-code.md
+          - "1051 Terraform for infrastructure as code (superseded by 1052)": phase-1-russetleaf-dev/adr/1051-terraform-for-infrastructure-as-code.md
+          - "1052 OpenTofu instead of Terraform": phase-1-russetleaf-dev/adr/1052-opentofu-instead-of-terraform.md
+          - "1053 Open-source tools by default, and the recorded exceptions": phase-1-russetleaf-dev/adr/1053-open-source-tools-by-default.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md

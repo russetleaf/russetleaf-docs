@@ -40,7 +40,7 @@ Also considered:
 
 - **No plugin installs from the admin screen.** Every plugin change is a new image built by CI and promoted through staging. Intended here; a real drawback for sites where editors manage plugins themselves.
 - **Plugins that write files** (some caching, form and backup plugins) must be checked before adoption, or given a writable scratch volume.
-- **The offload plugin is a key dependency** and must work with a custom S3 endpoint, so ci tests can use the LocalStack or MinIO stand-ins.
+- **The offload plugin is a key dependency** and must work with a custom S3 endpoint, so ci tests can use the Moto stand-in ([ADR 1053](1053-open-source-tools-by-default.md); LocalStack or MinIO were planned first).
 - Rollbacks, security scanning and promotion all work on a single artifact: the image.
 
 ## When to revisit

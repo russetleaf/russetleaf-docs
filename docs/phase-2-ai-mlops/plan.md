@@ -9,7 +9,7 @@ Each step is sized for one or a few Claude sessions and ends with a **test** tha
 This phase is built with **AI coding agents** under [ADR 2004](adr/2004-agentic-ai-delivery.md); Phase 1 was built without them, so its actual hours are the baseline.
 
 - **One step per agent session.** Write or approve the step's spec first; its acceptance criteria are the agent's definition of done. The agent works on a branch and opens a pull request.
-- **Sandbox first:** agents iterate against the Docker Compose demo, unit tests, kind with LocalStack and the mock LLM, and the evaluation harness, never against the production cluster or the live Bedrock budget.
+- **Sandbox first:** agents iterate against the Docker Compose demo, unit tests, kind with Moto and the mock LLM, and the evaluation harness, never against the production cluster or the live Bedrock budget.
 - **Least privilege:** agents use the identities from step 1.1b: branch and pull-request access on GitHub, the cluster's read-only role, and no secrets or AWS credentials.
 - **Review:** every agent pull request runs the same checks as any other; review IAM, policies, network rules and anything touching secrets line by line.
 - **Record the results** in the progress checklist: **Done by** (agent, operator or both) and **Review findings** (problems caught in review or CI that the agent missed), alongside actual hours. Each milestone retro includes a short section on the agents.
@@ -53,9 +53,9 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 - **Agent instructions:** an `AGENTS.md` in `russetleaf-llm-summarizer`, `russetleaf-gitops`, `russetleaf-wordpress` and `russetleaf-docs` (the project's conventions, how to run each repo's checks, and what an agent must not do), and a `CLAUDE.md` in each that imports it.
 - **Claude Code** is the coding agent ([ADR 2004](adr/2004-agentic-ai-delivery.md)): install it on the workstation with the permission settings below, and add the **Claude Code GitHub Action** to `russetleaf-llm-summarizer` and `russetleaf-gitops` for small tasks that come back as pull requests (read-only token defaults; it can never merge).
-- **Permission settings** for the agent tool: allow the repo's local tools and tests; deny reading `.env` files, kubeconfigs with write access, talosconfigs and credential files; deny `terraform apply`, `kubectl apply` against the home cluster, `git push` to `main`, and `gh pr merge`.
+- **Permission settings** for the agent tool: allow the repo's local tools and tests; deny reading `.env` files, kubeconfigs with write access, talosconfigs and credential files; deny `tofu apply`, `kubectl apply` against the home cluster, `git push` to `main`, and `gh pr merge`.
 - **Identities:** a read-only kubeconfig for agents (the `read-only` role from Phase 1 step 4.7, short-lived), and no AWS credentials in agent sessions.
-- **Sandbox:** a documented local environment per repo (Docker Compose demo, kind with LocalStack and the mock LLM) that an agent can create and destroy on its own.
+- **Sandbox:** a documented local environment per repo (Docker Compose demo, kind with Moto and the mock LLM) that an agent can create and destroy on its own.
 - **Pull-request template** in each repo: a "Done by" field and a checklist for the reviewer (IAM, policies, network rules, secrets, new dependencies).
 - Add the **Done by** and **Review findings** columns to this plan's progress checklist (done), and an agents section to the milestone retro notes.
 
@@ -118,7 +118,7 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 - `chart/`: Deployment (Rollout later), KEDA `ScaledObject` on the SQS queue (0–N), daily sweep CronJob, ServiceAccount, resources.
 - **Image and dependencies:** a **multi-stage** build with a **distroless or slim** runtime base; uv's lock file **with hashes**; chart signing as for `russetleaf-wordpress`; Secrets as files.
-- **Code and image checks** (as for `russetleaf-wordpress`, see Phase 1 step 5.1): **ruff**, **mypy**, **Semgrep**, **pip-audit**, dependency review, hadolint, Checkov, zizmor, `helm lint` / `ct lint`, container-structure-test, Trivy (vulnerability, secret and misconfiguration scanners).
+- **Code and image checks** (as for `russetleaf-wordpress`, see Phase 1 step 5.1): **ruff**, **mypy**, **Opengrep**, **pip-audit**, dependency review, hadolint, Checkov, zizmor, `helm lint` / `ct lint`, container-structure-test, Trivy (vulnerability, secret and misconfiguration scanners).
 - `ci/`: kind end-to-end tests on GitHub-hosted runners, with the AWS stand-ins (SQS) and a **mock LLM** (LiteLLM with mock responses): a queued post gets a summary written back to a test WordPress; a failing message reaches the dead-letter queue.
 - **Checkov on the summarizer's Dockerfile and chart** in pull request CI.
 - Release workflow: build, SBOM, scan, push by digest, sign, attach the SBOM as a signed attestation, add **SLSA build provenance**, verify all three, write release notes with digests and Rekor links, push the image and the chart (OCI) to GHCR, open a chart-bump pull request on `russetleaf-gitops` for **`overlays/home-staging`** (promoted to prod by the Phase 1 step 5.7 pipeline).

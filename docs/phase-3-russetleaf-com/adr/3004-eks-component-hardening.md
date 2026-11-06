@@ -15,7 +15,7 @@
 - **API endpoint:** public but **restricted to the home network's address**, with private access on for the nodes; the demo workflows run on the home ARC runners so they come from that address.
 - **Nodes:** AL2023 with a pinned AMI version; **IMDSv2 required with a hop limit of 1**; kubelet `seccompDefault`, system and kubelet reservations, hard eviction thresholds and a per-pod PID limit ([ADR 1034](../../phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md)) through the managed node group's launch template and Karpenter's node configuration; encrypted gp3 root volumes.
 - **Pod Security Admission labels** on every namespace, as at home, with the version pinned.
-- **Add-on versions pinned** in Terraform, checked monthly by the version-age workflow.
+- **Add-on versions pinned** in OpenTofu, checked monthly by the version-age workflow.
 - **Checks:** kube-bench with the EKS profile on every demo ([ADR 3001](3001-kube-bench-eks-only.md)), `aws eks describe-cluster` for encryption and endpoint access, and the EKS items of the security review (Phase 3 step 4.1); the review states that the control plane is AWS's responsibility.
 
 ## Alternatives considered

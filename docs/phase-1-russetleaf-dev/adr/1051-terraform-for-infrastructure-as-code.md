@@ -1,6 +1,6 @@
 # ADR 1051: Terraform for infrastructure as code (not CloudFormation, CDK, Pulumi or OpenTofu)
 
-- **Status:** Accepted. It records a choice the [overview](../../overview.md#phase-1-russetleafdev) and the plan already made, with the alternatives behind it.
+- **Status:** Superseded by [ADR 1052](1052-opentofu-instead-of-terraform.md) (OpenTofu, 2026-11-06). It recorded a choice the [overview](../../overview.md#phase-1-russetleafdev) and the plan already made, with the alternatives behind it.
 - **Date:** 2026-11-06
 - **Applies to:** both sites
 - **Phase:** 1 (`russetleaf-infra`, steps 2.0 to 2.5). Phase 2 adds the AI pipeline's AWS resources; Phase 3 adds russetleaf.com's edge and demo stacks.

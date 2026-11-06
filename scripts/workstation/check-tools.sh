@@ -212,33 +212,32 @@ function check_docker() {
 }
 
 ########################################
-# Check mise, the Bitwarden CLI, uv and the Python tools
+# Check mise, the Bitwarden CLI, Opengrep, uv and the Python tools
 # Arguments:
 #   None
 ########################################
 function check_python_tools() {
   local tool tool_path
 
-  # uv and bw are global mise tools, so they are on the PATH only in shells
+  # uv, bw and opengrep are global mise tools, so they are on the PATH only in shells
   # that run `mise activate`; ask mise where they are in other shells (scripts, CI)
-  for tool in uv bw; do
+  for tool in uv bw opengrep; do
     if ! command -v "${tool}" >/dev/null 2>&1 && tool_path="$(mise which "${tool}" 2>/dev/null)"; then
       PATH="${tool_path%/*}:${PATH}"
     fi
   done
 
-  section "mise, the Bitwarden CLI and the Python tools (uv)"
+  section "mise, the Bitwarden CLI, Opengrep and the Python tools (uv)"
   check_tool mise required mise --version
   check_tool bw required bw --version
+  check_tool opengrep required opengrep --version
   check_tool uv required uv --version
   check_tool pre-commit required pre-commit --version
   check_tool checkov required checkov --version
-  check_tool semgrep required semgrep --version
   check_tool ruff required ruff --version
   check_tool pip-audit required pip-audit --version
   check_tool prowler required prowler --version
   check_tool zizmor required zizmor --version
-  check_tool localstack optional localstack --version
 }
 
 ########################################
@@ -251,7 +250,7 @@ function check_repo_tools() {
   if [[ ! -f .mise.toml && ! -f mise.toml ]]; then
     log_warn "no .mise.toml here; run this inside a project repo, or use --system"
   fi
-  check_tool terraform required terraform version
+  check_tool tofu required tofu version
   check_tool tflint required tflint --version
   check_tool terraform-docs required terraform-docs --version
   check_tool infracost required infracost --version

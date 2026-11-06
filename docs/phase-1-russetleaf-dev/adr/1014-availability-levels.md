@@ -27,7 +27,7 @@ High availability (HA) means a site keeps working when a single component (a nod
 
 ## Decision
 
-- ~~**russetleaf.dev: no high availability.**~~ **Superseded by [ADR 1020](1020-three-node-ha-home-cluster.md)** (highly available for a single node failure; the rest of this bullet describes the original lab). Single points of failure were accepted because the hardware (two 8 GB nodes) and the budget do not allow redundancy. Protection comes from **recovery**, not redundancy: everything is rebuilt from Git (Terraform, Argo CD), and the database is restored from S3 backups.
+- ~~**russetleaf.dev: no high availability.**~~ **Superseded by [ADR 1020](1020-three-node-ha-home-cluster.md)** (highly available for a single node failure; the rest of this bullet describes the original lab). Single points of failure were accepted because the hardware (two 8 GB nodes) and the budget do not allow redundancy. Protection comes from **recovery**, not redundancy: everything is rebuilt from Git (OpenTofu, Argo CD), and the database is restored from S3 backups.
 - **russetleaf.com: a highly available design, run in demo mode.** It is HA *within one region while running* (EKS control plane, nodes across zones, RDS Multi-AZ, ElastiCache replica, multi-zone ALB, CloudFront), with one deliberate demo cut (one NAT Gateway), and it is not always running.
 - **Recovery targets** (recovery point = how much data can be lost; recovery time = how long until the site is back):
 
@@ -68,7 +68,7 @@ High availability (HA) means a site keeps working when a single component (a nod
 - Both sites' limits are explicit, with numbers, rather than implied.
 - russetleaf.dev will have outages when the home power or the internet fails (since [ADR 1020](1020-three-node-ha-home-cluster.md), not when a single node or disk fails); the uptime check and dead man's switch alert on them.
 - russetleaf.com demonstrates an HA design without paying for it around the clock.
-- Recovery depends on the backups, Terraform and GitOps working, which makes the monthly restore test and occasional rebuild rehearsal important.
+- Recovery depends on the backups, OpenTofu and GitOps working, which makes the monthly restore test and occasional rebuild rehearsal important.
 
 ## When to revisit
 

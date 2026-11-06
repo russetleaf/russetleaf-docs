@@ -16,7 +16,7 @@ The project plans runbooks for **changes and losses**: one per alert, a rollback
 - **Power:** there is no UPS ([ADR 1014](1014-availability-levels.md)), and the node-failure drills only ever take one node down. A power cut takes all three down at once, including both MariaDB members.
 - **GitOps down:** the only rollback mechanism is a Git revert. With GitHub down or Argo CD broken, there is no sanctioned way to change the cluster, and self-heal would revert a manual change anyway.
 - **Lost access:** if Dex, Google or Cloudflare Access fails, kubectl, Grafana and Argo CD are lost together. The break-glass **alert** has a runbook; **using** break-glass does not.
-- **Smaller gaps:** the Talos and Kubernetes upgrade procedure exists only as a table row; nothing covers a compromised CI pipeline or signing identity, a stuck demo teardown, Terraform state problems, or a bot flood.
+- **Smaller gaps:** the Talos and Kubernetes upgrade procedure exists only as a table row; nothing covers a compromised CI pipeline or signing identity, a stuck demo teardown, OpenTofu state problems, or a bot flood.
 - **No index:** runbooks are written in about fifteen plan steps across three phases, live in `russetleaf-gitops`, and are listed nowhere, so neither the operator nor a reviewer can see what exists, what is missing, or when each was last rehearsed.
 
 ## Decision
@@ -46,7 +46,7 @@ The project plans runbooks for **changes and losses**: one per alert, a rollback
 | `incident-response.md` | The process above | 4.4 | — |
 | `credential-leak.md` | An inventory of every credential (where it lives, how to revoke and replace it, what breaks meanwhile); revoke first, then check for use | 4.2 | Phase 2 step 2.2 adds the LiteLLM keys; Phase 3 the ElastiCache AUTH token |
 | `lost-access.md` | Sign-in failures; using break-glass and what to rotate afterwards | 4.7 | — |
-| `terraform-state.md` | A stuck lock, drift, restoring an earlier state version | 2.4 | — |
+| `opentofu-state.md` | A stuck lock, drift, restoring an earlier state version | 2.4 | — |
 | `upgrade-talos-kubernetes.md` | The upgrade procedure, one node at a time, with stop conditions | 7.8 | — |
 | `etcd-recovery.md` | Quorum lost: recover from a snapshot with `talosctl bootstrap --recover-from` | 7.10 | — |
 | `replace-node.md` | Remove the etcd member, reset or replace the machine, re-enroll the TPM, rejoin | 7.11 | — |

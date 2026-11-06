@@ -7,7 +7,7 @@
 
 ## Context
 
-The project needs CI for Terraform, manifests, images, charts, evaluation and promotion, plus scheduled workflows (scans, reports, demos). The code lives on GitHub. The repos were planned to stay **private** until the end (Phase 1 step 9.2), but GitHub's free plan gives private repos only about **2,000 Actions minutes a month** (check current limits), which image builds, kind clusters, scans and integration tests across four repos would use up quickly. Some jobs also need to reach the home cluster or a restricted EKS API.
+The project needs CI for OpenTofu, manifests, images, charts, evaluation and promotion, plus scheduled workflows (scans, reports, demos). The code lives on GitHub. The repos were planned to stay **private** until the end (Phase 1 step 9.2), but GitHub's free plan gives private repos only about **2,000 Actions minutes a month** (check current limits), which image builds, kind clusters, scans and integration tests across four repos would use up quickly. Some jobs also need to reach the home cluster or a restricted EKS API.
 
 ## Decision
 
@@ -15,7 +15,7 @@ The project needs CI for Terraform, manifests, images, charts, evaluation and pr
 - **Make the repositories public early** (Phase 1 step 1.1, right after a `gitleaks` scan of their history). By design nothing secret is in Git, and public repos get **free GitHub-hosted runner minutes**, free code scanning and push protection, and public GHCR packages (no storage limit or pull secrets; [ADR 1004](1004-ghcr-not-ecr.md)).
 - **Runner strategy:**
     - **GitHub-hosted runners** for most jobs (linting, scans, builds, kind tests).
-    - **Self-hosted, ephemeral ARC runners** on the home cluster (under gVisor, [ADR 1009](1009-gvisor-sandboxing.md)) for jobs that must reach the home cluster: the evaluation gate, `staging-test`, home Terraform applies, and the **AWS demo workflows** (so the EKS API endpoint can be restricted to the home network's address).
+    - **Self-hosted, ephemeral ARC runners** on the home cluster (under gVisor, [ADR 1009](1009-gvisor-sandboxing.md)) for jobs that must reach the home cluster: the evaluation gate, `staging-test`, home OpenTofu applies, and the **AWS demo workflows** (so the EKS API endpoint can be restricted to the home network's address).
     - Public-repo protections: approval required for workflows from fork pull requests, and the self-hosted label limited to specific trusted workflows.
 
 ## Alternatives considered

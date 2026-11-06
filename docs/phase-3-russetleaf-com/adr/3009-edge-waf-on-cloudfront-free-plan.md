@@ -34,7 +34,7 @@ Requests blocked by WAF do not count toward the allowance; exceeding it never ad
 - **Security headers** come from AWS's managed **`SecurityHeadersPolicy`** response-headers policy (HSTS, `X-Content-Type-Options`, `X-Frame-Options`, Referrer-Policy and others); WordPress's `security-headers` plugin still sets Content-Security-Policy and Permissions-Policy.
 - **The Route 53 hosted zone is attached to the plan**, so its cost is covered.
 - **Edge load tests** (Phase 3 step 5.4) stay small: they use the plan's 1 million-request allowance (a one-time spike up to three times the allowance is accommodated), and their temporary allow rule counts as one of the five rules, so one existing rule is switched to count mode for the test.
-- **Terraform:** manage the web ACL and distribution in `envs/aws-edge`; if the AWS provider cannot yet manage the plan subscription, subscribe once with the CLI (the Pricing Plan Manager API) and record it in the decision log. Confirm the plan's current limits when building.
+- **OpenTofu:** manage the web ACL and distribution in `envs/aws-edge`; if the AWS provider cannot yet manage the plan subscription, subscribe once with the CLI (the Pricing Plan Manager API) and record it in the decision log. Confirm the plan's current limits when building.
 
 ## Alternatives considered
 

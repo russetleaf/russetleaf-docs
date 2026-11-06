@@ -26,7 +26,7 @@ EKS nodes cost money by the hour, demos are short, and traffic during a load tes
 
 - Nodes appear for load and disappear afterwards; spot keeps the demo cost near $0.70 an hour.
 - Spot interruptions are part of normal operation and are tested.
-- Karpenter is installed by Terraform and its NodePools by Argo CD, so both repos change when node settings change.
+- Karpenter is installed by OpenTofu and its NodePools by Argo CD, so both repos change when node settings change.
 
 ## When to revisit
 

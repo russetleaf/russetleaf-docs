@@ -77,19 +77,19 @@ The AWS side follows the **AWS Security Reference Architecture (SRA)**: separate
 
 | Account | OU | Purpose |
 |---|---|---|
-| **Management** (dedicated, new) | Root | Only AWS Organizations, IAM Identity Center, consolidated billing (budgets, cost allocation tags), SCPs and tag policies. **No workloads, no Terraform state.** |
+| **Management** (dedicated, new) | Root | Only AWS Organizations, IAM Identity Center, consolidated billing (budgets, cost allocation tags), SCPs and tag policies. **No workloads, no OpenTofu state.** |
 | **Security Tooling** | Security | **Delegated administrator** for GuardDuty, Security Hub, IAM Access Analyzer and AWS Config aggregation (and Inspector, if used); findings routed to Slack from here |
 | **Log Archive** | Security | The **organization CloudTrail trail**, Config history and VPC flow logs, in **S3 Object Lock** buckets with KMS encryption |
-| **Backup** | Security | The cross-region, immutable data copies (database backups, media, Terraform state, repo mirrors) from [ADR 1018](adr/1018-disaster-recovery.md) |
-| **russetleaf-infra** | Infrastructure | **Terraform state** and the CI deployment entry points (the GitHub OIDC provider and roles); nothing else runs here |
+| **Backup** | Security | The cross-region, immutable data copies (database backups, media, OpenTofu state, repo mirrors) from [ADR 1018](adr/1018-disaster-recovery.md) |
+| **russetleaf-infra** | Infrastructure | **OpenTofu state** and the CI deployment entry points (the GitHub OIDC provider and roles); nothing else runs here |
 | **russetleaf-home** | Workloads | The AWS resources russetleaf.dev uses (S3, Secrets Manager, SES; SQS and Bedrock from Phase 2); a **new account** created by the Organization (the operator's older AWS Organization, from a 2022 project, stays separate and is not used) |
 | **russetleaf-com** | Workloads | russetleaf.com: the always-on edge (`envs/aws-edge`) and the demo stack (`envs/aws`). **Created in Phase 3.** |
 | **Policy test** | Policy Staging | An empty account where new SCPs and RCPs are attached and tested before they reach the real OUs |
 | *(none)* | Suspended | Normally empty; a **deny-all SCP**. Moving a compromised account here is the first containment step |
 
-Separate workload accounts limit how far a compromise can spread, and give each site its own costs, quotas and limits. Accounts are free. All of it is managed by Terraform in `russetleaf-infra/envs/org/` (Organization, OUs, accounts, SCPs, RCPs, declarative policies, Identity Center, tag, AI services opt-out and chat applications policies) and `russetleaf-infra/envs/security/` (the security services), applied from the workstation with management-account and Security Tooling access.
+Separate workload accounts limit how far a compromise can spread, and give each site its own costs, quotas and limits. Accounts are free. All of it is managed by OpenTofu in `russetleaf-infra/envs/org/` (Organization, OUs, accounts, SCPs, RCPs, declarative policies, Identity Center, tag, AI services opt-out and chat applications policies) and `russetleaf-infra/envs/security/` (the security services), applied from the workstation with management-account and Security Tooling access.
 
-**Cross-account access the design needs** (each a narrow, explicit grant): the russetleaf.com seed Job reads russetleaf.dev's backup and media buckets (bucket policies in `russetleaf-home`); every account's backup-bound buckets replicate into the Backup account; CI roles in each account read and write Terraform state in `russetleaf-infra`.
+**Cross-account access the design needs** (each a narrow, explicit grant): the russetleaf.com seed Job reads russetleaf.dev's backup and media buckets (bucket policies in `russetleaf-home`); every account's backup-bound buckets replicate into the Backup account; CI roles in each account read and write OpenTofu state in `russetleaf-infra`.
 
 ### Organization-wide guardrails
 
@@ -120,9 +120,9 @@ Separate workload accounts limit how far a compromise can spread, and give each 
 
 - **Security Hub** with the **AWS Foundational Security Best Practices** and **CIS AWS Foundations Benchmark v3.0** standards enabled in every account (v3.0 rather than the older versions, whose CloudWatch metric-filter alarm checks would need the trail sent to CloudWatch Logs; the sign-in alerts below cover the important cases; confirm the latest CIS version Security Hub offers when building), aggregating findings from GuardDuty, Access Analyzer, Config and Inspector. **Critical and high** findings go through EventBridge, SNS and Amazon Q Developer to `#rl-security` (critical also to `#rl-critical`). It is the **continuous** posture check; **Prowler** stays as a free monthly **second opinion** ([ADR 1007](adr/1007-prowler-not-threatmapper.md), updated).
 - **AWS Config** with **focused recording** (key resource types such as IAM, S3, security groups, KMS, EKS, RDS, rather than everything, to keep costs down, since the demo stack creates many short-lived resources), **daily recording** (rather than every change) for the high-churn resource types in russetleaf-com (EC2 instances, network interfaces, security groups, volumes), since each demo creates and deletes many of them, while IAM, S3 and KMS stay on continuous recording in every account (confirm the daily recording option when building), and a **conformance pack** (e.g. Operational Best Practices for CIS), aggregated in Security Tooling.
-- **IAM Access Analyzer:** organization-wide **external-access** findings (free), plus **policy checks in the Terraform pipeline** (`validate-policy` and its custom checks that flag new public or cross-account access) before anything is applied.
+- **IAM Access Analyzer:** organization-wide **external-access** findings (free), plus **policy checks in the OpenTofu pipeline** (`validate-policy` and its custom checks that flag new public or cross-account access) before anything is applied.
 - **GuardDuty** at organization level, with EKS audit-log monitoring (auto-enabled for new accounts).
-- **CloudTrail** as a single **organization trail** delivering to Log Archive, with log-file validation, management events, and **S3 data events** (object reads and writes) for the **Terraform state bucket** and the **backup buckets** (the database, etcd and Backup account buckets, and russetleaf.com's dump bucket in Phase 3) only, through advanced event selectors, since state can hold secrets and the dumps hold personal data; their traffic is low, so the cost is pennies.
+- **CloudTrail** as a single **organization trail** delivering to Log Archive, with log-file validation, management events, and **S3 data events** (object reads and writes) for the **OpenTofu state bucket** and the **backup buckets** (the database, etcd and Backup account buckets, and russetleaf.com's dump bucket in Phase 3) only, through advanced event selectors, since state can hold secrets and the dumps hold personal data; their traffic is low, so the cost is pennies.
 - **Optional:** **Inspector** for the EKS nodes during demos (images are on GHCR, so its registry scanning matters less). **Macie** and **Detective** are not used (little sensitive data; extra cost).
 
 ### Account- and resource-level best practices
@@ -147,7 +147,7 @@ How the controls fit together by layer (cloud, cluster, container, code) is in t
 The project depends on more than AWS: **GitHub** (code, CI, packages, attestations), **Cloudflare** (DNS, tunnel, WAF, Access), **Google Cloud** (sign-in), **Slack** (alerts) and the **domain registrars**. Each gets:
 
 - **Phishing-resistant sign-in:** passkeys or hardware security keys, with recovery codes in the break-glass kit.
-- **Least privilege:** GitHub's default workflow token **read-only** (jobs request more only when needed, e.g. `packages: write` in release jobs only), only verified or allow-listed Actions, required reviews and environment protections, managed with Terraform's **GitHub provider** where possible; Cloudflare **API tokens scoped** to the zones and permissions each job needs.
+- **Least privilege:** GitHub's default workflow token **read-only** (jobs request more only when needed, e.g. `packages: write` in release jobs only), only verified or allow-listed Actions, required reviews and environment protections, managed with OpenTofu's **GitHub provider** where possible; Cloudflare **API tokens scoped** to the zones and permissions each job needs.
 - **Registrar lock** and 2FA on both domains (alongside DNSSEC).
 - **Audit logs** reviewed (GitHub, Cloudflare), and a **quarterly access review** across all providers.
 
@@ -361,7 +361,7 @@ Detection (Falco, the audit alerts, GuardDuty, Hubble) says a container is compr
 
 | Repo | What Checkov scans |
 |---|---|
-| `russetleaf-infra` | **Terraform** source, plus the **plan** (`terraform show -json` output), which catches problems that only appear once variables and modules are resolved |
+| `russetleaf-infra` | **OpenTofu** source, plus the **plan** (`tofu show -json` output), which catches problems that only appear once variables and modules are resolved |
 | `russetleaf-gitops` | The **rendered Kubernetes manifests** for every overlay (the output of Helm and Kustomize, i.e. exactly what Argo CD would apply), and the Helm values |
 | `russetleaf-wordpress` | The **Dockerfile**, the WordPress **Helm chart** |
 | All four | **GitHub Actions workflows**: actions not pinned to a commit, over-broad `permissions`, untrusted input used in scripts (script injection) |
@@ -373,31 +373,31 @@ How it is run:
 - **Results on GitHub:** findings are uploaded as **SARIF** to GitHub's **code scanning**, so they appear inline on pull requests and in each repo's Security tab. Code scanning is free for **public** repos, and the repos are public from the start ([ADR 1030](adr/1030-github-actions-ci.md)), so SARIF upload is on from the first pipeline.
 - **Overlap with Kyverno is intended:** Checkov checks manifests *before* they are merged, using its own rule set; Kyverno enforces the project's policies *at admission* in the cluster (and its CLI tests the same policies in CI).
 
-### Terraform pipeline (`russetleaf-infra`)
+### OpenTofu pipeline (`russetleaf-infra`)
 
-All Terraform runs through **GitHub Actions** (apart from the first local applies of `bootstrap/` and `envs/home`), with every check passing before anything reaches AWS, Cloudflare or Talos.
+All OpenTofu runs through **GitHub Actions** (apart from the first local applies of `bootstrap/` and `envs/home`), with every check passing before anything reaches AWS, Cloudflare or Talos.
 
 | Stage | Tool | What it does |
 |---|---|---|
 | Before each commit | **pre-commit-terraform** hooks (plus gitleaks) | Runs fmt, validate, tflint, terraform-docs, Checkov and the secret scan locally, so most problems never reach CI |
-| Formatting | `terraform fmt -check` | Fails on unformatted code |
-| Validation | `terraform validate` | Syntax and internal consistency |
+| Formatting | `tofu fmt -check` | Fails on unformatted code |
+| Validation | `tofu validate` | Syntax and internal consistency |
 | Linting | **tflint** with the **`tflint-ruleset-aws`** plugin | Catches mistakes and AWS-specific errors (invalid instance types, deprecated settings) before AWS rejects them |
-| Static security analysis | **Checkov**, including **custom policies** | Insecure settings in the source and the plan (SARIF to GitHub code scanning), plus project rules: every resource tagged `Project`/`Site`/`Env`, only `us-east-1` (plus `us-west-2` for the Backup account's `envs/dr`, matching the SCPs), only approved instance families, Block Public Access on every S3 bucket. Custom policies keep one policy tool for Terraform, as Kyverno is for Kubernetes (no OPA/Conftest) |
-| Module tests | **`terraform test`** | Tests the shared modules, with mocked providers where possible |
+| Static security analysis | **Checkov**, including **custom policies** | Insecure settings in the source and the plan (SARIF to GitHub code scanning), plus project rules: every resource tagged `Project`/`Site`/`Env`, only `us-east-1` (plus `us-west-2` for the Backup account's `envs/dr`, matching the SCPs), only approved instance families, Block Public Access on every S3 bucket. Custom policies keep one policy tool for OpenTofu, as Kyverno is for Kubernetes (no OPA/Conftest) |
+| Module tests | **`tofu test`** | Tests the shared modules, with mocked providers where possible |
 | Secret scanning | **gitleaks**, plus **GitHub secret scanning with push protection** (free on public repos) | Push protection blocks a commit containing a recognized secret before it is pushed |
-| Plan | `terraform plan -out` | The plan is **saved** as a short-lived, private workflow artifact (plan files can contain secret values) and posted as a pull-request comment |
+| Plan | `tofu plan -out` | The plan is **saved** as a short-lived, private workflow artifact (plan files can contain secret values) and posted as a pull-request comment |
 | Plan analysis | **Checkov on the plan**; **Infracost** | Checks the resolved plan; Infracost comments the **monthly cost difference** of the change on the pull request (open-source CLI; check current terms for CI use) |
 | IAM policy checks | **IAM Access Analyzer** (`validate-policy` and its custom policy checks) | Flags invalid policies and **new public or cross-account access** in the plan before it is applied |
 | Approval | **GitHub Environment** `apply`, with required reviewers, limited to `main` | The OIDC *apply* role trusts only this environment, so nothing else can apply |
-| Apply | `terraform apply <saved plan>` | Applies **exactly the plan that was reviewed**, never a fresh one |
-| Drift | Scheduled `terraform plan` (weekly) | Alerts if anything changed outside Terraform |
+| Apply | `tofu apply <saved plan>` | Applies **exactly the plan that was reviewed**, never a fresh one |
+| Drift | Scheduled `tofu plan` (weekly) | Alerts if anything changed outside OpenTofu |
 | Documentation | **terraform-docs** | Generates each module's inputs and outputs into its README |
-| Provider integrity | `.terraform.lock.hcl` with hashes for **every platform** (`terraform providers lock -platform=linux_amd64 -platform=<workstation>`) | CI and local runs use the same verified providers |
+| Provider integrity | `.terraform.lock.hcl` with hashes for **every platform** (`tofu providers lock -platform=linux_amd64 -platform=<workstation>`) | CI and local runs use the same verified providers |
 
-**Pull request flow:** fmt → validate → tflint (+ AWS ruleset) → Checkov (source + custom policies) → `terraform test` → plan (saved) → Checkov on the plan → Infracost comment → plan comment → gitleaks. **After merge:** approval in the `apply` environment → apply the saved plan. For `envs/aws`, applies are done only by the demo workflows (never on merge), so merging never starts a paid stack.
+**Pull request flow:** fmt → validate → tflint (+ AWS ruleset) → Checkov (source + custom policies) → `tofu test` → plan (saved) → Checkov on the plan → Infracost comment → plan comment → gitleaks. **After merge:** approval in the `apply` environment → apply the saved plan. For `envs/aws`, applies are done only by the demo workflows (never on merge), so merging never starts a paid stack.
 
-**Deliberately not used:** tfsec or Trivy's Terraform scanning (they overlap heavily with Checkov); Atlantis, Terraform Cloud or Spacelift (GitHub Actions with OIDC, Environments and saved plans covers a single maintainer); OPA/Conftest (Checkov custom policies cover the project's rules).
+**Deliberately not used:** tfsec or Trivy's OpenTofu scanning (they overlap heavily with Checkov); Atlantis, Terraform Cloud or Spacelift (GitHub Actions with OIDC, Environments and saved plans covers a single maintainer); OPA/Conftest (Checkov custom policies cover the project's rules).
 
 ### Image build pipeline (`russetleaf-wordpress`, `russetleaf-llm-summarizer`)
 
@@ -408,7 +408,7 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
 | Secret scanning | **gitleaks** (pre-commit and CI); **GitHub secret scanning with push protection** (public repos) | Stops secrets entering the repo |
 | Dockerfile linting | **hadolint** (includes ShellCheck for `RUN` lines) | Dockerfile correctness and best practices |
 | Language linting | **ruff** and **mypy** (Python, summarizer); **PHP_CodeSniffer with the WordPress Coding Standards** and **PHPStan** (PHP, `russetleaf-wordpress`'s must-use plugins and `db.php`) | Style, types and bugs; the WordPress standards include security checks (output escaping, nonces, input sanitization) |
-| SAST | **Semgrep Community Edition** (Python and PHP, open-source security rules) | Security bugs in the project's own code |
+| SAST | **Opengrep**, the open-source fork of Semgrep (Python and PHP; the project's rules plus open rule sets; [ADR 1053](adr/1053-open-source-tools-by-default.md)) | Security bugs in the project's own code |
 | Dependency checks | `composer audit`, **pip-audit**; GitHub's **dependency-review action** (public repos) | Known-vulnerable dependencies, before building; the dependency review blocks a pull request that adds one |
 | WordPress plugin vulnerabilities | **WPScan** (`russetleaf-wordpress`) | Known plugin and theme vulnerabilities |
 | Build configuration | **Checkov** (Dockerfile, Helm chart, workflows); **zizmor** (GitHub Actions workflow security: untrusted input in scripts, risky triggers, credential exposure) | Insecure build and CI configuration |
@@ -427,9 +427,9 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
 | Release notes | GitHub release | Image and chart **digests** plus **Rekor log entry** links, so anyone can audit the transparency log (e.g. with `rekor-cli`) |
 | Repo practices | **OpenSSF Scorecard** (weekly, all four repos) | Scores branch protection, pinned dependencies, token permissions, signed releases and more; badge on each README |
 
-**Pull request flow:** gitleaks → hadolint → ruff/mypy or PHPCS/PHPStan → Semgrep → `composer audit` / pip-audit → dependency review → Checkov → zizmor → `helm lint` / `ct lint` → unit tests → build → container-structure-test → Trivy → kind integration tests (+ evaluation gate). **Release:** the same checks → push by digest → cosign sign → SBOM attestation → SLSA provenance → verify → release notes → version-bump pull request on `russetleaf-gitops`. **Weekly:** scheduled rebuild, WPScan, Scorecard.
+**Pull request flow:** gitleaks → hadolint → ruff/mypy or PHPCS/PHPStan → Opengrep → `composer audit` / pip-audit → dependency review → Checkov → zizmor → `helm lint` / `ct lint` → unit tests → build → container-structure-test → Trivy → kind integration tests (+ evaluation gate). **Release:** the same checks → push by digest → cosign sign → SBOM attestation → SLSA provenance → verify → release notes → version-bump pull request on `russetleaf-gitops`. **Weekly:** scheduled rebuild, WPScan, Scorecard.
 
-**Deliberately not used:** CodeQL (free on public repos but does not support PHP; Semgrep covers both languages), Docker Scout, Snyk Container and Grype (overlap with Trivy), Chainguard/Wolfi base images (free tier offers only `latest` tags, which conflicts with pinned versions; worth revisiting).
+**Deliberately not used:** CodeQL (free on public repos but does not support PHP; Opengrep covers both languages), Docker Scout, Snyk Container and Grype (overlap with Trivy), Chainguard/Wolfi base images (free tier offers only `latest` tags, which conflicts with pinned versions; worth revisiting).
 
 ### Runtime security and compliance
 
@@ -452,7 +452,7 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
 - **Trivy Operator** runs continuously in the cluster, producing CIS compliance reports, vulnerability reports for running images, and configuration audits. Its **compliance results are published as Prometheus metrics** on both clusters, feeding a **Grafana "Compliance" dashboard** that shows both sites side by side, and a `ComplianceFailuresIncreased` alert to `#rl-security` when the number of failing CIS controls rises. This is the continuous compliance signal; kube-bench adds deeper node-level checks on EKS.
 - **Kubescape CLI**, run on demand (monthly at home, once per AWS demo on EKS) from the workstation or the in-cluster CI runners, with **nothing installed in the cluster**: scores each cluster against the **NSA-CISA** and **MITRE ATT&CK** frameworks and analyzes **RBAC** for risky permissions, the one area no other tool here covers. Reports are saved in `docs/` in `russetleaf-gitops`. It complements kube-bench rather than replacing it: kube-bench checks node and control-plane configuration directly on the nodes; Kubescape checks workloads and permissions through the Kubernetes API. The in-cluster Kubescape operator is deliberately not used (0.5–1 GB of memory, mostly duplicating Trivy Operator and Falco); see [ADR 1003](adr/1003-kubescape-cli-not-operator.md).
 - **Security Hub** (with the AWS Foundational Security Best Practices and CIS standards) is the **continuous** check of every account's configuration; see [AWS account structure](#aws-account-structure-and-best-practices-security-reference-architecture).
-- **Prowler**, as a free **second opinion** across **all the accounts**: a scheduled GitHub Actions workflow in `russetleaf-infra` runs it **monthly**, plus once per AWS demo with the stack up, using a **read-only audit role** in each account through GitHub OIDC. It checks the account's actual settings (IAM users and keys, root MFA, CloudTrail, S3 public access, security groups, encryption defaults) against **CIS AWS Foundations** and **AWS Foundational Security Best Practices**, catching anything configured outside Terraform. Reports are kept as workflow artifacts with a summary in `docs/security/` and a short message to `#rl-security`. Deepfence ThreatMapper was considered and not used (its console needs more memory than `rl-home-cp01` has, and it duplicates the tools above); see [ADR 1007](adr/1007-prowler-not-threatmapper.md).
+- **Prowler**, as a free **second opinion** across **all the accounts**: a scheduled GitHub Actions workflow in `russetleaf-infra` runs it **monthly**, plus once per AWS demo with the stack up, using a **read-only audit role** in each account through GitHub OIDC. It checks the account's actual settings (IAM users and keys, root MFA, CloudTrail, S3 public access, security groups, encryption defaults) against **CIS AWS Foundations** and **AWS Foundational Security Best Practices**, catching anything configured outside OpenTofu. Reports are kept as workflow artifacts with a summary in `docs/security/` and a short message to `#rl-security`. Deepfence ThreatMapper was considered and not used (its console needs more memory than `rl-home-cp01` has, and it duplicates the tools above); see [ADR 1007](adr/1007-prowler-not-threatmapper.md).
 
 ### Stateless operation
 
@@ -489,7 +489,7 @@ Many WordPress-on-AWS guides, including AWS's own reference architecture, put `w
 - **S3-Uploads** (Human Made, open source): stores uploads **directly in S3** through a PHP stream wrapper, so nothing is written locally. The best fit for a read-only container.
 - **WP Offload Media Lite** (Delicious Brains): writes each upload to the local uploads directory first, then copies it to S3 (and can delete the local copy). Needs a writable `emptyDir` for uploads.
 
-Whichever is chosen must also work with a **custom S3 endpoint**, so the ci tests can use the LocalStack or MinIO stand-ins.
+Whichever is chosen must also work with a **custom S3 endpoint**, so the ci tests can use the Moto stand-in.
 
 ### Backup and recovery
 
@@ -499,7 +499,7 @@ Whichever is chosen must also work with a **custom S3 endpoint**, so the ci test
 
 ### Delivery and operations
 
-- **Infrastructure as code** (Terraform) for the AWS accounts and resources, Cloudflare and the Talos cluster.
+- **Infrastructure as code** (OpenTofu) for the AWS accounts and resources, Cloudflare and the Talos cluster.
 - **GitOps** (Argo CD) for what runs in the cluster, with **self-heal on by default** (manual sync only for Cilium and the staging Applications), **`ignoreDifferences`** for fields that controllers legitimately change (replica counts set by HPAs and KEDA), and an **`ArgoCDAppOutOfSync`** alert (Prometheus, from Argo CD's `argocd_app_info` metric) when an app stays out of sync or degraded for 15 minutes, which catches drift that self-heal cannot fix. AppProjects **warn about orphaned resources** (objects in managed namespaces that Argo CD does not own), since self-heal only reverts what Argo CD manages ([ADR 1034](adr/1034-kubernetes-threat-model-coverage.md)).
 - **Internal certificates** from **cert-manager** with an internal CA, and **trust-manager** distributing the CA bundle (MariaDB TLS and other internal endpoints); public certificates stay with Cloudflare and ACM. See [ADR 1028](adr/1028-internal-pki.md).
 - **Cost visibility** with **OpenCost** (cost per namespace, workload and node; Phase 2 adds cost per summary and Bedrock spend), and **AWS billing** for actual costs, with cost alerts and reports in `#rl-costs`; see [Cost monitoring and alerts](#cost-monitoring-and-alerts).
@@ -527,10 +527,10 @@ Both clusters run **Cilium** (the choice and its alternatives are recorded in [A
 |---|---|---|
 | Mode | **Full CNI**: replaces Talos's default Flannel **and kube-proxy** | **Chaining mode** with the Amazon VPC CNI: the VPC CNI still gives pods their VPC IP addresses; Cilium adds policy enforcement and Hubble on top |
 | Key settings | Talos machine config `cluster.network.cni.name: none` and `cluster.proxy.disabled: true`; Cilium `kubeProxyReplacement: true`, `k8sServiceHost: localhost`, `k8sServicePort: 7445` (Talos's KubePrism API endpoint), plus Talos's documented cgroup and capability settings | `cni.chainingMode: aws-cni`, `cni.exclusive: false`, `enableIPv4Masquerade: false`, `routingMode: native`; the VPC CNI's own network policy enforcement stays **off**, so only one component enforces policies |
-| Installed by | Talos, as an inline manifest in the machine config rendered by Terraform, so the cluster comes up with networking (nothing, including Argo CD, can run without a CNI); Argo CD then adopts it from `platform/cilium/` and the inline manifest is removed ([ADR 1039](adr/1039-bootstrap-through-talos-inline-manifests.md)) | Terraform (Helm provider) right after the cluster and its managed node group are created; Argo CD then manages it |
+| Installed by | Talos, as an inline manifest in the machine config rendered by OpenTofu, so the cluster comes up with networking (nothing, including Argo CD, can run without a CNI); Argo CD then adopts it from `platform/cilium/` and the inline manifest is removed ([ADR 1039](adr/1039-bootstrap-through-talos-inline-manifests.md)) | OpenTofu (Helm provider) right after the cluster and its managed node group are created; Argo CD then manages it |
 | New nodes | Fixed hardware | Karpenter NodePools add the startup taint `node.cilium.io/agent-not-ready=true:NoExecute`, so no pod lands on a new node before Cilium is ready on it |
 
-Cilium is installed only once by the bootstrap mechanism (Talos's inline manifests at home; Terraform's Helm provider on EKS, with `lifecycle { ignore_changes }`); from then on, the values in `russetleaf-gitops/platform/cilium/` (with `overlays/home` and `overlays/aws`) are the source of truth, and Cilium upgrades go through Git like everything else.
+Cilium is installed only once by the bootstrap mechanism (Talos's inline manifests at home; OpenTofu's Helm provider on EKS, with `lifecycle { ignore_changes }`); from then on, the values in `russetleaf-gitops/platform/cilium/` (with `overlays/home` and `overlays/aws`) are the source of truth, and Cilium upgrades go through Git like everything else.
 
 ### Policies: CiliumNetworkPolicies, not plain NetworkPolicies
 
@@ -661,7 +661,7 @@ dashboards:
 
 What else is needed for this to work:
 
-- **Install order:** the ServiceMonitor resource type comes from the Prometheus Operator, which arrives after Cilium. Install the **`prometheus-operator-crds`** chart (from the **prometheus-community** Helm repository, `https://prometheus-community.github.io/helm-charts`) in the first Argo CD sync wave, and have Terraform's bootstrap install of Cilium keep its ServiceMonitors **off**; the Argo CD-managed Cilium values then turn them on.
+- **Install order:** the ServiceMonitor resource type comes from the Prometheus Operator, which arrives after Cilium. Install the **`prometheus-operator-crds`** chart (from the **prometheus-community** Helm repository, `https://prometheus-community.github.io/helm-charts`) in the first Argo CD sync wave, and have OpenTofu's bootstrap install of Cilium keep its ServiceMonitors **off**; the Argo CD-managed Cilium values then turn them on.
 - **Prometheus must look in Cilium's namespace:** in kube-prometheus-stack, set `serviceMonitorSelectorNilUsesHelmValues: false` (and the same for PodMonitors and rules) so Prometheus picks up ServiceMonitors from every namespace, including `kube-system` where Cilium runs.
 - **Grafana must load the dashboards:** keep kube-prometheus-stack's Grafana dashboard sidecar watching all namespaces (or the `monitoring` namespace the dashboards are written to), with its default `grafana_dashboard: "1"` label.
 - **Layer-7 metrics** (`httpV2`) only appear for traffic that a layer-7 policy rule inspects (e.g. summarizer → WordPress REST API). That is intended: full HTTP visibility everywhere would cost memory `rl-home-cp01` does not have.
@@ -731,7 +731,7 @@ Admins and editors sign in to WordPress with their **Google accounts**, using **
 
 An admin signs in once with Google at the edge, then once more (one click, no password) in WordPress.
 
-**Google Cloud setup (free):** one Google Cloud project with an OAuth consent screen using only the basic scopes (`openid`, `email`, `profile`), and an OAuth client per site (and one for local testing). With only basic scopes, Google's app review is not usually required; until the app is published, only listed test users can sign in (check Google's current rules). OAuth clients for web apps are created in the Google Cloud console and documented in `russetleaf-infra`'s README, since they cannot be fully managed with Terraform; their secrets are stored in Secrets Manager.
+**Google Cloud setup (free):** one Google Cloud project with an OAuth consent screen using only the basic scopes (`openid`, `email`, `profile`), and an OAuth client per site (and one for local testing). With only basic scopes, Google's app review is not usually required; until the app is published, only listed test users can sign in (check Google's current rules). OAuth clients for web apps are created in the Google Cloud console and documented in `russetleaf-infra`'s README, since they cannot be fully managed with OpenTofu; their secrets are stored in Secrets Manager.
 
 **The plugin:** a generic OIDC client plugin (e.g. "OpenID Connect Generic Client"; check current maintenance before choosing), pinned in `composer.json` (through WPackagist) and configured entirely from **environment variables and constants** (client ID, client secret, endpoints, allowed emails), never from the admin screen.
 
@@ -939,7 +939,7 @@ A cluster cannot report that it is completely down, so two outside checks back u
 
 ### AWS and Cloudflare alerts
 
-- **AWS:** CloudWatch alarms (ALB 5xx, RDS CPU/storage/connections, ElastiCache memory), AWS Budgets and Cost Anomaly Detection publish to **SNS** topics, which **Amazon Q Developer in chat applications** forwards to Slack. All of it is defined in `russetleaf-infra` Terraform (an `alerting` module).
+- **AWS:** CloudWatch alarms (ALB 5xx, RDS CPU/storage/connections, ElastiCache memory), AWS Budgets and Cost Anomaly Detection publish to **SNS** topics, which **Amazon Q Developer in chat applications** forwards to Slack. All of it is defined in `russetleaf-infra` OpenTofu (an `alerting` module).
 - **Cloudflare:** notifications for tunnel health and security events go to a Slack webhook (`#rl-dev-alerts`).
 
 ### Alerts as code
@@ -976,16 +976,16 @@ Changes never go straight to a live site. Every change to the WordPress image or
 | Environment | Where it runs | Purpose | When it runs | Cost |
 |---|---|---|---|---|
 | **local** | The operator's Ubuntu workstation: Docker Compose, plus a local Kubernetes cluster (kind, or Talos in Docker with `talosctl cluster create`) | Fast build-and-try loop for the image, charts and summarizer; rehearse Talos upgrades and manifest changes | On demand | $0 |
-| **ci** | A temporary **kind** cluster inside GitHub Actions, created for each pull request | Install the changed charts and run integration tests against **LocalStack** (local stand-ins for S3, SQS and Secrets Manager) and a **mock LLM** (LiteLLM's mock responses), so no AWS account or model is needed | Minutes per pull request | $0 (GitHub-hosted runners are free for public repos) |
+| **ci** | A temporary **kind** cluster inside GitHub Actions, created for each pull request | Install the changed charts and run integration tests against **Moto** in server mode (one open-source container standing in for S3, SQS and Secrets Manager) and a **mock LLM** (LiteLLM's mock responses), so no AWS account or model is needed | Minutes per pull request | $0 (GitHub-hosted runners are free for public repos) |
 | **staging** | The home cluster, in its own namespaces, at `staging.russetleaf.dev` behind Cloudflare Access | Run each new version against **real** AWS services and real models, with real (scrubbed) content, before production | **On demand only (scale-to-zero):** created for each promotion, deleted when tests finish | ~$0–1/month; ~0.7–1 GB of memory (on `rl-home-cp01`), only while running |
 | **prod (home)** | russetleaf.dev | The live site | 24/7 | see the home lab costs |
 
 ### ci: test clusters in GitHub Actions
 
-- **Charts and images** (`russetleaf-wordpress`, `russetleaf-llm-summarizer`): each pull request creates a kind cluster, installs the chart with the `ci` values (LocalStack endpoints, mock LLM, test credentials), and runs integration tests:
-    - WordPress: the site installs and loads, an upload lands in the LocalStack S3 bucket, publishing a post sends a message to the LocalStack SQS queue
+- **Charts and images** (`russetleaf-wordpress`, `russetleaf-llm-summarizer`): each pull request creates a kind cluster, installs the chart with the `ci` values (Moto endpoints, mock LLM, test credentials), and runs integration tests:
+    - WordPress: the site installs and loads, an upload lands in Moto's S3 bucket, publishing a post sends a message to Moto's SQS queue
 - **Manifests** (`russetleaf-gitops`): pull requests render and validate every overlay (as before), and changes to shared platform components are installed into a kind cluster to check they start.
-- **LocalStack note:** LocalStack's free-tier terms have changed over time. If its current terms do not suit, use **MinIO** (S3) and **ElasticMQ** (SQS) instead, with a plain Kubernetes Secret in place of Secrets Manager.
+- **Why Moto:** it is Apache-licensed and needs no account or token; LocalStack, planned first, kept changing its free-tier terms, and MinIO, its fallback, cut back its free edition ([ADR 1053](adr/1053-open-source-tools-by-default.md)).
 
 ### staging: on-demand, scale-to-zero
 
@@ -1010,7 +1010,7 @@ Staging exists **only while it is being tested** (scale-to-zero): it keeps the c
 4. **Promotion to prod:** if staging passed, the bot opens a pull request bumping the same version in **`overlays/home`** (russetleaf.dev; and `overlays/aws` for russetleaf.com in Phase 3), with the staging results and release notes attached. **The operator reviews and merges.** If staging failed, the bot posts the failure to `#rl-staging` and `#rl-deploys`, and nothing is promoted.
 5. **Production rollout:** Argo CD syncs russetleaf.dev, and the Argo Rollouts canary is the last check. In Phase 3, the next russetleaf.com demo deploys the same version.
 
-Infrastructure changes follow the same idea with different tools: Terraform modules are tested with **`terraform test`** in CI, Talos version upgrades are rehearsed on a **local Talos-in-Docker cluster** first, and `envs/home` changes are planned in CI before being applied.
+Infrastructure changes follow the same idea with different tools: OpenTofu modules are tested with **`tofu test`** in CI, Talos version upgrades are rehearsed on a **local Talos-in-Docker cluster** first, and `envs/home` changes are planned in CI before being applied.
 
 **Kargo (optional, later):** Kargo, a GitOps promotion tool from the makers of Argo CD, can replace the promotion workflows with a visual pipeline (stages, verification, approvals). It is a good portfolio addition, but its controllers are always on, so add it only if `rl-home-cp01` has memory to spare. The workflows above are the lightweight default.
 
@@ -1032,7 +1032,7 @@ Performance is tested on purpose, at several levels, not just checked for correc
 
 - **k6** scripts (home page, posts, search, the REST API, admin sign-in through a test identity provider in staging) live in `russetleaf-gitops/perf/`, with **thresholds in code** (e.g. 95th-percentile latency under 1 second, errors under 1%) so each run passes or fails.
 - **The k6 Operator** runs tests **inside the cluster**, distributed across pods and aimed at the ingress, so tests are not limited by the home internet connection and do not go through Cloudflare. Its namespace gets a CiliumNetworkPolicy allowing only the ingress as a target, and its images go on the Kyverno registry allow-list.
-- **Edge tests** (through Cloudflare or CloudFront, to test caching and the WAFs themselves) use a narrow, **temporary WAF allow rule** for the test source, applied through Terraform and removed afterwards, so the WAFs are tested deliberately rather than tripped by accident.
+- **Edge tests** (through Cloudflare or CloudFront, to test caching and the WAFs themselves) use a narrow, **temporary WAF allow rule** for the test source, applied through OpenTofu and removed afterwards, so the WAFs are tested deliberately rather than tripped by accident.
 - **Results** go to **Prometheus** (k6's remote-write output), shown in Grafana beside the system metrics (CPU, memory, database, queue depth, Bedrock calls) for the same time window, and are summarized in `docs/performance/`.
 
 ### Performance regression gate
@@ -1077,11 +1077,11 @@ The OpenCost alerts are `PrometheusRule`s in `platform/opencost/`, labeled `team
 
 ### Cost allocation tags must be activated
 
-AWS only lets Budgets and Cost Explorer filter by custom tags (`Project`, `Site`, `Env`, `Stack`, `ManagedBy`) after they are **activated as cost allocation tags** in the Billing console, or with Terraform (`aws_ce_cost_allocation_tag`, in `russetleaf-infra/envs/org/`, applied in the management account in Phase 1 step 2.0). A tag can only be activated after it has appeared on at least one resource, activation can take up to a day to show, and costs are only tagged from activation onwards, so activate them early.
+AWS only lets Budgets and Cost Explorer filter by custom tags (`Project`, `Site`, `Env`, `Stack`, `ManagedBy`) after they are **activated as cost allocation tags** in the Billing console, or with OpenTofu (`aws_ce_cost_allocation_tag`, in `russetleaf-infra/envs/org/`, applied in the management account in Phase 1 step 2.0). A tag can only be activated after it has appeared on at least one resource, activation can take up to a day to show, and costs are only tagged from activation onwards, so activate them early.
 
 ## Update strategy
 
-Every update, from a WordPress plugin to a Kubernetes version, arrives as a **pull request**, is **tested by CI**, and is **promoted with the same safety nets** as any other change. Nothing updates itself in place: WordPress's own auto-updates are off (`DISALLOW_FILE_MODS`, `AUTOMATIC_UPDATER_DISABLED`), images are pinned by digest, and charts and Terraform versions are pinned. The reasoning is recorded in [ADR 1011](adr/1011-update-strategy.md).
+Every update, from a WordPress plugin to a Kubernetes version, arrives as a **pull request**, is **tested by CI**, and is **promoted with the same safety nets** as any other change. Nothing updates itself in place: WordPress's own auto-updates are off (`DISALLOW_FILE_MODS`, `AUTOMATIC_UPDATER_DISABLED`), images are pinned by digest, and charts and OpenTofu versions are pinned. The reasoning is recorded in [ADR 1011](adr/1011-update-strategy.md).
 
 ### By layer
 
@@ -1091,7 +1091,7 @@ Every update, from a WordPress plugin to a Kubernetes version, arrives as a **pu
 | **Base images** (official `wordpress`, Python) | Renovate updates the **pinned digests**; a **weekly scheduled rebuild** picks up OS patches even without code changes | Same pipeline as above | Weekly |
 | **Platform components** (Cilium, Argo CD, Kyverno, Falco, Loki, Tempo, etc.) | Renovate in `russetleaf-gitops`, **grouped** into one pull request per component | **Patch versions:** auto-merge once CI passes. **Minor and major versions:** read the changelog, try on a **local Talos-in-Docker cluster** first, merge by hand. (Staging does not help here: platform components are shared by staging and prod.) | Weekly review; minors monthly |
 | **Talos and Kubernetes** (home) | Versions bumped in `russetleaf-infra/envs/home` (Renovate tracks them with a custom version rule) | Take an **etcd snapshot** and an on-demand MariaDB backup; rehearse on a local Talos cluster; check Cilium and other components support the new Kubernetes version; upgrade **Talos one node at a time** (`rl-home-cp02`, `rl-home-cp01`, then `rl-home-cp03`), checking etcd health between nodes, so the site stays up throughout, then Kubernetes (`talosctl upgrade-k8s`). Roll back with `talosctl rollback` | Talos patches monthly; Kubernetes minor versions within a few months of release, staying **within the supported window** |
-| **Terraform providers and modules** | Renovate (with the lock file) | CI plan, Checkov, `terraform test` | Monthly |
+| **OpenTofu providers and modules** | Renovate (with the lock file) | CI plan, Checkov, `tofu test` | Monthly |
 | **CLI tools and GitHub Actions** | Renovate (`.mise.toml`; actions pinned to commit hashes) | CI | Monthly; patches auto-merge |
 | **Workstation** (Ubuntu) | Unattended security upgrades | — | Automatic |
 
@@ -1101,7 +1101,7 @@ Every update, from a WordPress plugin to a Kubernetes version, arrives as a **pu
 - **Grouping:** one pull request per platform component or related set (e.g. all Cilium charts and images together), to keep reviews small and rollbacks clean.
 - **Auto-merge:** **patch** updates for platform charts, CLI tools and GitHub Actions merge automatically once CI passes; everything else waits for review.
 - **Dependency Dashboard:** Renovate's dashboard issue in each repo lists every pending update, so nothing is silently ignored.
-- **Custom version rules** for versions Renovate cannot find by itself (Talos and Kubernetes versions in Terraform, the EKS AMI version).
+- **Custom version rules** for versions Renovate cannot find by itself (Talos and Kubernetes versions in OpenTofu, the EKS AMI version).
 
 ### Vulnerability-driven updates
 
@@ -1131,8 +1131,8 @@ A **monthly scheduled workflow** in `russetleaf-gitops` checks running versions 
 
 Recovering from losses bigger than a bad change (a destroyed home lab, a compromised or lost AWS account, a regional outage, a lost GitHub or Cloudflare account) is covered by **the [disaster recovery plan](disaster-recovery.md)**: an inventory of every asset and where its copy is, scenarios with data-loss and recovery-time targets and procedures, the bootstrap order from zero, and drills. The decisions are recorded in [ADR 1018](adr/1018-disaster-recovery.md). In short:
 
-- **Rebuild from code** wherever possible (Terraform, GitOps, image builds).
-- **Copy what cannot be rebuilt outside the workload accounts and region:** the **Backup** account (Security OU) holds **S3 Object Lock** buckets in **us-west-2** (30-day retention) receiving **replicated** copies of the database backups, Terraform state and media (CloudTrail logs already live in the **Log Archive** account's locked buckets); russetleaf.com's database is dumped at every `demo-down` and replicated the same way; a **GPG-encrypted copy** of the russetleaf.dev database dumps and etcd snapshots also goes daily to **Cloudflare R2** with a bucket lock, outside AWS entirely; all five repos (including `russetleaf-docs`) are **mirrored daily** as `git bundle`s.
+- **Rebuild from code** wherever possible (OpenTofu, GitOps, image builds).
+- **Copy what cannot be rebuilt outside the workload accounts and region:** the **Backup** account (Security OU) holds **S3 Object Lock** buckets in **us-west-2** (30-day retention) receiving **replicated** copies of the database backups, OpenTofu state and media (CloudTrail logs already live in the **Log Archive** account's locked buckets); russetleaf.com's database is dumped at every `demo-down` and replicated the same way; a **GPG-encrypted copy** of the russetleaf.dev database dumps and etcd snapshots also goes daily to **Cloudflare R2** with a bucket lock, outside AWS entirely; all five repos (including `russetleaf-docs`) are **mirrored daily** as `git bundle`s.
 - **Regenerate secrets** rather than copy them, except account access and the Talos secrets bundle, which live in a **break-glass kit** (password manager, a printed copy of the essentials in a safe, and a GPG-encrypted copy in two cloud drives).
 - **Drills:** monthly restores, quarterly restores from the backup account, and a **yearly full "home lab destroyed" rebuild** using only the break-glass kit and the backups.
 - **Cost:** a few cents a month.
@@ -1156,7 +1156,7 @@ Every change can be undone, and the way to undo it is decided **before** it is n
 | **Application release** after promotion | Alerts or uptime check after the canary finished | **Git revert** of the version bump in `overlays/home` (and `overlays/aws`); Argo CD syncs | Operator | A few minutes |
 | **Platform component** (Cilium, Kyverno, Argo CD, Loki, ...) | Component unhealthy, or workloads failing after an upgrade | **Git revert** of the chart version or values; see the high-risk components below | Operator | Minutes |
 | **Configuration** (overlays, policies, routing) | Anything broken after a merge | **Git revert** | Operator | Minutes |
-| **Infrastructure** (Terraform) | Problems after an apply | **Git revert**, then review the **new saved plan**; **stop if it destroys stateful resources** (below) | Operator, through the `apply` environment | Minutes to an hour |
+| **Infrastructure** (OpenTofu) | Problems after an apply | **Git revert**, then review the **new saved plan**; **stop if it destroys stateful resources** (below) | Operator, through the `apply` environment | Minutes to an hour |
 | **Talos** (home) | Node unhealthy after a Talos upgrade | **`talosctl rollback`** on the affected node (Talos keeps the previous version) | Operator | Minutes per node |
 | **Kubernetes version** (home) | Cluster problems after `talosctl upgrade-k8s` | Minor-version **downgrades are not supported by Kubernetes**: restore from the **etcd snapshot** taken before the upgrade (which is why upgrades are rehearsed locally first) | Operator | An hour or more |
 | **Secrets** | A rotation broke a service | Point External Secrets at the **previous version** in Secrets Manager (`AWSPREVIOUS`), then fix the rotation | Operator | Minutes |
@@ -1180,9 +1180,9 @@ Some components can make normal rollback impossible if they break, because rollb
 - **Argo CD:** if Argo CD itself is broken, revert with `helm rollback` from the workstation, then re-sync.
 - **External Secrets:** if it stops syncing, existing Kubernetes Secrets keep working; revert the chart, and use `AWSPREVIOUS` for bad secret values.
 
-### Terraform: protect what cannot be recreated
+### OpenTofu: protect what cannot be recreated
 
-Reverting Terraform code does not always undo infrastructure cleanly. Stateful resources carry **`lifecycle { prevent_destroy = true }`**, so no plan (including a revert's) can delete them without a deliberate code change: the Terraform state bucket, the media, backup, log, trace and model mirror buckets, the Route 53 hosted zone, the CloudFront distribution and the Secrets Manager entries. RDS final snapshots are not managed by Terraform, so they survive any plan.
+Reverting OpenTofu code does not always undo infrastructure cleanly. Stateful resources carry **`lifecycle { prevent_destroy = true }`**, so no plan (including a revert's) can delete them without a deliberate code change: the OpenTofu state bucket, the media, backup, log, trace and model mirror buckets, the Route 53 hosted zone, the CloudFront distribution and the Secrets Manager entries. RDS final snapshots are not managed by OpenTofu, so they survive any plan.
 
 ### Rollback drills
 
@@ -1194,7 +1194,7 @@ Reverting Terraform code does not always undo infrastructure cleanly. Stateful r
 
 The full AWS stack costs too much to run 24/7 as a portfolio project. Instead:
 
-- Keep the **complete AWS design in Terraform on GitHub**, with CI, so anyone can review it.
+- Keep the **complete AWS design in OpenTofu on GitHub**, with CI, so anyone can review it.
 - Run **russetleaf.dev all the time on a three-node, highly available home Talos cluster**, published through a Cloudflare Tunnel.
 - Use **real AWS services where they are cheap** (S3, Secrets Manager, SES, IAM; SQS and Bedrock from Phase 2).
 - In Phase 3 (optional), bring up **russetleaf.com's full AWS stack only for short demos**; see the Phase 3 design.
@@ -1324,7 +1324,7 @@ The cost column is what russetleaf.dev costs to run 24/7 in Phase 1. The russetl
 | Compliance | Talos hardened defaults (documented) + Trivy Operator | kube-bench (EKS profile) + Trivy Operator | $0 |
 | Cost visibility | OpenCost | OpenCost or Kubecost EKS bundle | $0 |
 | Staging (on demand) | Created per promotion on the home cluster, deleted after tests; own bucket and secrets (Phase 2 adds a queue and a small Bedrock budget) | None (AWS versions are tested at home first) | ~$0–1 |
-| ci test clusters | kind in GitHub Actions with LocalStack (Phase 2 adds a mock LLM) | Same | $0 |
+| ci test clusters | kind in GitHub Actions with Moto (Phase 2 adds a mock LLM) | Same | $0 |
 | Logs | Loki (single binary, S3 storage) + Alloy, 7-day retention | Same, 14-day retention | <$1 |
 | Alerting | Alertmanager → Slack, dead man's switch, uptime checks, Cloudflare notifications | Same, plus CloudWatch alarms via SNS and Amazon Q Developer | $0 |
 | Account threat detection | Organization CloudTrail + GuardDuty (always on) | Same organization | ~$1–5 |

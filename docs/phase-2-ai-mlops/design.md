@@ -137,7 +137,7 @@ Post content is untrusted input, so the summarizer treats it as data:
 ### Fine-tuning pipeline (distillation)
 
 - **Goal:** improve the small self-hosted model by **fine-tuning** it (LoRA) on high-quality example summaries, then compare it with the base model ([ADR 2005](adr/2005-fine-tuning-on-a-rented-gpu.md)).
-- **Where it runs:** the home lab has no GPU, so each run uses **one rented spot GPU instance** in the russetleaf-home account, started from a Terraform-managed launch template by the `train` workflow and terminated when the run ends (a few dollars per run). Its instance profile can only read the training data and write to the MLflow artifact bucket.
+- **Where it runs:** the home lab has no GPU, so each run uses **one rented spot GPU instance** in the russetleaf-home account, started from a OpenTofu-managed launch template by the `train` workflow and terminated when the run ends (a few dollars per run). Its instance profile can only read the training data and write to the MLflow artifact bucket.
 - **Training data:** curated summaries from the feedback loop and the evaluation set, plus summaries from a stronger **teacher** model. **Check the teacher's terms first:** some model providers' terms restrict using their outputs to train other models. An **open-weights teacher** avoids the question.
 - **The pipeline** (`russetleaf-llm-summarizer/training/`, one container): fetch the versioned dataset (DVC) → fine-tune (LoRA) → **evaluate against the base model** on the evaluation set (including the adversarial cases) → convert to GGUF → **register** in MLflow as a `local-summarizer` version with its scores → if it beats the champion, propose it as the **challenger**.
 - **Deployment:** the challenger enters the gateway **canary** at home; online evaluation compares it with the champion; promotion to champion is a reviewed pull request.
@@ -179,11 +179,11 @@ russetleaf-llm-summarizer/
                             #   PrometheusRule alerts, Grafana dashboard ConfigMap
   docker/                   # Dockerfile (multi-stage, distroless or slim runtime base)
   demo/                     # docker compose: sample posts + local model or Bedrock, no Kubernetes needed
-  ci/                       # kind config, ci chart values (LocalStack SQS, mock LLM), end-to-end tests
+  ci/                       # kind config, ci chart values (Moto SQS, mock LLM), end-to-end tests
   MODEL_CARD.md             # models evaluated (including fine-tuned versions), scores, cost per summary, known
                             #   limitations, guardrails, links to MLflow runs and registry versions
   dvc.yaml, .dvc/           # data pipeline stages and the S3 remote
-  .github/workflows/        # ruff, mypy, Semgrep, pip-audit, dependency review, hadolint, Checkov, zizmor, helm/ct
+  .github/workflows/        # ruff, mypy, Opengrep, pip-audit, dependency review, hadolint, Checkov, zizmor, helm/ct
                             #   lint, unit tests, container-structure-test, Trivy, kind end-to-end tests (mock LLM),
                             #   evaluation gate (on ARC runners); weekly OpenSSF Scorecard;
                             #   on release: gate again, build image and chart, SBOM, scan, sign + attest SBOM and
@@ -341,7 +341,7 @@ One trace then shows: a post is published → queued → picked up by the summar
 
 ### Running costs
 
-| Component | russetleaf.dev (home, 24/7) | russetleaf.com (AWS, Terraform in GitHub) | Est. monthly cost (USD) |
+| Component | russetleaf.dev (home, 24/7) | russetleaf.com (AWS, OpenTofu in GitHub) | Est. monthly cost (USD) |
 |---|---|---|---|
 | AI post summaries | **Real SQS** + KEDA-scaled summarizer | — (not on russetleaf.com) | <$1 |
 | LLM gateway | LiteLLM in-cluster, routing to **real Amazon Bedrock** and the self-hosted model | — (not on russetleaf.com) | ~$1–$2 (Bedrock tokens) |

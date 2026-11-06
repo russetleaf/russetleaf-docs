@@ -13,7 +13,12 @@ load helpers
 
 SYSTEM_TOOLS=(
   git curl wget unzip jq gpg paperkey ykman python3 shellcheck shfmt bats direnv wg
-  mise bw uv pre-commit checkov semgrep ruff pip-audit prowler zizmor
+  mise bw opengrep uv pre-commit checkov ruff pip-audit prowler zizmor
+)
+REPO_TOOLS=(
+  tofu tflint terraform-docs infracost talosctl kubectl helm kustomize kind argocd
+  kubeconform ct k6 cilium hubble kyverno cosign syft trivy rekor-cli hadolint
+  container-structure-test kubescape gh aws promtool
 )
 
 ########################################
@@ -128,10 +133,15 @@ esac'
 }
 
 @test "a missing optional tool is not counted" {
+  local tool
+
   stub_system_tools
-  run_isolated "${CHECK}" --system
+  for tool in "${REPO_TOOLS[@]}"; do
+    stub "${tool}"
+  done
+  run_isolated "${CHECK}"
   [ "${status}" -eq 0 ]
-  [[ "${output}" =~ localstack\ +not\ installed\ \(optional\) ]]
+  [[ "${output}" =~ k9s\ +not\ installed\ \(optional\) ]]
 }
 
 @test "an unreachable Docker daemon is a warning, not a failure" {
@@ -151,7 +161,7 @@ esac'
   run_isolated "${CHECK}"
   [ "${status}" -eq 1 ]
   [[ "${output}" == *"Per-repo tools"* ]]
-  [[ "${output}" =~ terraform\ +MISSING ]]
+  [[ "${output}" =~ tofu\ +MISSING ]]
 }
 
 @test "output that is not a terminal has no color codes" {

@@ -12,7 +12,7 @@
 ## Decision
 
 - **Cilium in chaining mode** on top of the VPC CNI: the VPC CNI keeps assigning VPC addresses; Cilium adds policy enforcement, Hubble and (if supported) WireGuard. The VPC CNI's own network policy enforcement is **off**.
-- **Installed by Terraform's Helm provider** right after the cluster and managed node group exist (`cni.chainingMode: aws-cni`, `cni.exclusive: false`, `enableIPv4Masquerade: false`, `routingMode: native`), then managed by Argo CD from `platform/cilium/overlays/aws`.
+- **Installed by OpenTofu's Helm provider** right after the cluster and managed node group exist (`cni.chainingMode: aws-cni`, `cni.exclusive: false`, `enableIPv4Masquerade: false`, `routingMode: native`), then managed by Argo CD from `platform/cilium/overlays/aws`.
 - **Karpenter NodePools add the startup taint** `node.cilium.io/agent-not-ready=true:NoExecute`, so no pod lands on a new node before Cilium is ready.
 - **WireGuard:** turned on only if the installed Cilium version supports it in chaining mode; otherwise left off and recorded, relying on the TLS already on every sensitive connection ([ADR 1001](../../phase-1-russetleaf-dev/adr/1001-no-service-mesh.md)).
 
