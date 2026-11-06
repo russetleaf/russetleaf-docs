@@ -305,7 +305,7 @@ Each demo creates a new RDS instance, so content needs a plan:
 
 ### Short AWS demos
 
-The full AWS design costs roughly **$0.70 an hour** while running. Run `tofu apply` in `envs/aws`, record a walkthrough of russetleaf.com or take screenshots, then tear it down. The `demo-up` and `demo-down` GitHub Actions workflows in `russetleaf-infra` do this in the right order, and a scheduled safety-net workflow alerts (or tears down) if the stack is left running too long; see [Building it from scratch](../overview.md#building-it-from-scratch). The always-on edge (`envs/aws-edge`) is never destroyed, so russetleaf.com switches to its offline page automatically.
+The full AWS design costs roughly **$0.70 an hour** while running. Run `tofu apply` in `envs/aws`, run the end-to-end verification (Phase 3 step 5.2), then tear it down. The `demo-up` and `demo-down` GitHub Actions workflows in `russetleaf-infra` do this in the right order, and a scheduled safety-net workflow alerts (or tears down) if the stack is left running too long; see [Building it from scratch](../overview.md#building-it-from-scratch). The always-on edge (`envs/aws-edge`) is never destroyed, so russetleaf.com switches to its offline page automatically.
 
 | Demo time per month | Est. cost |
 |---|---|

@@ -36,7 +36,7 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the demo workflows, one rehearsed and **recorded demo**, and the docs. | 0.1–2.4, 3.1, 3.2, 5.1, 5.2, 5.3 | **~74–123** |
+| **Core** | russetleaf.com working end to end in its own account: the always-on edge with the offline page, network, EKS with Karpenter, RDS for MariaDB with RDS Proxy, Valkey, the platform on EKS, WordPress, the demo workflows, one rehearsed **end-to-end verification** of the whole stack, and the docs. | 0.1–2.4, 3.1, 3.2, 5.1, 5.2, 5.3 | **~74–123** |
 | **Extended** | kube-bench and Kubescape on EKS, the security and cost reviews, and the EKS rollback and forensics drills. | 2.5, 4.1, 4.2, 5.1b, 5.1c | **~14–22** |
 | **Advanced** | Load, stress and spike tests for the capacity plan, EKS as a second spoke of the Argo CD hub, and the Istio ambient and Tetragon experiments. | 4.3, 4.4, 5.4, 5.5 | **~16–25** |
 | **Total** | | | **~104–170** |
@@ -45,7 +45,7 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 **Money:** the stack costs about **$0.70 an hour** while running, so batch work into focused sessions and run `demo-down` at the end of each; record each session's cost in the checklist.
 
-**Recommended order:** do the Core tier in plan order, with **3.1 → 5.1 → 5.2** (WordPress, demo workflows, recorded demo) as the first milestone; add the reviews next; the experiments last.
+**Recommended order:** do the Core tier in plan order, with **3.1 → 5.1 → 5.2** (WordPress, demo workflows, end-to-end verification) as the first milestone; add the reviews next; the experiments last.
 
 ## Prerequisites from Phase 1
 
@@ -335,17 +335,28 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 
 **Test:** during one demo, repeat the Phase 1 drill on a russetleaf.com WordPress pod (the marker string found in the captured memory, the quarantined pod cut off while a replacement serves the site); the AVML image and EBS snapshot exist, and the hashes in the evidence bucket match; Karpenter does not remove the held node during the drill; `demo-down` refuses to run while the hold is set, and the safety net (with its limit lowered) alerts without tearing down; after the runbook's release steps (termination protection off, then `forensic-hold release`), `demo-down` completes; the SSM policy is detached again. Record the time from alert to evidence uploaded in the decision log.
 
-### Step 5.2: Full rehearsal and demo script
+### Step 5.2: Full rehearsal and end-to-end verification
 
-**Do:** write `docs/demo-script.md`: what to show and in what order (offline page → `demo-up` → live site → a page request's trace in Tempo → Argo Rollouts canary → Kyverno rejecting an unsigned image → Falco alert → OpenCost → `demo-down` → offline page). Rehearse, then record a walkthrough.
+**Do:** write the runbook `docs/runbooks/aws-end-to-end-check.md` in `russetleaf-infra` ([ADR 1046](../phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md)): an ordered list of checks across the whole AWS stack, each with its expected result:
 
-**Test:** a complete demo runs in under an hour of stack time, and the recording is linked from the hub README.
+1. **Offline page:** russetleaf.com serves the offline page with status 503 while the stack is down.
+2. **`demo-up`:** the stack comes up, Argo CD syncs, and russetleaf.com returns 200.
+3. **Tracing:** a page request produces one trace in Tempo, covering WordPress, the database and the cache.
+4. **Progressive delivery:** an Argo Rollouts canary promotes on passing analysis (and aborts on failing analysis).
+5. **Admission policy:** Kyverno rejects an unsigned image.
+6. **Runtime security:** a shell in a WordPress pod raises a Falco alert in Slack.
+7. **Cost:** OpenCost shows the namespaces' costs for the session.
+8. **`demo-down`:** the stack is removed, nothing is left running, and the offline page returns.
+
+Run it once as a rehearsal, fix the runbook where it differed, then run it for real and file a **dated verification record** (each check's result, the stack time used and the session's cost) in `docs/` of `russetleaf-infra`, linked from the decision log. A screen recording is optional. Add the runbook to the [runbook index](../runbooks.md).
+
+**Test:** every check passes in under an hour of stack time, and the verification record is filed and linked from the decision log.
 
 ### Step 5.3: Documentation
 
-**Do:** add the russetleaf.com architecture diagram and demo recording to the hub README; update the Phase 3 design wherever the build differed from it.
+**Do:** add the russetleaf.com architecture diagram and the latest end-to-end verification record to the hub README; update the Phase 3 design wherever the build differed from it.
 
-**Test:** the hub README explains both sites, with links to the recording, reports and dashboards.
+**Test:** the hub README explains both sites, with links to the verification record, reports and dashboards.
 
 ### Step 5.4: Load, stress and spike tests (capacity data)
 
@@ -407,7 +418,7 @@ Also restore russetleaf.com's database **from the latest logical dump in the bac
 | 5.1 Demo workflows | Core | 6–10 | ☐ | | | | | | |
 | 5.1b Rollback drill on EKS | Extended | 2–4 | ☐ | | | | | | |
 | 5.1c Forensic hold + forensics drill on EKS | Extended | 3–5 | ☐ | | | | | | |
-| 5.2 Rehearsal + recording | Core | 3–5 | ☐ | | | | | | |
+| 5.2 Rehearsal + end-to-end verification | Core | 3–5 | ☐ | | | | | | |
 | 5.3 Documentation | Core | 2–3 | ☐ | | | | | | |
 | 5.4 Load, stress and spike tests | Advanced | 6–9 | ☐ | | | | | | |
 | 5.5 Register EKS with the Argo CD hub | Advanced | 4–6 | ☐ | | | | | | |

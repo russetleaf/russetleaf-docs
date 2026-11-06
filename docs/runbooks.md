@@ -87,6 +87,7 @@ A personal-data breach is handled by `docs/runbooks/personal-data-breach.md`, li
 | Runbook | Use it when | Written in | Rehearsed | Status |
 |---|---|---|---|---|
 | `docs/runbooks/demo-teardown-stuck.md` (in `russetleaf-infra`) | `demo-down` hangs or leaves resources behind (and costs) | [Phase 3 step 5.1](phase-3-russetleaf-com/plan.md#step-51-demo-workflows) | Step 5.1 | Planned |
+| `docs/runbooks/aws-end-to-end-check.md` (in `russetleaf-infra`) | Verifying the whole AWS stack after bringing it up: delivery, tracing, policy, runtime security, cost and teardown | [Phase 3 step 5.2](phase-3-russetleaf-com/plan.md#step-52-full-rehearsal-and-end-to-end-verification) | Step 5.2; then after significant changes to the AWS stack | Planned |
 
 The shared runbooks above gain EKS sections where russetleaf.com differs (forensics, AWS WAF).
 

@@ -237,7 +237,7 @@ What each phase builds. Phase 1 on its own is a complete project; Phases 2 and 3
 - **Full observability on both sites:** metrics (Prometheus), logs (Loki + Alloy, with log-based alerts), network flows (Hubble), security events (Falco) and traces (Tempo; Phase 2 follows each AI summary end to end through the SQS queue and model gateway), correlated in Grafana.
 - **Application-level monitoring:** exporters around WordPress (Apache, database, cache, synthetic probes) plus a custom metrics plugin (cron backlog, cache hit ratio, versions; Phase 2 adds the business-level `posts_without_summary` signal) tied to alerts and runbooks.
 - **Operational alerting:** alerts as code with tests and runbooks, routed to Slack by site and severity, with inhibition rules, a dead man's switch, external uptime checks and silences during demo teardown.
-- **Documentation:** architecture diagrams for both environments, the cost breakdown, Grafana dashboard screenshots, Slack alert screenshots, the runbook index and its runbooks, the bash script standard, sample evaluation reports comparing models, and demo recordings.
+- **Documentation:** architecture diagrams for both environments, the cost breakdown, Grafana dashboard screenshots, Slack alert screenshots, the runbook index and its runbooks, the bash script standard, sample evaluation reports comparing models, and the end-to-end verification records of the AWS stack.
 
 ### Phase 2: AI summaries and MLOps
 
@@ -341,7 +341,7 @@ russetleaf-gitops/
     performance/            # load, stress, spike and soak test results (Phase 2: AI burst); production baselines
     security/               # kube-bench, Kubescape and Prowler reports, RBAC review, accepted-findings files
     talos-hardening.md      # how Talos meets the CIS benchmark, with the talosctl checks
-                            # + diagrams, cost breakdown, Grafana screenshots, demo recordings
+                            # + diagrams, cost breakdown, Grafana screenshots, verification records
   bootstrap/
     home/                   # root "app of apps" Application for the home cluster
     aws/                    # root "app of apps" Application for EKS
