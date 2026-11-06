@@ -25,7 +25,7 @@ Everyday availability targets are in [ADR 1014](adr/1014-availability-levels.md)
 | Application code | `russetleaf-wordpress` (and `russetleaf-llm-summarizer` from Phase 2) (GitHub) | Repo mirrors in the backup account; **mirrored to GitLab** on every push | Daily for 35 days; monthly for 12 months; GitLab always current | Yes |
 | Documentation and planning | `russetleaf-docs` (GitHub; issues and the Projects board stay on GitHub) | Repo mirror in the backup account; **mirrored to GitLab** on every push | Daily for 35 days; monthly for 12 months; GitLab always current | The documents, yes; issues only from GitHub |
 | Images and charts | GHCR | None needed | — | Yes, rebuilt from the mirrored source |
-| OpenTofu state | S3 state bucket (us-east-1, **russetleaf-infra** account) | **Replicated** to the backup account (us-west-2, Object Lock); the source bucket also keeps old versions for 90 days | 30-day lock, deleted after 35 days; monthly copies for 12 months | Partly (state can be re-imported, but slowly) |
+| OpenTofu state (encrypted by OpenTofu with the state passphrase; [ADR 1054](adr/1054-opentofu-state-and-plan-encryption.md)) | S3 state bucket (us-east-1, **russetleaf-infra** account) | **Replicated** to the backup account (us-west-2, Object Lock); the source bucket also keeps old versions for 90 days | 30-day lock, deleted after 35 days; monthly copies for 12 months | Partly (state can be re-imported, but slowly) |
 | russetleaf.dev database | MariaDB backups in S3 (us-east-1), every 6 hours | **Replicated** to the backup account (Object Lock), plus a daily **GPG-encrypted copy in Cloudflare R2** (bucket lock), outside AWS | 30-day lock, deleted after 35 days; monthly copies for 12 months | No |
 | russetleaf.com database *(Phase 3)* | RDS snapshots (us-east-1) | A **logical dump** taken at every `demo-down`, written to the russetleaf.com backup bucket and **replicated** to the backup account | 30-day lock | No (or re-seed from russetleaf.dev) |
 | Media (both sites) | S3 media buckets (us-east-1) | **Replicated** to the backup account (Object Lock) | 30-day lock, deleted after 35 days; monthly copies for 12 months | No |
@@ -85,6 +85,7 @@ The kit holds:
 - ★ Google: account recovery (for the Google Cloud project and Google sign-in)
 - ★ Domain registrar logins for russetleaf.com and russetleaf.dev
 - ★ **Bitwarden's own recovery details:** the account email, the master password (never stored in Bitwarden itself) and the **two-step login recovery code**. Bitwarden's optional **emergency access** (a paid feature) can also let a trusted person reach the vault after a waiting period.
+- ★ The **OpenTofu state passphrase** ([ADR 1054](adr/1054-opentofu-state-and-plan-encryption.md)), and each previous one for **12 months** after it is replaced, until the last monthly state copy made with it has expired
 - The **lab router** (ER605) admin login, its configuration backup, and the WireGuard client profile
 - Talos secrets bundle (`secrets.yaml`), the `os:admin` talosconfig, and the Talos-generated **break-glass admin kubeconfig** (use of it raises an alert)
 - Where every backup is (this document's table), and the order of recovery (below)
@@ -121,7 +122,7 @@ The step-by-step runbooks for these scenarios (etcd recovery, node replacement, 
 
 1. **Access:** Bitwarden (from the printed copy if needed) → break-glass kit → AWS (management account, then IAM Identity Center into the others), GitHub, Cloudflare, Google, registrar.
 2. **Code:** restore the five repos (including `russetleaf-docs`) (from GitHub, or the mirrors in the backup account).
-3. **OpenTofu state:** use the russetleaf-infra state bucket, or copy it back from the Backup account.
+3. **OpenTofu state:** use the russetleaf-infra state bucket, or copy it back from the Backup account, and open it with the **state passphrase** from the break-glass kit.
 4. **Account foundations:** apply `russetleaf-infra/envs/org/` (Organization, accounts, SCPs, Identity Center) and `envs/security/` (CloudTrail, GuardDuty, Security Hub, Config), then `bootstrap/` (state bucket, CI roles).
 5. **Home infrastructure:** restore the lab router's configuration (or redo step 0.3), connect over WireGuard, then apply `russetleaf-infra/envs/home` with **`bootstrap_inline_manifests = true`** (Talos on all three nodes with Cilium, Argo CD and the root Application as inline manifests, Cloudflare, the AWS resources used from home; [ADR 1039](adr/1039-bootstrap-through-talos-inline-manifests.md)).
 6. **Secrets:** create or regenerate the entries in Secrets Manager; create the External Secrets bootstrap credential.
@@ -141,7 +142,7 @@ The step-by-step runbooks for these scenarios (etcd recovery, node replacement, 
 | **Full "home lab destroyed" rebuild**, using only the break-glass kit and the backups (on a local Talos-in-Docker cluster, or the real nodes during a maintenance window) | Yearly | The whole plan works; record the actual time |
 | *(Phase 3)* Restore russetleaf.com's database from the latest logical dump in the backup account | Once (then yearly) | The AWS-side copy works |
 | Recover a deleted staging namespace from Git and backups (`restore-deleted-resources.md`) | Quarterly, with the rollback drills | A deletion is recoverable without a cluster backup tool |
-| Restore a repo from its git bundle, a media object from the replica, and OpenTofu state from the Backup account | Twice a year | The other copies are usable, not just the database's |
+| Restore a repo from its git bundle, a media object from the replica, and OpenTofu state from the Backup account (decrypted with the passphrase from the break-glass kit) | Twice a year | The other copies are usable, not just the database's |
 | Restore a database dump from the **monthly** copies, and re-apply the erasure log | Yearly | Damage found late is recoverable |
 | Make one copy late on purpose (pause the R2 job) | Yearly | `BackupCopiesStale` fires |
 | Control-plane recovery (`etcd-recovery.md`, on a local Talos-in-Docker cluster) | Yearly | Quorum loss is recoverable |

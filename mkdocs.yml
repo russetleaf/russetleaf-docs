@@ -134,6 +134,7 @@ nav:
           - "1051 Terraform for infrastructure as code (superseded by 1052)": phase-1-russetleaf-dev/adr/1051-terraform-for-infrastructure-as-code.md
           - "1052 OpenTofu instead of Terraform": phase-1-russetleaf-dev/adr/1052-opentofu-instead-of-terraform.md
           - "1053 Open-source tools by default, and the recorded exceptions": phase-1-russetleaf-dev/adr/1053-open-source-tools-by-default.md
+          - "1054 OpenTofu state and plan encryption": phase-1-russetleaf-dev/adr/1054-opentofu-state-and-plan-encryption.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md

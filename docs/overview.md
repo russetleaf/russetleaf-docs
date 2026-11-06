@@ -700,6 +700,7 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [1051](phase-1-russetleaf-dev/adr/1051-terraform-for-infrastructure-as-code.md) | Terraform for infrastructure as code, not CloudFormation, CDK, Pulumi or OpenTofu (superseded by [ADR 1052](phase-1-russetleaf-dev/adr/1052-opentofu-instead-of-terraform.md)) | 1 |
 | [1052](phase-1-russetleaf-dev/adr/1052-opentofu-instead-of-terraform.md) | OpenTofu instead of Terraform | 1 |
 | [1053](phase-1-russetleaf-dev/adr/1053-open-source-tools-by-default.md) | Open-source tools by default, and the recorded exceptions (Opengrep, Moto and Zensical adopted) | 1 |
+| [1054](phase-1-russetleaf-dev/adr/1054-opentofu-state-and-plan-encryption.md) | OpenTofu state and plan encryption, with a passphrase in Secrets Manager and the break-glass kit | 1 |
 | [2001](phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback | 2 |
 | [2002](phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
 | [2003](phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | Self-hosted model on rl-home-cp02 (CPU llama.cpp), dedicated by taint | 2 |

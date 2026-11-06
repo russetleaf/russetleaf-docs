@@ -1,9 +1,11 @@
 # ADR 1052: OpenTofu instead of Terraform
 
-- **Status:** Accepted. It supersedes [ADR 1051](1051-terraform-for-infrastructure-as-code.md).
+- **Status:** Accepted. It supersedes [ADR 1051](1051-terraform-for-infrastructure-as-code.md); updated by [ADR 1054](1054-opentofu-state-and-plan-encryption.md) (state and plan encryption).
 - **Date:** 2026-11-06
 - **Applies to:** both sites
 - **Phase:** 1 (`russetleaf-infra`, steps 2.0 to 2.5). Phase 2 adds the AI pipeline's AWS resources; Phase 3 adds russetleaf.com's edge and demo stacks.
+
+> **Update ([ADR 1054](1054-opentofu-state-and-plan-encryption.md)):** state and saved plans **are encrypted** by OpenTofu from the first apply, with a passphrase kept in Secrets Manager and the break-glass kit, so the Backup account's copies stay readable without the russetleaf-infra account. The deferral below no longer applies.
 
 ## Context
 
@@ -23,7 +25,7 @@ No infrastructure code exists yet (`russetleaf-infra` is written from step 2.0),
 - **State** stays in the S3 bucket in the russetleaf-infra account, with built-in S3 locking (`use_lockfile = true`).
 - **The checks** run as before; the `pre-commit-terraform` hooks are pointed at `tofu` (`--hook-config=--tf-path=tofu`).
 - **The `ManagedBy` tag** on every resource is `opentofu`, and the Checkov policy that requires it checks that value.
-- **OpenTofu's state encryption** (client-side encryption of the state file) is **not turned on yet**: the state copies replicated to the Backup account must stay readable without the russetleaf-infra account's keys ([ADR 1018](1018-disaster-recovery.md)), which needs a key design of its own. It is [improvement I1-3](../improvements.md).
+- **OpenTofu's state encryption** encrypts the state and saved plans ([ADR 1054](1054-opentofu-state-and-plan-encryption.md)).
 
 ## Alternatives considered
 

@@ -9,6 +9,8 @@
 
 > **Update ([decision log](../plan.md#decision-log), 2026-11-05):** the copy outside AWS is encrypted with **GPG** instead of `age`, so one tool covers every encryption job; the private key is kept only in the break-glass kit, and can move onto a YubiKey later. The break-glass kit is kept in Bitwarden, as a printed copy in a safe, and as a passphrase-encrypted copy in Google Drive and OneDrive ([break-glass kit setup guide](../setup/break-glass-kit.md)).
 
+> **Update ([ADR 1054](1054-opentofu-state-and-plan-encryption.md)):** OpenTofu encrypts its state before writing it, so the state copies in the Backup account are opened with the **state passphrase from the break-glass kit**, still without any access to the russetleaf-infra account or its keys.
+
 ## Context
 
 The design could already rebuild most things from code (OpenTofu, GitOps, image builds), back up the databases (MariaDB to S3 every 6 hours; RDS snapshots), version media, and roll back changes ([ADR 1016](1016-rollback-strategy.md)). But:

@@ -52,7 +52,7 @@ All paths below are in `russetleaf-gitops` unless stated otherwise.
 | `docs/runbooks/cold-start.md` | All three nodes lost power, or are being shut down for planned power work | Home | [Phase 1 step 7.11](phase-1-russetleaf-dev/plan.md#step-711-node-failure-drills) | Full power cut, step 7.11, then yearly | Planned |
 | `docs/runbooks/restore-deleted-resources.md` | A namespace, volume or resource was deleted by mistake: Argo CD recreates the objects, backups restore the data (never an etcd snapshot) | Both | [Phase 1 step 7.8](phase-1-russetleaf-dev/plan.md#step-78-rollback-runbooks-and-drills) | Deleted staging namespace, quarterly | Planned |
 | `docs/runbooks/upgrade-talos-kubernetes.md` | Upgrading Talos or Kubernetes: backups, rehearsal, one node at a time, when to stop | Home | [Phase 1 step 7.8](phase-1-russetleaf-dev/plan.md#step-78-rollback-runbooks-and-drills) | Every upgrade | Planned |
-| `docs/runbooks/opentofu-state.md` (in `russetleaf-infra`) | A state lock is stuck, drift is found, or an earlier state version must be restored | Both | [Phase 1 step 2.4](phase-1-russetleaf-dev/plan.md#step-24-russetleaf-infra-ci) | Step 2.4 | Planned |
+| `docs/runbooks/opentofu-state.md` (in `russetleaf-infra`) | A state lock is stuck, drift is found, an earlier state version must be restored, or the state passphrase must be rotated | Both | [Phase 1 step 2.4](phase-1-russetleaf-dev/plan.md#step-24-russetleaf-infra-ci) | Step 2.4 | Planned |
 
 The scenarios these runbooks recover from, with data-loss and recovery-time targets, are in the [disaster recovery plan](phase-1-russetleaf-dev/disaster-recovery.md), which also has the bootstrap order for a rebuild from nothing.
 
