@@ -78,11 +78,11 @@ Kept in three places, so that losing any two of them still leaves a way back in 
 
 The kit holds:
 
-- ★ AWS: the **management account's** account ID, root email and password, and its **MFA devices** (Google Authenticator on the operator's phone, the YubiKey in the safe). AWS has no recovery codes for root MFA: with both devices lost, its recovery checks the root email address and calls the account's phone number, so both must stay current ([setup guide](setup/aws-management-account.md#if-something-goes-wrong)). Member accounts have no root credentials (centralized root access management). Also the IAM Identity Center admin and break-glass logins
+- ★ AWS: the **management account's** account ID, root email and password, and its **MFA devices** (two YubiKeys: the keychain key and the safe key; [ADR 1056](adr/1056-aws-root-mfa-two-security-keys.md)). AWS has no recovery codes for root MFA: with both devices lost, its recovery checks the root email address and calls the account's phone number, so both must stay current ([setup guide](setup/aws-management-account.md#if-something-goes-wrong)). Member accounts have no root credentials (centralized root access management). Also the IAM Identity Center admin and break-glass logins
 - ★ GitHub: account login and **recovery codes**
 - ★ GitLab (the mirrors of every repo): account login and **recovery codes**
 - ★ Cloudflare: account login and recovery codes
-- ★ Google: account recovery (for the Google Cloud project and Google sign-in). The operator's Google account is in **Advanced Protection**, so its passkey and security keys are its recovery path and Google's own recovery takes several days; it also holds the AWS root email address and Google Authenticator's synced codes ([ADR 1055](adr/1055-aws-root-mfa-synced-authenticator.md))
+- ★ Google: account recovery (for the Google Cloud project and Google sign-in). The operator's Google account is in **Advanced Protection**, so its passkey and security keys are its recovery path and Google's own recovery takes several days; it also holds the AWS root email address ([ADR 1056](adr/1056-aws-root-mfa-two-security-keys.md))
 - ★ Domain registrar logins for russetleaf.com and russetleaf.dev
 - ★ **Bitwarden's own recovery details:** the account email, the master password (never stored in Bitwarden itself) and the **two-step login recovery code**. Bitwarden's optional **emergency access** (a paid feature) can also let a trusted person reach the vault after a waiting period.
 - ★ The **OpenTofu state passphrase** ([ADR 1054](adr/1054-opentofu-state-and-plan-encryption.md)), and each previous one for **12 months** after it is replaced, until the last monthly state copy made with it has expired

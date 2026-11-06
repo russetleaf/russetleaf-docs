@@ -12,13 +12,13 @@ Have these ready:
 
 - **A new email address** for the account's root user, used for nothing else. An alias of the operator's mailbox works, for example `<name>+rl-management@<domain>`: the mail still arrives, but the address is unique to this account.
 - **Bitwarden open** (the project's password manager), with a new entry for the account, so the root password is generated there and never typed or reused.
-- **Two MFA devices** for root ([ADR 1055](../adr/1055-aws-root-mfa-synced-authenticator.md)), so losing one (or the phone holding it) never locks the account:
-    - **Google Authenticator on the operator's phone, the main factor,** used at each root sign-in, with its **cloud sync on**, so a new phone gets the codes back. Sync stores the codes in the operator's Google account, which also holds the root email address, so that account is enrolled in Google's **Advanced Protection Program** first: every Google sign-in then needs a passkey or security key (register a passkey on the phone and the YubiKey), with no authenticator codes, SMS or voice, so the account cannot be phished. This is an accepted risk for a one-operator project, not a corporate practice ([ADR 1055](../adr/1055-aws-root-mfa-synced-authenticator.md)). Open-source apps work the same way and can replace it later: **Aegis** (Android; no cloud sync, encrypted local backups) or **Ente Auth** (iOS and Android; optional end-to-end-encrypted sync). Google Authenticator is kept as the operator's choice ([ADR 1053](../adr/1053-open-source-tools-by-default.md)).
-    - **A YubiKey, the backup,** registered as a security key and kept in the **safe** with the printed break-glass kit ([break-glass kit setup guide](break-glass-kit.md)).
-    - **The accepted risk:** AWS accepts any registered device at sign-in, so a code from an app (TOTP) makes root phishable: a fake sign-in page can pass the password and code on to AWS straight away, which it cannot do with a security key. Root is signed in to only a few times, and only through **Bitwarden's autofill**: if Bitwarden does not offer the root login on a page, the address is wrong.
-    - **The CIS finding:** Security Hub's CIS control IAM.6 expects hardware MFA on root, and fails while an authenticator app is registered; it is suppressed with [ADR 1055](../adr/1055-aws-root-mfa-synced-authenticator.md) as the reason (step 2.0b).
-    - **Not in Bitwarden:** Bitwarden can store passkeys and authenticator codes, but it also holds the root password, so a root factor there would put both factors in one vault.
-    - **No recovery codes:** AWS has none for root MFA. With both devices lost, AWS's recovery checks the root email address and then calls the account's phone number, so both must stay current. **Do not save the authenticator's secret key** (the QR code shown during setup) anywhere else: Google Authenticator's sync already restores it on a new phone, and the YubiKey covers the rest.
+- **Two YubiKeys** for root ([ADR 1056](../adr/1056-aws-root-mfa-two-security-keys.md)), registered as security keys, so losing one never locks the account and root can never be phished:
+    - **The keychain key** for root sign-ins, and **the safe key** as the backup, kept with the printed break-glass kit ([break-glass kit setup guide](break-glass-kit.md)), never in the same place as the other.
+    - **A FIDO2 PIN on each key** (set with Yubico Authenticator or `ykman fido access change-pin`), so a lost key cannot be used without it.
+    - **No authenticator app** on root: AWS accepts any registered device, so a code from an app (TOTP) would make root as phishable as that code. With only security keys registered, Security Hub's CIS control IAM.6 (hardware MFA for root) passes.
+    - **The Google account that holds the root email address** is enrolled in Google's **Advanced Protection Program**, with a passkey on the phone and both YubiKeys registered: the root email address is AWS's recovery path when both keys are lost, so that account must not be phishable.
+    - **Not in Bitwarden:** Bitwarden can store passkeys, but it also holds the root password, so a root factor there would put both factors in one vault.
+    - **No recovery codes:** AWS has none for root MFA. With both keys lost, AWS's recovery checks the root email address and then calls the account's phone number, so both must stay current.
 - **A payment card and a phone** for AWS's identity check (a small temporary charge, then an SMS or voice call). The advanced sign-up below requires a payment method.
 
 ## Part 1: create the account (step 0.1)
@@ -29,20 +29,21 @@ Have these ready:
 4. **Payment and identity:** add the card, then complete the SMS or voice check.
 5. **Support plan:** choose **Basic** (free). Paid support is not needed for this project.
 6. **Sign in as the root user** (the "root user" option on the sign-in page, with the email address).
-7. **MFA on root,** before anything else: open **IAM → Security credentials** (the page for the root user) and assign an MFA device. Register the **YubiKey** first (device type **Security key**; touch it when asked), then **Google Authenticator** (device type **Authenticator app**: scan the QR code with the app and enter two codes in a row). An account allows several MFA devices on root. Do not save the QR code or its secret key. Sign out and back in to confirm MFA is asked for, and choose the authenticator app.
+7. **MFA on root,** before anything else: open **IAM → Security credentials** (the page for the root user) and assign an MFA device. Register the **keychain YubiKey** (device type **Security key**; enter its PIN and touch it when asked), then the **safe YubiKey** the same way. An account allows several MFA devices on root; register no authenticator app. Sign out and back in to confirm MFA is asked for.
 8. **No root access keys:** on the same page, confirm the **Access keys** section is empty. Never create one: the root user only ever signs in to the console.
 9. **Billing access for Identity Center roles:** in **Account** (from the account menu), turn on **IAM user and role access to Billing information**. Only root can do this; without it, the admin role from Part 2 cannot see budgets or costs.
 10. **Alternate contacts:** in the same **Account** page, set the **Security**, **Billing** and **Operations** contacts to the operator, so AWS's security notices reach a person. (OpenTofu manages these from step 2.0.)
 11. **Billing preferences:** in **Billing and Cost Management → Billing preferences**, turn on **Free Tier usage alerts**, and the **billing alerts** that let CloudWatch alarm on charges. Under **Invoice delivery preferences**, choose **PDF invoices delivered by email**, so each month's invoice arrives as a PDF.
 12. **The budget:** in **Billing and Cost Management → Budgets**, create a **monthly cost budget** named **`RussetLeaf Monthly Cost Budget`**, of **$50**, with email alerts at **85% of actual** and **100% of forecast** spend, to the operator's email. Because this is the management account, the budget covers every account the Organization creates later (consolidated billing). OpenTofu takes it over in step 2.0.
 13. **Region:** in the console's region menu, choose **US East (N. Virginia), `us-east-1`**, the project's region. The SCPs in step 2.0 allow only `us-east-1` and `us-west-2`.
-14. **The break-glass kit** ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)): in **Bitwarden**, the kit's working copy, record the **account ID** (shown in the account menu), the **root email**, the **root password**, and **which MFA devices are registered** (Google Authenticator on the phone, the YubiKey in the safe). Put the YubiKey back in the safe. The printed copy and the encrypted cloud copies are made later, once, at the end of step 0.1, when Bitwarden holds the other accounts' recovery details too ([break-glass kit setup guide](break-glass-kit.md)).
+14. **The break-glass kit** ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)): in **Bitwarden**, the kit's working copy, record the **account ID** (shown in the account menu), the **root email**, the **root password**, and **which MFA devices are registered** (the keychain YubiKey and the safe YubiKey). Put the YubiKey back in the safe. The printed copy and the encrypted cloud copies are made later, once, at the end of step 0.1, when Bitwarden holds the other accounts' recovery details too ([break-glass kit setup guide](break-glass-kit.md)).
 15. **Sign out.** Nothing else is done in this account until step 2.0.
 
 **Checks:**
 
-- [ ] Signing in as root asks for MFA, and both MFA devices work (sign in once with each).
-- [ ] The Google account that syncs Google Authenticator (and holds the root email address) is enrolled in **Advanced Protection**, with a phone passkey and the YubiKey registered.
+- [ ] Signing in as root asks for MFA, and both YubiKeys work (sign in once with each); the root user's MFA list shows **no authenticator app**.
+- [ ] Both YubiKeys have a FIDO2 PIN.
+- [ ] The Google account that holds the root email address is enrolled in **Advanced Protection**, with a phone passkey and both YubiKeys registered.
 - [ ] The root user's **Security credentials** page shows **no access keys**.
 - [ ] **IAM user and role access to Billing information** is on.
 - [ ] **Invoice delivery preferences** are set to **PDF invoices delivered by email**.
@@ -60,7 +61,7 @@ OpenTofu manages the Organization from step 2.0, but it needs a way to sign in f
 4. **Identity source:** keep the default, the **Identity Center directory**.
 5. **The AWS access portal address:** under **Settings**, change the portal's subdomain to something memorable (for example `russetleaf`, giving `https://russetleaf.awsapps.com/start`), and record it in the break-glass kit.
 6. **MFA settings:** under **Settings → Authentication**, require MFA **every time users sign in**, require users to **register an MFA device at sign-in**, and allow **security keys and built-in authenticators** (passkeys) only, with **authenticator apps** turned off: Identity Center is signed in to daily, so it keeps phishing-resistant factors only (decision log, 2026-11-05).
-7. **The operator's user:** under **Users**, add a user for the operator (their name and email), and accept the invitation from the email: set a password (from the password manager) and register two MFA devices: a **passkey** on the operator's phone (not in Bitwarden, which holds the password) for daily sign-in, and the **YubiKey** from the safe as the backup.
+7. **The operator's user:** under **Users**, add a user for the operator (their name and email), and accept the invitation from the email: set a password (from the password manager) and register MFA devices: a **passkey** on the operator's phone (not in Bitwarden, which holds the password) and the **keychain YubiKey** for daily sign-in, and the **safe YubiKey** as the backup.
 8. **A bootstrap admin permission set:** under **Permission sets**, create one from the predefined **AdministratorAccess** policy, named **`admin`** (the name OpenTofu will manage it under), with a session duration of **4 hours**.
 9. **Assign it:** under **AWS accounts**, select the management account, and assign the operator's user with the **`admin`** permission set.
 10. **Sign in from the workstation:**
@@ -92,7 +93,7 @@ OpenTofu manages the Organization from step 2.0, but it needs a way to sign in f
 
 ## If something goes wrong
 
-- **Lost the phone:** get the YubiKey from the safe, sign in with it, sign in to the Google account on the new phone (with the YubiKey), and Google Authenticator restores the codes through sync; remove the lost phone's passkey from the Google account, and register a new one. Do the same for the Identity Center passkey.
-- **Lost the YubiKey:** sign in with Google Authenticator, remove the YubiKey, and register a new one.
-- **Lost both MFA devices:** on the root sign-in page, choose **Troubleshoot MFA**, then **Sign in using alternative factors**. AWS sends a link to the root email address, then calls the phone number on the account. There are no recovery codes, which is why the root email address and the phone number are kept current in the break-glass kit. If neither works, contact AWS Support.
+- **Lost the keychain YubiKey:** sign in with the safe key, remove the lost key from root (and from the Google account, Identity Center and every other account it is registered with), and register a replacement (with a PIN) right away.
+- **Lost the phone:** root is not affected. Remove the phone's passkeys from the Google account and Identity Center (signing in with a YubiKey), and register new ones on the new phone.
+- **Lost both YubiKeys:** on the root sign-in page, choose **Troubleshoot MFA**, then **Sign in using alternative factors**. AWS sends a link to the root email address, then calls the phone number on the account. There are no recovery codes, which is why the root email address and the phone number are kept current in the break-glass kit. If neither works, contact AWS Support.
 - **The management account is compromised or lost:** follow the [disaster recovery plan](../disaster-recovery.md#scenarios) ("Management account compromised or lost").

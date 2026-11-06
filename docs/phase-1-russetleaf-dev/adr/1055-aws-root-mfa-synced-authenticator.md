@@ -1,6 +1,6 @@
 # ADR 1055: AWS root MFA: a synced authenticator app, with the Google account under Advanced Protection (accepted risk)
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR 1056](1056-aws-root-mfa-two-security-keys.md) (two security keys, no authenticator app, 2026-11-06)
 - **Date:** 2026-11-06
 - **Applies to:** the AWS management account's root user (the only root user with credentials; member accounts have none, [ADR 1019](1019-aws-multi-account-sra.md))
 - **Phase:** 1 (step 0.1; the Security Hub suppression in step 2.0b)
