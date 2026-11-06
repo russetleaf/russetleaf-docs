@@ -30,9 +30,8 @@
 ## Consequences
 
 - No storage system to run, upgrade or debug; no memory spent on storage daemons.
-- A failure of `rl-home-cp01`'s disk means rebuilding the cluster and restoring the database, losing up to **6 hours** of changes, with some downtime while restoring. Acceptable for a portfolio site.
+- A failure of `rl-home-cp01`'s disk means rebuilding the cluster and restoring the database, losing up to **6 hours** of changes, with some downtime while restoring. Acceptable for one small site with frequent backups.
 - Backup storage grows (four backups a day, kept 14 days); still only a few MB each, so cost stays under $1/month.
-- Rook-Ceph experience is not shown by this project; it can be learned in a separate, throwaway lab.
 
 ## When to revisit
 

@@ -17,7 +17,7 @@ The project plans runbooks for **changes and losses**: one per alert, a rollback
 - **GitOps down:** the only rollback mechanism is a Git revert. With GitHub down or Argo CD broken, there is no sanctioned way to change the cluster, and self-heal would revert a manual change anyway.
 - **Lost access:** if Dex, Google or Cloudflare Access fails, kubectl, Grafana and Argo CD are lost together. The break-glass **alert** has a runbook; **using** break-glass does not.
 - **Smaller gaps:** the Talos and Kubernetes upgrade procedure exists only as a table row; nothing covers a compromised CI pipeline or signing identity, a stuck demo teardown, OpenTofu state problems, or a bot flood.
-- **No index:** runbooks are written in about fifteen plan steps across three phases, live in `russetleaf-gitops`, and are listed nowhere, so neither the operator nor a reviewer can see what exists, what is missing, or when each was last rehearsed.
+- **No index:** runbooks are written in about fifteen plan steps across three phases, live in `russetleaf-gitops`, and are listed nowhere, so neither the operator nor an auditor can see what exists, what is missing, or when each was last rehearsed.
 
 ## Decision
 
@@ -70,9 +70,9 @@ The project plans runbooks for **changes and losses**: one per alert, a rollback
 ## Alternatives considered
 
 - **An incident tool** (PagerDuty, incident.io, Rootly): on-call schedules, escalation and automatic timelines, all built for teams. One operator gains little over a Slack thread, and each adds an account and cost. Worth revisiting with a second operator.
-- **A public status page** (Atlassian Statuspage, Upptime, Instatus): useful when users depend on the site; for a portfolio site, the uptime check and the incident thread are enough.
+- **A public status page** (Atlassian Statuspage, Upptime, Instatus): useful when users depend on the site; for a site with no users who depend on it, the uptime check and the incident thread are enough.
 - **One large incident playbook** instead of separate runbooks: everything in one place, but slow to follow under pressure. Separate runbooks from the shared template are quicker to use, and Phase 2's assistant can cite the right one ([ADR 2007](../../phase-2-ai-mlops/adr/2007-ai-diagnosis-and-remediation-proposals.md)).
-- **The index in `russetleaf-gitops` only:** next to the runbooks, but invisible on the docs site, which is the project's front door, and it would miss the runbooks in other repos. Keeping two lists would let them drift.
+- **The index in `russetleaf-gitops` only:** next to the runbooks, but invisible on the docs site, which is where the project's documentation is read, and it would miss the runbooks in other repos. Keeping two lists would let them drift.
 - **Backstage TechDocs as the index:** renders and searches runbooks well, but Backstage is an Advanced step (8.3) that may not be built; it can render the same pages later.
 - **Forbidding all changes outside GitOps:** the purest rule, but it leaves no way to contain an attack while GitHub is down. A narrow, recorded exception with a 24-hour reconciliation is safer than an unofficial one.
 - **A UPS instead of the cold-start runbook:** prevents most power-cut incidents, and [ADR 1014](1014-availability-levels.md) still recommends one, but long outages and failed batteries still happen, so the runbook is needed either way.
@@ -80,7 +80,7 @@ The project plans runbooks for **changes and losses**: one per alert, a rollback
 ## Consequences
 
 - Every incident has a severity, a timeline and a defined set of hand-offs; the riskiest recoveries are written down step by step and rehearsed.
-- A reviewer can see on one page what runbooks exist, what is still planned, and when each was last rehearsed.
+- The operator, or an auditor, can see on one page what runbooks exist, what is still planned, and when each was last rehearsed.
 - About **16–28 more hours** in Phase 1 (mostly in the drills) and **2–3** in Phase 3.
 - A sanctioned way to change the cluster outside GitOps now exists. It is limited to SEV1, alerts on every use, and must be reconciled within 24 hours.
 - The index must be kept current: each step that writes a runbook updates it, and a quarterly review checks it against the runbooks folders.

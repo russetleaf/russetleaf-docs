@@ -7,7 +7,7 @@
 
 ## Context
 
-The repos are public ([ADR 1030](1030-github-actions-ci.md)). The project's scripts already carried a GPL v3.0 license line, and `russetleaf-docs` now has the GPL v3.0 `LICENSE` they refer to. The GPL lets anyone copy, change and redistribute what it covers, which suits code, configuration and documentation: it is a portfolio meant to be read and reused.
+The repos are public ([ADR 1030](1030-github-actions-ci.md)). The project's scripts already carried a GPL v3.0 license line, and `russetleaf-docs` now has the GPL v3.0 `LICENSE` they refer to. The GPL lets anyone copy, change and redistribute what it covers, which suits code, configuration and documentation that are published to be read and reused.
 
 It suits the brand less. The logo and the name identify the project and its author. If they were GPL, a copy of the site or a fork could present itself as RussetLeaf, with the same logo, and that would be allowed. The logo (with its icons and share image) will live in `russetleaf-wordpress/brand/` ([ADR 1025](1025-site-design-in-git.md)), inside a repo that is otherwise GPL.
 
@@ -29,7 +29,7 @@ It suits the brand less. The logo and the name identify the project and its auth
 - **A Creative Commons license for the brand** (such as CC BY-ND, no derivatives): allows sharing the logo unchanged with credit, which still lets a copy of the site keep it; "all rights reserved" is clearer for an identity.
 - **Creative Commons (CC BY 4.0) for the documentation,** the usual license for prose: a common choice, but one license for code and documentation keeps the rule and the headers simple, and the documentation contains code and configuration throughout.
 - **A separate brand repo:** a clean boundary, but one more repo for a few files; a `brand/` folder with its own notice gives the same clarity.
-- **A registered trademark:** the strongest protection of the name, but it costs money and time out of proportion for a portfolio project; revisited below.
+- **A registered trademark:** the strongest protection of the name, but it costs money and time out of proportion for a non-commercial project; revisited below.
 
 ## Consequences
 
@@ -40,7 +40,7 @@ It suits the brand less. The logo and the name identify the project and its auth
 
 ## When to revisit
 
-- RussetLeaf becomes more than a portfolio (users, contributors, revenue): register the name as a trademark, and consider a contributor agreement.
+- RussetLeaf gains users, contributors or revenue: register the name as a trademark, and consider a contributor agreement.
 - Contributors outside the project appear: decide whether their contributions need a sign-off (for example the Developer Certificate of Origin).
 
 ## Open items

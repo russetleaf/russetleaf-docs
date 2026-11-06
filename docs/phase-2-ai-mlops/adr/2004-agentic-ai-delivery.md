@@ -31,7 +31,7 @@ Agents speed up work that has fast, objective checks (code, OpenTofu, manifests,
 
 ## Alternatives considered
 
-- **No agents (conversation only, as in Phase 1):** lowest risk, but slower on code-heavy work, and it does not build or show experience with agentic tooling.
+- **No agents (conversation only, as in Phase 1):** lowest risk, but slower on code-heavy work, and it gives no way to compare delivery with and without agents against Phase 1's measured hours.
 - **A general personal-assistant agent** (e.g. OpenClaw): broad access to the machine it runs on and community skills, a poor fit for a workstation that holds cluster and AWS credentials.
 - **Agents with broad access** (admin credentials, able to apply and merge): fastest, but one confused or injected agent can damage the cluster or the AWS accounts; not acceptable for infrastructure.
 - **Agents only in CI** (e.g. bots that open pull requests): safe and auditable, but limited to narrow tasks; interactive agent sessions with local tools cover far more of the work.

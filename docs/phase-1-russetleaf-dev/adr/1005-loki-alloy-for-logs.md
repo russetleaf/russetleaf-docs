@@ -21,7 +21,7 @@ Constraints: `rl-home-cp01` of the home lab has 8 GB of RAM and already uses abo
 
 ## Alternatives considered
 
-- **VictoriaLogs:** lighter on memory than Loki and simple to run; a reasonable fit for 8 GB. Not chosen because Loki is more widely used, integrates natively with Grafana (correlation with metrics and traces), and is the more recognisable skill.
+- **VictoriaLogs:** lighter on memory than Loki and simple to run; a reasonable fit for 8 GB. Not chosen because Loki is more widely used and integrates natively with Grafana (correlation with metrics and traces).
 - **ELK (Elasticsearch, Logstash, Kibana) or OpenSearch:** the long-standing standard for central logs, with **full-text search** over every word of every log line, rich aggregations, and security-analytics features. Against it here:
     - **Indexing everything is expensive:** Elasticsearch builds an index of every word, so it needs fast local disk and a lot of memory. Loki indexes only a few labels (`site`, `env`, `namespace`, `app` and the others above) and stores the compressed log text in **S3**, which is cheap and needs no disks to manage; at this project's volume, searching the text within a label and time range is fast enough.
     - **Memory:** even one Elasticsearch node, with Logstash and Kibana, needs about 3–4 GB or more (Elasticsearch runs on the Java virtual machine with its own heap), against Loki's 0.3–0.7 GB, on nodes whose memory is already allocated ([ADR 1020](1020-three-node-ha-home-cluster.md)).

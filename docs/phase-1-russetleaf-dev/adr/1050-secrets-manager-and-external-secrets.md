@@ -40,7 +40,6 @@ The design has always kept these secrets in **AWS Secrets Manager** and synced t
 - **The home cluster depends on AWS for new or changed secrets** (existing Secrets keep working during an outage), and holds one static IAM key until step 9.1.
 - **No dynamic credentials:** secrets are long-lived values that are rotated, not short-lived ones issued per use; [ADR 1047](1047-in-cluster-credentials-and-rotation.md) narrows the gap for the database with two alternating users.
 - **Cost** grows with the number of secrets (about $0.40 each a month), which matters only if the count grows a lot.
-- **Experience with Vault** is not part of the project; the ADR, and the comparison above, explain why.
 
 ## When to revisit
 

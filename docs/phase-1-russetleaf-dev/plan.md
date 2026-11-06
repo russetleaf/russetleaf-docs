@@ -39,7 +39,7 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 The optional later phases add about **147–244 hours** (Phase 2) and **104–170 hours** (Phase 3); see the [overview](../overview.md#build-plans-priorities-and-effort).
 
-**Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to explain its trade-offs**.
+**Where the time really goes:** Claude makes writing code, configuration and documents much faster, but the calendar is dominated by **debugging environment-specific problems** (Talos and Cilium networking, Kyverno blocking something, OIDC trust policies, tunnel routing), **waiting** (CI runs, quota approvals, DNS), and **learning each tool well enough to run it in production**.
 
 **Recommended order:** finish **all Core steps first** (in plan order), and publish them; then review the [improvements list](improvements.md) (step 9.3), and add the other Extended steps, starting with the drills (7.8, 7.10, 7.11), which show the system being operated; leave the Advanced steps until Core and Extended are done. A finished subset is worth more than an unfinished whole. Start Phase 2 or Phase 3 only once Phase 1's Core tier is published.
 

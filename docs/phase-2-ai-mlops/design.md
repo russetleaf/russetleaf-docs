@@ -196,7 +196,7 @@ Design choices that make it stand on its own:
 - **Clear interfaces:** jobs come in from a queue (`{"post_id": ...}`), content is read and written through an **adapter** (WordPress is the first), and models are reached through any **OpenAI-compatible endpoint**. LiteLLM (and Bedrock through it) and llama.cpp both qualify, so the summarizer has no hard dependency on any one provider.
 - **Its own Helm chart**, published to an OCI registry with the same version as the image. `russetleaf-gitops` only supplies values (queue URL, gateway URL, scaling limits, IAM role). The chart also ships the summarizer's alerts and Grafana dashboard, so whoever deploys it gets monitoring too.
 - **Releases gated on quality:** a release tag runs the evaluation gate first; only a passing release is published, with its evaluation report attached to the GitHub release.
-- **Model card:** reviewers see which models were compared (Claude Haiku, Nova Lite and the self-hosted model), the scores, the cost per summary and known limitations, without running anything.
+- **Model card:** a record of which models were compared (Claude Haiku, Nova Lite and the self-hosted model), the scores, the cost per summary and known limitations, without running anything.
 - **Local demo:** `docker compose up` runs it against sample posts, so anyone can try it in minutes.
 - **Self-hosted runners:** the evaluation gate runs on ARC runners in the home cluster, registered to this repo, because it needs to reach the gateway and the self-hosted model. Runners are ephemeral, and jobs from fork pull requests need manual approval.
 
@@ -265,7 +265,7 @@ These parts of Phase 1's shared platform sections exist only once the AI pipelin
 
 ### Site design
 
-- **Feature the AI summaries:** a styled "AI summary" box at the top of each post, with the model and prompt version in small print, so visitors see the MLOps work.
+- **Feature the AI summaries:** a styled "AI summary" box at the top of each post, with the model and prompt version in small print, so readers know the summary is machine-generated and by which model.
 
 ### WordPress metrics
 

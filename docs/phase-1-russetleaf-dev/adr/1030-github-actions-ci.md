@@ -32,7 +32,7 @@ The project needs CI for OpenTofu, manifests, images, charts, evaluation and pro
 
 ## Consequences
 
-- No CI minute or package-storage limits; work in progress is visible publicly (acceptable for a portfolio, and shows real history).
+- No CI minute or package-storage limits; work in progress is visible publicly (acceptable, since nothing secret is in Git, and the full history stays open to audit).
 - Fork pull requests must be handled carefully on self-hosted runners (approval, label restrictions, ephemeral gVisor runners).
 - The EKS API can be locked to the home address because demo workflows run at home.
 

@@ -754,7 +754,7 @@ An admin signs in once with Google at the edge, then once more (one click, no pa
 
 ## Site design and branding
 
-russetleaf.dev is the portfolio's front door, so it gets a **custom design and a logo**, built the same way as everything else: in Git, reviewed, and shipped in the image. The reasoning is recorded in [ADR 1025](adr/1025-site-design-in-git.md).
+russetleaf.dev is the project's public site, so it gets a **custom design and a logo**, built the same way as everything else: in Git, reviewed, and shipped in the image. The reasoning is recorded in [ADR 1025](adr/1025-site-design-in-git.md).
 
 ### A block theme kept in Git
 
@@ -1013,7 +1013,7 @@ Staging exists **only while it is being tested** (scale-to-zero): it keeps the c
 
 Infrastructure changes follow the same idea with different tools: OpenTofu modules are tested with **`tofu test`** in CI, Talos version upgrades are rehearsed on a **local Talos-in-Docker cluster** first, and `envs/home` changes are planned in CI before being applied.
 
-**Kargo (optional, later):** Kargo, a GitOps promotion tool from the makers of Argo CD, can replace the promotion workflows with a visual pipeline (stages, verification, approvals). It is a good portfolio addition, but its controllers are always on, so add it only if `rl-home-cp01` has memory to spare. The workflows above are the lightweight default.
+**Kargo (optional, later):** Kargo, a GitOps promotion tool from the makers of Argo CD, can replace the promotion workflows with a visual pipeline (stages, verification, approvals). It gives a clearer view of each promotion, but its controllers are always on, so add it only if `rl-home-cp01` has memory to spare. The workflows above are the lightweight default.
 
 ## Performance and stress testing
 
@@ -1169,7 +1169,7 @@ WordPress core upgrades (and some plugin updates) **change the database structur
 
 - **Detection:** CI compares WordPress's database version (`$wp_db_version`) between the old and new images, and plugins flag schema changes in their release notes; such releases are labeled **`schema-change`**.
 - **Before promotion:** for a `schema-change` release, the promotion workflow runs an **on-demand MariaDB backup** (and, on AWS, takes a manual RDS snapshot before the demo uses the new version) and waits for it to succeed before the version bump can be merged.
-- **If it goes wrong:** either **restore the pre-release backup and roll back the image** (losing any changes made since the release), or **fix forward**. Decide within the 15-minute window above; for a portfolio site, restoring is usually simpler.
+- **If it goes wrong:** either **restore the pre-release backup and roll back the image** (losing any changes made since the release), or **fix forward**. Decide within the 15-minute window above; for a small site with few changes between releases, restoring is usually simpler.
 - Staging runs every schema change on a copy of production data first, so most problems are caught there.
 
 ### High-risk platform components
@@ -1193,7 +1193,7 @@ Reverting OpenTofu code does not always undo infrastructure cleanly. Stateful re
 
 ## Home lab: hardware, backups and costs
 
-The full AWS stack costs too much to run 24/7 as a portfolio project. Instead:
+The full AWS stack costs too much to run 24/7 for this site's traffic and budget. Instead:
 
 - Keep the **complete AWS design in OpenTofu on GitHub**, with CI, so anyone can review it.
 - Run **russetleaf.dev all the time on a three-node, highly available home Talos cluster**, published through a Cloudflare Tunnel.

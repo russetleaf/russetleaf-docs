@@ -29,14 +29,14 @@ No infrastructure code exists yet (`russetleaf-infra` is written from step 2.0),
 
 ## Alternatives considered
 
-- **Keep Terraform** ([ADR 1051](1051-terraform-for-infrastructure-as-code.md)): the better-known name in job listings, HashiCorp's certification, and new features first. But it is not open source, which the project now prefers ([ADR 1053](1053-open-source-tools-by-default.md)); its license terms are set by one company and have changed once already; and nothing the project needs is missing from OpenTofu.
+- **Keep Terraform** ([ADR 1051](1051-terraform-for-infrastructure-as-code.md)): the larger user base, more documentation and examples, and new features first. But it is not open source, which the project now prefers ([ADR 1053](1053-open-source-tools-by-default.md)); its license terms are set by one company and have changed once already; and nothing the project needs is missing from OpenTofu.
 - **Switch later:** possible, since the two still read the same configuration, but every module, workflow and runbook written in the meantime would have to be checked and renamed; now there is none.
 
 ## Consequences
 
 - **The project's infrastructure code is fully open source** (MPL 2.0, run by the Linux Foundation), like the rest of its tools.
 - **The documentation names OpenTofu throughout,** including the earlier ADRs, whose decisions are unchanged; only [ADR 1051](1051-terraform-for-infrastructure-as-code.md) and the decision log keep the name Terraform, as a record.
-- **Experience transfers:** OpenTofu uses the same language, workflow and providers as Terraform, so the work reads as Terraform experience too ("OpenTofu, Terraform-compatible"). HashiCorp's Terraform certification is not part of the project.
+- **Compatibility:** OpenTofu uses the same language, workflow and providers as Terraform, so modules, providers and most tooling written for Terraform work with it unchanged.
 - **Features may diverge** over time. Using an OpenTofu-only feature (state encryption, for example) makes a move back to Terraform harder; that is accepted.
 - **Documentation and examples** online are mostly written for Terraform; they apply to OpenTofu almost without change.
 

@@ -10,6 +10,7 @@ This repo holds the RussetLeaf project's documentation (published at https://doc
 - **Stage only the files the change touched** (`git add <paths>`, never `git add -A` or `git add .`), because another session or person may have unrelated work in progress in the same clone, and check `git diff --cached` before committing. Commits are signed; the commit message describes everything in it.
 - **Open-source tools by default** ([ADR 1053](docs/phase-1-russetleaf-dev/adr/1053-open-source-tools-by-default.md)): when choosing a tool, prefer one under an OSI-approved open-source license. A tool that is not, or whose license changes, is either replaced by an open-source alternative or added to the ADR's exceptions with the reason it is kept.
 - **Keep private details out of the repo:** it is public, so no secrets, AWS account or Organization IDs, personal email addresses or phone numbers. Write placeholders such as `<name>+rl-management@<domain>`, and keep real values in Bitwarden, the project's password manager.
+- **Professional reasons only:** justify decisions on technical, operational, security, cost or compliance grounds, as industry documentation would. No personal or career reasons (job listings, certifications, what a tool shows on a résumé, "good for a portfolio").
 - **No judgments of skill levels** (such as "junior", "intermediate" or "advanced") about people or their work in any file.
 
 ## Bash scripts

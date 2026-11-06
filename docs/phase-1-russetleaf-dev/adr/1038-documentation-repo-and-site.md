@@ -11,7 +11,7 @@
 
 ## Context
 
-The documentation (overview, phase designs, plans and roadmaps, the ADRs, step specs) describes the whole system across four code repos and three phases, and is published as evidence of planning and engineering practice. It was going to move into `russetleaf-gitops`, which would make one code repo the owner of documents about all of them, mix documentation commits with deployment config, and leave reviewers to find the design among Kubernetes manifests. Planning issues and milestones also span all repos. The repo holding the documents (`private-test-wordpress`) no longer held anything else.
+The documentation (overview, phase designs, plans and roadmaps, the ADRs, step specs) describes the whole system across four code repos and three phases, and is published so the design and its decisions can be read without the code. It was going to move into `russetleaf-gitops`, which would make one code repo the owner of documents about all of them, mix documentation commits with deployment config, and leave readers to find the design among Kubernetes manifests. Planning issues and milestones also span all repos. The repo holding the documents (`private-test-wordpress`) no longer held anything else.
 
 ## Decision
 
@@ -24,14 +24,14 @@ The documentation (overview, phase designs, plans and roadmaps, the ADRs, step s
 
 ## Alternatives considered
 
-- **Docs in `russetleaf-gitops`** (the earlier plan): one fewer repo and docs nearer the manifests, but one code repo owns documents about all of them, and reviewers land in deployment config.
+- **Docs in `russetleaf-gitops`** (the earlier plan): one fewer repo and docs nearer the manifests, but one code repo owns documents about all of them, and readers land in deployment config.
 - **Docs in each code repo:** closest to the code, but the cross-cutting design and ADRs have no natural home and get duplicated or scattered.
 - **A wiki (GitHub Wiki, Confluence, Notion):** easy to edit, but outside pull-request review and CI, so no link checking and no history tied to the work.
 - **Other site generators (Docusaurus, Hugo, Backstage TechDocs):** all capable; MkDocs Material needs only Markdown and a small config, renders Mermaid, and is widely used for infrastructure projects. Backstage TechDocs (Phase 1 step 8.3) can render the same Markdown later.
 
 ## Consequences
 
-- One front door for reviewers: the repo README and the docs site.
+- One entry point for readers: the repo README and the docs site.
 - A risk of docs drifting from code, reduced by the pull-request template checkbox, specs written before each step, and the strict build.
 - One more repo to secure (branch protection, Scorecard, Renovate for the pinned MkDocs and Actions versions).
 - References to `docs/...` paths now mean either this repo's `docs/` (project documents) or a code repo's `docs/` (operational documents); the overview's repository section says which goes where.

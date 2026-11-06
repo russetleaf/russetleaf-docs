@@ -40,7 +40,7 @@ What each milestone shows when it is done:
 - **M2:** the three-node, highly available Talos cluster with Cilium and Argo CD, hardened and tested.
 - **M3:** the organization's security services, the home AWS and Cloudflare resources, the OpenTofu pipeline, the repos' CI guardrails, Argo CD managing everything; storage, secrets and certificates, ingress through the tunnel, monitoring and alerting, MariaDB and Valkey, logging, and OIDC sign-in.
 - **M4:** russetleaf.dev live on the custom image and theme, with ci tests, on-demand staging, promotion and the privacy basics.
-- **M5:** Kyverno and network policies enforced, the docs polished, and the project published as a finished Core tier. **First portfolio milestone.**
+- **M5:** Kyverno and network policies enforced, the docs polished, and the project published as a finished Core tier. **First complete release.**
 - **M6:** the post go-live review of the improvements list, progressive delivery, sandboxing, runtime security, cost and tracing, keyless AWS access, and the rollback, node-failure and disaster drills.
 - **M7:** SLOs and error budgets, DORA metrics, Backstage and a second service, the threat model and control matrix, chaos and postmortems, strategy documents, fleet management, and public writing.
 

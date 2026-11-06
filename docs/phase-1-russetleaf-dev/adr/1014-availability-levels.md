@@ -59,7 +59,7 @@ High availability (HA) means a site keeps working when a single component (a nod
 
 ## Alternatives considered
 
-- **Building HA at home now:** needs a third node, more memory and replicated storage; not affordable with the current hardware, and recovery from Git plus backups is adequate for a portfolio site.
+- **Building HA at home now:** needs a third node, more memory and replicated storage; not affordable with the current hardware, and recovery from Git plus backups is adequate for a small site with no paying users.
 - **Running russetleaf.com always-on with full HA:** about $515–575/month, far over the $30–50/month budget.
 - **Removing the demo cut (three NAT Gateways) during demos:** adds cost for every demo hour, for resilience that a demo rarely needs; documented as "production would use three" instead.
 
@@ -67,7 +67,7 @@ High availability (HA) means a site keeps working when a single component (a nod
 
 - Both sites' limits are explicit, with numbers, rather than implied.
 - russetleaf.dev will have outages when the home power or the internet fails (since [ADR 1020](1020-three-node-ha-home-cluster.md), not when a single node or disk fails); the uptime check and dead man's switch alert on them.
-- russetleaf.com demonstrates an HA design without paying for it around the clock.
+- russetleaf.com runs the full HA design only when it is needed, without paying for it around the clock.
 - Recovery depends on the backups, OpenTofu and GitOps working, which makes the monthly restore test and occasional rebuild rehearsal important.
 
 ## When to revisit
