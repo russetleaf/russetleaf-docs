@@ -12,12 +12,13 @@ Have these ready:
 
 - **A new email address** for the account's root user, used for nothing else. An alias of the operator's mailbox works, for example `<name>+rl-management@<domain>`: the mail still arrives, but the address is unique to this account.
 - **Bitwarden open** (the project's password manager), with a new entry for the account, so the root password is generated there and never typed or reused.
-- **Two MFA devices** for root (decision log, 2026-11-05), so losing one (or the phone holding it) never locks the account:
-    - **Google Authenticator on the operator's phone, the main factor,** used at each root sign-in. Turn off its **cloud sync** (use the app without signing in to a Google account, or sign out of it in the app's settings), so the codes exist only on the phone rather than also in the Google account. Open-source apps work the same way and can replace it later: **Aegis** (Android; no cloud sync, encrypted local backups) or **Ente Auth** (iOS and Android; optional end-to-end-encrypted sync). Google Authenticator is kept as the operator's choice ([ADR 1053](../adr/1053-open-source-tools-by-default.md)).
+- **Two MFA devices** for root ([ADR 1055](../adr/1055-aws-root-mfa-synced-authenticator.md)), so losing one (or the phone holding it) never locks the account:
+    - **Google Authenticator on the operator's phone, the main factor,** used at each root sign-in, with its **cloud sync on**, so a new phone gets the codes back. Sync stores the codes in the operator's Google account, which also holds the root email address, so that account is enrolled in Google's **Advanced Protection Program** first: every Google sign-in then needs a passkey or security key (register a passkey on the phone and the YubiKey), with no authenticator codes, SMS or voice, so the account cannot be phished. This is an accepted risk for a one-operator project, not a corporate practice ([ADR 1055](../adr/1055-aws-root-mfa-synced-authenticator.md)). Open-source apps work the same way and can replace it later: **Aegis** (Android; no cloud sync, encrypted local backups) or **Ente Auth** (iOS and Android; optional end-to-end-encrypted sync). Google Authenticator is kept as the operator's choice ([ADR 1053](../adr/1053-open-source-tools-by-default.md)).
     - **A YubiKey, the backup,** registered as a security key and kept in the **safe** with the printed break-glass kit ([break-glass kit setup guide](break-glass-kit.md)).
     - **The accepted risk:** AWS accepts any registered device at sign-in, so a code from an app (TOTP) makes root phishable: a fake sign-in page can pass the password and code on to AWS straight away, which it cannot do with a security key. Root is signed in to only a few times, and only through **Bitwarden's autofill**: if Bitwarden does not offer the root login on a page, the address is wrong.
+    - **The CIS finding:** Security Hub's CIS control IAM.6 expects hardware MFA on root, and fails while an authenticator app is registered; it is suppressed with [ADR 1055](../adr/1055-aws-root-mfa-synced-authenticator.md) as the reason (step 2.0b).
     - **Not in Bitwarden:** Bitwarden can store passkeys and authenticator codes, but it also holds the root password, so a root factor there would put both factors in one vault.
-    - **No recovery codes:** AWS has none for root MFA. With both devices lost, AWS's recovery checks the root email address and then calls the account's phone number, so both must stay current. **Do not save the authenticator's secret key** (the QR code shown during setup) as a backup: a copy of it is a third factor, and the YubiKey already covers a lost phone.
+    - **No recovery codes:** AWS has none for root MFA. With both devices lost, AWS's recovery checks the root email address and then calls the account's phone number, so both must stay current. **Do not save the authenticator's secret key** (the QR code shown during setup) anywhere else: Google Authenticator's sync already restores it on a new phone, and the YubiKey covers the rest.
 - **A payment card and a phone** for AWS's identity check (a small temporary charge, then an SMS or voice call). The advanced sign-up below requires a payment method.
 
 ## Part 1: create the account (step 0.1)
@@ -41,7 +42,7 @@ Have these ready:
 **Checks:**
 
 - [ ] Signing in as root asks for MFA, and both MFA devices work (sign in once with each).
-- [ ] Google Authenticator's cloud sync is off for the root entry.
+- [ ] The Google account that syncs Google Authenticator (and holds the root email address) is enrolled in **Advanced Protection**, with a phone passkey and the YubiKey registered.
 - [ ] The root user's **Security credentials** page shows **no access keys**.
 - [ ] **IAM user and role access to Billing information** is on.
 - [ ] **Invoice delivery preferences** are set to **PDF invoices delivered by email**.
@@ -91,7 +92,7 @@ OpenTofu manages the Organization from step 2.0, but it needs a way to sign in f
 
 ## If something goes wrong
 
-- **Lost the phone:** get the YubiKey from the safe, sign in with it, remove the Google Authenticator device, and register the app on the new phone right away (sync off). Do the same for the Identity Center passkey.
+- **Lost the phone:** get the YubiKey from the safe, sign in with it, sign in to the Google account on the new phone (with the YubiKey), and Google Authenticator restores the codes through sync; remove the lost phone's passkey from the Google account, and register a new one. Do the same for the Identity Center passkey.
 - **Lost the YubiKey:** sign in with Google Authenticator, remove the YubiKey, and register a new one.
 - **Lost both MFA devices:** on the root sign-in page, choose **Troubleshoot MFA**, then **Sign in using alternative factors**. AWS sends a link to the root email address, then calls the phone number on the account. There are no recovery codes, which is why the root email address and the phone number are kept current in the break-glass kit. If neither works, contact AWS Support.
 - **The management account is compromised or lost:** follow the [disaster recovery plan](../disaster-recovery.md#scenarios) ("Management account compromised or lost").

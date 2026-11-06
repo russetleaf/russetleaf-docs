@@ -135,6 +135,7 @@ nav:
           - "1052 OpenTofu instead of Terraform": phase-1-russetleaf-dev/adr/1052-opentofu-instead-of-terraform.md
           - "1053 Open-source tools by default, and the recorded exceptions": phase-1-russetleaf-dev/adr/1053-open-source-tools-by-default.md
           - "1054 OpenTofu state and plan encryption": phase-1-russetleaf-dev/adr/1054-opentofu-state-and-plan-encryption.md
+          - "1055 AWS root MFA: synced authenticator, Google account under Advanced Protection": phase-1-russetleaf-dev/adr/1055-aws-root-mfa-synced-authenticator.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md

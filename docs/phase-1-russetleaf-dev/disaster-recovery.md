@@ -82,7 +82,7 @@ The kit holds:
 - ★ GitHub: account login and **recovery codes**
 - ★ GitLab (the mirrors of every repo): account login and **recovery codes**
 - ★ Cloudflare: account login and recovery codes
-- ★ Google: account recovery (for the Google Cloud project and Google sign-in)
+- ★ Google: account recovery (for the Google Cloud project and Google sign-in). The operator's Google account is in **Advanced Protection**, so its passkey and security keys are its recovery path and Google's own recovery takes several days; it also holds the AWS root email address and Google Authenticator's synced codes ([ADR 1055](adr/1055-aws-root-mfa-synced-authenticator.md))
 - ★ Domain registrar logins for russetleaf.com and russetleaf.dev
 - ★ **Bitwarden's own recovery details:** the account email, the master password (never stored in Bitwarden itself) and the **two-step login recovery code**. Bitwarden's optional **emergency access** (a paid feature) can also let a trusted person reach the vault after a waiting period.
 - ★ The **OpenTofu state passphrase** ([ADR 1054](adr/1054-opentofu-state-and-plan-encryption.md)), and each previous one for **12 months** after it is replaced, until the last monthly state copy made with it has expired
