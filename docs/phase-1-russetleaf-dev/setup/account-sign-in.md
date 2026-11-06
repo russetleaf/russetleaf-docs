@@ -55,8 +55,13 @@ Have these ready:
 
 1. **Cloudflare account:** under **My Profile → Authentication → Two-Factor Authentication**, add both YubiKeys under **Security Key Authentication** and save the **backup codes** in Bitwarden. Do not add an authenticator app.
 2. **russetleaf.dev, at Cloudflare Registrar:** under **Domain Registration → Manage Domains**, confirm **auto-renew** is on and the domain is **locked** (Cloudflare locks registered domains against transfer by default); turn on **DNSSEC** in the zone's DNS settings (one click, since Cloudflare is both registrar and DNS). Registrant contact details stay redacted from public lookups.
-3. **russetleaf.com, at Amazon Route 53 Domains:** in the **Route 53 → Registered domains** page of the AWS account that holds it, confirm **auto-renew** is on, **transfer lock** is on, and **privacy protection** is on for all contacts. DNSSEC is added in Phase 3, with the Route 53 hosted zone ([Phase 3 design](../../phase-3-russetleaf-com/design.md)).
-    - **Which AWS account:** if the registration is in an AWS account outside the new Organization (such as the operator's 2022 one), move it into the Organization with Route 53's **transfer to another AWS account** (free, no change at the registry) once the russetleaf-com account exists (Phase 3), and do not close the old account before then. Until then, the old account's sign-in must use MFA too.
+3. **russetleaf.com, at Amazon Route 53 Domains:** the registration is in an account of the operator's **2022 AWS Organization**, outside RussetLeaf's Organization. It stays there until Phase 3 [step 1.2](../../phase-3-russetleaf-com/plan.md#step-12-always-on-edge-envsaws-edge) moves it into the russetleaf-com account. Until then, in that 2022 account:
+    1. **Registration settings:** under **Route 53 → Domains → Registered domains → russetleaf.com**, confirm **auto-renew** is on, **transfer lock** is on, and **privacy protection** is on for the registrant, administrative and technical contacts.
+    2. **Renewal payment:** the yearly renewal is charged to that account's payment method, so keep it valid until the transfer.
+    3. **Account sign-in:** the root user has both YubiKeys as its MFA devices (and no authenticator app), and **every IAM user with a console password has MFA**, or has its console password removed. Anyone who can sign in to that account can transfer the domain away.
+    4. **Do not close** that account, or leave or delete the 2022 Organization, before the transfer is complete.
+
+    DNSSEC is added in Phase 3, with the new Route 53 hosted zone ([Phase 3 design](../../phase-3-russetleaf-com/design.md)).
 
 ## Part 4: Slack and the outside monitoring services
 
@@ -71,6 +76,7 @@ Have these ready:
 - [ ] Google Authenticator holds codes only for services that require them (GitHub, and GitLab or the uptime checker if they did), and none for AWS root.
 - [ ] Every account's recovery codes are in Bitwarden.
 - [ ] Both domains have **auto-renew** and a **transfer lock** on, russetleaf.dev has **DNSSEC** on, and russetleaf.com's contacts have **privacy protection**.
+- [ ] In the 2022 account that holds russetleaf.com, root uses both YubiKeys and every IAM user with a console password has MFA (or no console password).
 
 ## If something goes wrong
 

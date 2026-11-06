@@ -56,7 +56,7 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 - A **data perimeter**: SCPs limit what the Organization's identities can do, and RCPs limit who can reach its resources, so a mistaken bucket or key policy cannot expose data outside the Organization.
 - About **$5–15/month** more (Security Hub, Config, KMS), included in the home lab's always-on total of about **$14–33/month** (with `rl-home-cp03`'s electricity from [ADR 1020](1020-three-node-ha-home-cluster.md); see the Phase 1 design's cost table).
 - More moving parts: cross-account access for state, replication and the seed Job; per-account CI roles; per-account quotas; SES access per account (and Bedrock model access in russetleaf-home, Phase 2).
-- Nothing is migrated: every account starts empty inside the Organization, under its guardrails from the first day. The operator's older AWS Organization (from a 2022 project) stays separate and is not part of RussetLeaf; it is cleaned up or closed on its own schedule.
+- Nothing is migrated: every account starts empty inside the Organization, under its guardrails from the first day. The operator's older AWS Organization (from a 2022 project) stays separate and is not part of RussetLeaf; it is cleaned up or closed on its own schedule, but only after the **russetleaf.com registration**, which is held by one of its accounts, has moved to the russetleaf-com account (Phase 3 step 1.2).
 - An AWS foundation that follows the Security Reference Architecture, so it can be checked against AWS's own guidance.
 
 ## When to revisit
