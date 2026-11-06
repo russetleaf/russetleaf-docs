@@ -12,7 +12,7 @@ The kit lives in three places, so that losing any two still leaves a way back in
 
 ## The GPG key
 
-The GPG key decrypts the backup copies in Cloudflare R2 ([step 2.5](../plan.md#step-25-disaster-recovery-copies)). The cluster holds only its public key. The secret key is needed only for a restore or the quarterly drill, so it is **kept only in the kit**, never in the workstation's keyring:
+The GPG key decrypts the backup copies in Cloudflare R2 ([step 2.5](../plan.md#step-25-disaster-recovery-copies)). The cluster holds only its public key. It is **not used for the copies in AWS**: those are encrypted with KMS keys, re-encrypted in the Backup account with that account's own keys, and protected by Object Lock, which already covers a compromised workload account; encrypting them with GPG as well would put this key in every routine restore and staging refresh ([ADR 1043](../adr/1043-database-encryption.md)). The R2 copy is outside AWS, where KMS cannot protect it, so GPG is its only encryption. The secret key is needed only for a restore or the quarterly drill, so it is **kept only in the kit**, never in the workstation's keyring:
 
 - a passphrase-protected **export** on the USB stick in the safe, and inside the encrypted kit in Google Drive and OneDrive;
 - a **`paperkey` printout** in the safe, in case the USB stick fails.
