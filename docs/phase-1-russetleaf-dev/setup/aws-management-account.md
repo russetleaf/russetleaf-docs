@@ -35,7 +35,7 @@ Have these ready:
 11. **Billing preferences:** in **Billing and Cost Management → Billing preferences**, turn on **Free Tier usage alerts**, and the **billing alerts** that let CloudWatch alarm on charges. Under **Invoice delivery preferences**, choose **PDF invoices delivered by email**, so each month's invoice arrives as a PDF.
 12. **The budget:** in **Billing and Cost Management → Budgets**, create a **monthly cost budget** named **`RussetLeaf Monthly Cost Budget`**, of **$50**, with email alerts at **85% of actual** and **100% of forecast** spend, to the operator's email. Because this is the management account, the budget covers every account the Organization creates later (consolidated billing). OpenTofu takes it over in step 2.0.
 13. **Region:** in the console's region menu, choose **US East (N. Virginia), `us-east-1`**, the project's region. The SCPs in step 2.0 allow only `us-east-1` and `us-west-2`.
-14. **The break-glass kit** ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)): record the **account ID** (shown in the account menu), the **root email**, the **root password**, and **which MFA devices are registered** (Google Authenticator on the phone, the YubiKey in the safe). Add the starred items to the printed copy and the encrypted cloud copies ([break-glass kit setup guide](break-glass-kit.md)), and put the YubiKey back in the safe.
+14. **The break-glass kit** ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)): in **Bitwarden**, the kit's working copy, record the **account ID** (shown in the account menu), the **root email**, the **root password**, and **which MFA devices are registered** (Google Authenticator on the phone, the YubiKey in the safe). Put the YubiKey back in the safe. The printed copy and the encrypted cloud copies are made later, once, at the end of step 0.1, when Bitwarden holds the other accounts' recovery details too ([break-glass kit setup guide](break-glass-kit.md)).
 15. **Sign out.** Nothing else is done in this account until step 2.0.
 
 **Checks:**
@@ -47,7 +47,7 @@ Have these ready:
 - [ ] **Invoice delivery preferences** are set to **PDF invoices delivered by email**.
 - [ ] The **RussetLeaf Monthly Cost Budget** ($50) exists with its two alerts (85% of actual, 100% of forecast).
 - [ ] The **alternate contacts** are set.
-- [ ] The **break-glass kit** has the account ID, root login and MFA notes, and the printed copy is updated.
+- [ ] **Bitwarden** has the account ID, root login and MFA notes (the printed and encrypted copies follow at the end of step 0.1).
 
 ## Part 2: bootstrap the Organization and Identity Center (step 2.0)
 
