@@ -13,7 +13,7 @@ The operator now has a **second YubiKey**, carried on the keychain. With one key
 
 ## Decision
 
-- **The root user's MFA devices are two YubiKeys,** registered as security keys: the **keychain key** for sign-ins, and the **safe key** as the backup, kept apart from it. **No authenticator app (virtual MFA device) is registered**, and the Google Authenticator entry for root is deleted.
+- **The root user's MFA devices are two YubiKeys,** both **YubiKey Security Key NFC** (FIDO2 and U2F only), registered as security keys: the **keychain key** for sign-ins, and the **safe key** as the backup, kept apart from it. **No authenticator app (virtual MFA device) is registered**, and the Google Authenticator entry for root is deleted.
 - **Both keys have a FIDO2 PIN,** so a lost or stolen key cannot be used without it (and the root password, in Bitwarden, is still needed).
 - **Changing over:** register the keychain key on root first, confirm a sign-in with it, then remove the virtual MFA device, so root always has a working factor.
 - **IAM.6 is not suppressed:** with only hardware MFA on root, the control should pass; step 2.0b checks it.
@@ -28,6 +28,7 @@ The operator now has a **second YubiKey**, carried on the keychain. With one key
 
 ## Consequences
 
+- **The same two keys secure the project's other accounts** wherever a service supports them ([account sign-in setup guide](../setup/account-sign-in.md)).
 - **Root cannot be phished:** a security key answers only AWS's real sign-in page.
 - **No root factor is stored in the Google account or on the phone,** and the accepted risk of [ADR 1055](1055-aws-root-mfa-synced-authenticator.md) no longer exists.
 - **Security Hub's CIS score** includes IAM.6 as passed, with nothing suppressed for root.

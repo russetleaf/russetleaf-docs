@@ -8,12 +8,12 @@ Slack's and the services' web pages change over time. These steps name each sett
 
 - **Bitwarden** (the project's password manager) open, with entries ready for Slack, the bot token, the heartbeat service and the uptime checker.
 - The **Slack app** on the operator's phone, for the `#rl-critical` notifications.
-- An authenticator app, passkey or security key for each account's two-factor sign-in ([ADR 1032](../adr/1032-defense-in-depth.md)).
+- The two **YubiKeys** and the operator's **Google account** (in Advanced Protection), for each account's sign-in ([account sign-in setup guide](account-sign-in.md)).
 
 ## Part 1: the Slack workspace
 
 1. **Create the workspace** on Slack's "create a new workspace" page, with the operator's email address: name it **RussetLeaf**, with a workspace URL such as `russetleaf.slack.com`. The **free plan** is enough (90 days of history, up to 10 apps; the project uses about five).
-2. **Secure the owner account:** in the account's security settings, turn on **two-factor authentication** (a passkey or security key if Slack offers one, otherwise an authenticator app), and save the **backup codes** in the password manager.
+2. **Secure the owner account:** create it with **Sign in with Google**, so every sign-in goes through the Google account's Advanced Protection, and set no separate Slack password. Slack's own two-factor authentication offers only codes or SMS, so it is needed only if Slack requires a password: then generate the password in Bitwarden, turn on two-factor authentication with Google Authenticator, and save the **backup codes** in Bitwarden ([account sign-in setup guide](account-sign-in.md)).
 3. **Keep the workspace closed:** in the workspace settings, make sure people can join **only by invitation**.
 4. **Create the eight channels:**
 
@@ -77,9 +77,9 @@ Incoming webhooks, which Falcosidekick and Policy Reporter use instead of the to
 
 Two free services watch the platform from outside, so a dead cluster or a broken internet connection still raises an alert ([Alerting and notifications](../design.md#alerting-and-notifications-slack)). Their checks are created in step 4.4; this part creates the accounts and their Slack connections.
 
-1. **The heartbeat service** (for example healthchecks.io): sign up, turn on **two-factor authentication**, and connect its **Slack integration** to `#rl-critical`. In step 4.4, Alertmanager's always-firing `Watchdog` alert pings a check here every few minutes; if the pings stop, this service posts to `#rl-critical`.
-2. **The uptime checker** (for example UptimeRobot or Better Stack): sign up, turn on **two-factor authentication**, and connect its **Slack integration** to `#rl-critical` and `#rl-dev-alerts`. Step 4.4 adds the checks for `https://russetleaf.dev` (and Phase 3 for russetleaf.com).
-3. **The break-glass kit** ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)): add the logins for both services, and the Slack workspace owner's login and backup codes.
+1. **The heartbeat service** (for example healthchecks.io): sign up, register **both YubiKeys** as its two-factor sign-in (security keys are its only second factor), and connect its **Slack integration** to `#rl-critical`. In step 4.4, Alertmanager's always-firing `Watchdog` alert pings a check here every few minutes; if the pings stop, this service posts to `#rl-critical`.
+2. **The uptime checker** (for example UptimeRobot or Better Stack): prefer one that offers security keys or Google sign-in (UptimeRobot offers only authenticator codes); sign up, turn on its strongest **two-factor authentication**, and connect its **Slack integration** to `#rl-critical` and `#rl-dev-alerts`. Step 4.4 adds the checks for `https://russetleaf.dev` (and Phase 3 for russetleaf.com).
+3. **The break-glass kit** ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)): add the logins for both services (and any recovery codes); Slack signs in through Google, so it adds nothing unless a Slack password and backup codes were needed.
 
 ## Checks
 
@@ -99,7 +99,7 @@ The test for step 0.1:
     The response starts with `{"ok":true`; `not_in_channel` means the bot was not invited to that channel.
 
 - [ ] A test message to `#rl-critical` raises a phone notification, and one to another channel does not.
-- [ ] Signing in to Slack, the heartbeat service and the uptime checker asks for the second factor.
+- [ ] Slack signs in with Google; the heartbeat service asks for a YubiKey; the uptime checker asks for its second factor.
 - [ ] The heartbeat service and the uptime checker can each send a test notification to `#rl-critical`.
 - [ ] The workspace has only invited members, and `#rl-security` is private.
-- [ ] The break-glass kit has all three logins and Slack's backup codes.
+- [ ] Bitwarden has both services' logins (and Slack's password and backup codes, if they exist).

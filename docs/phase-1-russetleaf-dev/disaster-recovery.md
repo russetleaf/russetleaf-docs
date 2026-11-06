@@ -83,13 +83,13 @@ The kit holds:
 - ★ GitLab (the mirrors of every repo): account login and **recovery codes**
 - ★ Cloudflare: account login and recovery codes
 - ★ Google: account recovery (for the Google Cloud project and Google sign-in). The operator's Google account is in **Advanced Protection**, so its passkey and security keys are its recovery path and Google's own recovery takes several days; it also holds the AWS root email address ([ADR 1056](adr/1056-aws-root-mfa-two-security-keys.md))
-- ★ Domain registrar logins for russetleaf.com and russetleaf.dev
+- ★ Domain registrars: **russetleaf.dev** at Cloudflare Registrar (the Cloudflare login above) and **russetleaf.com** at Route 53 Domains (AWS access), with auto-renew and transfer lock on ([account sign-in setup guide](setup/account-sign-in.md))
 - ★ **Bitwarden's own recovery details:** the account email, the master password (never stored in Bitwarden itself) and the **two-step login recovery code**. Bitwarden's optional **emergency access** (a paid feature) can also let a trusted person reach the vault after a waiting period.
 - ★ The **OpenTofu state passphrase** ([ADR 1054](adr/1054-opentofu-state-and-plan-encryption.md)), and each previous one for **12 months** after it is replaced, until the last monthly state copy made with it has expired
 - The **lab router** (ER605) admin login, its configuration backup, and the WireGuard client profile
 - Talos secrets bundle (`secrets.yaml`), the `os:admin` talosconfig, and the Talos-generated **break-glass admin kubeconfig** (use of it raises an alert)
 - Where every backup is (this document's table), and the order of recovery (below)
-- Slack workspace owner login
+- Slack workspace owner: signs in with the Google account (a Slack password and backup codes only if Slack required them)
 - ★ The project's **GPG key**, which decrypts the backup copies in Cloudflare R2. It is kept **only in the kit**, never in a keyring on the workstation: a passphrase-protected **export of the secret key** (on the USB stick, and inside the encrypted copy), a `paperkey` printout in the safe, its fingerprint and its passphrase. It is loaded into memory only for a restore or a drill. Moving it onto a YubiKey 5 is [improvement I1-1](improvements.md) ([setup guide](setup/break-glass-kit.md#moving-the-key-to-a-yubikey-later))
 - The **internal CA root** (certificate and key) from cert-manager ([ADR 1028](adr/1028-internal-pki.md))
 - Logins for the **outside monitoring services** (the heartbeat service behind the dead man's switch, and the uptime checker), so monitoring can be repaired when the cluster is down

@@ -5,6 +5,8 @@
 - **Applies to:** both sites, the AWS accounts and the supporting SaaS accounts
 - **Phase:** 1 (most controls). Later: Phase 2 adds prompt-injection guardrails; Phase 3 adds the AWS edge and VPC controls.
 
+> **Update ([ADR 1056](1056-aws-root-mfa-two-security-keys.md), 2026-11-06):** the hardware keys are two YubiKey Security Key NFC, registered with every account that supports them ([account sign-in setup guide](../setup/account-sign-in.md)). Two services cannot be keys-only: **GitHub** requires an authenticator code before it accepts keys, so a code stays as its fallback, and **Slack** offers only codes or SMS, so it signs in with Google (Advanced Protection) instead. The registrars are Cloudflare Registrar (russetleaf.dev) and Route 53 Domains (russetleaf.com).
+
 > **Update ([ADR 1040](1040-lab-network-and-wireguard.md)):** the lab network is a separate subnet behind a TP-Link ER605 router (the household router cannot do VLANs), and the workstation reaches the cluster over WireGuard.
 
 ## Context

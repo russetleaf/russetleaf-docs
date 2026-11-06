@@ -19,7 +19,7 @@ The GPG key decrypts the backup copies in Cloudflare R2 ([step 2.5](../plan.md#s
 
 For a restore or a drill, it is loaded into a keyring in memory (`/dev/shm`) and deleted afterwards ([Using the key](#using-the-key)). Its passphrase, kept in Bitwarden and in the kit, protects it while it is in use.
 
-The operator's safe YubiKey (a Security Key NFC) has no OpenPGP function, so it cannot hold the key; if the keychain YubiKey is a YubiKey 5 series key, it can. Moving the key onto a **YubiKey 5 series** key later adds a PIN and a touch to every use, and changes nothing else ([Moving the key to a YubiKey later](#moving-the-key-to-a-yubikey-later)); it is [improvement I1-1](../improvements.md). Commits are signed with SSH, not this key ([workstation configuration](../plan.md#4-configuration)).
+Both of the operator's YubiKeys are Security Key NFC, which have no OpenPGP function, so neither can hold the key. Moving the key onto a **YubiKey 5 series** key later adds a PIN and a touch to every use, and changes nothing else ([Moving the key to a YubiKey later](#moving-the-key-to-a-yubikey-later)); it is [improvement I1-1](../improvements.md). Commits are signed with SSH, not this key ([workstation configuration](../plan.md#4-configuration)).
 
 ## Before starting
 
