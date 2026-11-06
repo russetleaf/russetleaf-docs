@@ -35,7 +35,12 @@ Have these ready:
 
 ## Part 1: Google, Microsoft and Bitwarden
 
-1. **Google:** register both YubiKeys and a passkey on the phone under **Security → Passkeys and security keys**, then enroll in the **Advanced Protection Program**. Remove any SMS, voice or authenticator-code second factors that remain.
+1. **Google**, moving to the **Advanced Protection Program**:
+    1. Under **Security → Passkeys and security keys**, register a **passkey on the phone** and the YubiKeys available (one key and one passkey are enough to enroll; add the second key when it arrives).
+    2. Under **Security**, confirm a **recovery phone** and a **recovery email address** in a mailbox other than this Google account.
+    3. **Enroll** on Google's Advanced Protection page, signing in again with the key or passkey when asked.
+    4. Under **2-Step Verification**, remove any SMS, voice or authenticator-code second steps that remain. Keep the Google Authenticator app itself: it stays signed in to the account and keeps syncing the codes other services need (GitHub's).
+    5. Sign in again on each device, and confirm Google Drive's web upload still works (Advanced Protection blocks most third-party apps from Gmail and Drive data).
 2. **Microsoft account** (used for OneDrive): under **Security → Advanced security options**, add both YubiKeys as security keys (and a passkey on the phone if offered); save the **recovery code** in Bitwarden.
 3. **Bitwarden:** under **Settings → Security → Two-step login**, add both YubiKeys under **Passkey / FIDO2 WebAuthn**, and save the **two-step login recovery code** (it goes into the printed kit, since it cannot live in the vault it unlocks). Sign the CLI in with the account's **personal API key** (`bw login --apikey`), since the CLI cannot use a security key ([workstation configuration](../plan.md#4-configuration)).
 
