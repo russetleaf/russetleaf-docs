@@ -130,6 +130,7 @@ nav:
           - "1047 The home cluster's own passwords are generated in the cluster and rotated automatically": phase-1-russetleaf-dev/adr/1047-in-cluster-credentials-and-rotation.md
           - "1048 One bash script standard for every repo, enforced by checks and agent instructions": phase-1-russetleaf-dev/adr/1048-bash-script-standard.md
           - "1049 GPL v3.0 for code and documentation; the RussetLeaf name and logo reserved": phase-1-russetleaf-dev/adr/1049-licensing.md
+          - "1050 AWS Secrets Manager with External Secrets, not HashiCorp Vault": phase-1-russetleaf-dev/adr/1050-secrets-manager-and-external-secrets.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md

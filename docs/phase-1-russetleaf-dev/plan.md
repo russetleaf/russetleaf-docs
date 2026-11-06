@@ -290,6 +290,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 | [1047 In-cluster credentials and rotation](adr/1047-in-cluster-credentials-and-rotation.md) | 4.5, 5.2, 7.8 | — | — |
 | [1048 Bash script standard](adr/1048-bash-script-standard.md) | 1.1 | — | — |
 | [1049 Licensing](adr/1049-licensing.md) | 1.1, 5.10 | — | — |
+| [1050 Secrets Manager and External Secrets, not Vault](adr/1050-secrets-manager-and-external-secrets.md) | 4.2, 9.1 | 1.2, 2.4 | 1.7, 2.4 |
 | [2001 MLOps lifecycle](../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | — | 4.4–4.10 | — |
 | [2002 Summary pipeline architecture](../phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | — | 2.1–2.5 | — |
 | [2003 Self-hosted model on `rl-home-cp02`](../phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | — | 1.3, 3.1, 3.2 | — |
@@ -467,7 +468,7 @@ Check `kubectl top nodes` after each step.
 
 ### Step 4.2: Secrets and internal certificates
 
-**Do:** `platform/external-secrets/`: External Secrets Operator plus a `ClusterSecretStore` for AWS Secrets Manager.
+**Do:** `platform/external-secrets/`: External Secrets Operator plus a `ClusterSecretStore` for AWS Secrets Manager ([ADR 1050](adr/1050-secrets-manager-and-external-secrets.md)).
 
 - `platform/cert-manager/`: **cert-manager** and **trust-manager**, with an **internal CA** (a self-signed root issuing an intermediate, used by a ClusterIssuer); copy the root to the break-glass kit; trust-manager distributes the CA bundle to namespaces that need it. See [ADR 1028](adr/1028-internal-pki.md).
 - **Bootstrap credential:** External Secrets needs one AWS key to start. Create it once by hand as a Kubernetes Secret from the Terraform output (document the exact command in the README, never commit it). Everything else comes from Secrets Manager.
@@ -1122,3 +1123,4 @@ Phase 1 builds most of what these need: the shared Terraform modules, the base m
 | 2026-11-05 | The **GPG key** is kept **only in the break-glass kit** (a passphrase-protected export on the USB stick in the safe and inside the encrypted kit, plus a `paperkey` printout), and loaded into a keyring in memory only for a restore or a drill; it is **not on the YubiKey**, which changes the entry above ([setup guide](setup/break-glass-kit.md#the-gpg-key)) | The operator's YubiKey is a Security Key NFC, which has no OpenPGP function; the key is needed only for restores and the quarterly drill. Moving it onto a YubiKey 5 later keeps the same key and fingerprint, so nothing else changes; it is a planned improvement |
 | 2026-11-05 | An **[improvements list](improvements.md)** for work deliberately put off, reviewed in a new **step 9.3: Post go-live improvements** (Extended, 2–6 hours, milestone M6) right after the Core tier is published, then quarterly; the Extended tier becomes ~95–167 hours and Phase 1 ~361–601, which moves M7's latest date from January 11 to **January 12, 2027** | Deferred items (the first: the GPG key onto a YubiKey 5, and Bitwarden's SSH agent) need one place to live and a set time to be decided, or they are forgotten |
 | 2026-11-06 | The management account's budget is the **`RussetLeaf Monthly Cost Budget`**, **$50** a month, alerting at **85% of actual** and 100% of forecast spend (was $25 and 80%); invoices arrive as **PDFs by email** ([setup guide](setup/aws-management-account.md#part-1-create-the-account-step-01)) | Set by the operator: more room than $25 for the Organization's security services and the home lab's AWS resources, while still catching a forgotten resource within the month. An emailed PDF keeps a copy of every invoice outside the console |
+| 2026-11-06 | **[ADR 1050](adr/1050-secrets-manager-and-external-secrets.md)** records the secrets store: **AWS Secrets Manager** with the **External Secrets Operator**, not HashiCorp Vault or OpenBao | The design already used it, but no ADR recorded why Vault, SOPS, Sealed Secrets, Parameter Store and Bitwarden Secrets Manager were not chosen |

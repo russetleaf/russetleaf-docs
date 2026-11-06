@@ -49,7 +49,7 @@ Supporting settings: the job's ServiceAccount may only read and update the named
 - **One database user, rotated at a quiet time:** simpler, but every rotation causes a burst of failed requests; unacceptable for something that runs unattended.
 - **Letting the generator refresh on its own** (`refreshInterval` set to 90 days): rotation with no job, but nothing restarts Valkey and WordPress in the right order, so they would disagree until the next restarts.
 - **Stakater Reloader** (restart workloads when a Secret changes): automatic restarts, but no ordering between Valkey and WordPress, no alternating-user sequence, no report, and one more component. The job does all of that in one place.
-- **Vault or OpenBao dynamic database credentials** (a short-lived user per pod): the strongest option, but a highly available Vault, its unsealing and its storage are far more than one WordPress site needs. Revisit if more applications use the database.
+- **Vault or OpenBao dynamic database credentials** (a short-lived user per pod): the strongest option, but a highly available Vault, its unsealing and its storage are far more than one WordPress site needs ([ADR 1050](1050-secrets-manager-and-external-secrets.md) covers Vault as the secrets store). Revisit if more applications use the database.
 - **MariaDB client certificates (`REQUIRE X509`)** instead of passwords: passwordless and already listed as an optional later step in the design; depends on MariaDB Operator support.
 
 ## Consequences
