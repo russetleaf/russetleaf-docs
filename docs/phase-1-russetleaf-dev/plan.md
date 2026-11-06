@@ -26,7 +26,7 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 |---|---|---|---|
 | **Core** | A complete, demonstrable home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting with an incident process, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, privacy basics (GDPR), and the docs. Finished on its own, this is a complete platform. | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 5.12, 6.1, 6.3, 9.2 | **~177–290** |
 | **Extended** | Hardening, operations and evidence: progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, performance and stress testing with a regression gate, and **evidence of operating it** (rollback, node-failure, cold-start, disaster, forensics and incident drills, with their runbooks), and the **post go-live review** of the [improvements list](improvements.md). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.14, 9.1, 9.3 | **~95–167** |
-| **Advanced** | Reliability and platform practices: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management with a local spoke cluster, chaos experiments and postmortems, a threat model and control matrix, strategy documents, public writing, and a custom seccomp profile for WordPress. | 7.7, 8.1–8.9 | **~89–144** |
+| **Advanced** | Reliability and platform practices: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management with a local spoke cluster, chaos experiments and postmortems, a threat model and control matrix, strategy documents, knowledge sharing (engineering write-ups of the main decisions), and a custom seccomp profile for WordPress. | 7.7, 8.1–8.9 | **~89–144** |
 | **Total** | | | **~361–601** |
 
 **Calendar time** (Phase 1 only):
@@ -964,11 +964,11 @@ These steps are most of the **Advanced** tier; see the Phase 1 design's [Enginee
 
 **Test:** with the local spoke running, the hub shows both clusters and the ApplicationSet syncs the overlay to the spoke; deleting the spoke's registration removes its Applications with no errors left behind; the spoke's credentials cannot change anything outside the namespaces the hub manages.
 
-### Step 8.9: Public writing
+### Step 8.9: Knowledge sharing
 
-**Do:** a series of **articles on russetleaf.dev** explaining the main design decisions (from the ADRs): e.g. S3 rather than EFS, no service mesh, the SRA account structure, error-budget-gated promotion (and, after Phase 2, evaluation gates for LLMs). Link them from the hub README.
+**Do:** **engineering write-ups on russetleaf.dev** that explain the main design decisions to engineers facing the same choices, with the context, trade-offs and lessons from building and operating them (the ADRs are the source): e.g. S3 rather than EFS, no service mesh, the SRA account structure, error-budget-gated promotion (and, after Phase 2, evaluation gates for LLMs). Each links to its ADRs, code and, where relevant, postmortems and drill results. Link them from the hub README.
 
-**Test:** at least four articles published, each linking to the relevant ADRs and code.
+**Test:** at least four write-ups published, each linking to the relevant ADRs and code.
 
 ## Stage 9: Finishing
 
@@ -1116,7 +1116,7 @@ Phase 1 builds most of what these need: the shared OpenTofu modules, the base ma
 | 8.6 Chaos experiments + postmortems | Advanced | 10–15 | ☐ | | | | |
 | 8.7 Strategy documents | Advanced | 6–10 | ☐ | | | | |
 | 8.8 Fleet management (hub) | Advanced | 6–10 | ☐ | | | | |
-| 8.9 Public writing | Advanced | 10–20 | ☐ | | | | |
+| 8.9 Knowledge sharing | Advanced | 10–20 | ☐ | | | | |
 
 ## Decision log
 

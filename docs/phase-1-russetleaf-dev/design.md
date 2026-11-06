@@ -1387,9 +1387,9 @@ ADRs record decisions; these set direction:
 - **Migration plan** (`docs/strategy/migration-plan.md`): e.g. moving russetleaf.dev fully into AWS, or going multi-region: phases, risks, rollback points.
 - **Build-vs-buy analysis** (`docs/strategy/build-vs-buy.md`): the self-hosted stack compared with managed alternatives (e.g. Grafana Cloud, managed Argo CD, Kubecost, Security Hub-only), with costs and trade-offs.
 
-### Public writing
+### Knowledge sharing
 
-A series of **articles on russetleaf.dev** explaining the design decisions (the ADRs are the raw material): S3 rather than EFS, no service mesh, the SRA account structure, evaluation gates for LLMs, error-budget-gated promotion. The site is then both the system and the evidence of communicating it.
+**Engineering write-ups on russetleaf.dev** explain the main design decisions to engineers facing the same choices: S3 rather than EFS, no service mesh, the SRA account structure, evaluation gates for LLMs, error-budget-gated promotion. The ADRs record each decision; the write-ups add the context, trade-offs and lessons from building and operating it, with links to the ADRs, code, postmortems and drill results.
 
 ### Cost and memory
 
