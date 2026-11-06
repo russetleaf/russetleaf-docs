@@ -32,8 +32,8 @@ Have these ready:
 8. **No root access keys:** on the same page, confirm the **Access keys** section is empty. Never create one: the root user only ever signs in to the console.
 9. **Billing access for Identity Center roles:** in **Account** (from the account menu), turn on **IAM user and role access to Billing information**. Only root can do this; without it, the admin role from Part 2 cannot see budgets or costs.
 10. **Alternate contacts:** in the same **Account** page, set the **Security**, **Billing** and **Operations** contacts to the operator, so AWS's security notices reach a person. (Terraform manages these from step 2.0.)
-11. **Billing preferences:** in **Billing and Cost Management → Billing preferences**, turn on **Free Tier usage alerts**, and the **billing alerts** that let CloudWatch alarm on charges.
-12. **The budget:** in **Billing and Cost Management → Budgets**, create a **monthly cost budget** of **$25**, with email alerts at **80% of actual** and **100% of forecast** spend, to the operator's email. Because this is the management account, the budget covers every account the Organization creates later (consolidated billing). Terraform takes it over in step 2.0.
+11. **Billing preferences:** in **Billing and Cost Management → Billing preferences**, turn on **Free Tier usage alerts**, and the **billing alerts** that let CloudWatch alarm on charges. Under **Invoice delivery preferences**, choose **PDF invoices delivered by email**, so each month's invoice arrives as a PDF.
+12. **The budget:** in **Billing and Cost Management → Budgets**, create a **monthly cost budget** named **`RussetLeaf Monthly Cost Budget`**, of **$50**, with email alerts at **85% of actual** and **100% of forecast** spend, to the operator's email. Because this is the management account, the budget covers every account the Organization creates later (consolidated billing). Terraform takes it over in step 2.0.
 13. **Region:** in the console's region menu, choose **US East (N. Virginia), `us-east-1`**, the project's region. The SCPs in step 2.0 allow only `us-east-1` and `us-west-2`.
 14. **The break-glass kit** ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)): record the **account ID** (shown in the account menu), the **root email**, the **root password**, and **which MFA devices are registered** (Google Authenticator on the phone, the YubiKey in the safe). Add the starred items to the printed copy and the encrypted cloud copies ([break-glass kit setup guide](break-glass-kit.md)), and put the YubiKey back in the safe.
 15. **Sign out.** Nothing else is done in this account until step 2.0.
@@ -44,7 +44,8 @@ Have these ready:
 - [ ] Google Authenticator's cloud sync is off for the root entry.
 - [ ] The root user's **Security credentials** page shows **no access keys**.
 - [ ] **IAM user and role access to Billing information** is on.
-- [ ] The **$25 budget** exists with its two alerts.
+- [ ] **Invoice delivery preferences** are set to **PDF invoices delivered by email**.
+- [ ] The **RussetLeaf Monthly Cost Budget** ($50) exists with its two alerts (85% of actual, 100% of forecast).
 - [ ] The **alternate contacts** are set.
 - [ ] The **break-glass kit** has the account ID, root login and MFA notes, and the printed copy is updated.
 

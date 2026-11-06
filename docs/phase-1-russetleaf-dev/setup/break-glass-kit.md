@@ -86,7 +86,7 @@ mkdir -m 700 "${GNUPGHOME}"
 
 ## Part 2: the kit file and the printed copy
 
-1. **Write the kit file** in `"${RL_KIT}/kit.txt"` with `nano` (which keeps no backup copies), from the entries in Bitwarden: every item in the [disaster recovery plan's list](../disaster-recovery.md#break-glass-kit), plus the GPG key's **fingerprint** and **passphrase**. Then append the GPG key's public key and secret key export:
+1. **Write the kit file** in `"${RL_KIT}/kit.txt"` with `vim -n -i NONE -c 'setlocal noundofile nobackup nowritebackup'`, from the entries in Bitwarden. The options keep every copy of the text in the folder in memory: `-n` turns off the swap file and `-i NONE` the `viminfo` file (which would save yanked text in the home folder), and the settings turn off undo and backup files, which a `vimrc` may send to a folder on disk. The kit file lists every item in the [disaster recovery plan's list](../disaster-recovery.md#break-glass-kit), plus the GPG key's **fingerprint** and **passphrase**. Then append the GPG key's public key and secret key export:
 
     ```bash
     cat "${RL_KIT}/gpg-public-key.asc" "${RL_KIT}/gpg-secret-key.asc" >>"${RL_KIT}/kit.txt"

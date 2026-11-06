@@ -1062,7 +1062,7 @@ Costs are tracked from two angles that complement each other. The reasoning is r
 
 | Alert | Source | Fires when |
 |---|---|---|
-| Monthly budget thresholds | **AWS Budgets** → SNS → Amazon Q Developer | Spend passes set levels (e.g. $25 for the account; $20 and $40 for the demo stack) |
+| Monthly budget thresholds | **AWS Budgets** → SNS → Amazon Q Developer | Spend passes set levels (e.g. $50 for the Organization, from the management account; $20 and $40 for the demo stack) |
 | Unusual spend | **Cost Anomaly Detection** → SNS → Amazon Q Developer | AWS detects an unexpected cost pattern |
 | `NamespaceDailyCostSpike` (both) | **OpenCost metrics** → Prometheus → Alertmanager | A namespace's estimated daily cost jumps well above its recent average (e.g. a runaway summarizer scaling out) |
 
