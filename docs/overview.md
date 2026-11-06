@@ -1,6 +1,6 @@
 # RussetLeaf: project overview
 
-RussetLeaf is a portfolio project: a production-grade WordPress platform built the way a platform team would build it, with infrastructure as code, GitOps, layered security, observability, tested delivery, and decisions recorded as ADRs. It is built in **three phases**, each with its own design, build plan and decisions. **Phase 1 is a complete project on its own**; Phases 2 and 3 are optional additions.
+RussetLeaf is an open-source reference implementation of a production-grade WordPress platform, built the way a platform team would build it, with infrastructure as code, GitOps, layered security, observability, tested delivery, and decisions recorded as ADRs. It is built in **three phases**, each with its own design, build plan and decisions. **Phase 1 is a complete project on its own**; Phases 2 and 3 are optional additions.
 
 ## The three phases
 
