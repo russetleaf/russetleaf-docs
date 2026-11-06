@@ -291,6 +291,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 | [1048 Bash script standard](adr/1048-bash-script-standard.md) | 1.1 | — | — |
 | [1049 Licensing](adr/1049-licensing.md) | 1.1, 5.10 | — | — |
 | [1050 Secrets Manager and External Secrets, not Vault](adr/1050-secrets-manager-and-external-secrets.md) | 4.2, 9.1 | 1.2, 2.4 | 1.7, 2.4 |
+| [1051 Terraform, not CloudFormation](adr/1051-terraform-for-infrastructure-as-code.md) | 2.0–2.5 | 1.2 | 1.1–1.7, 1.9 |
 | [2001 MLOps lifecycle](../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | — | 4.4–4.10 | — |
 | [2002 Summary pipeline architecture](../phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | — | 2.1–2.5 | — |
 | [2003 Self-hosted model on `rl-home-cp02`](../phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | — | 1.3, 3.1, 3.2 | — |
@@ -323,6 +324,8 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 **Test:** in each repo, `check-tools.sh` reports every pinned tool and the kind and Talos-in-Docker smoke clusters start and are deleted; each repo is public with a clean `gitleaks` history scan and push protection on, and GitHub shows its license as GPL-3.0; a push to `main` appears in the repo's GitLab mirror within minutes; each repo has protected `main`, the secret scan and Checkov run on a test pull request (a workflow with `permissions: write-all` fails Checkov), and Renovate opens its onboarding pull request; in each code repo, a deliberately non-compliant script (copied from the template, with its header block removed) fails pre-commit and the `bash-checks` job, and an edited copy of `scripts/lib/common.sh` fails the drift check. The Projects board shows one issue per step in the roadmap's milestones, and running the script again creates nothing new.
 
 ## Stage 2: Infrastructure (`russetleaf-infra`)
+
+Everything in this stage is built with Terraform ([ADR 1051](adr/1051-terraform-for-infrastructure-as-code.md)), except the one-time console bootstrap in step 2.0, which Terraform then imports.
 
 ### Step 2.0: AWS Organization and accounts (Security Reference Architecture)
 
@@ -1124,3 +1127,4 @@ Phase 1 builds most of what these need: the shared Terraform modules, the base m
 | 2026-11-05 | An **[improvements list](improvements.md)** for work deliberately put off, reviewed in a new **step 9.3: Post go-live improvements** (Extended, 2–6 hours, milestone M6) right after the Core tier is published, then quarterly; the Extended tier becomes ~95–167 hours and Phase 1 ~361–601, which moves M7's latest date from January 11 to **January 12, 2027** | Deferred items (the first: the GPG key onto a YubiKey 5, and Bitwarden's SSH agent) need one place to live and a set time to be decided, or they are forgotten |
 | 2026-11-06 | The management account's budget is the **`RussetLeaf Monthly Cost Budget`**, **$50** a month, alerting at **85% of actual** and 100% of forecast spend (was $25 and 80%); invoices arrive as **PDFs by email** ([setup guide](setup/aws-management-account.md#part-1-create-the-account-step-01)) | Set by the operator: more room than $25 for the Organization's security services and the home lab's AWS resources, while still catching a forgotten resource within the month. An emailed PDF keeps a copy of every invoice outside the console |
 | 2026-11-06 | **[ADR 1050](adr/1050-secrets-manager-and-external-secrets.md)** records the secrets store: **AWS Secrets Manager** with the **External Secrets Operator**, not HashiCorp Vault or OpenBao | The design already used it, but no ADR recorded why Vault, SOPS, Sealed Secrets, Parameter Store and Bitwarden Secrets Manager were not chosen |
+| 2026-11-06 | **[ADR 1051](adr/1051-terraform-for-infrastructure-as-code.md)** records the infrastructure-as-code tool: **Terraform**, not CloudFormation, CDK, Pulumi, OpenTofu or Crossplane; [ADR 1005](adr/1005-loki-alloy-for-logs.md)'s ELK alternative is written out in full | Both choices were already made but not explained: Terraform covers AWS, Cloudflare, GitHub and Talos with one tool, and Loki's label index and S3 storage fit the home cluster where Elasticsearch would not |

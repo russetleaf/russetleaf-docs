@@ -1,6 +1,6 @@
 # ADR 1005: Loki and Grafana Alloy for logs
 
-- **Status:** Accepted
+- **Status:** Accepted; ELK alternative expanded 2026-11-06
 - **Date:** 2026-11-01
 - **Applies to:** both sites
 - **Phase:** 1. Later: Phase 2 adds the summarizer and Bedrock log alerts; Phase 3 adds Loki on EKS (14-day retention).
@@ -22,7 +22,14 @@ Constraints: `rl-home-cp01` of the home lab has 8 GB of RAM and already uses abo
 ## Alternatives considered
 
 - **VictoriaLogs:** lighter on memory than Loki and simple to run; a reasonable fit for 8 GB. Not chosen because Loki is more widely used, integrates natively with Grafana (correlation with metrics and traces), and is the more recognisable skill.
-- **OpenSearch / ELK (Elasticsearch, Logstash, Kibana):** full-text search over everything, but needs several GB of memory; far too heavy for this hardware.
+- **ELK (Elasticsearch, Logstash, Kibana) or OpenSearch:** the long-standing standard for central logs, with **full-text search** over every word of every log line, rich aggregations, and security-analytics features. Against it here:
+    - **Indexing everything is expensive:** Elasticsearch builds an index of every word, so it needs fast local disk and a lot of memory. Loki indexes only a few labels (`site`, `env`, `namespace`, `app` and the others above) and stores the compressed log text in **S3**, which is cheap and needs no disks to manage; at this project's volume, searching the text within a label and time range is fast enough.
+    - **Memory:** even one Elasticsearch node, with Logstash and Kibana, needs about 3–4 GB or more (Elasticsearch runs on the Java virtual machine with its own heap), against Loki's 0.3–0.7 GB, on nodes whose memory is already allocated ([ADR 1020](1020-three-node-ha-home-cluster.md)).
+    - **Running it:** shards, index lifecycle policies, snapshots and upgrades, for a cluster that is meant to be run by one person.
+    - **Managed on AWS:** Amazon OpenSearch Service removes the running work but costs about $25 a month or more for the smallest instance (OpenSearch Serverless costs much more; check current pricing), does not cover the home site without shipping its logs out, and charges for data sent to it.
+    - **One toolset:** Loki is queried in the same Grafana as Prometheus and Tempo, with links from a metric or trace to the matching logs; ELK would add a second interface (Kibana) and query language.
+    - **Licensing:** Elastic moved Elasticsearch and Kibana from Apache 2.0 to source-available licenses in 2021 and added an open-source option (AGPL) in 2024; **OpenSearch** is the Apache-licensed fork made in 2021 and now run by the Linux Foundation. Either could be used; neither changes the points above.
+    - **What is given up:** fast search for an arbitrary word across all logs, and the built-in security analytics. Searches here start from labels and a time range, and security analysis across sources is left to [ADR 1019](1019-aws-multi-account-sra.md)'s trigger (adopt Security Lake once a SIEM is connected).
 - **CloudWatch Logs only:** fine on AWS, but does not cover the home site, and costs per GB ingested.
 - **Promtail** as the collector: deprecated in favor of Alloy.
 - **No central logs (status quo):** rejected; losing logs on every restart is not production-grade.
