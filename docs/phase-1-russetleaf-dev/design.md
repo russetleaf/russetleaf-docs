@@ -110,7 +110,7 @@ Separate workload accounts limit how far a compromise can spread, and give each 
 - **Policy rollout:** every new or changed SCP or RCP is attached to the **Policy Staging** OU first and tested there, then to the real OUs.
 - **Centralized root access management:** root credentials are **removed from member accounts**, so only the management account's root login needs to be in the break-glass kit.
 - **IAM Identity Center** for all human access: permission sets for **admin**, **read-only** and **break-glass**, with MFA required; no IAM users for people.
-- **Tag policies** enforcing `Project`, `Site`, `Env` and `ManagedBy` values.
+- **Tag policies** enforcing `Project`, `Site`, `Env` and `ManagedBy` values (`Site`: `dev`, `com` or `shared`; `Env`: `prod`, `staging` or `shared`).
 - **AI services opt-out policy:** AWS AI services may not store or use the Organization's content to improve their models (relevant once Phase 2 uses Bedrock and other AI services).
 - **Chat applications policy:** Amazon Q Developer in chat applications may connect only to the project's **Slack workspace**, with other chat platforms blocked, so a compromised account cannot route alerts or commands elsewhere.
 - **Alternate security contacts** set on every account (security, billing, operations).
@@ -413,7 +413,7 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
 | Dependency checks | `composer audit`, **pip-audit**; GitHub's **dependency-review action** (public repos) | Known-vulnerable dependencies, before building; the dependency review blocks a pull request that adds one |
 | WordPress plugin vulnerabilities | **WPScan** (`russetleaf-wordpress`) | Known plugin and theme vulnerabilities |
 | Build configuration | **Checkov** (Dockerfile, Helm chart, workflows); **zizmor** (GitHub Actions workflow security: untrusted input in scripts, risky triggers, credential exposure) | Insecure build and CI configuration |
-| Chart checks | `helm lint` and `ct lint` (chart-testing) | Chart correctness |
+| Chart checks | `helm lint` against the chart's `values.schema.json`, `ct lint` (chart-testing), **helm-unittest**, and `ct install` in the kind cluster | Chart correctness: bad values rejected, templates render what each overlay expects, and the chart installs and becomes ready |
 | Build | Docker Buildx | Builds the image (base images pinned by digest) |
 | Image checks | **container-structure-test** | The built image runs as non-root, listens on port 8080, has the expected files and no leftover tools |
 | Image scanning | **Trivy** with its **vulnerability**, **secret** and **misconfiguration** scanners | Fails on critical vulnerabilities and on any secret baked into a layer; accepted vulnerabilities go in signed **OpenVEX** statements (`.vex/`, each with a justification and review date, attached to the image as an attestation); `.trivyignore` only for secret and misconfiguration findings ([ADR 1035](adr/1035-platform-security.md)); Trivy's **CIS Docker Benchmark** compliance check on each image ([ADR 1036](adr/1036-compliance-frameworks-and-privacy.md)) |
@@ -428,7 +428,7 @@ Both images are built in **GitHub Actions** and only reach GHCR after passing co
 | Release notes | GitHub release | Image and chart **digests** plus **Rekor log entry** links, so anyone can audit the transparency log (e.g. with `rekor-cli`) |
 | Repo practices | **OpenSSF Scorecard** (weekly, all four repos) | Scores branch protection, pinned dependencies, token permissions, signed releases and more; badge on each README |
 
-**Pull request flow:** gitleaks → hadolint → ruff/mypy or PHPCS/PHPStan → Opengrep → `composer audit` / pip-audit → dependency review → Checkov → zizmor → `helm lint` / `ct lint` → unit tests → build → container-structure-test → Trivy → kind integration tests (+ evaluation gate). **Release:** the same checks → push by digest → cosign sign → SBOM attestation → SLSA provenance → verify → release notes → version-bump pull request on `russetleaf-gitops`. **Weekly:** scheduled rebuild, WPScan, Scorecard.
+**Pull request flow:** gitleaks → hadolint → ruff/mypy or PHPCS/PHPStan → Opengrep → `composer audit` / pip-audit → dependency review → Checkov → zizmor → `helm lint` / `ct lint` / helm-unittest → unit tests → build → container-structure-test → Trivy → kind integration tests and `ct install` (+ evaluation gate). **Release:** the same checks → push by digest → cosign sign → SBOM attestation → SLSA provenance → verify → release notes → version-bump pull request on `russetleaf-gitops`. **Weekly:** scheduled rebuild, WPScan, Scorecard.
 
 **Deliberately not used:** CodeQL (free on public repos but does not support PHP; Opengrep covers both languages), Docker Scout, Snyk Container and Grype (overlap with Trivy), Chainguard/Wolfi base images (free tier offers only `latest` tags, which conflicts with pinned versions; worth revisiting).
 
@@ -508,7 +508,7 @@ Whichever is chosen must also work with a **custom S3 endpoint**, so the ci test
 - **Metrics, logs and alerts**: Prometheus, **Loki** (logs, collected by Grafana Alloy; see [Logging](#logging-loki--alloy)), Grafana and Alertmanager, with every alert routed to **Slack** by site and topic; see [Alerting and notifications](#alerting-and-notifications-slack).
 - **Deployment notifications**: Argo CD and Argo Rollouts post syncs, failures, canary steps and rollbacks to `#rl-deploys`.
 - **AWS Budgets alerts** (Phase 2 adds one on Bedrock spending, in case a bug calls the model in a loop).
-- **Tagging**: every AWS resource gets `Project`, `Site`, `Env` and `ManagedBy` tags (plus `Stack=edge|demo` on russetleaf.com in Phase 3) through the AWS provider's `default_tags`, so leftovers can be found and costs split per site.
+- **Tagging**: every AWS resource gets `Project`, `Site`, `Env` and `ManagedBy` tags (plus `Stack=edge|demo` on russetleaf.com in Phase 3) through the AWS provider's `default_tags`, so leftovers can be found and costs split per site; organization-wide resources (the management, Log Archive, Security and Backup accounts, and the OpenTofu state) are tagged `Site=shared` and `Env=shared`.
 
 ### WordPress image and Helm chart
 
