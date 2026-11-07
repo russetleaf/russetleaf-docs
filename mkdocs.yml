@@ -78,6 +78,7 @@ nav:
       - Setup guides:
           - AWS management account: phase-1-russetleaf-dev/setup/aws-management-account.md
           - Two-factor sign-in for the project's accounts: phase-1-russetleaf-dev/setup/account-sign-in.md
+          - YubiKeys on the workstation (SSH and sudo): phase-1-russetleaf-dev/setup/workstation-yubikey.md
           - Break-glass kit and GPG key: phase-1-russetleaf-dev/setup/break-glass-kit.md
           - Slack and outside monitoring: phase-1-russetleaf-dev/setup/slack-and-monitoring.md
           - Lab network and WireGuard: phase-1-russetleaf-dev/setup/lab-network.md

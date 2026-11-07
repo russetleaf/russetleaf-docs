@@ -85,6 +85,6 @@ Have these ready:
 
 ## If something goes wrong
 
-- **Lost the keychain YubiKey:** sign in with the safe key or a passkey, and remove the lost key from **every** account in the table above and from AWS root and Identity Center; then register a replacement (with a PIN) everywhere.
+- **Lost the keychain YubiKey:** sign in with the safe key or a passkey, and remove the lost key from **every** account in the table above, from AWS root and Identity Center, and from the workstation's SSH keys and `sudo` ([workstation YubiKey setup guide](workstation-yubikey.md#if-something-goes-wrong)); then register a replacement (with a PIN) everywhere.
 - **Lost the phone:** remove its passkeys from each account (signing in with a YubiKey); Google Authenticator's codes return on a new phone through sync once the Google account is signed in.
 - **Lost both YubiKeys:** use each account's recovery codes from the break-glass kit, a phone passkey where one exists, or the provider's recovery process; AWS root uses AWS's email-and-phone recovery ([AWS management account setup guide](aws-management-account.md#if-something-goes-wrong)).
