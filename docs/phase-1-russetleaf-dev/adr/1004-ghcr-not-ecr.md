@@ -45,7 +45,7 @@ Reasons, in order of importance:
 
 ## When to revisit
 
-- A requirement that images stay **private inside AWS** (e.g. a compliance rule), or that EKS pulls never leave the VPC.
+- A requirement that images stay **private inside AWS** (for example, a compliance rule), or that EKS pulls never leave the VPC.
 - The home cluster moving into AWS (removing the token-refresh problem).
 - GitHub pull limits, outages or pricing changes affecting deployments.
 

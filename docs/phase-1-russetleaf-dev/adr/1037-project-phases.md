@@ -39,7 +39,7 @@ Build in **three phases**, each complete and usable on its own, with its own des
 
 ## When to revisit
 
-- A job target makes one later phase more valuable (e.g. MLOps roles: do Phase 2 next; cloud platform roles: Phase 3).
+- A job target makes one later phase more valuable (for example, MLOps roles: do Phase 2 next; cloud platform roles: Phase 3).
 - A phase turns out too large to finish: split it further rather than leaving it half done.
 
 ## Open items

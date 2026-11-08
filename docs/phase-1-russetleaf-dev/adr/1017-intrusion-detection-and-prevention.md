@@ -13,7 +13,7 @@
 
 Falco provides runtime detection inside containers, but on its own it is not an intrusion detection and prevention strategy. The design already had several prevention layers (the Cloudflare and AWS WAFs, edge login for the admin area, default-deny CiliumNetworkPolicies, Kyverno admission rules, seccomp, gVisor, read-only filesystems) and detection layers (Falco, Hubble, posture scanners). Three gaps remained:
 
-- **Nothing watched the Kubernetes API** for suspicious activity (e.g. `exec` into pods, Secret reads, RBAC changes, anonymous requests).
+- **Nothing watched the Kubernetes API** for suspicious activity (for example, `exec` into pods, Secret reads, RBAC changes, anonymous requests).
 - **No continuous AWS account threat detection**: no CloudTrail trail and no GuardDuty, only monthly Prowler scans, although the account holds keys, buckets and Bedrock access around the clock.
 - **The home edge** had only basic Cloudflare settings: no managed rules, no login rate limiting, and XML-RPC (a common brute-force target) open.
 

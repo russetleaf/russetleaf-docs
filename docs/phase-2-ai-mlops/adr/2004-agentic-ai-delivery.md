@@ -32,13 +32,13 @@ Agents speed up work that has fast, objective checks (code, OpenTofu, manifests,
 ## Alternatives considered
 
 - **No agents (conversation only, as in Phase 1):** lowest risk, but slower on code-heavy work, and it gives no way to compare delivery with and without agents against Phase 1's measured hours.
-- **A general personal-assistant agent** (e.g. OpenClaw): broad access to the machine it runs on and community skills, a poor fit for a workstation that holds cluster and AWS credentials.
+- **A general personal-assistant agent** (for example, OpenClaw): broad access to the machine it runs on and community skills, a poor fit for a workstation that holds cluster and AWS credentials.
 - **Agents with broad access** (admin credentials, able to apply and merge): fastest, but one confused or injected agent can damage the cluster or the AWS accounts; not acceptable for infrastructure.
-- **Agents only in CI** (e.g. bots that open pull requests): safe and auditable, but limited to narrow tasks; interactive agent sessions with local tools cover far more of the work.
+- **Agents only in CI** (for example, bots that open pull requests): safe and auditable, but limited to narrow tasks; interactive agent sessions with local tools cover far more of the work.
 
 ## Consequences
 
-- Faster code-heavy steps (a rough expectation is 10–30%; the checklists will show the actual effect), with the operator's review time as the main limit.
+- Faster code-heavy steps (a rough expectation is 10–30%; the checklists record the actual effect), with the operator's review time as the main limit.
 - One extra setup step per phase for the agents' identities, instructions and sandbox.
 - A measurable record of what agents did, what review caught, and how the results compare with Phase 1.
 

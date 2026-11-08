@@ -6,7 +6,7 @@ The milestones for building [Phase 1](plan.md), with target dates, and the actua
 
 - **Start:** planning on Monday, November 2, 2026; building from **Tuesday, November 3**.
 - **Pace:** about **60 hours a week**, worked as **10 hours a day, six days a week**, with **Saturdays off**.
-- **Fixed dates:** `rl-home-cp03` (the 16 GB server) and the ER605 lab router arrive by November 4, so **November 3–4** are for the preliminaries the servers need (accounts and tools, decisions, the lab network, the repos, the AWS accounts and the OpenTofu state bucket), and **November 5–6** are for the servers: the cluster up on the 5th, hardening and tests on the 6th.
+- **Fixed dates:** `rl-home-cp03` (the 16 GB server) and the ER605 lab router arrive by November 4, so **November 3–4** are for the preliminaries the servers need (accounts and tools, decisions, the lab network, the repos, the AWS accounts and the OpenTofu state bucket), and **November 5–6** are for the servers: the cluster up on November 5, hardening and tests on November 6.
 - **Time-boxing M1:** its steps are estimated at 21–39 hours against 20 available, so only what the servers need is done on November 3–4; the rest (the repos' full CI guardrails, from step 1.1) is finished after November 6 and counted in M3's dates.
 - **Order after that:** the Core tier first (in plan order), then step 9.3 (the post go-live review of the [improvements list](improvements.md)), then the other Extended steps, then the Advanced steps, as the plan recommends.
 - **Estimates:** the plan's focused-hour ranges (expect ±50%). **Target** is the date at the midpoint of the estimates; **latest** is the date at the high end.

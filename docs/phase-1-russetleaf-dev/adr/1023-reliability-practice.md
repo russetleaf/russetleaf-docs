@@ -31,7 +31,7 @@ The design had rollback, node-failure and disaster drills, but no regular, hypot
 
 ## When to revisit
 
-- Experiments become routine and stable: automate them as part of releases (e.g. a chaos stage before promotion).
+- Experiments become routine and stable: automate them as part of releases (for example, a chaos stage before promotion).
 
 ## Open items
 

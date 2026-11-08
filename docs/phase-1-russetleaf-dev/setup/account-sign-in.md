@@ -8,7 +8,7 @@ Providers' settings pages change over time. These steps name each setting rather
 
 - **Security keys first.** The operator has two YubiKeys, both **YubiKey Security Key NFC** (FIDO2 and U2F only: no OpenPGP and no OATH, so they hold no authenticator codes): the **keychain key** for daily use and the **safe key** as the backup. Both are registered with every account that supports security keys, and each has a FIDO2 PIN.
 - **A passkey on the operator's phone** is added where the service offers passkeys, for convenience.
-- **Authenticator codes only where a service requires them,** in Google Authenticator (cloud sync on; the Google account is in Advanced Protection). Today that is **GitHub**, which requires a code before it accepts security keys, and possibly GitLab and the uptime checker (below). A code is a fallback, not the daily factor.
+- **Authenticator codes only where a service requires them,** in Google Authenticator (cloud sync on; the Google Account is in Advanced Protection). Today that is **GitHub**, which requires a code before it accepts security keys, and possibly GitLab and the uptime checker (below). A code is a fallback, not the daily factor.
 - **Every password** is generated in Bitwarden and entered only through Bitwarden's autofill, which fills only on the real site, so a look-alike page shows up as a missing autofill.
 - **Recovery codes** go into Bitwarden at once, and into the printed and encrypted copies of the break-glass kit at the end of step 0.1 ([break-glass kit setup guide](break-glass-kit.md)).
 
@@ -20,7 +20,7 @@ Providers' settings pages change over time. These steps name each setting rather
 | **GitHub** | Password, or a passkey | An authenticator code first (required), then both YubiKeys and a phone passkey | Recovery codes |
 | **GitLab** (the repo mirrors) | Password from Bitwarden | Both YubiKeys; an authenticator code only if GitLab requires one | Recovery codes |
 | **Cloudflare** (DNS, tunnel, Access, and the registrar for russetleaf.dev) | Password from Bitwarden | Both YubiKeys | Backup codes |
-| **Slack** (workspace owner) | **Sign in with Google** | Google's (Advanced Protection) | Through the Google account |
+| **Slack** (workspace owner) | **Sign in with Google** | Google's (Advanced Protection) | Through the Google Account |
 | **Heartbeat service** (healthchecks.io) | Password from Bitwarden | Both YubiKeys (WebAuthn) | A second key is the only backup |
 | **Uptime checker** | Google sign-in, or a password | Security keys if the service offers them, otherwise an authenticator code | The service's recovery codes |
 | **Route 53 Domains** (the registrar for russetleaf.com) | AWS access ([AWS management account setup guide](aws-management-account.md)) | Both YubiKeys | AWS's recovery |
@@ -30,14 +30,14 @@ Providers' settings pages change over time. These steps name each setting rather
 Have these ready:
 
 - **Both YubiKeys**, each with a FIDO2 PIN (set with `ykman fido access change-pin`).
-- **The operator's phone**, with Google Authenticator signed in to the Google account (for GitHub's code).
+- **The operator's phone**, with Google Authenticator signed in to the Google Account (for GitHub's code).
 - **Bitwarden open**, with an entry for each account.
 
 ## Part 1: Google, Microsoft and Bitwarden
 
 1. **Google**, moving to the **Advanced Protection Program**:
     1. Under **Security → Passkeys and security keys**, register a **passkey on the phone** and the YubiKeys available (one key and one passkey are enough to enroll; add the second key when it arrives).
-    2. Under **Security**, confirm a **recovery phone** and a **recovery email address** in a mailbox other than this Google account.
+    2. Under **Security**, confirm a **recovery phone** and a **recovery email address** in a mailbox other than this Google Account.
     3. **Enroll** on Google's Advanced Protection page, signing in again with the key or passkey when asked.
     4. Under **2-Step Verification**, remove any SMS, voice or authenticator-code second steps that remain. Keep the Google Authenticator app itself: it stays signed in to the account and keeps syncing the codes other services need (GitHub's).
     5. Sign in again on each device, and confirm Google Drive's web upload still works (Advanced Protection blocks most third-party apps from Gmail and Drive data).
@@ -70,14 +70,14 @@ Have these ready:
 
 ## Part 4: Slack and the outside monitoring services
 
-1. **Slack:** create or sign in to the workspace owner account with **Sign in with Google**, so the sign-in goes through the Google account's Advanced Protection; do not set a separate Slack password. If Slack requires one, generate it in Bitwarden and turn on Slack's own two-factor authentication with Google Authenticator, so the password path is protected too ([Slack and outside monitoring setup guide](slack-and-monitoring.md)).
+1. **Slack:** create or sign in to the workspace owner account with **Sign in with Google**, so the sign-in goes through the Google Account's Advanced Protection; do not set a separate Slack password. If Slack requires one, generate it in Bitwarden and turn on Slack's own two-factor authentication with Google Authenticator, so the password path is protected too ([Slack and outside monitoring setup guide](slack-and-monitoring.md)).
 2. **Heartbeat service** (healthchecks.io): register both YubiKeys under **Account Settings → Two-factor authentication** (security keys are its only second factor).
 3. **Uptime checker:** prefer a service that offers security keys or Google sign-in; if it offers only authenticator codes (UptimeRobot, for example), use Google Authenticator and save its recovery codes.
 
 ## Checks
 
 - [ ] Signing in to Google, Microsoft, Bitwarden, GitHub, GitLab, Cloudflare and the heartbeat service asks for a security key or passkey (or uses one), and both YubiKeys work on each.
-- [ ] The Google account is in **Advanced Protection**, and Slack signs in through it.
+- [ ] The Google Account is in **Advanced Protection**, and Slack signs in through it.
 - [ ] Google Authenticator holds codes only for services that require them (GitHub, and GitLab or the uptime checker if they did), and none for AWS root.
 - [ ] Every account's recovery codes are in Bitwarden.
 - [ ] Both domains have **auto-renew** and a **transfer lock** on, russetleaf.dev has **DNSSEC** on, and russetleaf.com's contacts have **privacy protection**.
@@ -86,5 +86,5 @@ Have these ready:
 ## If something goes wrong
 
 - **Lost the keychain YubiKey:** sign in with the safe key or a passkey, and remove the lost key from **every** account in the table above, from AWS root and Identity Center, and from the workstation's SSH keys and `sudo` ([workstation YubiKey setup guide](workstation-yubikey.md#if-something-goes-wrong)); then register a replacement (with a PIN) everywhere.
-- **Lost the phone:** remove its passkeys from each account (signing in with a YubiKey); Google Authenticator's codes return on a new phone through sync once the Google account is signed in.
+- **Lost the phone:** remove its passkeys from each account (signing in with a YubiKey); Google Authenticator's codes return on a new phone through sync once the Google Account is signed in.
 - **Lost both YubiKeys:** use each account's recovery codes from the break-glass kit, a phone passkey where one exists, or the provider's recovery process; AWS root uses AWS's email-and-phone recovery ([AWS management account setup guide](aws-management-account.md#if-something-goes-wrong)).

@@ -15,12 +15,12 @@ No infrastructure code exists yet (`russetleaf-infra` is written from step 2.0),
 
 - the four providers the project uses (`hashicorp/aws`, `cloudflare/cloudflare`, `integrations/github`, `siderolabs/talos`) install from **OpenTofu's registry**, signed;
 - **ephemeral values and write-only arguments**, which keep Phase 3's database password and cache token out of state ([ADR 3007](../../phase-3-russetleaf-com/adr/3007-rds-mariadb-with-rds-proxy.md)), validate with the AWS provider;
-- every check in the pipeline supports OpenTofu: tflint, Checkov, terraform-docs, Infracost, `pre-commit-terraform`, Renovate, `mise` and a GitHub Action (`opentofu/setup-opentofu`).
+- every check in the pipeline supports OpenTofu: tflint, Checkov, `terraform-docs`, Infracost, `pre-commit-terraform`, Renovate, `mise` and a GitHub Action (`opentofu/setup-opentofu`).
 
 ## Decision
 
 - **OpenTofu** (1.13 or later, pinned per repo with `mise` as `opentofu`) replaces Terraform for everything [ADR 1051](1051-terraform-for-infrastructure-as-code.md) covered; its decision otherwise stands (one repo, a root module per environment, the gated pipeline, imports of anything made by hand).
-- **Commands** are `tofu` (`tofu plan`, `tofu apply`, `tofu test`, ...). File names stay the same (`*.tf`, `.terraform.lock.hcl`), as does the `terraform { }` block in the configuration, which OpenTofu reads unchanged.
+- **Commands** are `tofu` (`tofu plan`, `tofu apply`, `tofu test` and the rest). File names stay the same (`*.tf`, `.terraform.lock.hcl`), as does the `terraform { }` block in the configuration, which OpenTofu reads unchanged.
 - **Providers** come from OpenTofu's registry (`registry.opentofu.org`), pinned with hashes for every platform in `.terraform.lock.hcl` (`tofu providers lock`).
 - **State** stays in the S3 bucket in the russetleaf-infra account, with built-in S3 locking (`use_lockfile = true`).
 - **The checks** run as before; the `pre-commit-terraform` hooks are pointed at `tofu` (`--hook-config=--tf-path=tofu`).

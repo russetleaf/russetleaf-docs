@@ -63,7 +63,7 @@ One runbook per layer, from the [rollback strategy](phase-1-russetleaf-dev/desig
 | Runbook | Layer | Written in | Rehearsed | Status |
 |---|---|---|---|---|
 | `docs/runbooks/rollback-applications.md` | WordPress and, from Phase 2, the summarizer | [Phase 1 step 7.8](phase-1-russetleaf-dev/plan.md#step-78-rollback-runbooks-and-drills) | Monthly in staging | Planned |
-| `docs/runbooks/rollback-platform.md` | Platform components (Loki, Argo CD, ...) | [Phase 1 step 7.8](phase-1-russetleaf-dev/plan.md#step-78-rollback-runbooks-and-drills) | Monthly in staging | Planned |
+| `docs/runbooks/rollback-platform.md` | Platform components (such as Loki and Argo CD) | [Phase 1 step 7.8](phase-1-russetleaf-dev/plan.md#step-78-rollback-runbooks-and-drills) | Monthly in staging | Planned |
 | `docs/runbooks/rollback-configuration.md` | Overlays, policies, routing | [Phase 1 step 7.8](phase-1-russetleaf-dev/plan.md#step-78-rollback-runbooks-and-drills) | Monthly in staging | Planned |
 | `docs/runbooks/rollback-opentofu.md` | OpenTofu changes | [Phase 1 step 7.8](phase-1-russetleaf-dev/plan.md#step-78-rollback-runbooks-and-drills) | Monthly in staging | Planned |
 | `docs/runbooks/rollback-talos.md` | Talos upgrades | [Phase 1 step 7.8](phase-1-russetleaf-dev/plan.md#step-78-rollback-runbooks-and-drills) | Quarterly, locally | Planned |

@@ -23,7 +23,7 @@ Each post gets a short AI-generated summary. Summaries must not slow down publis
 - **Summarizing inside WordPress on publish (synchronous):** simplest, but slows publishing, ties model outages to the admin screen, and cannot scale or be tested separately.
 - **WP-Cron or a Kubernetes CronJob polling for new posts:** no queue to manage, but adds latency and polling load, and gives no per-message retries or dead-letter queue.
 - **Calling Bedrock directly from the summarizer:** one less component, but no fallback, canaries, budgets or uniform metrics across models.
-- **A different gateway (e.g. a cloud-hosted router):** capable, but a third-party service in the request path; LiteLLM is open source and in-cluster.
+- **A different gateway (for example, a cloud-hosted router):** capable, but a third-party service in the request path; LiteLLM is open source and in-cluster.
 
 ## Consequences
 
@@ -34,7 +34,7 @@ Each post gets a short AI-generated summary. Summaries must not slow down publis
 
 ## When to revisit
 
-- Summaries become interactive (e.g. on-demand rewriting): consider a synchronous path through the same gateway.
+- Summaries become interactive (for example, on-demand rewriting): consider a synchronous path through the same gateway.
 - Many more AI features: consider a shared inference platform rather than one gateway config.
 
 ## Open items

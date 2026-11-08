@@ -32,7 +32,7 @@ The design used OpenCost on both clusters (with Kubecost as an optional alternat
 - **Kubecost (free tier or the EKS bundle):** adds billing reconciliation and built-in budget alerts, but runs more components (memory `rl-home-cp01` cannot spare) and would differ between sites; the Cost Explorer report covers reconciliation more simply.
 - **AWS billing only:** exact, but cannot show which workload in a cluster drives cost, and does not cover the home cluster's hardware.
 - **OpenCost only:** shows allocation but not the actual bill, and misses everything outside Kubernetes (NAT Gateways, RDS, S3, Bedrock).
-- **Long-term storage for EKS OpenCost data** (e.g. remote-writing Prometheus to the home cluster or a managed service): keeps per-demo allocation history, but adds plumbing for a cluster that runs a few hours at a time; the Cost Explorer report keeps the important number (actual cost per demo).
+- **Long-term storage for EKS OpenCost data** (for example, remote-writing Prometheus to the home cluster or a managed service): keeps per-demo allocation history, but adds plumbing for a cluster that runs a few hours at a time; the Cost Explorer report keeps the important number (actual cost per demo).
 
 ## Consequences
 

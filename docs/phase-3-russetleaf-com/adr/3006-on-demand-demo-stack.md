@@ -22,7 +22,7 @@ The full AWS design (EKS, RDS Multi-AZ with RDS Proxy, ElastiCache, NAT Gateways
 - **Always on:** the real production pattern, but about $515–575 a month.
 - **Route 53 failover routing** to the offline page: works, but needs health checks and DNS TTL waits; CloudFront's error fallback is instant and free.
 - **No AWS site; OpenTofu only (plan, Checkov and Infracost in CI, never applied):** costs nothing and still shows the design as reviewed code, but no live demo; a good interim step if Phase 3 is postponed.
-- **A smaller always-on AWS stack** (e.g. a single small EKS node and no RDS): cheaper, but no longer the production design the site exists to run.
+- **A smaller always-on AWS stack** (for example, a single small EKS node and no RDS): cheaper, but no longer the production design the site exists to run.
 
 ## Consequences
 

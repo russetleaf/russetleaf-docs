@@ -18,7 +18,7 @@ Do not run a service mesh. Cover a mesh's benefits with tools already in the des
 | What a mesh would add | How this design covers it |
 |---|---|
 | mTLS between services | Cilium **WireGuard** transparent encryption for pod traffic between nodes, plus TLS on every sensitive connection (WordPress → database, everything → AWS APIs, CloudFront → ALB) |
-| Layer-7 authorization | **CiliumNetworkPolicies** with layer-7 rules (e.g. the summarizer may only call WordPress's REST API) |
+| Layer-7 authorization | **CiliumNetworkPolicies** with layer-7 rules (for example, the summarizer may only call WordPress's REST API) |
 | Traffic shifting for canaries | **Argo Rollouts** through the Cilium Gateway ([ADR 1044](1044-cilium-gateway-api.md)) and the ALB for code; the **LiteLLM gateway's** canary split for models |
 | Retries, timeouts, circuit breaking | The **SQS** queue with retries and a dead-letter queue; LiteLLM's retries and fallbacks |
 | Per-service request metrics | **Hubble** HTTP metrics, ingress and ALB metrics, and the apps' own **OpenTelemetry** metrics |
@@ -40,9 +40,9 @@ Do not run a service mesh. Cover a mesh's benefits with tools already in the des
 ## When to revisit
 
 - Many more services calling each other (roughly ten or more), where per-service retries, timeouts and metrics become hard to manage without a mesh.
-- A requirement (e.g. compliance) to verify service identity on every connection.
+- A requirement (for example, compliance) to verify service identity on every connection.
 - Traffic between several clusters that needs consistent identity and encryption.
-- More memory on the home nodes (e.g. 16 GB), making Istio ambient mode affordable.
+- More memory on the home nodes (for example, 16 GB), making Istio ambient mode affordable.
 
 ## Open items
 

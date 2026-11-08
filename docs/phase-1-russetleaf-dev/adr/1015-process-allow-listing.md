@@ -34,7 +34,7 @@ Platform constraints:
 - **Custom SELinux policies:** large effort, limited Talos support, and AL2023's default permissive mode; little gain over seccomp, Falco and the read-only, non-root containers.
 - **KubeArmor:** enforcement through AppArmor, SELinux or BPF-LSM; depends on kernel features not guaranteed on Talos, and duplicates Tetragon, which fits the existing Cilium stack.
 - **Tetragon enforcement everywhere now:** blocks rather than detects, but costs memory on `rl-home-cp01` and can break workloads if an allow-list is wrong; better proven on EKS first.
-- **Detection only through the existing "shell in pod" rule:** catches shells but not other unexpected programs (e.g. `curl`, a miner).
+- **Detection only through the existing "shell in pod" rule:** catches shells but not other unexpected programs (for example, `curl`, a miner).
 
 ## Consequences
 

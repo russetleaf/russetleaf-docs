@@ -9,7 +9,7 @@
 
 The repos are public ([ADR 1030](1030-github-actions-ci.md)). The project's scripts already carried a GPL v3.0 license line, and `russetleaf-docs` now has the GPL v3.0 `LICENSE` they refer to. The GPL lets anyone copy, change and redistribute what it covers, which suits code, configuration and documentation that are published to be read and reused.
 
-It suits the brand less. The logo and the name identify the project and its author. If they were GPL, a copy of the site or a fork could present itself as RussetLeaf, with the same logo, and that would be allowed. The logo (with its icons and share image) will live in `russetleaf-wordpress/brand/` ([ADR 1025](1025-site-design-in-git.md)), inside a repo that is otherwise GPL.
+It suits the brand less. The logo and the name identify the project and its author. If they were GPL, a copy of the site or a fork could present itself as RussetLeaf, with the same logo, and that would be allowed. The logo (with its icons and share image) lives in `russetleaf-wordpress/brand/` ([ADR 1025](1025-site-design-in-git.md)), inside a repo that is otherwise GPL.
 
 ## Decision
 

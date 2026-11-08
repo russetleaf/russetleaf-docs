@@ -29,7 +29,7 @@ Most of this is already covered by tools in the design:
 - **Run the Kubescape CLI on demand** against each live cluster, from the workstation or the in-cluster CI runners, with nothing installed in the cluster:
     - frameworks: **NSA-CISA** and **MITRE ATT&CK**, plus the **RBAC** analysis
     - **monthly** on the home cluster, and **once per AWS demo** on EKS
-    - reports saved in `russetleaf-gitops/docs/` (e.g. `docs/security/kubescape-<site>-<date>.json` with a short Markdown summary), next to the kube-bench and Trivy reports; accepted findings explained in the summary
+    - reports saved in `russetleaf-gitops/docs/` (for example, `docs/security/kubescape-<site>-<date>.json` with a short Markdown summary), next to the kube-bench and Trivy reports; accepted findings explained in the summary
 
 ## Alternatives considered
 
@@ -46,7 +46,7 @@ Most of this is already covered by tools in the design:
 ## When to revisit
 
 - More memory on the home nodes, making the operator affordable for continuous posture monitoring.
-- A requirement for continuous compliance reporting (e.g. an audit).
+- A requirement for continuous compliance reporting (for example, an audit).
 - Trivy Operator or Falco being removed, leaving the operator's other features uncovered.
 
 ## Open items

@@ -53,10 +53,10 @@ The summarizer authenticates to WordPress with an **application password** store
 - Models behind the gateway:
     - **Amazon Bedrock: Claude Haiku** (default)
     - **Amazon Bedrock: Amazon Nova Lite** (lower-cost alternative)
-    - **Self-hosted model** served by **llama.cpp** (OpenAI-compatible server), e.g. a 3B model such as Qwen2.5-3B or Llama 3.2 3B, 4-bit quantized
+    - **Self-hosted model** served by **llama.cpp** (OpenAI-compatible server), for example, a 3B model such as Qwen2.5-3B or Llama 3.2 3B, 4-bit quantized
 - The gateway handles:
-    - **routing and fallback** (e.g. Bedrock first, the self-hosted model if Bedrock fails or is throttled)
-    - **canary splits** for model changes (e.g. send 10% of requests to a new model, then compare quality scores and cost before switching)
+    - **routing and fallback** (for example, Bedrock first, the self-hosted model if Bedrock fails or is throttled)
+    - **canary splits** for model changes (for example, send 10% of requests to a new model, then compare quality scores and cost before switching)
     - **rate limits and spending budgets** per app
 - The self-hosted model runs on a **dedicated LLM node**, `rl-home-cp02`:
     - The node carries the label `workload=llm` and the taint `dedicated=llm:NoSchedule`, so only the model server (plus cluster-wide agents such as node-exporter) runs there.
@@ -90,7 +90,7 @@ The summarizer reports **OpenTelemetry metrics** to Prometheus, labeled by model
 - estimated **cost per summary** and per day
 - **queue depth** and age of the oldest message (from SQS)
 
-Prometheus also collects the gateway's metrics (requests, spend and fallbacks per model) and **llama.cpp's built-in metrics** (tokens per second, requests waiting). A **Grafana dashboard** shows these alongside the WordPress metrics, the LLM node's CPU and memory, and the LLM node's cost from OpenCost. **Alertmanager** alerts on error spikes, messages in the dead-letter queue, the self-hosted model being down, and daily Bedrock spend over a set limit, posting them to `#rl-mlops` (and `#rl-critical` for criticals). The Argo Rollouts canary analysis uses the same metrics.
+Prometheus also collects the gateway's metrics (requests, spend and fallbacks per model) and **llama.cpp's built-in metrics** (tokens per second, requests waiting). A **Grafana dashboard** shows these alongside the WordPress metrics, the LLM node's CPU and memory, and the LLM node's cost from OpenCost. **Alertmanager** alerts on error spikes, messages in the dead-letter queue, the self-hosted model being down, and daily Bedrock spend over a set limit, posting them to `#rl-mlops` (and `#rl-critical` for critical alerts). The Argo Rollouts canary analysis uses the same metrics.
 
 ## MLOps lifecycle
 
@@ -160,7 +160,7 @@ Rolling back a prompt or model does not fix summaries already saved. Each summar
 
 ### `russetleaf-llm-summarizer`: the standalone MLOps project
 
-```
+```text
 russetleaf-llm-summarizer/
   src/                      # SQS consumer, content source/sink adapters, OpenAI-compatible model client,
                             #   OpenTelemetry metrics

@@ -46,7 +46,7 @@ Constraints: `rl-home-cp01` of the home lab has 8 GB of RAM and already uses abo
 
 - Memory becomes a blocker (originally `rl-home-cp01`; since [ADR 1020](1020-three-node-ha-home-cluster.md), `rl-home-cp03` hosts Loki): consider VictoriaLogs, or shorter retention.
 - Log volume grows enough that Loki's single-binary mode struggles: move to its scalable deployment mode (on AWS) or reduce what is collected.
-- A requirement for long-term log retention (e.g. an audit): add S3 lifecycle transitions to cheaper storage classes.
+- A requirement for long-term log retention (for example, an audit): add S3 lifecycle transitions to cheaper storage classes.
 
 ## Open items
 

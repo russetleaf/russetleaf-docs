@@ -11,7 +11,7 @@
 
 ## Decision
 
-- **Fine-tuning moves into Phase 2**, run on **one rented spot GPU instance** in the russetleaf-home account (e.g. a g6.xlarge), created for a training run and destroyed afterwards.
+- **Fine-tuning moves into Phase 2**, run on **one rented spot GPU instance** in the russetleaf-home account (for example, a g6.xlarge), created for a training run and destroyed afterwards.
 - **How a run works:** a `train` workflow in `russetleaf-llm-summarizer` (on the home runners) assumes a narrow **training-launcher role** and starts an instance from a OpenTofu-managed **launch template** (a GPU-ready image, an instance profile limited to reading the DVC training data and writing to the MLflow artifact bucket, outbound-only networking, a maximum run time). The instance runs the **training container**: fetch the DVC-versioned dataset, **LoRA** fine-tune the 3B base model, **evaluate against the base** (including the adversarial cases), convert to GGUF, and **register** the result in the home MLflow as a `local-summarizer` version with its scores and lineage. It then **terminates itself**; the workflow checks it is gone.
 - **The challenger at home:** a version that beats the base becomes the **challenger** on `rl-home-cp02`, gets a canary share through the gateway, and is promoted only if online evaluation holds up for a week ([ADR 2003](2003-self-hosted-model-on-cp02.md)).
 - **Drift-triggered retraining:** a sustained `InputDriftDetected` or `SummaryQualityDegraded`, or enough new feedback, **opens a retraining pull request** with the drift report and the proposed dataset version; merging it starts a training run. A person decides; nothing retrains on its own.

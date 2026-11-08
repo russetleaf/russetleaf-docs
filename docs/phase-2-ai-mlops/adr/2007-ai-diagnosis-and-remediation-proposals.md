@@ -21,7 +21,7 @@
     - At most one open proposal per incident and a daily limit; a single setting (the **kill switch**) turns proposals off.
     - Retrieved documentation is the project's own and reviewed; logs and events are untrusted text and are never treated as instructions.
 - **Evaluation:** the incident scenarios from [ADR 2006](2006-ai-operations-assistant.md) and Phase 1's chaos experiments, run in staging, score each run: correct diagnosis, correct runbook cited, whether the proposed pull request is one the operator would merge, and **any harmful proposal (target: none)**. Results are tracked in MLflow, like model evaluations.
-- **Not in this decision (a documented later extension):** direct actions (e.g. restarting a Deployment, aborting a canary, scaling within quota) after an operator approves them in Slack, and automatic actions for a few reversible cases. They need their own decision, based on the evaluation results.
+- **Not in this decision (a documented later extension):** direct actions (for example, restarting a Deployment, aborting a canary, scaling within quota) after an operator approves them in Slack, and automatic actions for a few reversible cases. They need their own decision, based on the evaluation results.
 
 ## Alternatives considered
 

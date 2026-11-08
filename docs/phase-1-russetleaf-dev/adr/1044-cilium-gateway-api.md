@@ -39,7 +39,7 @@ The cluster already runs **Cilium** with kube-proxy replacement ([ADR 1027](1027
 
 ## When to revisit
 
-- Cilium's Gateway API lacks a feature the site needs (e.g. a specific rewrite or header rule): consider Envoy Gateway or Traefik.
+- Cilium's Gateway API lacks a feature the site needs (for example, a specific rewrite or header rule): consider Envoy Gateway or Traefik.
 - The AWS site moves to the Gateway API: use `HTTPRoute`s on both sites.
 
 ## Open items

@@ -26,7 +26,7 @@ Four had gaps:
     - New audit alerts: **`KubeWorkloadCreatedOutsideArgoCD`** (Pods, Deployments, DaemonSets, StatefulSets, Jobs or CronJobs created in production or platform namespaces by anyone other than Argo CD and the expected controllers), **`KubeAdmissionWebhookChanged`** (validating or mutating webhook configurations created, changed or deleted by anyone other than Argo CD and the components that manage their own webhooks, such as Kyverno and cert-manager's CA injector) and **`KubeTokenSecretCreated`** (a long-lived service-account token Secret).
     - Kyverno **blocks** Secrets of type `kubernetes.io/service-account-token` outside an allow-list (none expected).
 - **Denial of service:**
-    - **kubelet limits** on every node: `podPidsLimit` (e.g. 4096; tuned after measuring), and **hard eviction thresholds** for memory, disk and inodes, alongside the existing `systemReserved` and `kubeReserved`.
+    - **kubelet limits** on every node: `podPidsLimit` (for example, 4096; tuned after measuring), and **hard eviction thresholds** for memory, disk and inodes, alongside the existing `systemReserved` and `kubeReserved`.
     - **Ephemeral storage:** the namespace LimitRange sets default ephemeral-storage requests and limits, and the ResourceQuota caps the namespace total.
     - **API server throttling:** keep Kubernetes' **API Priority and Fairness** defaults, and alert (`KubeAPIRequestsRejected`) when the API server rejects requests because of it.
 - **Privilege escalation through RBAC:**
@@ -46,14 +46,14 @@ Four had gaps:
 
 - Each of the eight threat areas has named controls, a detection, and a test.
 - A few more audit alerts to tune: controllers that create objects (operators, KEDA, Argo Rollouts, the MariaDB Operator) go on the expected-identity list.
-- Third-party charts with broad RBAC need allow-list entries with reasons; some upgrades will need a review.
+- Third-party charts with broad RBAC need allow-list entries with reasons; some upgrades need a review.
 - The PID limit must be high enough for PHP-FPM or Apache workers and the model server; it is measured before enforcing.
 - About **8–9 hours** more across the two plans.
 
 ## When to revisit
 
 - A workload legitimately needs more processes than the PID limit allows.
-- Kubernetes adds built-in protections that make a custom rule redundant (e.g. stricter defaults for token Secrets).
+- Kubernetes adds built-in protections that make a custom rule redundant (for example, stricter defaults for token Secrets).
 - The cluster gets other users or tenants: consider custom API Priority and Fairness levels per tenant.
 
 ## Open items

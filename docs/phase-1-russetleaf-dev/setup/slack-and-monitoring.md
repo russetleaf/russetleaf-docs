@@ -8,20 +8,20 @@ Slack's and the services' web pages change over time. These steps name each sett
 
 - **Bitwarden** (the project's password manager) open, with entries ready for Slack, the bot token, the heartbeat service and the uptime checker.
 - The **Slack app** on the operator's phone, for the `#rl-critical` notifications.
-- The two **YubiKeys** and the operator's **Google account** (in Advanced Protection), for each account's sign-in ([account sign-in setup guide](account-sign-in.md)).
+- The two **YubiKeys** and the operator's **Google Account** (in Advanced Protection), for each account's sign-in ([account sign-in setup guide](account-sign-in.md)).
 
-## Part 1: the Slack workspace
+## Part 1: The Slack workspace
 
 1. **Create the workspace** on Slack's "create a new workspace" page, with the operator's email address: name it **RussetLeaf**, with a workspace URL such as `russetleaf.slack.com`. The **free plan** is enough (90 days of history, up to 10 apps; the project uses about five).
-2. **Secure the owner account:** create it with **Sign in with Google**, so every sign-in goes through the Google account's Advanced Protection, and set no separate Slack password. Slack's own two-factor authentication offers only codes or SMS, so it is needed only if Slack requires a password: then generate the password in Bitwarden, turn on two-factor authentication with Google Authenticator, and save the **backup codes** in Bitwarden ([account sign-in setup guide](account-sign-in.md)).
+2. **Secure the owner account:** create it with **Sign in with Google**, so every sign-in goes through the Google Account's Advanced Protection, and set no separate Slack password. Slack's own two-factor authentication offers only codes or SMS, so it is needed only if Slack requires a password: then generate the password in Bitwarden, turn on two-factor authentication with Google Authenticator, and save the **backup codes** in Bitwarden ([account sign-in setup guide](account-sign-in.md)).
 3. **Keep the workspace closed:** in the workspace settings, make sure people can join **only by invitation**.
 4. **Create the eight channels:**
 
     | Channel | Used for |
     |---|---|
     | `#rl-critical` | Critical alerts from both sites; the only channel with phone notifications |
-    | `#rl-dev-alerts` | russetleaf.dev warnings and criticals |
-    | `#rl-com-alerts` | russetleaf.com warnings and criticals (Phase 3) |
+    | `#rl-dev-alerts` | russetleaf.dev warning and critical alerts |
+    | `#rl-com-alerts` | russetleaf.com warning and critical alerts (Phase 3) |
     | `#rl-deploys` | Syncs, rollouts, rollbacks and version bumps |
     | `#rl-security` | Falco, Kyverno, audit alerts, GuardDuty and Security Hub findings |
     | `#rl-mlops` | The AI components (Phase 2) |
@@ -32,7 +32,7 @@ Slack's and the services' web pages change over time. These steps name each sett
 
 5. **Phone notifications:** in the Slack app's notification preferences, set mobile notifications to **nothing** by default, then set `#rl-critical` to notify on **every new message**. Everything else is read when convenient.
 
-## Part 2: the bot (`russetleaf-bot`)
+## Part 2: The bot (`russetleaf-bot`)
 
 The clusters and workflows post through one custom Slack app, with a single permission: posting messages to channels it has been invited to.
 
@@ -62,7 +62,7 @@ The clusters and workflows post through one custom Slack app, with a single perm
 
 Incoming webhooks, which Falcosidekick and Policy Reporter use instead of the token, are added to this app when those tools are installed (Policy Reporter in step 6.1, Falcosidekick in step 7.1).
 
-## Part 3: the GitHub app for Slack
+## Part 3: The GitHub app for Slack
 
 1. **Add the GitHub app** to the workspace from Slack's app directory, and connect the operator's GitHub account when it asks.
 2. **Subscribe `#rl-deploys`** to the project's repos, starting with this one:
@@ -73,7 +73,7 @@ Incoming webhooks, which Falcosidekick and Policy Reporter use instead of the to
 
     Each code repo is subscribed the same way when step 1.1 creates it.
 
-## Part 4: the outside monitoring services
+## Part 4: The outside monitoring services
 
 Two free services watch the platform from outside, so a dead cluster or a broken internet connection still raises an alert ([Alerting and notifications](../design.md#alerting-and-notifications-slack)). Their checks are created in step 4.4; this part creates the accounts and their Slack connections.
 

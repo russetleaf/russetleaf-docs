@@ -23,7 +23,7 @@
 ## Alternatives considered
 
 - **k8sgpt or HolmesGPT:** focused troubleshooting tools that also work well; kagent is Kubernetes-native (agents and tools as resources managed by Argo CD), part of the CNCF, and extensible with the same tools across Prometheus, Argo CD and Cilium.
-- **A general personal-assistant agent (e.g. OpenClaw):** broad access to the machine it runs on and third-party skills, without the scoped, cluster-native permissions this needs.
+- **A general personal-assistant agent (for example, OpenClaw):** broad access to the machine it runs on and third-party skills, without the scoped, cluster-native permissions this needs.
 - **No operations agent:** simpler, but leaves out a widely discussed use of agentic AI in operations, which this project can show safely.
 - **Letting the agent fix problems:** faster in theory, but an agent acting on untrusted log text with write access is too risky; suggestions keep a person in control.
 
@@ -36,7 +36,7 @@
 
 ## When to revisit
 
-- Diagnoses prove reliable over months: consider allowing low-risk actions (e.g. restarting a pod) behind explicit approval.
+- Diagnoses prove reliable over months: consider allowing low-risk actions (for example, restarting a pod) behind explicit approval.
 - kagent stops being maintained: replace it with k8sgpt or HolmesGPT behind the same gateway and permissions.
 
 ## Open items

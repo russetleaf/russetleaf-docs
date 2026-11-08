@@ -23,7 +23,7 @@ High availability (HA) means a site keeps working when a single component (a nod
 | Network path | One home internet connection and power supply; cloudflared has 2 replicas, but on the same box | CloudFront and a multi-zone ALB |
 | Deliberate demo cuts | — | **One NAT Gateway** instead of three |
 | Availability over time | Up 24/7, with single points of failure everywhere | **Only during demos**; the always-on edge serves an offline page otherwise |
-| Region | One home | One AWS region (us-east-1) |
+| Region | One home | One AWS region (`us-east-1`) |
 
 ## Decision
 
@@ -66,7 +66,7 @@ High availability (HA) means a site keeps working when a single component (a nod
 ## Consequences
 
 - Both sites' limits are explicit, with numbers, rather than implied.
-- russetleaf.dev will have outages when the home power or the internet fails (since [ADR 1020](1020-three-node-ha-home-cluster.md), not when a single node or disk fails); the uptime check and dead man's switch alert on them.
+- russetleaf.dev has outages when the home power or the internet fails (since [ADR 1020](1020-three-node-ha-home-cluster.md), not when a single node or disk fails); the uptime check and dead man's switch alert on them.
 - russetleaf.com runs the full HA design only when it is needed, without paying for it around the clock.
 - Recovery depends on the backups, OpenTofu and GitOps working, which makes the monthly restore test and occasional rebuild rehearsal important.
 

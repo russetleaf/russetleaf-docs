@@ -42,7 +42,7 @@ The image pipelines already had gitleaks, Checkov, Trivy (critical vulnerabiliti
 ## When to revisit
 
 - Kyverno's support for verifying GitHub attestation bundles changes, or GitHub's attestation format changes.
-- The project needs SLSA Build Level 3 guarantees explicitly (e.g. for a customer requirement).
+- The project needs SLSA Build Level 3 guarantees explicitly (for example, for a customer requirement).
 - Chainguard or Wolfi offers pinned versions on a free tier.
 
 ## Open items

@@ -13,14 +13,14 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 ## Decision
 
 - **Accounts and OUs:** Management (dedicated, new); Security OU: Security Tooling, Log Archive, Backup; Infrastructure OU: russetleaf-infra (OpenTofu state and CI entry points); Workloads OU: russetleaf-home and russetleaf-com. **Every account is created new by the Organization**, russetleaf-home included. Two further OUs from AWS's recommended structure, normally empty: **Policy Staging** (new SCPs and RCPs are attached here first, with a test account, before the real OUs) and **Suspended** (a deny-all SCP; moving a compromised account here is the first containment step).
-- **Guardrails:** SCPs (no leaving the Organization; no disabling security services; us-east-1 and us-west-2 only; no member-account root actions; no IAM users or access keys except a named exception for the home cluster's scoped keys; Log Archive and Backup buckets protected); **resource control policies (RCPs)** forming a data perimeter (below); **declarative policies** for EC2 settings; centralized root access management; IAM Identity Center with MFA; tag policies; alternate security contacts; per-account and consolidated budgets.
+- **Guardrails:** SCPs (no leaving the Organization; no disabling security services; `us-east-1` and `us-west-2` only; no member-account root actions; no IAM users or access keys except a named exception for the home cluster's scoped keys; Log Archive and Backup buckets protected); **resource control policies (RCPs)** forming a data perimeter (below); **declarative policies** for EC2 settings; centralized root access management; IAM Identity Center with MFA; tag policies; alternate security contacts; per-account and consolidated budgets.
 - **Resource control policies (RCPs)** on every OU, limiting who can access the Organization's resources whatever their own resource policies say:
     - **Organization-only access:** S3, KMS, SQS and Secrets Manager resources can be accessed only by identities in the Organization (`aws:PrincipalOrgID`).
     - **AWS services only on the Organization's behalf:** AWS service principals (CloudFront serving media, S3 replication, CloudTrail and Config delivery) are allowed only when acting for the Organization (`aws:SourceOrgID`), which prevents confused-deputy access.
     - **TLS required** for every request to those services (`aws:SecureTransport`), organization-wide rather than in each policy.
     - **STS:** roles can be assumed only by identities in the Organization, or through federation the design uses (the GitHub OIDC provider, IAM Identity Center and, from Phase 1 step 9.1, the home cluster's OIDC issuer).
     - Every cross-account access the design needs (the seed Job, replication to Backup, OpenTofu state) stays inside the Organization, so the RCPs block nothing intended. RCPs do not apply to the management account, which runs nothing.
-- **Management policies:** tag policies; an **AI services opt-out policy** (AWS AI services may not store or use the Organization's content to improve their models); a **chat applications policy** (Amazon Q Developer in chat applications limited to the project's Slack workspace). Newer policy types (e.g. for Security Hub or Inspector) are reviewed when building.
+- **Management policies:** tag policies; an **AI services opt-out policy** (AWS AI services may not store or use the Organization's content to improve their models); a **chat applications policy** (Amazon Q Developer in chat applications limited to the project's Slack workspace). Newer policy types (for example, for Security Hub or Inspector) are reviewed when building.
 - **Declarative policies:** organization-wide EC2 settings that hold even if an account's own settings are changed: block public access to AMIs and EBS snapshots, and IMDSv2 required by default.
 - **Security services, delegated to Security Tooling:** Security Hub (AWS Foundational Security Best Practices and CIS AWS Foundations v3.0; critical and high findings to Slack), **EventBridge sign-in alerts** for the management account's root user and the break-glass permission set, AWS Config (focused recording, with daily rather than continuous recording for the high-churn demo resource types in russetleaf-com, and a CIS conformance pack), IAM Access Analyzer (external-access findings, plus policy checks in the OpenTofu pipeline), organization GuardDuty, an organization CloudTrail trail into Log Archive (management events, plus S3 data events for the OpenTofu state and backup buckets only). Inspector optional; Macie and Detective not used.
 - **Resource practices:** account-level S3 Block Public Access, TLS-only bucket policies, bucket-owner-enforced ownership; EBS encryption by default; KMS customer-managed keys for logs and backups; snapshot and AMI public-access blocks; IMDSv2 with hop limit 1 on EKS nodes; VPC endpoints, flow logs, empty default security groups, default VPCs removed.
@@ -29,7 +29,7 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 
 ## Alternatives considered
 
-- **Single account (the previous design):** simplest and cheapest, but a compromise or mistake can reach everything; no separation of security tooling and logs from workloads; does not match the SRA.
+- **Single account (the previous design):** simplest and cheapest, but a compromise or mistake can reach everything; no separation of security tools and logs from workloads; does not match the SRA.
 - **AWS Control Tower:** sets up a similar landing zone automatically, with guardrails and account vending, but adds managed resources and costs, and keeps much of the landing zone's configuration outside the project's code and review. A good choice for a team; an OpenTofu-managed Organization defines the same structure explicitly, in version control.
 - **The lean option** (account structure and free guardrails only, without Security Hub and Config): saves about $5–15/month, but loses continuous posture checks and the central findings view the SRA is built around.
 - **Amazon Macie** (discovers sensitive data in S3 and flags bucket exposure): the only sensitive data is already known and located (commenters' emails and password hashes in the database dumps), and is protected by a customer-managed key, lifecycle limits, Object Lock and CloudTrail data events ([ADR 1043](1043-database-encryption.md), [ADR 1042](1042-s3-versioning-lifecycle-and-storage-classes.md)); Macie would mostly confirm the record of processing, at a per-GB scanning cost. Added if russetleaf.com becomes always-on or holds user data (below).
@@ -52,7 +52,7 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 
 ## Consequences
 
-- Each site, the logs, the backups and the security tooling are isolated; a compromised workload account cannot delete logs or backups, and cannot turn off security services (SCPs).
+- Each site, the logs, the backups and the security tools are isolated; a compromised workload account cannot delete logs or backups, and cannot turn off security services (SCPs).
 - A **data perimeter**: SCPs limit what the Organization's identities can do, and RCPs limit who can reach its resources, so a mistaken bucket or key policy cannot expose data outside the Organization.
 - About **$5–15/month** more (Security Hub, Config, KMS), included in the home lab's always-on total of about **$14–33/month** (with `rl-home-cp03`'s electricity from [ADR 1020](1020-three-node-ha-home-cluster.md); see the Phase 1 design's cost table).
 - More moving parts: cross-account access for state, replication and the seed Job; per-account CI roles; per-account quotas; SES access per account (and Bedrock model access in russetleaf-home, Phase 2).
@@ -64,7 +64,7 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 - The project becomes a team effort: consider Control Tower for account vending and drift detection.
 - Config costs grow with the demo stack despite daily recording: narrow recording further, or record only during demos.
 - russetleaf.com becomes always-on or holds user data: add Macie, Detective and Inspector, and consider a separate network account.
-- A SIEM is connected (e.g. Splunk or OpenSearch Security Analytics), or log volume makes querying the raw Log Archive painful: adopt Security Lake.
+- A SIEM is connected (for example, Splunk or OpenSearch Security Analytics), or log volume makes querying the raw Log Archive painful: adopt Security Lake.
 
 ## Open items
 

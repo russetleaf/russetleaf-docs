@@ -34,7 +34,7 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | Decision | Recommendation | Why it matters |
 |---|---|---|
 | **Summarizer language** | **Python** (boto3 for SQS, the `openai` client for the gateway, OpenTelemetry SDK). | Fastest path; the most common language for MLOps work. |
-| **Models** | **Claude Haiku** (default) and **Amazon Nova Lite** on Bedrock, plus a 4-bit **3B model** (e.g. Qwen2.5-3B or Llama 3.2 3B) on `rl-home-cp02` with llama.cpp. | Sets the budgets, the evaluation set and `rl-home-cp02`'s memory use. |
+| **Models** | **Claude Haiku** (default) and **Amazon Nova Lite** on Bedrock, plus a 4-bit **3B model** (for example, Qwen2.5-3B or Llama 3.2 3B) on `rl-home-cp02` with llama.cpp. | Sets the budgets, the evaluation set and `rl-home-cp02`'s memory use. |
 | **AWS access for the AI components** | Pod roles through the cluster's OIDC provider if Phase 1 step 9.1 (keyless AWS access) is done; otherwise scoped IAM keys, like the rest of Phase 1. | Avoids adding new static keys if they can be avoided. |
 
 ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture), 2003 (self-hosted model on `rl-home-cp02`), 2004 (agentic AI delivery), 2005 (fine-tuning on a rented GPU), 2006 (AI operations assistant) and 2007 (AI diagnosis and remediation proposals), in `adr/` (see the [overview's index](../overview.md#architecture-decision-records)).
@@ -65,11 +65,11 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 **Do:** in `russetleaf-infra`, add the **`sqs-queue`** (with dead-letter queue) and **`bedrock-access`** modules, then in `envs/home`: the **summary queue** and dead-letter queue (production and staging), the **model mirror bucket** (with `prevent_destroy`), the **Bedrock budget alert**, and credentials for WordPress (send to the queue), the summarizer (read from the queue) and LiteLLM (`bedrock:InvokeModel` on the chosen models only), each in Secrets Manager (or pod roles, if Phase 1 step 9.1 is done). Confirm access to Claude Haiku and Amazon Nova Lite in the chosen region (Anthropic models may need a one-time use-case form in the console). Extend the ci stand-ins with SQS (LocalStack, or **ElasticMQ** if LocalStack's terms do not suit). Request a **GPU quota** for G-family spot instances in russetleaf-home now if the fine-tuning steps (4.8–4.10) are planned; approval can take days.
 
-**Test:** each credential's allowed action works and a disallowed one fails (e.g. the summarizer cannot send to the queue); `aws bedrock-runtime converse` with the LiteLLM credential returns a response; the budget alert exists; deleting the model mirror bucket is refused by the plan.
+**Test:** each credential's allowed action works and a disallowed one fails (for example, the summarizer cannot send to the queue); `aws bedrock-runtime converse` with the LiteLLM credential returns a response; the budget alert exists; deleting the model mirror bucket is refused by the plan.
 
 ### Step 1.3: `rl-home-cp02` as the LLM node
 
-**Do:** in `russetleaf-infra/envs/home`, label `rl-home-cp02` `workload=llm` and taint it `dedicated=llm:NoSchedule`; give the ARC runners a matching toleration so they keep running there, next to the model; move anything else that ran on `rl-home-cp02` in Phase 1 (e.g. Backstage overflow) back to `rl-home-cp01` and `rl-home-cp03`; recheck the kubelet PID limit against llama.cpp's process count. Update the memory budget in the Phase 2 design.
+**Do:** in `russetleaf-infra/envs/home`, label `rl-home-cp02` `workload=llm` and taint it `dedicated=llm:NoSchedule`; give the ARC runners a matching toleration so they keep running there, next to the model; move anything else that ran on `rl-home-cp02` in Phase 1 (for example, Backstage overflow) back to `rl-home-cp01` and `rl-home-cp03`; recheck the kubelet PID limit against llama.cpp's process count. Update the memory budget in the Phase 2 design.
 
 **Test:** `kubectl describe node rl-home-cp02` shows the label and taint; only the runners and node agents run on `rl-home-cp02`; every node stays under its memory budget.
 
@@ -146,15 +146,15 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 3.1: llama.cpp model server
 
-**Do:** `platform/llm-serving/`: llama.cpp server (CPU build) with a toleration and node selector for `rl-home-cp02`; an init container that downloads a 4-bit **3B model** (e.g. Qwen2.5-3B or Llama 3.2 3B) into a local-path volume (mirror the file in S3 so rebuilds do not depend on Hugging Face); metrics enabled; memory limits leaving ~1 GB free on the node, and a **CPU limit leaving about one core free**, because `rl-home-cp02` is also an etcd member (watch etcd's latency metrics while summaries run).
+**Do:** `platform/llm-serving/`: llama.cpp server (CPU build) with a toleration and node selector for `rl-home-cp02`; an init container that downloads a 4-bit **3B model** (for example, Qwen2.5-3B or Llama 3.2 3B) into a local-path volume (mirror the file in S3 so rebuilds do not depend on Hugging Face); metrics enabled; memory limits leaving ~1 GB free on the node, and a **CPU limit leaving about one core free**, because `rl-home-cp02` is also an etcd member (watch etcd's latency metrics while summaries run).
 
 **Test:** the pod runs **only** on `rl-home-cp02`; an OpenAI-style request returns a summary; record the time per summary and memory use in the decision log.
 
 ### Step 3.2: Gateway routing to the local model
 
-**Do:** add the local model to LiteLLM: fallback (Bedrock first, local if Bedrock fails), and a canary split (e.g. 10% of summary requests to the local model); llama.cpp metrics and model-down alert in Grafana.
+**Do:** add the local model to LiteLLM: fallback (Bedrock first, local if Bedrock fails), and a canary split (for example, 10% of summary requests to the local model); llama.cpp metrics and model-down alert in Grafana.
 
-**Test:** with Bedrock blocked (e.g. a wrong model ID in a test config), requests fall back to the local model; with the split on, about 10% of summaries show the local model's name in the metrics.
+**Test:** with Bedrock blocked (for example, a wrong model ID in a test config), requests fall back to the local model; with the split on, about 10% of summaries show the local model's name in the metrics.
 
 ## Stage 4: MLOps pipeline
 
@@ -210,7 +210,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Do** ([ADR 2005](adr/2005-fine-tuning-on-a-rented-gpu.md)):
 
 - **Training container** in `russetleaf-llm-summarizer/training/`: fetch the DVC-versioned training set; **LoRA fine-tune** the 3B base model; **evaluate against the base** on the evaluation set (including the adversarial cases); convert to GGUF; **register** the result in MLflow as a `local-summarizer` version with its scores, dataset version and Git commit; propose it as **challenger** if it beats the base. Build, scan and sign it like the summarizer image.
-- **Infrastructure** in `russetleaf-infra/envs/home`: a **launch template** for one spot GPU instance (e.g. g6.xlarge; a GPU-ready image; outbound-only security group; a **maximum run time** after which the instance shuts itself down), an **instance profile** that can only read the DVC training data and write to the MLflow artifact bucket, and a **training-launcher role** for the `train` workflow (GitHub OIDC; may start and stop instances from that template only). The instance reaches the home MLflow through Cloudflare Access with a service token kept in Secrets Manager.
+- **Infrastructure** in `russetleaf-infra/envs/home`: a **launch template** for one spot GPU instance (for example, g6.xlarge; a GPU-ready image; outbound-only security group; a **maximum run time** after which the instance shuts itself down), an **instance profile** that can only read the DVC training data and write to the MLflow artifact bucket, and a **training-launcher role** for the `train` workflow (GitHub OIDC; may start and stop instances from that template only). The instance reaches the home MLflow through Cloudflare Access with a service token kept in Secrets Manager.
 - **`train` workflow** (on the home runners, started by hand or by a merged retraining pull request): assume the launcher role, start the instance with the dataset version and base model as parameters, wait for the run to register its result, then confirm the instance has terminated.
 - **Cost alert:** `TrainingInstanceRunningLong` when a training instance has been running longer than expected, to `#rl-costs` and `#rl-mlops`.
 - Before generating training data with a teacher model, **check the provider's terms**; use an open-weights teacher if in doubt.
@@ -227,7 +227,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 **Do:** when `InputDriftDetected` or `SummaryQualityDegraded` stays firing for a set period, or enough new feedback has accumulated, an Argo Workflows job **opens a retraining pull request** in `russetleaf-llm-summarizer` with the Evidently drift report, the proposed DVC dataset version and the expected cost; merging it starts the `train` workflow (step 4.8). A person always decides; nothing retrains on its own.
 
-**Test:** forcing drift (e.g. replaying a batch of unusually long or off-topic posts in staging) opens a retraining pull request with the report attached; merging it starts a training run; closing it starts nothing.
+**Test:** forcing drift (for example, replaying a batch of unusually long or off-topic posts in staging) opens a retraining pull request with the report attached; merging it starts a training run; closing it starts nothing.
 
 ## Stage 5: Platform integration and finishing
 

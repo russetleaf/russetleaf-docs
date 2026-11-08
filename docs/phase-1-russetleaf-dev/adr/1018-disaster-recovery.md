@@ -22,7 +22,7 @@ The design could already rebuild most things from code (OpenTofu, GitOps, image 
 
 ## Decision
 
-- **A separate backup AWS account** (in an AWS Organization), holding **S3 Object Lock** buckets in **us-west-2** (30-day retention; governance mode first, compliance mode once proven), receiving **S3 replication** from the main account's backup, OpenTofu state, media and CloudTrail buckets through a write-only replication role. Access through a separate login kept in the break-glass kit.
+- **A separate backup AWS account** (in an AWS Organization), holding **S3 Object Lock** buckets in **`us-west-2`** (30-day retention; governance mode first, compliance mode once proven), receiving **S3 replication** from the main account's backup, OpenTofu state, media and CloudTrail buckets through a write-only replication role. Access through a separate login kept in the break-glass kit.
 - **russetleaf.com's database:** a logical dump at every `demo-down`, stored in its backup bucket and replicated (instead of cross-account snapshot copies, which would need KMS key sharing).
 - **Daily repo mirrors** (`git bundle`) of every repo (the four code repos and `russetleaf-docs`) into the backup account, through a write-only OIDC role. Images and charts are rebuilt rather than copied.
 - **A copy outside AWS:** a daily job on the home cluster encrypts the latest MariaDB dump and etcd snapshot with **GPG** (the cluster holds only the public key; the private key is kept only in the break-glass kit) and uploads them with `rclone` to a **Cloudflare R2** bucket with a **bucket lock** rule of 30 days (objects deleted after 35). It covers the worst case, losing or compromising the AWS management account and with it the whole Organization. The project already has a Cloudflare account, R2 has no download charges, and data this small fits its free tier (check current terms); the bucket and its lock rule are managed with OpenTofu's Cloudflare provider where supported. The R2 token is limited to that bucket and kept in Secrets Manager.
@@ -44,7 +44,7 @@ The design could already rebuild most things from code (OpenTofu, GitOps, image 
 - **Velero** (backs up Kubernetes objects, and volumes through CSI snapshots or file-level copies with Kopia, to S3): the usual tool for cluster backups and namespace-level restores, but most of what it captures is already in Git (and restoring it can conflict with Argo CD); local-path-provisioner has no snapshot support, so volume backups would be file copies of a running database, which are not consistent without freeze hooks, whereas the logical dumps are; and it adds a server, a per-node agent (roughly 100–300 MB per node) and a second backup system to monitor and drill. Worth adopting if stateful workloads without their own backup tools appear, or if the cluster moves to storage with snapshots.
 - **Kasten K10** (Veeam): application-aware backups with a policy UI; free for small clusters, but heavier than Velero, with the same overlap with GitOps and the database dumps.
 - **Copies encrypted with the source accounts' keys** (the replication default when SSE-KMS objects are included without a destination key): simpler key policies, but a lost or compromised workload account, or a key scheduled for deletion, would make its copies unreadable.
-- **Longer retention for the daily copies instead of monthly ones** (e.g. 1 year of daily copies): finer recovery points for old damage, but about twelve times the storage and the same personal-data trade-off; monthly is enough for damage found late.
+- **Longer retention for the daily copies instead of monthly ones** (for example, 1 year of daily copies): finer recovery points for old damage, but about twelve times the storage and the same personal-data trade-off; monthly is enough for damage found late.
 - **No copies older than 35 days:** minimizes how long personal data is kept, but leaves nothing to restore from if corruption or a compromise is found late.
 - **Mirroring images to a second registry:** unnecessary, since images are reproducible from the mirrored source and re-signed on rebuild.
 
@@ -53,14 +53,14 @@ The design could already rebuild most things from code (OpenTofu, GitOps, image 
 - Backups survive an account compromise, an account loss, and malicious deletion (for 30 days), not just hardware failures.
 - One more AWS account to secure (root login with MFA, no day-to-day use), and an AWS Organization to manage.
 - A few cents a month for storage and replication.
-- **Security Hub backup findings:** AWS Backup is not used, so Security Hub may report resources (e.g. RDS instances, S3 buckets) as not covered by a backup plan. These findings are **suppressed with a recorded reason** pointing to this ADR (S3 replication with Object Lock, MariaDB Operator backups, RDS automated backups, final snapshots and logical dumps cover them), rather than left open; the weekly Security Hub review checks no new kind of backup finding appears.
+- **Security Hub backup findings:** AWS Backup is not used, so Security Hub may report resources (for example, RDS instances, S3 buckets) as not covered by a backup plan. These findings are **suppressed with a recorded reason** pointing to this ADR (S3 replication with Object Lock, MariaDB Operator backups, RDS automated backups, final snapshots and logical dumps cover them), rather than left open; the weekly Security Hub review checks no new kind of backup finding appears.
 - Recovery is documented and rehearsed; a full rebuild's real duration is known.
 - The break-glass kit becomes critical: it must be kept current and its printed copy stored safely.
 
 ## When to revisit
 
-- russetleaf.com becomes always-on or holds user data: consider a warm standby in us-west-2 and AWS Backup.
-- The data grows enough that the off-AWS copy leaves R2's free tier, or more than the database and etcd need a copy outside AWS (e.g. the media).
+- russetleaf.com becomes always-on or holds user data: consider a warm standby in `us-west-2` and AWS Backup.
+- The data grows enough that the off-AWS copy leaves R2's free tier, or more than the database and etcd need a copy outside AWS (for example, the media).
 - Data grows enough that replication or Object Lock costs matter.
 
 ## Open items

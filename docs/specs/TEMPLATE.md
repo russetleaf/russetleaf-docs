@@ -7,7 +7,7 @@ the same pull request if the work turns out differently. Delete these comments.
 -->
 
 - **Issue:** #<number>
-- **Plan:** <link to the step in the phase plan, e.g. `../../phase-1-russetleaf-dev/plan.md#step-41-storage`>
+- **Plan:** <link to the step in the phase plan, for example, `../../phase-1-russetleaf-dev/plan.md#step-41-storage`>
 - **Tier / estimate:** <Core | Extended | Advanced> / <low–high> hours
 - **Status:** Draft | In progress | Done
 - **Dates:** started YYYY-MM-DD; finished YYYY-MM-DD
@@ -19,7 +19,7 @@ One or two sentences: what exists when this step is done, and why it matters.
 ## Context
 
 - Design: the sections of the phase design this step implements (links).
-- Decisions: the ADRs it implements or depends on (e.g. [ADR 1033](../phase-1-russetleaf-dev/adr/1033-identity-and-access.md)), and any open items it resolves.
+- Decisions: the ADRs it implements or depends on (for example, [ADR 1033](../phase-1-russetleaf-dev/adr/1033-identity-and-access.md)), and any open items it resolves.
 - Depends on: earlier steps that must be done, and anything to check first (versions, quotas, access).
 
 ## Scope
@@ -29,7 +29,7 @@ One or two sentences: what exists when this step is done, and why it matters.
 
 ## Approach
 
-How it will be built: the components, files and repos touched, key settings, and anything decided now
+How it is built: the components, files and repos touched, key settings, and anything decided now
 that is not already in an ADR. If a decision is significant or hard to reverse, write or update an ADR
 instead of deciding it here.
 
@@ -37,14 +37,14 @@ instead of deciding it here.
 
 Small enough to finish and check in a sitting each (roughly 1–3 hours).
 
-- [ ] ...
-- [ ] ...
+- [ ] <criterion>
+- [ ] <criterion>
 
 ## Acceptance criteria
 
 Copied from the step's **Test** in the plan, made specific (commands, expected output).
 
-- [ ] ...
+- [ ] <criterion>
 
 ## Risks and rollback
 

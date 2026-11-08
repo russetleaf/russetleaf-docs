@@ -21,10 +21,10 @@ The decision is needed before Talos is installed: the nodes' addresses and the c
 
 ## Alternatives considered
 
-- **VLANs** (a VLAN-capable router and a managed switch, e.g. UniFi or an OPNsense mini PC): the textbook approach, but more equipment and configuration than one isolated segment needs.
+- **VLANs** (a VLAN-capable router and a managed switch, for example, UniFi or an OPNsense mini PC): the textbook approach, but more equipment and configuration than one isolated segment needs.
 - **No separation (deferred):** relies on the Talos firewall and Cilium's default-deny egress policies, which already stop pods reaching household devices, but leaves a compromised node or broadly permitted platform component able to reach them; and re-addressing later is costly.
 - **Routing the lab subnet without NAT:** would let household devices reach the lab directly, but needs a static route on the Spectrum router, which it does not support.
-- **Other routers with WireGuard** (e.g. GL.iNet, MikroTik): equally suitable; the ER605 v2 supports WireGuard, firewall rules and multiple subnets at low cost.
+- **Other routers with WireGuard** (for example, GL.iNet, MikroTik): equally suitable; the ER605 v2 supports WireGuard, firewall rules and multiple subnets at low cost.
 
 ## Consequences
 
@@ -36,7 +36,7 @@ The decision is needed before Talos is installed: the nodes' addresses and the c
 ## When to revisit
 
 - Remote access from outside the house is needed: consider Cloudflare Access for the APIs, or a port forward for WireGuard.
-- More segments are needed (e.g. separating staging, or IoT devices): move to VLANs with a managed switch.
+- More segments are needed (for example, separating staging, or IoT devices): move to VLANs with a managed switch.
 
 ## Open items
 

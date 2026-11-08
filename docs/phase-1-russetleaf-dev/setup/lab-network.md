@@ -17,7 +17,7 @@ The ER605's web interface changes between firmware versions. These steps name ea
 - A **laptop** (or any spare device) that can be plugged into the lab switch, for the checks at the end.
 - The **MAC addresses** of the three nodes' network ports (on a label, or in each machine's BIOS), for the address reservations.
 
-## Part 1: wiring and first login
+## Part 1: Wiring and first login
 
 1. **Wire it:** the ER605's **WAN** port to the mesh extender, one of its **LAN** ports to the switch, and the three nodes to the switch. (The port labels show which ports are WAN and which are LAN.)
 2. **First login:** connect the workstation (or laptop) by cable to a spare LAN port, and open the ER605's default address, `http://192.168.0.1`. Create the **admin username and password** it asks for, generated in the password manager. Use it in **standalone mode** (no Omada controller).
@@ -41,7 +41,7 @@ The ER605's web interface changes between firmware versions. These steps name ea
 
 6. **Name the router `rl-home-rt01`** where the system settings allow a device name, and put a label with that name on the case.
 
-## Part 3: the firewall
+## Part 3: The firewall
 
 1. **The household network as a group:** in the IP group settings, create a group named **`household`** for **`192.168.1.0/24`**.
 2. **Block the lab from it:** in the **access control** rules, add a rule:
@@ -98,7 +98,7 @@ The workstation's private key is generated on the workstation and never leaves i
 
 6. **Keep a copy in the break-glass kit:** store the profile in the password manager ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)), then delete the files in `~/.config/wireguard/` (NetworkManager keeps its own copy, readable only by root).
 
-## Part 5: backups and BIOS passwords
+## Part 5: Backups and BIOS passwords
 
 1. **Back up the ER605's configuration** from the backup page under the system tools, and store the file in the password manager with the admin login. Repeat after every change.
 2. **BIOS passwords** on all three nodes: enter each machine's setup (**F1** on the Lenovo ThinkCentre, **F2** on the Dell OptiPlex machines) and set the **administrator (supervisor) password**, from the password manager. The other BIOS settings (Secure Boot, the TPM, power-on after a power cut) are part of step 2.2.

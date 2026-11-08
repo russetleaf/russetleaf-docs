@@ -36,7 +36,7 @@ ThreatMapper's management console bundles several databases and services; its do
     - a **scheduled GitHub Actions workflow** in `russetleaf-infra`, **monthly** (the account exists permanently), plus manual runs; it assumes a **read-only audit role** through GitHub OIDC (AWS's `SecurityAudit` and `ViewOnlyAccess` managed policies), so no keys are stored
     - an extra run **once per AWS demo** with the demo stack up, to check EKS, RDS, the ALB and the rest while they exist
     - reports kept as workflow artifacts, a summary committed to `russetleaf-gitops/docs/security/`, and a short Slack message to `#rl-security` with the counts of failed high and critical checks
-    - accepted findings explained in the summary (e.g. checks that do not apply to a demo account)
+    - accepted findings explained in the summary (for example, checks that do not apply to a demo account)
 
 ## Alternatives considered
 
@@ -53,7 +53,7 @@ ThreatMapper's management console bundles several databases and services; its do
 
 ## When to revisit
 
-- Much more memory available (e.g. a dedicated security node), making ThreatMapper's console affordable.
+- Much more memory available (for example, a dedicated security node), making ThreatMapper's console affordable.
 - ~~The AWS account holding production or personal data: consider AWS Security Hub for continuous checks.~~ Done ([ADR 1019](1019-aws-multi-account-sra.md)).
 - Many more services, where attack-path ranking would help prioritize findings.
 

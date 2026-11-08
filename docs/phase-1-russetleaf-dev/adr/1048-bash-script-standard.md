@@ -9,7 +9,7 @@
 
 The workstation scripts (`scripts/workstation/setup-ubuntu.sh` and `check-tools.sh`) set the format the project wants for bash: a header block on every function, a fixed layout (`init_script`, `parse_params`, `usage`, the steps, `main`), named exit codes, `--help`, `--verbose` and `--no-color`, a shared library for messages and for error and signal handling, and bats tests plus an end-to-end test in CI. Writing them found real bugs that only tests and a real run caught: a setup script that failed on every second run, and a `sudo` check that failed for a common sudoers setup.
 
-More scripts will follow in every repo: CI helpers, CronJob and Job scripts in `russetleaf-gitops`, OpenTofu wrappers in `russetleaf-infra`, runbook automation. Two things would let them drift from the format:
+More scripts follow in every repo: CI helpers, CronJob and Job scripts in `russetleaf-gitops`, OpenTofu wrappers in `russetleaf-infra`, runbook automation. Two things would let them drift from the format:
 
 - **Nothing checked the format.** shellcheck finds bugs and shfmt fixes layout, but neither checks the structure (header blocks, required functions and options, exit codes, tests), and nothing ran on commit.
 - **Claude does not carry instructions between sessions.** Its memory is tied to the folder a session starts in, so a session in `russetleaf-gitops` would not know about a preference recorded while working in `russetleaf-docs`; and memory is a reminder, not a check.
@@ -43,7 +43,7 @@ More scripts will follow in every repo: CI helpers, CronJob and Job scripts in `
 - **The written standard alone:** cheapest, but nothing stops drift, and a reviewer has to remember every rule.
 - **shellcheck and shfmt only:** catch bugs and layout, but not the structure, which is most of what makes these scripts consistent.
 - **bashate** (OpenStack's bash style checker): checks indentation and some style rules, but not this project's structure, and duplicates shfmt for the rest.
-- **A shared library as a git submodule:** one copy instead of identical ones, but submodules complicate cloning, CI and every checkout; a small file copied with a drift check is simpler and fails just as loudly.
+- **A shared library as a Git submodule:** one copy instead of identical ones, but submodules complicate cloning, CI and every checkout; a small file copied with a drift check is simpler and fails just as loudly.
 - **Publishing the library as a package** (a `.deb` or a release asset fetched at runtime): versioned, but a network dependency for every script, and more machinery than two small files need.
 - **Relying on Claude's memory:** works within this repo's folder only, and checks nothing.
 - **A Backstage software template** (Phase 1 step 8.3) to scaffold new scripts: a good addition later for new services, but an Advanced step that may not be built; the template file works without it.

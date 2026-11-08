@@ -16,18 +16,18 @@ The design referred to the home servers as "box 1", "box 2" and "box 3", which i
 | Part | Meaning | Values |
 |---|---|---|
 | `project` | The project | `rl` (RussetLeaf) |
-| `site` | Where the machine runs: a physical location, or a cloud region | `home` (the home lab); `use1` (AWS us-east-1), `usw2` (us-west-2) |
+| `site` | Where the machine runs: a physical location, or a cloud region | `home` (the home lab); `use1` (AWS `us-east-1`), `usw2` (`us-west-2`) |
 | `role` | What kind of machine it is, not what it runs | `cp` (Kubernetes node running the control plane; at home it also runs workloads), `wk` (worker-only node), `gpu` (GPU worker), `rt` (router or firewall), `sw` (switch), `nas` (storage), `ws` (workstation) |
-| `nn` | Two-digit sequence per site and role | `01`, `02`, ... in the order machines join; **never reused** |
+| `nn` | Two-digit sequence per site and role | `01`, `02` and so on, in the order machines join; **never reused** |
 
 **Rules:**
 
 - Lowercase letters, digits and hyphens only; at most 63 characters (a valid DNS label). Names here are 12–15 characters.
-- **No hardware, workload or person names.** The name says what kind of machine it is, not what runs on it: workload placement uses Kubernetes labels (e.g. `role=main`, `workload=llm`), so a node keeps its name when its job changes (as `rl-home-cp02` does when it becomes the LLM node in Phase 2).
+- **No hardware, workload or person names.** The name says what kind of machine it is, not what runs on it: workload placement uses Kubernetes labels (for example, `role=main`, `workload=llm`), so a node keeps its name when its job changes (as `rl-home-cp02` does when it becomes the LLM node in Phase 2).
 - **A replacement gets a new number.** If `rl-home-cp02` fails and is replaced, the new machine is `rl-home-cp04`; old names in logs, alerts and postmortems keep pointing at the old machine.
 - **The inventory is the source of truth** for hardware, addresses and roles: the Phase 1 design's [Home hardware](../design.md#home-hardware) table.
 - **Physical labels:** each machine carries a printed label with its hostname.
-- **Local name resolution (optional):** under `home.arpa`, the domain reserved for home networks (RFC 8375), e.g. `rl-home-cp01.home.arpa` on the router's DNS. Internal names are never published in public DNS.
+- **Local name resolution (optional):** under `home.arpa`, the domain reserved for home networks (RFC 8375), for example, `rl-home-cp01.home.arpa` on the router's DNS. Internal names are never published in public DNS.
 
 **Clusters** follow the same idea, without the role and number: **`rl-home`** (the Talos cluster) and **`rl-use1`** (the EKS cluster). The cluster name is also the kubeconfig context and the `cluster` label on metrics and logs. Local test clusters are `kind-ci` (kind adds the `kind-` prefix) and `rl-local` (Talos in Docker).
 
@@ -43,7 +43,7 @@ The design referred to the home servers as "box 1", "box 2" and "box 3", which i
 
 The numbers follow the order the machines joined. Of the two 8 GB machines, the faster CPU (the OptiPlex 3040's i5-6500T) is `rl-home-cp02`, the node that runs the model in Phase 2.
 
-**Cloud nodes (Phase 3):** EKS sets each node's Kubernetes name from its EC2 instance, so node names do not follow this convention. Use **resource-based names** (the instance ID, e.g. `i-0abc123def4567890.ec2.internal`) rather than IP-based ones, so a name never refers to a different node later. The convention applies where the project chooses the name: the EKS cluster (`rl-use1`), the managed node group (`rl-use1-sys`), the Karpenter NodePool (`general`), and the EC2 **`Name` tag** set through the node class (`rl-use1-wk`), alongside the existing `Project`, `Site` and `Env` tags.
+**Cloud nodes (Phase 3):** EKS sets each node's Kubernetes name from its EC2 instance, so node names do not follow this convention. Use **resource-based names** (the instance ID, for example, `i-0abc123def4567890.ec2.internal`) rather than IP-based ones, so a name never refers to a different node later. The convention applies where the project chooses the name: the EKS cluster (`rl-use1`), the managed node group (`rl-use1-sys`), the Karpenter NodePool (`general`), and the EC2 **`Name` tag** set through the node class (`rl-use1-wk`), alongside the existing `Project`, `Site` and `Env` tags.
 
 **When names are applied:**
 
@@ -54,8 +54,8 @@ The numbers follow the order the machines joined. Of the two 8 GB machines, the 
 ## Alternatives considered
 
 - **Keep "box 1–3":** fine in planning, but it exists nowhere in the real system.
-- **Themed names** (e.g. trees or planets): memorable, but carry no information and do not scale to cloud resources.
-- **Names describing hardware or workload** (e.g. `rl-dell-16g`, `rl-llm-01`): stale as soon as hardware is replaced or the workload moves.
+- **Themed names** (for example, trees or planets): memorable, but carry no information and do not scale to cloud resources.
+- **Names describing hardware or workload** (for example, `rl-dell-16g`, `rl-llm-01`): stale as soon as hardware is replaced or the workload moves.
 - **A longer project prefix** (`russetleaf-home-cp01`): clearer to outsiders, but longer in every command, dashboard and alert; the prefix is defined here once.
 - **Forcing EKS node names to the convention:** possible only with custom bootstrapping that EKS and Karpenter do not support well; tags and node group names give the same traceability.
 
@@ -67,7 +67,7 @@ The numbers follow the order the machines joined. Of the two 8 GB machines, the 
 
 ## When to revisit
 
-- A second home site, or more clusters per site: add a cluster identifier to the format (e.g. `rl-home-k2-cp01`).
+- A second home site, or more clusters per site: add a cluster identifier to the format (for example, `rl-home-k2-cp01`).
 - More device types join the lab: extend the role list here before naming them.
 
 ## Open items

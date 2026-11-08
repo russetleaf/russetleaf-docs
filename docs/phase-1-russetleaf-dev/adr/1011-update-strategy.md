@@ -26,7 +26,7 @@ The project has many layers that need regular updates: WordPress core, plugins a
 ## Alternatives considered
 
 - **WordPress auto-updates:** keeps plugins current with no effort, but changes code in place, bypasses CI, staging, signing and the read-only filesystem, and makes rollback hard. Incompatible with [ADR 1002](1002-s3-media-not-efs.md).
-- **Auto-merging everything that passes CI:** less review work, but minor and major platform changes (e.g. Cilium, Kyverno) can break the cluster in ways CI on kind does not catch.
+- **Auto-merging everything that passes CI:** less review work, but minor and major platform changes (for example, Cilium, Kyverno) can break the cluster in ways CI on kind does not catch.
 - **Manual updates only:** easy to fall behind, with no reminders; Renovate's Dependency Dashboard and the version-age report prevent that.
 - **Dependabot instead of Renovate:** works for common ecosystems, but Renovate handles more (Helm charts in Argo CD manifests, `.mise.toml`, Composer via WPackagist, custom version rules) and has better grouping and auto-merge controls.
 - **A full staging cluster for platform updates:** would catch more, but `rl-home-cp01` has no memory for a second cluster; local Talos-in-Docker rehearsal is the lightweight substitute.
@@ -41,7 +41,7 @@ The project has many layers that need regular updates: WordPress core, plugins a
 
 ## When to revisit
 
-- Updates become too frequent to review weekly: widen auto-merge (e.g. minor versions of well-behaved components).
+- Updates become too frequent to review weekly: widen auto-merge (for example, minor versions of well-behaved components).
 - A second cluster or more memory becomes available: use it as a platform staging environment.
 - The site adopts premium plugins outside WPackagist: add their update sources.
 

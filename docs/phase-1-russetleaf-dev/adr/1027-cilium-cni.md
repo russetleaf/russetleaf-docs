@@ -35,7 +35,7 @@ The design needs: enforced default-deny policies, **outbound rules by DNS name**
 
 ## When to revisit
 
-- A managed alternative (e.g. AWS adding DNS-based policies to the VPC CNI) closes the gap.
+- A managed alternative (for example, AWS adding DNS-based policies to the VPC CNI) closes the gap.
 
 ## Open items
 

@@ -41,7 +41,7 @@ export GNUPGHOME="${RL_KIT}/gnupg"
 mkdir -m 700 "${GNUPGHOME}"
 ```
 
-## Part 1: create the GPG key
+## Part 1: Create the GPG key
 
 1. **Create the key:** a primary key for certifying (it renews the key's expiry) and an encryption subkey, both expiring after two years. Enter a passphrase generated in Bitwarden when asked, and save it in Bitwarden.
 
@@ -84,7 +84,7 @@ mkdir -m 700 "${GNUPGHOME}"
     unset GNUPGHOME
     ```
 
-## Part 2: the kit file and the printed copy
+## Part 2: The kit file and the printed copy
 
 1. **Write the kit file** in `"${RL_KIT}/kit.txt"` with `vim -n -i NONE -c 'setlocal noundofile nobackup nowritebackup'`, from the entries in Bitwarden. The options keep every copy of the text in the folder in memory: `-n` turns off the swap file and `-i NONE` the `viminfo` file (which would save yanked text in the home folder), and the settings turn off undo and backup files, which a `vimrc` may send to a folder on disk. The kit file lists every item in the [disaster recovery plan's list](../disaster-recovery.md#break-glass-kit), plus the GPG key's **fingerprint** and **passphrase**. Then append the GPG key's public key and secret key export:
 
@@ -96,7 +96,7 @@ mkdir -m 700 "${GNUPGHOME}"
 3. **Copy to the USB stick** `gpg-public-key.asc`, `gpg-secret-key.asc` and `gpg-paperkey.txt`.
 4. **Put in the safe:** the printed pages, the USB stick and the safe YubiKey. The safe then holds the AWS root password and an MFA device together, which is accepted for a home safe (decision log, 2026-11-05).
 
-## Part 3: the encrypted copy in Google Drive and OneDrive
+## Part 3: The encrypted copy in Google Drive and OneDrive
 
 1. **Encrypt the kit file with the memorized passphrase,** using AES-256 and a slow passphrase hash, which makes guessing the passphrase from a stolen copy expensive:
 

@@ -23,7 +23,7 @@ The home cluster has passwords that are created and used only inside it: the Mar
 
 - the `default` user **disabled**
 - **`wordpress`:** the data commands the object-cache plugin needs, including `FLUSHDB` (for `wp cache flush`), and no administrative commands (`CONFIG`, `DEBUG`, `MODULE`, `ACL`, replication)
-- **`exporter`:** only the commands redis_exporter reads (`INFO`, `PING`, `SLOWLOG`, `LATENCY`, `CLIENT LIST` and similar)
+- **`exporter`:** only the commands `redis_exporter` reads (`INFO`, `PING`, `SLOWLOG`, `LATENCY`, `CLIENT LIST` and similar)
 - **`admin`:** everything, used only for recovery and forensics (such as the cache dump in the compromised-container runbook; [ADR 1045](1045-container-forensics.md))
 
 The three passwords come from one `ExternalSecret` using the `Password` generator, with `refreshInterval: 0` so they change only when asked; its template also renders Valkey's ACL file. Each client reads only its own password. If authentication fails, the cache plugin's graceful mode falls back to the database, so the site slows down rather than failing.
