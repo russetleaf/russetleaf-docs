@@ -25,8 +25,12 @@ Every bash script follows the **[bash script standard](docs/standards/bash.md)**
 
 ## Documentation
 
-- **Writing style:** third person ("the operator"), no second person, no contractions; instructions in the imperative. See "Writing style" and "References are links" in the [overview](docs/overview.md).
+Every Markdown file follows the **[documentation style guide](docs/standards/documentation.md)** ([ADR 1057](docs/phase-1-russetleaf-dev/adr/1057-documentation-style-guide.md)), without exception and without needing to be asked. Read it before writing or revising a document. The rules most often needed:
+
+- **Writing style:** third person ("the operator"), no second person, no contractions; instructions in the imperative; present tense.
+- **Structure:** one H1; sentence-case headings, with a capital after a numbered label (`Part 2: Create the GPG key`); numbered lists only for ordered steps; a language on every code block; Markdown that renders the same on GitHub and the docs site.
 - **References are links:** every mention of an ADR or an existing document is a Markdown link; files that do not exist yet appear as plain paths.
+- **Checks:** Vale, `tools/check_doc_style.py` and `tools/check_doc_links.py` run in pre-commit, in the Claude Code hook after every edit to a Markdown file, and in CI, with markdownlint and the strict build. Fix what they report; a new product or tool name goes in the Vale vocabulary (`.vale/styles/config/vocabularies/RussetLeaf/accept.txt`).
 - **ADRs:** take the next free number in the phase, start from the [ADR template](docs/adr/0000-template.md), and add the ADR to the index in the [overview](docs/overview.md), the `nav` in `mkdocs.yml` and the ADR table in the [Phase 1 plan](docs/phase-1-russetleaf-dev/plan.md). An ADR that changes an earlier one adds an "Update" note to it.
 - **Plan format:** keep each step's heading as `### Step <n>: <title>`, with **Do:** and **Test:** paragraphs and a matching progress-checklist row (`| <n> <name> | <tier> | <low>–<high> | ...`), because `tools/plan_to_issues.py` builds the GitHub issues and milestones from them; after editing a plan, run it as a dry run (`tools/plan_to_issues.py --phase-dir docs/phase-1-russetleaf-dev --repo <owner>/russetleaf-docs`) to confirm it still parses.
 - **Plan estimates:** when a step's hours change, update its checklist row, the tier totals and calendar figures in the plan, the totals in the [overview](docs/overview.md) and [ADR 1037](docs/phase-1-russetleaf-dev/adr/1037-project-phases.md), and recompute the roadmap's milestone dates.
@@ -42,11 +46,11 @@ Everything in the repo is licensed under the GNU General Public License v3.0 (`L
 Run these, and fix anything they report:
 
 ```bash
-pre-commit run --all-files     # shellcheck, shfmt, bash standard, doc references, writing style
+pre-commit run --all-files     # shellcheck, shfmt, bash standard, doc references, writing style, Vale
 bats -r scripts                # the scripts' tests
 zensical build --strict        # broken links and anchors (in a venv with requirements-docs.txt)
 ```
 
-CI also runs **markdownlint** (`.markdownlint-cli2.yaml`: blank lines around headings, lists, tables and code blocks; four-space nested lists; no trailing spaces or repeated blank lines). It needs Node.js, which the workstation does not install, so follow those rules while writing and check the CI result after pushing.
+CI also runs **markdownlint** (`.markdownlint-cli2.yaml`: heading levels, one H1, `-` bullets, list numbering, blank lines around headings, lists, tables and code blocks, four-space nested lists, code-block languages). The workstation does not install Node.js, so run it through Docker: `docker run --rm -v "$PWD":/workdir davidanson/markdownlint-cli2:v0.14.0`.
 
-Install the hooks once per clone with `pre-commit install`. The tools come from `scripts/workstation/setup-ubuntu.sh`.
+Install the hooks once per clone with `pre-commit install`, and Vale's style package with `vale sync`. The tools come from `scripts/workstation/setup-ubuntu.sh`.

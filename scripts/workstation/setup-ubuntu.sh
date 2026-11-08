@@ -40,6 +40,8 @@ function init_script() {
     docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc
   )
   readonly UV_TOOLS=(pre-commit checkov ruff pip-audit prowler zizmor)
+  # The same Vale version as the docs CI workflow (.github/workflows/docs.yml)
+  readonly VALE_VERSION="3.25.1"
   readonly KEYRING_DIR="/etc/apt/keyrings"
   readonly SOURCES_DIR="/etc/apt/sources.list.d"
   readonly BASHRC="${HOME}/.bashrc"
@@ -312,6 +314,19 @@ function install_opengrep() {
 }
 
 ########################################
+# Install Vale (the prose linter of the documentation style guide) globally with
+# mise, which verifies the release's checksum, at the version CI uses
+# Globals:
+#   VALE_VERSION (read)
+# Arguments:
+#   None
+########################################
+function install_vale() {
+  log_step "Vale ${VALE_VERSION}"
+  mise use --global "vale@${VALE_VERSION}"
+}
+
+########################################
 # Install uv globally with mise, then the Python tools with uv
 # Globals:
 #   UV_TOOLS (read)
@@ -385,6 +400,7 @@ function main() {
   install_mise
   install_bitwarden_cli
   install_opengrep
+  install_vale
   install_python_tools
   print_next_steps
 }

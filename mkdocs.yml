@@ -69,6 +69,7 @@ nav:
   - Runbooks: runbooks.md
   - Standards:
       - Bash scripts: standards/bash.md
+      - Documentation: standards/documentation.md
   - "Phase 1: russetleaf.dev":
       - Design: phase-1-russetleaf-dev/design.md
       - Plan: phase-1-russetleaf-dev/plan.md
@@ -139,6 +140,7 @@ nav:
           - "1054 OpenTofu state and plan encryption": phase-1-russetleaf-dev/adr/1054-opentofu-state-and-plan-encryption.md
           - "1055 AWS root MFA: synced authenticator (superseded by 1056)": phase-1-russetleaf-dev/adr/1055-aws-root-mfa-synced-authenticator.md
           - "1056 AWS root MFA: two hardware security keys": phase-1-russetleaf-dev/adr/1056-aws-root-mfa-two-security-keys.md
+          - "1057 Documentation style guide": phase-1-russetleaf-dev/adr/1057-documentation-style-guide.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md

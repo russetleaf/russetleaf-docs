@@ -9,6 +9,12 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR/tools/claude_bash_hook.py\"",
             "timeout": 200,
             "statusMessage": "Checking the shell file against the bash script standard"
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/tools/claude_doc_hook.py\"",
+            "timeout": 150,
+            "statusMessage": "Checking the Markdown file against the documentation style guide"
           }
         ]
       }

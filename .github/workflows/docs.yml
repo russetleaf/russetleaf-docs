@@ -27,8 +27,22 @@ jobs:
           globs: "**/*.md"
       - name: Check that ADR and document references are links
         run: python3 tools/check_doc_links.py
-      - name: Check the writing style (no second person or contractions)
+      - name: Check the writing style (no second person or contractions; sentence-case headings)
         run: python3 tools/check_doc_style.py
+      - name: Install Vale (the same version as scripts/workstation/setup-ubuntu.sh)
+        env:
+          VALE_VERSION: "3.25.1"
+          VALE_SHA256: "4bf5c5176b682b1da0830f471584d3494f1c2e27ee3029e1ad6f6661d4962182"
+        run: |
+          archive="vale_${VALE_VERSION}_Linux_64-bit.tar.gz"
+          curl -fsSLo "${RUNNER_TEMP}/${archive}" "https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}/${archive}"
+          echo "${VALE_SHA256}  ${RUNNER_TEMP}/${archive}" | sha256sum -c -
+          tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}" vale
+          echo "${RUNNER_TEMP}" >> "${GITHUB_PATH}"
+      - name: Check the prose style (Vale)
+        run: |
+          vale sync
+          vale --output=line $(git ls-files '*.md')
       - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: "3.12"

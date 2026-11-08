@@ -63,7 +63,7 @@ def main():
             print(f'{f}:{n}: {msg}')
             total += 1
     if total:
-        print(f'\n{total} reference(s) to fix. See "References are links" in docs/overview.md.')
+        print(f'\n{total} reference(s) to fix. See "Links and references" in docs/standards/documentation.md.')
         return 1
     print(f'Checked {len(files)} Markdown files: all ADR and document references are links.')
     return 0

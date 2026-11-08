@@ -1,7 +1,7 @@
 # Pre-commit hooks for russetleaf-docs: the same checks as CI, run on each commit.
 # Install once per clone with: pre-commit install
 # The tools come from scripts/workstation/setup-ubuntu.sh, so the hooks are "system"
-# hooks: nothing is downloaded.
+# hooks: nothing is downloaded. Vale needs its style package once per clone: vale sync.
 repos:
   - repo: local
     hooks:
@@ -26,7 +26,12 @@ repos:
         language: system
         files: \.md$
       - id: doc-style
-        name: writing style (no second person or contractions)
+        name: writing style (no second person or contractions; sentence-case headings)
         entry: python3 tools/check_doc_style.py
+        language: system
+        files: \.md$
+      - id: vale
+        name: prose style (Vale; docs/standards/documentation.md)
+        entry: vale --output=line
         language: system
         files: \.md$

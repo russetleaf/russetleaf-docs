@@ -42,8 +42,7 @@ flowchart LR
 - **Each phase folder:** `design.md` (what is built and why), `plan.md` (the steps to build it, with a progress checklist), `roadmap.md` (milestones with target and actual dates; Phase 1's [roadmap](phase-1-russetleaf-dev/roadmap.md)) and `adr/` (the decisions first made in that phase).
 - **Tracking and step specs:** each step becomes a GitHub issue in its roadmap milestone (created by `tools/plan_to_issues.py`), and each step starts with a short spec written from [`specs/TEMPLATE.md`](specs/TEMPLATE.md) and kept in `docs/specs/`, linked from the issue and its pull request. Together with the plans' estimate-vs-actual columns and milestone retros, they show the work was planned, measured and adjusted.
 - **ADR numbers start with their phase:** 1001 upwards for Phase 1, 2001 upwards for Phase 2, 3001 upwards for Phase 3. They are unique across the project and do not change once used; the [index](#architecture-decision-records) lists them all. The template is [`adr/0000-template.md`](adr/0000-template.md).
-- **Writing style:** third person throughout; "the operator" is the person who builds and runs the platform. Instructions in the plans and runbooks use the imperative ("Install X"). No contractions, except inside quoted text such as commands, code or test inputs. Pre-commit and CI enforce this with `tools/check_doc_style.py`; a line that must break the rule can end with `<!-- style: allow -->`.
-- **References are links:** every mention of an ADR or another document is a link, written as [ADR 1032](phase-1-russetleaf-dev/adr/1032-defense-in-depth.md); only files that do not exist yet (such as future runbooks) appear as plain paths. Pre-commit and CI enforce this with `tools/check_doc_links.py`.
+- **Writing style:** every document follows the [documentation style guide](standards/documentation.md) ([ADR 1057](phase-1-russetleaf-dev/adr/1057-documentation-style-guide.md)), based on Google's: third person ("the operator" is the person who builds and runs the platform), instructions in the imperative, no contractions, and references to ADRs and documents written as links, such as [ADR 1032](phase-1-russetleaf-dev/adr/1032-defense-in-depth.md). Vale, markdownlint and the repo's own checks enforce it in pre-commit and CI.
 - **Phase 1** also has the [disaster recovery plan](phase-1-russetleaf-dev/disaster-recovery.md), the [improvements list](phase-1-russetleaf-dev/improvements.md) (work deliberately put off, reviewed after go-live and quarterly), and **setup guides** for every procedure done by hand (accounts, consoles, hardware), such as the [AWS management account](phase-1-russetleaf-dev/setup/aws-management-account.md), [Slack](phase-1-russetleaf-dev/setup/slack-and-monitoring.md) and the [lab network](phase-1-russetleaf-dev/setup/lab-network.md); each ends with checks matching its plan step.
 - **Runbooks:** every runbook in every repo is listed in the [runbook index](runbooks.md), with the step that writes it and how it is rehearsed ([ADR 1046](phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md)).
 - **Standards:** the [bash script standard](standards/bash.md) for every script in every repo, enforced by pre-commit, a Claude Code hook and CI ([ADR 1048](phase-1-russetleaf-dev/adr/1048-bash-script-standard.md)).
@@ -601,19 +600,22 @@ russetleaf-docs/
   requirements-docs.txt     # pinned Zensical version
   AGENTS.md                 # instructions for people and coding agents: conventions, the bash standard, checks
   CLAUDE.md                 # imports AGENTS.md, so every Claude Code session starts with it
-  .claude/settings.json     # Claude Code hook: checks a shell file right after Claude edits it
-  .pre-commit-config.yaml   # shellcheck, shfmt, the bash standard and the doc checks on every commit
-  .github/workflows/docs.yml  # markdownlint and a strict build on pull requests; publish to GitHub Pages on main
+  .claude/settings.json     # Claude Code hooks: check a shell or Markdown file right after Claude edits it
+  .vale.ini                 # Vale: the prose rules of the documentation style guide (Google package + project rules)
+  .vale/styles/             # the project vocabulary (product and tool names); `vale sync` adds the Google package
+  .pre-commit-config.yaml   # shellcheck, shfmt, the bash standard, Vale and the doc checks on every commit
+  .github/workflows/docs.yml  # markdownlint, Vale, the doc checks and a strict build on pull requests; publish to GitHub Pages on main
   .github/workflows/bash-checks.yml  # reusable: the bash standard's checks, called by every repo
   .github/workflows/bash.yml         # this repo's bash checks (calls bash-checks.yml)
   .github/workflows/workstation-scripts.yml  # the setup script end to end on a fresh Ubuntu (weekly)
   .github/workflows/gitlab-sync.yml  # mirrors the repo to GitLab on every push (an off-GitHub copy)
-  .markdownlint-cli2.yaml   # the Markdown rules that matter for how the site renders
+  .markdownlint-cli2.yaml   # the structural Markdown rules of the documentation style guide
   tools/plan_to_issues.py   # creates milestones, labels and one issue per step from a phase's plan and roadmap
   tools/check_doc_links.py  # CI check: ADR and document references must be links
-  tools/check_doc_style.py  # CI check: no second person or contractions outside code and quotes
+  tools/check_doc_style.py  # no second person or contractions outside code and quotes; sentence-case headings
   tools/check_bash_style.py # the bash standard's structure checks (pre-commit, the hook and CI)
   tools/claude_bash_hook.py # the Claude Code hook: runs the bash checks on an edited shell file
+  tools/claude_doc_hook.py  # the Claude Code hook: runs Vale and the doc checks on an edited Markdown file
   scripts/lib/              # common.sh (the shared bash library) and bats-helpers.bash; other repos copy them
   scripts/templates/        # the starter script and its bats test, for every new script
   scripts/workstation/      # setup-ubuntu.sh (sets up the operator's workstation) and check-tools.sh
@@ -703,6 +705,7 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [1054](phase-1-russetleaf-dev/adr/1054-opentofu-state-and-plan-encryption.md) | OpenTofu state and plan encryption, with a passphrase in Secrets Manager and the break-glass kit | 1 |
 | [1055](phase-1-russetleaf-dev/adr/1055-aws-root-mfa-synced-authenticator.md) | AWS root MFA: a synced authenticator app, with the Google Account under Advanced Protection (superseded by [ADR 1056](phase-1-russetleaf-dev/adr/1056-aws-root-mfa-two-security-keys.md)) | 1 |
 | [1056](phase-1-russetleaf-dev/adr/1056-aws-root-mfa-two-security-keys.md) | AWS root MFA: two hardware security keys, no authenticator app | 1 |
+| [1057](phase-1-russetleaf-dev/adr/1057-documentation-style-guide.md) | One documentation style guide, based on Google's and enforced by Vale | 1 |
 | [2001](phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback | 2 |
 | [2002](phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
 | [2003](phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | Self-hosted model on rl-home-cp02 (CPU llama.cpp), dedicated by taint | 2 |

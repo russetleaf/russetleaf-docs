@@ -1,0 +1,213 @@
+Actuals
+ALBs?
+Alertmanager
+Altis
+[Aa]uthenticators?
+authorizers?
+Backblaze
+bashate
+Bitnami
+Bitwarden
+blackbox
+Bottlerocket
+Buildx
+CAs
+Ceph
+Chainguard
+Checkov
+cloudflared
+CNIs?
+commenters?
+cookieless
+Crossplane
+Deepfence
+Dex
+EFS
+EKS
+Ente
+Env
+etcd
+Falco
+Falcosidekick
+Firehose
+fmt
+Forgejo
+forma
+Freemium
+Fulcio
+Galera
+GDPR
+gitleaks
+GRUB
+Grype
+gVisor
+hadolint
+HCL
+HPAs?
+HTTPRoutes?
+Infracost
+Inkscape
+inodes?
+Instatus
+JMeter
+kagent
+Kargo
+Karpenter
+Kasten
+Kata
+Katib
+KEDA
+Kopia
+KServe
+kubeadm
+kubeconform
+Kubecost
+Kubeflow
+kubelogin
+Kubescape
+Kyverno
+Lenovo
+Linkerd
+LLMOps
+Macie
+Mattermost
+Midjourney
+mise
+MLflow
+MLOps
+Moto
+mypy
+mysqlnd
+Omada
+OPcache
+Opengrep
+OPNsense
+OUs?
+PCI
+phishable
+PHPStan
+polkit
+Promtail
+protectable
+Pulumi
+Pushgateway
+Pyrra
+RCPs?
+[Rr]ebuildable
+Rekor
+Reloader
+Renovate
+Rootly
+schedulable
+scriptable
+SCPs?
+Scully
+Semgrep
+shfmt
+showback
+Sigstore
+SLIs?
+Spacelift
+sshd
+Stakater
+Statuspage
+substeps?
+Suricata
+Syft
+Talos
+talosconfigs?
+teardowns?
+Tekton
+Tetragon
+tflint
+tfsec
+Toxiproxy
+triages?
+unoptimized
+unrequested
+untampered
+Upptime
+uv
+Valkey
+vCPUs?
+vectorizing
+Veeam
+Velero
+VLANs?
+WAFs?
+waypoints?
+WCUs?
+Wolfi
+Wordfence
+wordmark
+WPackagist
+WPScan
+Yubico
+ZAP
+Zeek
+Zensical
+zizmor
+Zulip
+OpenTofu
+GitHub
+GitLab
+WordPress
+YubiKeys?
+(?i)ci
+(?i)runbooks?
+(?i)summarizers?
+(?i)rollouts?
+(?i)roadmaps?
+(?:RussetLeaf|russetleaf)
+(?:ShellCheck|shellcheck)
+(?:CA|revert|install|rebuild|Made)'s
+Advanced Protection
+Alloy
+Amazon
+Argo CD
+Argo Rollouts
+AWS Organizations?
+Backstage
+Cilium
+Claude
+Cloudflare
+Cloudflare Tunnel
+CloudFront(?:'s)?
+External Secrets
+Gateway API
+Git
+GitHub Actions
+GitHub Container Registry
+Google
+Google Drive
+Grafana Alloy
+HashiCorp Vault
+Helm
+Hubble
+Identity Center
+Istio
+kube-bench
+Loki
+Longhorn
+Microsoft
+Phase (?:\d|N)
+Prometheus
+Prowler
+RDS Proxy
+Rook
+seccomp
+Secrets Manager
+Security Reference Architecture
+Security Tooling
+Site Editor
+Slack
+Tempo
+Terraform
+Trivy Operator
+Ubuntu
+Restrict Seccomp
+microVMs?
+Google Accounts?
+(?:PINs?|[Pp]ins?)
+(?:CloudFront's )?[Ff]lat-rate Free plan
+Vale

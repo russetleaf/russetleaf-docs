@@ -1,19 +1,38 @@
-# markdownlint rules for the docs. MkDocs' Markdown parser is stricter than GitHub's,
-# so these focus on what changes how the site renders.
+# markdownlint rules for the docs: the structural rules of the documentation style guide
+# (docs/standards/documentation.md). Zensical's Markdown parser is stricter than GitHub's,
+# so the blank-line and indentation rules keep both renderings the same.
 config:
   default: false
-  MD007:            # nested list items indented by 4 spaces (MkDocs needs 4, not 2)
-    indent: 4
-  MD009: true       # no trailing spaces
-  MD010: true       # no hard tabs
-  MD012: true       # no repeated blank lines
-  MD022: true       # blank lines around headings
-  MD031: true       # blank lines around fenced code blocks
-  MD032: true       # blank lines around lists (otherwise MkDocs renders them as one paragraph)
-  MD047: true       # files end with a single newline
-  MD058: true       # blank lines around tables
+  MD001: true                       # heading levels go up one at a time
+  MD003: { style: atx }             # "#" headings only
+  MD004: { style: dash }            # "-" for bullets
+  MD007: { indent: 4 }              # nested list items indented by 4 spaces (Zensical needs 4)
+  MD009: true                       # no trailing spaces
+  MD010: true                       # no hard tabs
+  MD012: true                       # no repeated blank lines
+  MD022: true                       # blank lines around headings
+  MD023: true                       # headings start at the beginning of the line
+  MD025: true                       # one H1 per page
+  MD026: { punctuation: ".,;:!" }   # no punctuation at the end of a heading
+  MD027: true                       # one space after a blockquote marker
+  MD029: { style: ordered }         # numbered lists count 1., 2., 3.
+  MD030: true                       # one space after a list marker
+  MD031: true                       # blank lines around fenced code blocks
+  MD032: true                       # blank lines around lists (otherwise Zensical renders them as one paragraph)
+  MD037: true                       # no spaces inside emphasis markers
+  MD038: true                       # no spaces inside code spans (catches "|" splitting one in a table)
+  MD039: true                       # no spaces inside link text
+  MD040: true                       # every fenced code block names its language
+  MD042: true                       # no empty links
+  MD046: { style: fenced }          # fenced code blocks only
+  MD047: true                       # files end with a single newline
+  MD048: { style: backtick }        # ``` fences, not ~~~
+  MD049: { style: asterisk }        # *italics*
+  MD050: { style: asterisk }        # **bold**
+  MD058: true                       # blank lines around tables
 globs:
   - "**/*.md"
 ignores:
   - "site/**"
   - ".venv/**"
+  - ".vale/**"

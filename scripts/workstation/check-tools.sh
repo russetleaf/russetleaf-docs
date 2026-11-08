@@ -213,25 +213,26 @@ function check_docker() {
 }
 
 ########################################
-# Check mise, the Bitwarden CLI, Opengrep, uv and the Python tools
+# Check mise, the Bitwarden CLI, Opengrep, Vale, uv and the Python tools
 # Arguments:
 #   None
 ########################################
 function check_python_tools() {
   local tool tool_path
 
-  # uv, bw and opengrep are global mise tools, so they are on the PATH only in shells
+  # uv, bw, opengrep and vale are global mise tools, so they are on the PATH only in shells
   # that run `mise activate`; ask mise where they are in other shells (scripts, CI)
-  for tool in uv bw opengrep; do
+  for tool in uv bw opengrep vale; do
     if ! command -v "${tool}" >/dev/null 2>&1 && tool_path="$(mise which "${tool}" 2>/dev/null)"; then
       PATH="${tool_path%/*}:${PATH}"
     fi
   done
 
-  section "mise, the Bitwarden CLI, Opengrep and the Python tools (uv)"
+  section "mise, the Bitwarden CLI, Opengrep, Vale and the Python tools (uv)"
   check_tool mise required mise --version
   check_tool bw required bw --version
   check_tool opengrep required opengrep --version
+  check_tool vale required vale --version
   check_tool uv required uv --version
   check_tool pre-commit required pre-commit --version
   check_tool checkov required checkov --version
