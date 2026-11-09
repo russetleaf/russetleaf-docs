@@ -82,8 +82,8 @@ The AWS side follows the **AWS Security Reference Architecture (SRA)**: separate
 | **Log Archive** | Security | The **organization CloudTrail trail**, Config history and VPC flow logs, in **S3 Object Lock** buckets with KMS encryption |
 | **Backup** | Security | The cross-region, immutable data copies (database backups, media, OpenTofu state, repo mirrors) from [ADR 1018](adr/1018-disaster-recovery.md) |
 | **russetleaf-infra** | Infrastructure | **OpenTofu state** and the CI deployment entry points (the GitHub OIDC provider and roles); nothing else runs here |
-| **russetleaf-home** | Workloads | The AWS resources russetleaf.dev uses (S3, Secrets Manager, SES; SQS and Bedrock from Phase 2); a **new account** created by the Organization (the operator's older AWS Organization, from a 2022 project, stays separate and is not used) |
-| **russetleaf-com** | Workloads | russetleaf.com: the always-on edge (`envs/aws-edge`) and the demo stack (`envs/aws`). **Created in Phase 3.** |
+| **russetleaf-home** | Workloads | The AWS resources russetleaf.dev uses (S3, Secrets Manager, SES; SQS and Bedrock from Phase 2); a **new account** created by the Organization |
+| **russetleaf-com** | Workloads | russetleaf.com: the always-on edge (`envs/aws-edge`) and the demo stack (`envs/aws`). **Created in Phase 1** to hold russetleaf.com's registration and hosted zone; the edge and the demo stack are added in Phase 3. |
 | **Policy test** | Policy Staging | An empty account where new SCPs and RCPs are attached and tested before they reach the real OUs |
 | *(none)* | Suspended | Normally empty; a **deny-all SCP**. Moving a compromised account here is the first containment step |
 

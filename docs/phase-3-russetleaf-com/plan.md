@@ -70,10 +70,9 @@ These steps must be done first, because this plan builds on them:
 
 **Do:**
 
-- **All of russetleaf.com lives in its own account, `russetleaf-com`** (Workloads OU), created in this step by adding it to `russetleaf-infra/envs/org` (the Organization itself is from Phase 1 step 2.0; see the Phase 1 design's [AWS account structure](../phase-1-russetleaf-dev/design.md#aws-account-structure-and-best-practices-security-reference-architecture) and [ADR 1019](../phase-1-russetleaf-dev/adr/1019-aws-multi-account-sra.md)). Quotas and SES sandbox status are **per account**, so the items below apply to `russetleaf-com`.
+- **All of russetleaf.com lives in its own account, `russetleaf-com`** (Workloads OU), created in Phase 1 step 2.0 to hold the russetleaf.com registration and hosted zone (see the Phase 1 design's [AWS account structure](../phase-1-russetleaf-dev/design.md#aws-account-structure-and-best-practices-security-reference-architecture) and [ADR 1019](../phase-1-russetleaf-dev/adr/1019-aws-multi-account-sra.md)). Quotas and SES sandbox status are **per account**, so the items below apply to `russetleaf-com`.
 - **SES production access** (or a verified test address) for russetleaf.com.
 - **Backup account:** the disaster-recovery backup account and replication (Phase 1 step 2.5) must exist first; add the russetleaf.com media and backup buckets to its replication in step 1.2.
-- **russetleaf.com DNS:** if the domain is registered outside Route 53, plan to move its name servers to Route 53 in step 1.2.
 - **AWS Config for the new account** (`envs/security`): the organization's focused recording, with **daily recording** for the high-churn demo resource types (EC2 instances, network interfaces, security groups, volumes) and continuous recording for IAM, S3 and KMS ([ADR 1019](../phase-1-russetleaf-dev/adr/1019-aws-multi-account-sra.md)).
 - **Budget guardrails:** the **russetleaf-com** account's budget (from `envs/org`, for example, alerts at $20 and $40 per month), and a **Cost Anomaly Detection** monitor. Send both to an **SNS topic** connected to Slack `#rl-costs` through **Amazon Q Developer in chat applications** (formerly AWS Chatbot), as well as by email. (Created by hand here; OpenTofu's `alerting` module takes over in step 1.7.)
 
@@ -104,7 +103,7 @@ Record each answer in the [decision log](#decision-log).
 
 ### Step 1.1: CI roles for the AWS environments
 
-**Do:** extend `russetleaf-infra/bootstrap/` to the **russetleaf-com** account (GitHub OIDC provider, audit role) with plan and apply roles for `envs/aws-edge` and `envs/aws`, with access to their own keys in the russetleaf-infra state bucket, limited to what each environment manages (the demo-stack apply role cannot touch the edge stack's resources, and vice versa, where IAM conditions allow).
+**Do:** extend `russetleaf-infra/bootstrap/` in the **russetleaf-com** account (which has its GitHub OIDC provider, audit role and `envs/aws-edge` roles from Phase 1 step 2.1) with plan and apply roles for `envs/aws`, widen the `envs/aws-edge` roles to the edge stack's resources, with access to their own keys in the russetleaf-infra state bucket, limited to what each environment manages (the demo-stack apply role cannot touch the edge stack's resources, and vice versa, where IAM conditions allow).
 
 **Test:** a pull request touching `envs/aws-edge` gets a plan comment using the plan role; the apply role can be assumed only from `main`.
 
@@ -112,13 +111,8 @@ Record each answer in the [decision log](#decision-log).
 
 **Do:**
 
-- **Move the russetleaf.com registration into the russetleaf-com account.** It is registered with Route 53 Domains in an account of the operator's 2022 AWS Organization ([account sign-in setup guide](../phase-1-russetleaf-dev/setup/account-sign-in.md#part-3-cloudflare-and-the-domain-registrations)). Route 53's transfer between AWS accounts is free and changes nothing at the registry or in DNS:
-    1. In the **2022 account** (Route 53 Domains is a `us-east-1` API): `aws route53domains transfer-domain-to-another-aws-account --region us-east-1 --domain-name russetleaf.com --account-id <russetleaf-com account ID>`. It returns an operation ID and a one-time **password**; keep the password in Bitwarden until the transfer is accepted.
-    2. In the **russetleaf-com account**, within the acceptance window (about three days): `aws route53domains accept-domain-transfer-from-another-aws-account --region us-east-1 --domain-name russetleaf.com --password <password>`.
-    3. Check `aws route53domains get-operation-detail --region us-east-1 --operation-id <id>` (from the 2022 account) until it shows `SUCCESSFUL`, then confirm the domain is listed in russetleaf-com with **auto-renew**, **transfer lock** and **privacy protection** on, and delete the transfer password from Bitwarden.
-    4. **Import the registration into OpenTofu** (`aws_route53domains_registered_domain`, with an `import` block) in `envs/aws-edge`, so its auto-renew, transfer lock, privacy settings and name servers are managed in code from then on.
-    5. If a hosted zone for russetleaf.com exists in the 2022 account, keep it until the new zone below is ready, then switch the name servers and delete the old zone. After that, nothing RussetLeaf needs remains in the 2022 Organization, and it can be closed on its own schedule.
-- Route 53 hosted zone for russetleaf.com (point the domain's name servers at it), with **DNSSEC signing** (an asymmetric KMS key in `us-east-1`, about $1/month) and the **DS record** added at the registrar.
+- **The registration and hosted zone** for russetleaf.com are already in `envs/aws-edge`, in russetleaf-com, from Phase 1 [step 2.3](../phase-1-russetleaf-dev/plan.md#step-23-aws-and-cloudflare-resources-for-the-home-lab); this step adds the rest of the always-on edge to that root module.
+- **DNSSEC signing** on the russetleaf.com hosted zone (an asymmetric KMS key in `us-east-1`, about $1/month) and the **DS record** added at the registrar.
 - ACM certificates: `russetleaf.com` + `www` in `us-east-1` (CloudFront), and `origin.russetleaf.com` in the ALB's region (the same region if `us-east-1` is the chosen region).
 - S3 offline-page bucket with the offline page ("The AWS demo is offline. Visit russetleaf.dev."), the russetleaf.com **media bucket** (versioned; old versions deleted after 90 days), a **Loki log bucket** (14-day lifecycle) and a **Tempo trace bucket** (7-day lifecycle), both kept in the always-on stack so demo logs and traces can be reviewed after teardown. Every bucket aborts incomplete multipart uploads after 7 days ([ADR 1042](../phase-1-russetleaf-dev/adr/1042-s3-versioning-lifecycle-and-storage-classes.md)). **Origin Access Control** on the two buckets CloudFront serves (the offline page and media); Loki and Tempo are reached through scoped IAM roles, never through CloudFront.
 - CloudFront's managed **`SecurityHeadersPolicy`** response-headers policy adding HSTS and the other security headers (custom policies are not part of the Free plan; the WordPress `security-headers` plugin supplies Content-Security-Policy and Permissions-Policy) ([ADR 1032](../phase-1-russetleaf-dev/adr/1032-defense-in-depth.md)).
@@ -129,7 +123,7 @@ Record each answer in the [decision log](#decision-log).
 - A **russetleaf.com backup bucket** for the logical dumps taken at `demo-down`, and **replication** of it and the media bucket to the backup account (`envs/dr`).
 - Outputs for `envs/aws` (zone ID, certificate ARNs, secret ARN, bucket names).
 
-**Test:** russetleaf.com is listed under Route 53 Domains in the russetleaf-com account (not the 2022 one), and `tofu plan` in `envs/aws-edge` shows no changes to the imported registration; the distribution shows the Free plan with the edge web ACL attached; a request to `/xmlrpc.php` is blocked at CloudFront even with the demo stack down; `curl -I https://russetleaf.com` returns **503** with the offline page; the page links to russetleaf.dev; the SES identity shows "verified". Add the russetleaf.com **external uptime check** (expects 200 or the 503 offline page) and confirm it is green and posts to `#rl-com-alerts` and `#rl-critical` when it fails (test by pointing it at a wrong URL). Leave this stack running from now on (about $1/month).
+**Test:** the distribution shows the Free plan with the edge web ACL attached; a request to `/xmlrpc.php` is blocked at CloudFront even with the demo stack down; `curl -I https://russetleaf.com` returns **503** with the offline page; the page links to russetleaf.dev; the SES identity shows "verified". Add the russetleaf.com **external uptime check** (expects 200 or the 503 offline page) and confirm it is green and posts to `#rl-com-alerts` and `#rl-critical` when it fails (test by pointing it at a wrong URL). Leave this stack running from now on (about $1/month).
 
 ### Step 1.3: Network (`envs/aws`)
 

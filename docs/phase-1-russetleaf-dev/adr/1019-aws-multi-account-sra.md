@@ -1,9 +1,9 @@
 # ADR 1019: Multi-account AWS structure aligned with the AWS Security Reference Architecture
 
-- **Status:** Accepted; RCPs, Suspended and Policy Staging OUs, and declarative policies added 2026-11-03; russetleaf-home created new instead of invited, 2026-11-04; SIEM trigger updated by [ADR 1058](1058-security-detections-as-code.md)
+- **Status:** Accepted; RCPs, Suspended and Policy Staging OUs, and declarative policies added 2026-11-03; russetleaf-home created new instead of invited, 2026-11-04; russetleaf-com created in Phase 1 to hold the russetleaf.com domain, 2026-11-09; SIEM trigger updated by [ADR 1058](1058-security-detections-as-code.md)
 - **Date:** 2026-11-01
 - **Applies to:** all AWS usage by both sites
-- **Phase:** 1 (the Organization and all accounts except russetleaf-com). Later: Phase 3 creates russetleaf-com.
+- **Phase:** 1 (the Organization and all accounts; russetleaf-com holds only russetleaf.com's registration and hosted zone until Phase 3). Later: Phase 3 builds russetleaf.com in russetleaf-com.
 - **Updates:** [ADR 1007](1007-prowler-not-threatmapper.md) (Security Hub now used; Prowler kept as a second opinion), [ADR 1017](1017-intrusion-detection-and-prevention.md) (organization CloudTrail and GuardDuty, delegated administration), [ADR 1018](1018-disaster-recovery.md) (a dedicated management account; CloudTrail logs in Log Archive)
 
 ## Context
@@ -46,9 +46,9 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 - **AWS Trusted Advisor beyond its free checks:** the core checks (S3 bucket permissions, open security-group ports, root MFA, public EBS and RDS snapshots, service limits) are available in every account at no cost and need no setup; the full checks and the organization view need a Business support plan (about $100 a month at least, more than the project's AWS bill), and Security Hub, Prowler and AWS Budgets already cover their security and cost findings.
 - **A shared-services account for everything non-workload** (state, logs and backups together): fewer accounts, but mixes concerns the SRA deliberately separates.
 
-- **Inviting the existing account as russetleaf-home** (the earlier plan): would keep the account and its history, but that account is already the **management account of its own Organization** (created in 2022 for an earlier project, with three member accounts). It could join another Organization only after removing or closing those accounts and deleting its Organization, and it holds no RussetLeaf resources, so there is nothing to bring across.
-- **AWS Billing Transfer** (another Organization's management account, such as the 2022 one, pays RussetLeaf's consolidated bill): one card for both, but Cost Anomaly Detection does not work for a transferred bill, Budgets and Cost Explorer show only pro forma costs (without credits), the transfer can start only on the first of a month, and RussetLeaf's billing would depend permanently on an Organization outside the project. Consolidated billing within the Organization already gives one bill for every RussetLeaf account.
-- **Reusing that 2022 Organization** (its management account as RussetLeaf's): no new management account, but it would inherit years of unrelated resources, IAM users with long-lived keys and an old SCP, in the one account that is meant to run nothing.
+- **Inviting the existing account as russetleaf-home** (the earlier plan): that account is the management account of another Organization, from an earlier project, so it could join only after that Organization was dismantled; it holds no RussetLeaf resources, so there is nothing to bring across.
+- **AWS Billing Transfer** (another Organization's management account pays RussetLeaf's consolidated bill): Cost Anomaly Detection does not work for a transferred bill, Budgets and Cost Explorer show only pro forma costs (without credits), and RussetLeaf's billing would depend on an Organization outside the project. Consolidated billing within the Organization already gives one bill for every RussetLeaf account.
+- **Reusing that other Organization** (its management account as RussetLeaf's): it would bring unrelated resources, IAM users with long-lived keys and an old SCP into the one account that is meant to run nothing.
 
 ## Consequences
 
@@ -56,7 +56,7 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 - A **data perimeter**: SCPs limit what the Organization's identities can do, and RCPs limit who can reach its resources, so a mistaken bucket or key policy cannot expose data outside the Organization.
 - About **$5–15/month** more (Security Hub, Config, KMS), included in the home lab's always-on total of about **$14–33/month** (with `rl-home-cp03`'s electricity from [ADR 1020](1020-three-node-ha-home-cluster.md); see the Phase 1 design's cost table).
 - More moving parts: cross-account access for state, replication and the seed Job; per-account CI roles; per-account quotas; SES access per account (and Bedrock model access in russetleaf-home, Phase 2).
-- Nothing is migrated: every account starts empty inside the Organization, under its guardrails from the first day. The operator's older AWS Organization (from a 2022 project) stays separate and is not part of RussetLeaf; it is cleaned up or closed on its own schedule, but only after the **russetleaf.com registration**, which is held by one of its accounts, has moved to the russetleaf-com account (Phase 3 step 1.2).
+- Nothing is migrated: every account starts empty inside the Organization, under its guardrails from the first day. The one exception is russetleaf.com's registration and hosted zone, which move into russetleaf-com from an account outside the Organization in step 2.3, so the project depends on nothing outside it.
 - An AWS foundation that follows the Security Reference Architecture, so it can be checked against AWS's own guidance.
 
 ## When to revisit

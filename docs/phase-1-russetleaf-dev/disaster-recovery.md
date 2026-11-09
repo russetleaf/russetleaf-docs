@@ -83,7 +83,7 @@ The kit holds:
 - ★ GitLab (the mirrors of every repo): account login and **recovery codes**
 - ★ Cloudflare: account login and recovery codes
 - ★ Google: account recovery (for the Google Cloud project and Google sign-in). The operator's Google Account is in **Advanced Protection**, so its passkey and security keys are its recovery path and Google's own recovery takes several days; it also holds the AWS root email address ([ADR 1056](adr/1056-aws-root-mfa-two-security-keys.md))
-- ★ Domain registrars: **russetleaf.dev** at Cloudflare Registrar (the Cloudflare login above) and **russetleaf.com** at Route 53 Domains (in an account of the 2022 AWS Organization until Phase 3 step 1.2 moves it to russetleaf-com; its sign-in is in the kit too), with auto-renew and transfer lock on ([account sign-in setup guide](setup/account-sign-in.md))
+- ★ Domain registrars: **russetleaf.dev** at Cloudflare Registrar (the Cloudflare login above) and **russetleaf.com** at Route 53 Domains (in the russetleaf-com account, signed in to through Identity Center), with auto-renew and transfer lock on ([account sign-in setup guide](setup/account-sign-in.md))
 - ★ **Bitwarden's own recovery details:** the account email, the master password (never stored in Bitwarden itself) and the **two-step login recovery code**. Bitwarden's optional **emergency access** (a paid feature) can also let a trusted person reach the vault after a waiting period.
 - ★ The **OpenTofu state passphrase** ([ADR 1054](adr/1054-opentofu-state-and-plan-encryption.md)), and each previous one for **12 months** after it is replaced, until the last monthly state copy made with it has expired
 - The **lab router** (ER605) admin login, its configuration backup, and the WireGuard client profile
