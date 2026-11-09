@@ -86,6 +86,8 @@ Write a note or a warning as a paragraph that starts with a bold label: `**Note:
 | open-source (before a noun), open source (after) | `opensource` | "an open-source tool"; "the tool is open source" |
 | for example, that is, and so on | `e.g.`, `i.e.`, `etc.` | No Latin abbreviations |
 | critical alerts | `criticals` | |
+| security key | `passkey` (for a YubiKey) | A hardware key such as the operator's YubiKeys, whatever a service's menu calls it; name the menu as the service shows it |
+| phone passkey | `passkey` (unqualified) | A passkey stored on a phone or in a password manager |
 
 ## Numbers, dates and units
 

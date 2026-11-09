@@ -61,7 +61,7 @@ OpenTofu manages the Organization from step 2.0, but it needs a way to sign in f
 4. **Identity source:** keep the default, the **Identity Center directory**.
 5. **The AWS access portal address:** under **Settings**, change the portal's subdomain to something memorable (for example `russetleaf`, giving `https://russetleaf.awsapps.com/start`), and record it in the break-glass kit.
 6. **MFA settings:** under **Settings → Authentication**, require MFA **every time users sign in**, require users to **register an MFA device at sign-in**, and allow **security keys and built-in authenticators** (passkeys) only, with **authenticator apps** turned off: Identity Center is signed in to daily, so it keeps phishing-resistant factors only (decision log, 2026-11-05).
-7. **The operator's user:** under **Users**, add a user for the operator (their name and email), and accept the invitation from the email: set a password (from the password manager) and register MFA devices: **`yubikey-primary`** for daily sign-in, and **`yubikey-backup`** as the backup (no passkeys, [account sign-in setup guide](account-sign-in.md#the-rule)).
+7. **The operator's user:** under **Users**, add a user for the operator (their name and email), and accept the invitation from the email: set a password (from the password manager) and register MFA devices: **`yubikey-primary`** for daily sign-in, and **`yubikey-backup`** as the backup; a phone passkey is optional ([account sign-in setup guide](account-sign-in.md#the-rule)).
 8. **A bootstrap admin permission set:** under **Permission sets**, create one from the predefined **AdministratorAccess** policy, named **`admin`** (the name OpenTofu manages it under from step 2.0), with a session duration of **4 hours**.
 9. **Assign it:** under **AWS accounts**, select the management account, and assign the operator's user with the **`admin`** permission set.
 10. **Sign in from the workstation:**
@@ -94,6 +94,6 @@ OpenTofu manages the Organization from step 2.0, but it needs a way to sign in f
 ## If something goes wrong
 
 - **Lost `yubikey-primary`:** sign in with `yubikey-backup`, remove the lost key from root (and from the Google Account, Identity Center and every other account it is registered with), and register a replacement (with a PIN) right away.
-- **Lost the phone:** root and Identity Center are not affected; neither uses the phone.
+- **Lost the phone:** root is not affected. If Identity Center has a phone passkey, remove it, signing in with a YubiKey.
 - **Lost both YubiKeys:** on the root sign-in page, choose **Troubleshoot MFA**, then **Sign in using alternative factors**. AWS sends a link to the root email address, then calls the phone number on the account. There are no recovery codes, which is why the root email address and the phone number are kept current in the break-glass kit. If neither works, contact AWS Support.
 - **The management account is compromised or lost:** follow the [disaster recovery plan](../disaster-recovery.md#scenarios) ("Management account compromised or lost").

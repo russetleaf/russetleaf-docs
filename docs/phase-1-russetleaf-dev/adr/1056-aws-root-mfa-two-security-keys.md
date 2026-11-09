@@ -18,7 +18,7 @@ The operator now has a **second YubiKey**, carried on the keychain (`yubikey-pri
 - **Changing over:** register `yubikey-primary` on root first, confirm a sign-in with it, then remove the virtual MFA device, so root always has a working factor.
 - **IAM.6 is not suppressed:** with only hardware MFA on root, the control should pass; step 2.0b checks it.
 - **The Google Account stays in Advanced Protection,** with both YubiKeys registered: it still holds the root email address, which is AWS's recovery path when both keys are lost.
-- **The IAM Identity Center user** signs in with **`yubikey-primary`**, with `yubikey-backup` registered as the backup; no passkeys are used (decision log, 2026-11-09).
+- **The IAM Identity Center user** signs in with **`yubikey-primary`**, with `yubikey-backup` registered as the backup; a phone passkey is optional (decision log, 2026-11-09).
 
 ## Alternatives considered
 
