@@ -215,3 +215,4 @@ Sigma
 pySigma
 SigmaHQ
 Wazuh
+yubikey-(?:primary|backup)

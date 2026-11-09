@@ -78,7 +78,7 @@ Kept in three places, so that losing any two of them still leaves a way back in 
 
 The kit holds:
 
-- ★ AWS: the **management account's** account ID, root email and password, and its **MFA devices** (two YubiKeys: the keychain key and the safe key; [ADR 1056](adr/1056-aws-root-mfa-two-security-keys.md)). AWS has no recovery codes for root MFA: with both devices lost, its recovery checks the root email address and calls the account's phone number, so both must stay current ([setup guide](setup/aws-management-account.md#if-something-goes-wrong)). Member accounts have no root credentials (centralized root access management). Also the IAM Identity Center admin and break-glass logins
+- ★ AWS: the **management account's** account ID, root email and password, and its **MFA devices** (two YubiKeys: `yubikey-primary` and `yubikey-backup`; [ADR 1056](adr/1056-aws-root-mfa-two-security-keys.md)). AWS has no recovery codes for root MFA: with both devices lost, its recovery checks the root email address and calls the account's phone number, so both must stay current ([setup guide](setup/aws-management-account.md#if-something-goes-wrong)). Member accounts have no root credentials (centralized root access management). Also the IAM Identity Center admin and break-glass logins
 - ★ GitHub: account login and **recovery codes**
 - ★ GitLab (the mirrors of every repo): account login and **recovery codes**
 - ★ Cloudflare: account login and recovery codes

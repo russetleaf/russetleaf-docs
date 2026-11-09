@@ -7,7 +7,7 @@ The kit lives in three places, so that losing any two still leaves a way back in
 | Copy | Where | Opened with | Covers |
 |---|---|---|---|
 | Working copy | Bitwarden | The master password and Bitwarden's two-step login | Day-to-day use |
-| Printed copy | The safe at home, with the safe YubiKey and a USB stick holding the GPG key | Physical access to the safe | Losing Bitwarden access |
+| Printed copy | The safe at home, with `yubikey-backup` and a USB stick holding the GPG key | Physical access to the safe | Losing Bitwarden access |
 | Encrypted copy | Google Drive and OneDrive | A **passphrase the operator memorizes**, kept out of Bitwarden and the cloud | Losing the home (and the safe) and Bitwarden access together |
 
 ## The GPG key
@@ -94,7 +94,7 @@ mkdir -m 700 "${GNUPGHOME}"
 
 2. **Print** the starred items of the kit file, the GPG fingerprint and passphrase, and `gpg-paperkey.txt` with the public key (`gpg-public-key.asc`). Date each page.
 3. **Copy to the USB stick** `gpg-public-key.asc`, `gpg-secret-key.asc` and `gpg-paperkey.txt`.
-4. **Put in the safe:** the printed pages, the USB stick and the safe YubiKey. The safe then holds the AWS root password and an MFA device together, which is accepted for a home safe (decision log, 2026-11-05).
+4. **Put in the safe:** the printed pages, the USB stick and `yubikey-backup`. The safe then holds the AWS root password and an MFA device together, which is accepted for a home safe (decision log, 2026-11-05).
 
 ## Part 3: The encrypted copy in Google Drive and OneDrive
 
@@ -124,7 +124,7 @@ mkdir -m 700 "${GNUPGHOME}"
 - [ ] The secret key export decrypted a test message in a scratch keyring (Part 1, step 3).
 - [ ] With `FPR` set to the key's fingerprint, `gpg --list-secret-keys "${FPR}"` in the workstation's own keyring finds **no** key.
 - [ ] The encrypted kit **downloaded from Google Drive**, and again **from OneDrive**, decrypts with the memorized passphrase after `gpgconf --reload gpg-agent`.
-- [ ] The safe holds the printed pages, the `paperkey` printout, the USB stick and the safe YubiKey.
+- [ ] The safe holds the printed pages, the `paperkey` printout, the USB stick and `yubikey-backup`.
 - [ ] Bitwarden holds the GPG key's fingerprint, passphrase and public key.
 - [ ] `/dev/shm/rl-kit` no longer exists.
 

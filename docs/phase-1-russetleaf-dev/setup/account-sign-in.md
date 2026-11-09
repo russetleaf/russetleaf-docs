@@ -6,7 +6,7 @@ Providers' settings pages change over time. These steps name each setting rather
 
 ## The rule
 
-- **Security keys first.** The operator has two YubiKeys, both **YubiKey Security Key NFC** (FIDO2 and U2F only: no OpenPGP and no OATH, so they hold no authenticator codes): the **keychain key** for daily use and the **safe key** as the backup. Both are registered with every account that supports security keys, and each has a FIDO2 PIN.
+- **Security keys first.** The operator has two YubiKeys, both **YubiKey Security Key NFC** (FIDO2 and U2F only: no OpenPGP and no OATH, so they hold no authenticator codes): **`yubikey-primary`**, carried on the keychain for daily use, and **`yubikey-backup`**, kept in the safe as the backup. Both are registered, under those names wherever a service asks for one, with every account that supports security keys, and each has a FIDO2 PIN.
 - **A passkey on the operator's phone** is added where the service offers passkeys, for convenience.
 - **Authenticator codes only where a service requires them,** in Google Authenticator (cloud sync on; the Google Account is in Advanced Protection). Today that is **GitHub**, which requires a code before it accepts security keys, and possibly GitLab and the uptime checker (below). A code is a fallback, not the daily factor.
 - **Every password** is generated in Bitwarden and entered only through Bitwarden's autofill, which fills only on the real site, so a look-alike page shows up as a missing autofill.
@@ -50,7 +50,7 @@ Have these ready:
     1. **Set up an authenticator app** first (GitHub requires a code or SMS before it accepts security keys): scan the code with Google Authenticator. Do not use SMS.
     2. **Save the recovery codes** in Bitwarden.
     3. Under **Security keys**, register **both YubiKeys**; under **Passkeys**, add one on the phone.
-    4. Sign in with the passkey or the keychain key from then on; the code is the fallback.
+    4. Sign in with the passkey or `yubikey-primary` from then on; the code is the fallback.
 2. **GitLab:** under **Preferences → Account → Two-factor authentication** (or **Password and authentication**):
     1. **Register both YubiKeys** as WebAuthn devices **without** an authenticator app, if GitLab allows it.
     2. **If GitLab asks for an authenticator app first,** set one up in Google Authenticator, then register both YubiKeys.
@@ -85,6 +85,6 @@ Have these ready:
 
 ## If something goes wrong
 
-- **Lost the keychain YubiKey:** sign in with the safe key or a passkey, and remove the lost key from **every** account in the table above, from AWS root and Identity Center, and from the workstation's SSH keys and `sudo` ([workstation YubiKey setup guide](workstation-yubikey.md#if-something-goes-wrong)); then register a replacement (with a PIN) everywhere.
+- **Lost `yubikey-primary`:** sign in with `yubikey-backup` or a passkey, and remove the lost key from **every** account in the table above, from AWS root and Identity Center, and from the workstation's SSH keys and `sudo` ([workstation YubiKey setup guide](workstation-yubikey.md#if-something-goes-wrong)); then register a replacement (with a PIN) everywhere.
 - **Lost the phone:** remove its passkeys from each account (signing in with a YubiKey); Google Authenticator's codes return on a new phone through sync once the Google Account is signed in.
 - **Lost both YubiKeys:** use each account's recovery codes from the break-glass kit, a phone passkey where one exists, or the provider's recovery process; AWS root uses AWS's email-and-phone recovery ([AWS management account setup guide](aws-management-account.md#if-something-goes-wrong)).

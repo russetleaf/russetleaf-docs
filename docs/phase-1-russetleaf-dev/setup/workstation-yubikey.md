@@ -2,7 +2,7 @@
 
 The step-by-step procedure for using the two YubiKeys on the Ubuntu workstation ([local workstation setup](../plan.md#local-workstation-setup-ubuntu-2404)): **SSH keys held on the YubiKeys** for GitHub and GitLab, and **`sudo` that needs a YubiKey touch as well as the password**. The keys themselves, and the accounts they protect, are covered by the [account sign-in setup guide](account-sign-in.md) and [ADR 1056](../adr/1056-aws-root-mfa-two-security-keys.md).
 
-Both keys are **YubiKey Security Key NFC** (FIDO2 and U2F): the **keychain key** for daily use and the **safe key** as the backup. Each is registered everywhere below, so losing one never locks the operator out.
+Both keys are **YubiKey Security Key NFC** (FIDO2 and U2F): **`yubikey-primary`**, carried on the keychain for daily use, and **`yubikey-backup`**, kept in the safe as the backup. Each is registered everywhere below, so losing one never locks the operator out.
 
 ## What changes, and what does not
 
@@ -24,22 +24,22 @@ Have these ready:
 
 ## Part 1: SSH keys on the YubiKeys
 
-1. **Create one SSH key per YubiKey.** With the keychain key plugged in (touch it when it blinks):
+1. **Create one SSH key per YubiKey.** With `yubikey-primary` plugged in (touch it when it blinks):
 
     ```bash
-    ssh-keygen -t ed25519-sk -O application=ssh:russetleaf -C "workstation keychain YubiKey" -f ~/.ssh/id_ed25519_sk_keychain
+    ssh-keygen -t ed25519-sk -O application=ssh:russetleaf -C "workstation yubikey-primary" -f ~/.ssh/id_ed25519_sk_primary
     ```
 
-    Then swap to the safe key and repeat with `-C "workstation safe YubiKey" -f ~/.ssh/id_ed25519_sk_safe`. Press Enter at the passphrase prompts: the files hold only a handle that is useless without its YubiKey.
-2. **Register both public keys** (`~/.ssh/id_ed25519_sk_keychain.pub` and `~/.ssh/id_ed25519_sk_safe.pub`):
+    Then swap to `yubikey-backup` and repeat with `-C "workstation yubikey-backup" -f ~/.ssh/id_ed25519_sk_backup`. Press Enter at the passphrase prompts: the files hold only a handle that is useless without its YubiKey.
+2. **Register both public keys** (`~/.ssh/id_ed25519_sk_primary.pub` and `~/.ssh/id_ed25519_sk_backup.pub`):
     - **GitHub:** **Settings → SSH and GPG keys → New SSH key**, key type **Authentication key**.
     - **GitLab:** **Preferences → SSH Keys → Add new key**, usage type **Authentication**.
 3. **Point SSH at them** in `~/.ssh/config` (create it with `chmod 600`):
 
     ```text
     Host github.com gitlab.com
-        IdentityFile ~/.ssh/id_ed25519_sk_keychain
-        IdentityFile ~/.ssh/id_ed25519_sk_safe
+        IdentityFile ~/.ssh/id_ed25519_sk_primary
+        IdentityFile ~/.ssh/id_ed25519_sk_backup
         IdentitiesOnly yes
     ```
 
@@ -48,7 +48,7 @@ Have these ready:
     1. Add a passphrase: `ssh-keygen -p -f ~/.ssh/id_ed25519_github`, with the passphrase generated in and saved to Bitwarden.
     2. On **GitHub**, delete `id_ed25519_github` from the **Authentication keys** list and keep (or add) it under **Signing keys**; on **GitLab**, set its usage to **Signing** (or remove it if it is not used there).
     3. Commits stay signed as before (`gpg.format ssh`, `user.signingkey` pointing to `id_ed25519_github.pub`); `ssh-add ~/.ssh/id_ed25519_github` unlocks it once per session.
-6. **Put the safe key back in the safe.**
+6. **Put `yubikey-backup` back in the safe.**
 
 ## Part 2: `sudo` with a YubiKey and the password
 
@@ -59,15 +59,15 @@ The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in th
 
     ```bash
     origin="pam://russetleaf-workstation"
-    first="$(pamu2fcfg -u "${USER}" -o "${origin}" -i "${origin}")"   # keychain key plugged in
-    # swap to the safe key
+    first="$(pamu2fcfg -u "${USER}" -o "${origin}" -i "${origin}")"   # yubikey-primary plugged in
+    # swap to yubikey-backup
     second="$(pamu2fcfg -n -o "${origin}" -i "${origin}")"            # -n: no user name, appended to the line
     printf '%s%s\n' "${first}" "${second}" | sudo tee /etc/u2f_mappings >/dev/null
     sudo chown root:root /etc/u2f_mappings
     sudo chmod 644 /etc/u2f_mappings
     ```
 
-    The file holds one line, `<user>:<keychain key>:<safe key>`; it contains public data only.
+    The file holds one line, `<user>:<primary-key>:<backup-key>`; it contains public data only.
 3. **Require the key for `sudo` and `sudo -i`:** with `sudo vim`, add this line to **both** `/etc/pam.d/sudo` and `/etc/pam.d/sudo-i`, directly **above** `@include common-auth`:
 
     ```text
@@ -75,8 +75,8 @@ The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in th
     ```
 
     `required` means the touch must succeed and the password (from `common-auth`) is still asked for; `cue` prints "Please touch the device".
-4. **Test in a new terminal** (not the root shell): `sudo -k; sudo true` shows the touch prompt, then asks for the password, and succeeds; repeat with the safe key; with no YubiKey plugged in, `sudo -k; sudo true` fails even with the right password. Only then close the root shell.
-5. **Put the safe key back in the safe.**
+4. **Test in a new terminal** (not the root shell): `sudo -k; sudo true` shows the touch prompt, then asks for the password, and succeeds; repeat with `yubikey-backup`; with no YubiKey plugged in, `sudo -k; sudo true` fails even with the right password. Only then close the root shell.
+5. **Put `yubikey-backup` back in the safe.**
 
 ## Checks
 
@@ -88,6 +88,6 @@ The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in th
 
 ## If something goes wrong
 
-- **Lost the keychain key:** on GitHub and GitLab, delete its SSH key (`workstation keychain YubiKey`), and delete `~/.ssh/id_ed25519_sk_keychain*`; rebuild `/etc/u2f_mappings` with the safe key and the replacement (Part 2, step 2); then do the rest of the replacement in the [account sign-in setup guide](account-sign-in.md#if-something-goes-wrong).
+- **Lost `yubikey-primary`:** on GitHub and GitLab, delete its SSH key (`workstation yubikey-primary`), and delete `~/.ssh/id_ed25519_sk_primary*`; rebuild `/etc/u2f_mappings` with `yubikey-backup` and the replacement (Part 2, step 2); then do the rest of the replacement in the [account sign-in setup guide](account-sign-in.md#if-something-goes-wrong).
 - **`sudo` stops working after the PAM change:** in the root shell kept open in Part 2, remove the `pam_u2f.so` line from both files.
 - **Both keys lost, or no root shell open:** boot into **recovery mode** (GRUB's **Advanced options**, then the **root** shell; on a default Ubuntu install it needs no root password, but the disk passphrase is still asked for), run `mount -o remount,rw /`, and remove the `pam_u2f.so` line from both files.
