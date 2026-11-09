@@ -141,6 +141,7 @@ nav:
           - "1055 AWS root MFA: synced authenticator (superseded by 1056)": phase-1-russetleaf-dev/adr/1055-aws-root-mfa-synced-authenticator.md
           - "1056 AWS root MFA: two hardware security keys": phase-1-russetleaf-dev/adr/1056-aws-root-mfa-two-security-keys.md
           - "1057 Documentation style guide": phase-1-russetleaf-dev/adr/1057-documentation-style-guide.md
+          - "1058 Security detections as code, not a SIEM product": phase-1-russetleaf-dev/adr/1058-security-detections-as-code.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md

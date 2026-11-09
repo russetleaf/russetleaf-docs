@@ -1,6 +1,6 @@
 # ADR 1017: Intrusion detection and prevention in layers
 
-- **Status:** Accepted; updated by [ADR 1019](1019-aws-multi-account-sra.md), [ADR 1020](1020-three-node-ha-home-cluster.md)
+- **Status:** Accepted; updated by [ADR 1019](1019-aws-multi-account-sra.md), [ADR 1020](1020-three-node-ha-home-cluster.md), [ADR 1058](1058-security-detections-as-code.md)
 - **Date:** 2026-11-01
 - **Applies to:** both sites and the AWS account
 - **Phase:** 1. Later: Phase 3 adds AWS WAF, GuardDuty's EKS monitoring and the EKS audit alerts.
@@ -8,6 +8,8 @@
 > **Update ([ADR 1019](1019-aws-multi-account-sra.md)):** CloudTrail is now a single **organization trail** delivering to the **Log Archive** account, and GuardDuty is enabled organization-wide with the **Security Tooling** account as delegated administrator; GuardDuty and Security Hub findings are routed to Slack from there.
 
 > **Update ([ADR 1020](1020-three-node-ha-home-cluster.md)):** With the three-node home cluster's extra memory, **CrowdSec is realistic at home** (recommended, no longer optional).
+
+> **Update ([ADR 1058](1058-security-detections-as-code.md)):** the Kubernetes audit alert rules are written as **Sigma rules**, tagged with MITRE ATT&CK techniques, tested in CI and converted to Loki ruler rules; CloudTrail and GuardDuty events are also forwarded into Loki's `security` tenant, kept for 90 days, so the sources can be searched together. No SIEM product is used.
 
 ## Context
 

@@ -186,7 +186,7 @@ Which compliance frameworks the project follows, and how, recorded in [ADR 1036]
 
 | Framework | Applies? | How it is covered |
 |---|---|---|
-| **GDPR** | Yes, lightly (a small public site holding commenters' names and emails, visitors' IPs in logs, admins' Google Accounts) | A **privacy notice** on both sites; a **record of processing** and **processors list** (Cloudflare, AWS, Google, GitHub, Slack); a **retention schedule** (logs 7–14 days, backups 30 days locked plus lifecycle and monthly copies for 12 months, audit logs 1 year, unapproved comments 30 days); runbooks for **access and erasure requests** (WordPress's built-in export and erasure tools, with an erasure log re-applied after any restore, since locked backups cannot be erased early) and **personal data breaches** (72-hour notification); **no tracking cookies**, checked in CI, so no consent banner is needed |
+| **GDPR** | Yes, lightly (a small public site holding commenters' names and emails, visitors' IPs in logs, admins' Google Accounts) | A **privacy notice** on both sites; a **record of processing** and **processors list** (Cloudflare, AWS, Google, GitHub, Slack); a **retention schedule** (logs 7–14 days, backups 30 days locked plus lifecycle and monthly copies for 12 months, security logs 90 days, audit logs 1 year, unapproved comments 30 days); runbooks for **access and erasure requests** (WordPress's built-in export and erasure tools, with an erasure log re-applied after any restore, since locked backups cannot be erased early) and **personal data breaches** (72-hour notification); **no tracking cookies**, checked in CI, so no consent banner is needed |
 | **CIS Benchmarks** | Yes | CIS Kubernetes (kube-bench on EKS, Trivy Operator, Talos hardening notes), CIS AWS Foundations (Security Hub), **CIS Docker** (Trivy's compliance check on each image), CIS Controls in the control matrix; results linked from the control matrix as evidence |
 | **NIST** | As guidance, not certification | The control matrix is organized by **Cybersecurity Framework 2.0** functions, with **SP 800-190** (container security) and **SP 800-218 (SSDF)** checklists; SLSA provenance and the CI checks map onto SSDF |
 | **MITRE ATT&CK** | Yes, for detection coverage | Kubescape's ATT&CK posture score, plus a **detection map** (`docs/security/attack-coverage.md`) from each detection (Falco, audit alerts, GuardDuty, Hubble, CrowdSec) to the **ATT&CK for Containers** techniques it covers, with gaps listed; Falco alerts by technique in Grafana |
@@ -271,19 +271,19 @@ Each phase's plan tiers every step as **Core** (a complete, working, secure plat
 
 | Plan | Core | Extended | Advanced | Total |
 |---|---|---|---|---|
-| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~179–294 | ~95–167 | ~89–144 | **~363–605** |
+| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~179–294 | ~103–181 | ~89–144 | **~371–619** |
 | [Phase 2: AI summaries and MLOps](phase-2-ai-mlops/plan.md#priorities-and-time-estimates) (optional) | ~50–86 | ~33–54 | ~64–104 | **~147–244** |
 | [Phase 3: russetleaf.com](phase-3-russetleaf-com/plan.md#priorities-and-time-estimates) (optional) | ~74–123 | ~14–22 | ~16–25 | **~104–170** |
-| **Whole project** | ~303–503 | ~142–243 | ~169–273 | **~614–1019** |
+| **Whole project** | ~303–503 | ~150–257 | ~169–273 | **~622–1033** |
 
 **Calendar time at about 20 hours a week:**
 
 | Scope | Hours | Calendar |
 |---|---|---|
 | Phase 1, Core tier | ~179–294 | 9–14 weeks |
-| Phase 1, everything | ~363–605 | 18–30 weeks (4–7 months) |
-| Phases 1 and 2 | ~510–849 | 25–42 weeks (6–10 months) |
-| All three phases | ~614–1019 | 30–50 weeks (7–12 months; 14–23 months at 10 hours a week) |
+| Phase 1, everything | ~371–619 | 19–31 weeks (4–7 months) |
+| Phases 1 and 2 | ~518–863 | 26–43 weeks (6–10 months) |
+| All three phases | ~622–1033 | 31–52 weeks (7–12 months; 14–24 months at 10 hours a week) |
 
 Phase 1 is built with AI assistance in conversation; Phases 2 and 3 are built with AI coding agents under [ADR 2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md), with Phase 1's actual hours as the baseline for measuring the difference. Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar. A finished Phase 1 is worth more than three unfinished phases.
 
@@ -706,6 +706,7 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [1055](phase-1-russetleaf-dev/adr/1055-aws-root-mfa-synced-authenticator.md) | AWS root MFA: a synced authenticator app, with the Google Account under Advanced Protection (superseded by [ADR 1056](phase-1-russetleaf-dev/adr/1056-aws-root-mfa-two-security-keys.md)) | 1 |
 | [1056](phase-1-russetleaf-dev/adr/1056-aws-root-mfa-two-security-keys.md) | AWS root MFA: two hardware security keys, no authenticator app | 1 |
 | [1057](phase-1-russetleaf-dev/adr/1057-documentation-style-guide.md) | One documentation style guide, based on Google's and enforced by Vale | 1 |
+| [1058](phase-1-russetleaf-dev/adr/1058-security-detections-as-code.md) | Security detections as code in Sigma, on Loki, instead of a SIEM product | 1 |
 | [2001](phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback | 2 |
 | [2002](phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
 | [2003](phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | Self-hosted model on rl-home-cp02 (CPU llama.cpp), dedicated by taint | 2 |

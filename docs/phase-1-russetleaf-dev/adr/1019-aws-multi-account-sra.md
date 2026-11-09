@@ -1,6 +1,6 @@
 # ADR 1019: Multi-account AWS structure aligned with the AWS Security Reference Architecture
 
-- **Status:** Accepted; RCPs, Suspended and Policy Staging OUs, and declarative policies added 2026-11-03; russetleaf-home created new instead of invited, 2026-11-04
+- **Status:** Accepted; RCPs, Suspended and Policy Staging OUs, and declarative policies added 2026-11-03; russetleaf-home created new instead of invited, 2026-11-04; SIEM trigger updated by [ADR 1058](1058-security-detections-as-code.md)
 - **Date:** 2026-11-01
 - **Applies to:** all AWS usage by both sites
 - **Phase:** 1 (the Organization and all accounts except russetleaf-com). Later: Phase 3 creates russetleaf-com.
@@ -64,7 +64,7 @@ The design used **one AWS account** for everything (the home lab's AWS resources
 - The project becomes a team effort: consider Control Tower for account vending and drift detection.
 - Config costs grow with the demo stack despite daily recording: narrow recording further, or record only during demos.
 - russetleaf.com becomes always-on or holds user data: add Macie, Detective and Inspector, and consider a separate network account.
-- A SIEM is connected (for example, Splunk or OpenSearch Security Analytics), or log volume makes querying the raw Log Archive painful: adopt Security Lake.
+- A SIEM is connected (for example, OpenSearch Security Analytics; [improvement I1-4](../improvements.md)), or log volume makes querying the raw Log Archive painful: adopt Security Lake. Until then, CloudTrail and GuardDuty events are also forwarded into Loki for searching alongside the cluster's security logs ([ADR 1058](1058-security-detections-as-code.md)).
 
 ## Open items
 

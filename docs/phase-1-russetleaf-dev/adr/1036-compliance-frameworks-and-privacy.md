@@ -1,6 +1,6 @@
 # ADR 1036: Compliance frameworks and privacy
 
-- **Status:** Accepted
+- **Status:** Accepted; retention schedule updated by [ADR 1058](1058-security-detections-as-code.md)
 - **Date:** 2026-11-02
 - **Applies to:** both sites, the clusters, the build pipeline and the security documents
 - **Phase:** 1. Later: Phase 2's guardrails redact personal data; Phase 3 adds GuardDuty's EKS findings to the ATT&CK map and the privacy notice on russetleaf.com.
@@ -24,7 +24,7 @@ The design was checked against common compliance frameworks: MITRE ATT&CK, GDPR,
     - A **privacy notice** page in the theme (who runs the site, what is collected, why, how long, which processors, how to make a request), linked from every page footer and the comment form.
     - **Record of processing** (`docs/privacy/record-of-processing.md`): each kind of personal data, where it is stored (database, logs, backups, Slack alerts), why, and for how long.
     - **Processors list:** Cloudflare, AWS, Google, GitHub and Slack, each with its data processing terms linked.
-    - **Retention schedule:** logs 7–14 days; database backups 30 days locked plus the lifecycle period, and monthly copies for 12 months ([ADR 1018](1018-disaster-recovery.md)); audit logs 1 year ([ADR 1033](1033-identity-and-access.md)); unapproved comments deleted after 30 days.
+    - **Retention schedule:** logs 7–14 days, and the security logs (with visitors' IP addresses in sign-in requests) 90 days ([ADR 1058](1058-security-detections-as-code.md)); database backups 30 days locked plus the lifecycle period, and monthly copies for 12 months ([ADR 1018](1018-disaster-recovery.md)); audit logs 1 year ([ADR 1033](1033-identity-and-access.md)); unapproved comments deleted after 30 days.
     - **Request runbook** (`docs/runbooks/data-subject-request.md`): find and export or delete a person's data with WordPress's built-in **personal data export and erasure tools**; locked backups expire on their own within the retention period (up to 12 months for the monthly copies), and a restore re-applies past erasures (kept in an erasure log).
     - **Personal data breach runbook** (`docs/runbooks/personal-data-breach.md`): assess, contain, record, and notify the supervisory authority within **72 hours** if required (and affected people if the risk is high); linked from the security alerts' runbooks.
     - **No tracking cookies:** no analytics or third-party scripts that set cookies, so no consent banner is needed; a CI check (Playwright) confirms anonymous page views set no cookies and load no third-party scripts. Adding analytics later means choosing a cookieless tool or adding consent.

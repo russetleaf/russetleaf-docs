@@ -211,3 +211,7 @@ Google Accounts?
 (?:PINs?|[Pp]ins?)
 (?:CloudFront's )?[Ff]lat-rate Free plan
 Vale
+Sigma
+pySigma
+SigmaHQ
+Wazuh

@@ -306,6 +306,8 @@ Falco is one layer among several. The design combines **prevention** (stopping a
 
 **Optional: CrowdSec.** CrowdSec analyses WordPress's and the gateway's access logs and **bans abusive IP addresses** through a Cloudflare "bouncer" (a modern, shared-intelligence fail2ban). With the three-node cluster's extra memory it is now realistic at home (about 100–200 MB of memory).
 
+**Security detections as code, instead of a SIEM product.** The Kubernetes audit alerts and the rules for WordPress sign-ins and AWS events are written as **Sigma rules** (the vendor-neutral format for detection rules), each tagged with MITRE ATT&CK techniques, tested in CI against sample log lines and converted to Loki ruler rules. CloudTrail management events and GuardDuty findings are forwarded into Loki's `security` tenant, kept 90 days with Falco and CrowdSec events, so one Grafana dashboard shows a timeline across all sources, and the ATT&CK detection map is generated from the rules' tags. Wazuh, Security Onion, OpenSearch Security Analytics and commercial SIEM products were not chosen: they need an indexer with several GB of memory, host agents Talos cannot run, or a monthly fee ([ADR 1058](adr/1058-security-detections-as-code.md)).
+
 **Deliberately not used: a network IDS** (Suricata or Zeek) inside the cluster. It needs a lot of CPU and memory, and the traffic it would inspect is already covered: TLS ends at Cloudflare and the ALB, where the WAFs inspect it, and Cilium and Hubble cover traffic inside the cluster. A home-network IDS on the router (for example, OPNsense with Suricata) is worthwhile but outside this project.
 
 ### Process allow-listing
@@ -838,7 +840,7 @@ Both sites send all logs to **Grafana Loki**, collected by **Grafana Alloy**, so
 
 | Piece | What it does | Configuration |
 |---|---|---|
-| **Loki** (single-binary mode) | Stores and indexes logs; queried from Grafana | Index and log data in an **S3 bucket** per site (lifecycle rules matching retention), a small local cache volume; **7-day retention** at home, **14 days** for russetleaf.com (its bucket is in the always-on edge stack, so demo logs can be reviewed afterwards); multi-tenancy off |
+| **Loki** (single-binary mode) | Stores and indexes logs; queried from Grafana | Index and log data in an **S3 bucket** per site (lifecycle rules matching retention), a small local cache volume; **7-day retention** at home, **14 days** for russetleaf.com (its bucket is in the always-on edge stack, so demo logs can be reviewed afterwards); two tenants, `apps` and `security`, with the `security` tenant kept **90 days** ([ADR 1058](adr/1058-security-detections-as-code.md)) |
 | **Grafana Alloy** (DaemonSet, one per node) | Collects every container's logs and sends them to Loki | Adds a **small, fixed label set**: `site`, `env`, `cluster`, `namespace`, `app`, `container`. Everything else (pod name, request IDs) stays in the log line or as structured metadata, because Loki's cost grows with the number of label combinations. Drops noisy debug lines and health-check access logs before sending. Masks obvious secrets (tokens, passwords in query strings) |
 | **Talos system logs** (home) | Kubelet, etcd and Talos service logs from the nodes themselves | Talos's machine logging setting sends them as JSON to Alloy on each node (a host port), so node-level problems are searchable too |
 | **Log-based alerts** | Alerts on log patterns that metrics cannot see | Loki's **ruler** evaluates log queries and sends alerts to the same **Alertmanager → Slack** routing (by `site`, `env` and `team`) |
@@ -857,7 +859,7 @@ Each has a runbook in `docs/runbooks/` and a test of its log query.
 
 ### Privacy
 
-Logs can contain visitors' IP addresses and occasionally email addresses. Short retention (7 and 14 days), masking in Alloy, and access to Grafana only through Cloudflare Access (home) or port-forward (AWS) keep that in check. **Security logs are separate:** the API audit log, Argo CD audit events and runtime-security events go to a separate Loki tenant (`security`), visible only in a Grafana **Security** organization whose members are platform admins ([ADR 1035](adr/1035-platform-security.md)). Staging logs come from scrubbed data. The full record of personal data, its retention and how requests are handled is in [Compliance and privacy](../overview.md#compliance-and-privacy).
+Logs can contain visitors' IP addresses and occasionally email addresses. Short retention (7 and 14 days; 90 days for the security tenant, which holds sign-in requests), masking in Alloy, and access to Grafana only through Cloudflare Access (home) or port-forward (AWS) keep that in check. **Security logs are separate:** the API audit log, Argo CD audit events and runtime-security events go to a separate Loki tenant (`security`), visible only in a Grafana **Security** organization whose members are platform admins ([ADR 1035](adr/1035-platform-security.md)). Staging logs come from scrubbed data. The full record of personal data, its retention and how requests are handled is in [Compliance and privacy](../overview.md#compliance-and-privacy).
 
 ### Cost and memory
 

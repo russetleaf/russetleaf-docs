@@ -1,9 +1,11 @@
 # ADR 1005: Loki and Grafana Alloy for logs
 
-- **Status:** Accepted; ELK alternative expanded 2026-11-06
+- **Status:** Accepted; ELK alternative expanded 2026-11-06; updated by [ADR 1058](1058-security-detections-as-code.md)
 - **Date:** 2026-11-01
 - **Applies to:** both sites
 - **Phase:** 1. Later: Phase 2 adds the summarizer and Bedrock log alerts; Phase 3 adds Loki on EKS (14-day retention).
+
+> **Update ([ADR 1058](1058-security-detections-as-code.md)):** the `security` tenant is kept for **90 days** (the `apps` tenant stays at 7), and security analysis across sources is done with **Sigma rules converted to Loki alert rules**, with CloudTrail and GuardDuty events forwarded into Loki, instead of waiting for a SIEM.
 
 ## Context
 
@@ -29,7 +31,7 @@ Constraints: `rl-home-cp01` of the home lab has 8 GB of RAM and already uses abo
     - **Managed on AWS:** Amazon OpenSearch Service removes the running work but costs about $25 a month or more for the smallest instance (OpenSearch Serverless costs much more; check current pricing), does not cover the home site without shipping its logs out, and charges for data sent to it.
     - **One toolset:** Loki is queried in the same Grafana as Prometheus and Tempo, with links from a metric or trace to the matching logs; ELK would add a second interface (Kibana) and query language.
     - **Licensing:** Elastic moved Elasticsearch and Kibana from Apache 2.0 to source-available licenses in 2021 and added an open-source option (AGPL) in 2024; **OpenSearch** is the Apache-licensed fork made in 2021 and now run by the Linux Foundation. Either could be used; neither changes the points above.
-    - **What is given up:** fast search for an arbitrary word across all logs, and the built-in security analytics. Searches here start from labels and a time range, and security analysis across sources is left to [ADR 1019](1019-aws-multi-account-sra.md)'s trigger (adopt Security Lake once a SIEM is connected).
+    - **What is given up:** fast search for an arbitrary word across all logs, and the built-in security analytics. Searches here start from labels and a time range, and security analysis across sources ~~is left to [ADR 1019](1019-aws-multi-account-sra.md)'s trigger (adopt Security Lake once a SIEM is connected)~~ is built on Loki with Sigma rules ([ADR 1058](1058-security-detections-as-code.md)).
 - **CloudWatch Logs only:** fine on AWS, but does not cover the home site, and costs per GB ingested.
 - **Promtail** as the collector: deprecated in favor of Alloy.
 - **No central logs (status quo):** rejected; losing logs on every restart is not production-grade.

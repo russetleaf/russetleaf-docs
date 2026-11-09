@@ -21,9 +21,9 @@ The milestones for building [Phase 1](plan.md), with target dates, and the actua
 | **M3 AWS, GitOps and platform services** | 2.0b, 2.3, 2.4, 3.1, 4.1–4.7 | 62–102 | Wed, Nov 18, 2026 | Sun, Nov 22, 2026 | | |
 | **M4 WordPress live with staging and promotion** | 5.1–5.7, 5.10, 5.12 | 56–95 | Thu, Nov 26, 2026 | Wed, Dec 2, 2026 | | |
 | **M5 Core tier complete and published** | 6.1, 6.3, 9.2 | 27–39 | Tue, Dec 1, 2026 | Mon, Dec 7, 2026 | | |
-| **M6 Production hardening and operations** | 9.3, 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.14, 9.1 | 95–167 | Wed, Dec 16, 2026 | Sun, Dec 27, 2026 | | |
-| **M7 Advanced practices; Phase 1 complete** | 7.7, 8.1–8.9 | 89–144 | Tue, Dec 29, 2026 | Tue, Jan 12, 2027 | | |
-| **Total** | | **363–605** | | | | |
+| **M6 Production hardening and operations** | 9.3, 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.15, 9.1 | 103–181 | Thu, Dec 17, 2026 | Mon, Dec 28, 2026 | | |
+| **M7 Advanced practices; Phase 1 complete** | 7.7, 8.1–8.9 | 89–144 | Wed, Dec 30, 2026 | Wed, Jan 13, 2027 | | |
+| **Total** | | **371–619** | | | | |
 
 **The first four days:**
 
@@ -41,7 +41,7 @@ What each milestone shows when it is done:
 - **M3:** the organization's security services, the home AWS and Cloudflare resources, the OpenTofu pipeline, the repos' CI guardrails, Argo CD managing everything; storage, secrets and certificates, ingress through the tunnel, monitoring and alerting, MariaDB and Valkey, logging, and OIDC sign-in.
 - **M4:** russetleaf.dev live on the custom image and theme, with ci tests, on-demand staging, promotion and the privacy basics.
 - **M5:** Kyverno and network policies enforced, the docs polished, and the project published as a finished Core tier. **First complete release.**
-- **M6:** the post go-live review of the improvements list, progressive delivery, sandboxing, runtime security, cost and tracing, keyless AWS access, and the rollback, node-failure and disaster drills.
+- **M6:** the post go-live review of the improvements list, progressive delivery, sandboxing, runtime security, security detections as code, cost and tracing, keyless AWS access, and the rollback, node-failure and disaster drills.
 - **M7:** SLOs and error budgets, DORA metrics, Backstage and a second service, the threat model and control matrix, chaos and postmortems, strategy documents, fleet management, and knowledge sharing (engineering write-ups).
 
 ## Tracking and reporting
