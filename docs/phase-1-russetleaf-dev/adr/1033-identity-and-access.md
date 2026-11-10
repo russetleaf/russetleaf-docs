@@ -1,11 +1,13 @@
 # ADR 1033: Identity and access to the clusters
 
-- **Status:** Accepted
+- **Status:** Accepted; updated by [ADR 1059](1059-google-workspace-identity.md)
 - **Date:** 2026-11-02
 - **Applies to:** both clusters and their admin tools (the EKS-specific parts are tracked in [ADR 3005](../../phase-3-aws-russetleaf-dev/adr/3005-eks-access-and-audit-logs.md))
 - **Phase:** 1. EKS: [ADR 3005](../../phase-3-aws-russetleaf-dev/adr/3005-eks-access-and-audit-logs.md) (Phase 3).
 
 > **Update ([ADR 3005](../../phase-3-aws-russetleaf-dev/adr/3005-eks-access-and-audit-logs.md)):** the project is now built in three phases ([ADR 1037](1037-project-phases.md)). This ADR is Phase 1's. **EKS access** (Identity Center permission sets mapped to access entries) and the **EKS audit-log archive** are recorded in [ADR 3005](../../phase-3-aws-russetleaf-dev/adr/3005-eks-access-and-audit-logs.md) (Phase 3).
+
+> **Update ([ADR 1059](1059-google-workspace-identity.md)):** Dex's Google connector accepts only russetleaf.dev accounts and reads the user's groups from Google Workspace, so the cluster roles bind to Workspace groups.
 
 ## Context
 

@@ -29,7 +29,7 @@ Have these ready:
 - **Bitwarden open,** with a new entry for the GPG key (its passphrase and fingerprint, and the public key as a secure note).
 - **A USB stick** for the safe, used for nothing else.
 - **A printer** connected by USB or on the home network, not a cloud print service, so the printed pages are not stored by a third party.
-- **Sign-ins to Google Drive and OneDrive.**
+- **Sign-ins to Google Drive and OneDrive:** the personal Google Account's Drive (not the Workspace account's, which depends on russetleaf.dev) and the personal Microsoft account.
 - **The kit passphrase:** generate a passphrase of six or more words with Bitwarden's generator (passphrase type) **without saving it**, and memorize it. It is written down nowhere except, optionally, a sealed copy with a trusted person. Everything in the encrypted copy depends on remembering it, so the 6-monthly check below tests it.
 
 All secret files, and the keyring the key is created in, are made in memory (`/dev/shm`), so they never reach the disk, and they are deleted at the end:

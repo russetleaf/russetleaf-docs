@@ -78,6 +78,7 @@ nav:
       - Improvements after go-live: phase-1-russetleaf-dev/improvements.md
       - Setup guides:
           - AWS management account: phase-1-russetleaf-dev/setup/aws-management-account.md
+          - Google Workspace on russetleaf.dev: phase-1-russetleaf-dev/setup/google-workspace.md
           - Two-factor sign-in for the project's accounts: phase-1-russetleaf-dev/setup/account-sign-in.md
           - YubiKeys on the workstation (SSH and sudo): phase-1-russetleaf-dev/setup/workstation-yubikey.md
           - Break-glass kit and GPG key: phase-1-russetleaf-dev/setup/break-glass-kit.md
@@ -142,6 +143,8 @@ nav:
           - "1056 AWS root MFA: two hardware security keys": phase-1-russetleaf-dev/adr/1056-aws-root-mfa-two-security-keys.md
           - "1057 Documentation style guide": phase-1-russetleaf-dev/adr/1057-documentation-style-guide.md
           - "1058 Security detections as code, not a SIEM product": phase-1-russetleaf-dev/adr/1058-security-detections-as-code.md
+          - "1059 Google Workspace as the project's identity": phase-1-russetleaf-dev/adr/1059-google-workspace-identity.md
+          - "1060 GitHub organization and GitLab group": phase-1-russetleaf-dev/adr/1060-github-organization-and-gitlab-group.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md

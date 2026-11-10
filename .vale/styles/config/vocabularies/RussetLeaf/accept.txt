@@ -216,3 +216,4 @@ pySigma
 SigmaHQ
 Wazuh
 yubikey-(?:primary|backup)
+[Ww]orkspace

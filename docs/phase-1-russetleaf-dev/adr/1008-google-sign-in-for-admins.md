@@ -1,9 +1,11 @@
 # ADR 1008: Google sign-in (OIDC) for WordPress admins, plus an edge login layer
 
-- **Status:** Accepted
+- **Status:** Accepted; updated by [ADR 1059](1059-google-workspace-identity.md)
 - **Date:** 2026-11-01
 - **Applies to:** both sites
 - **Phase:** 1. Later: Phase 3 adds the ALB's OIDC rule and aws.russetleaf.dev's OAuth client.
+
+> **Update ([ADR 1059](1059-google-workspace-identity.md)):** the admins sign in with Google Workspace accounts on russetleaf.dev, and the OAuth client accepts only that domain; the Google Cloud project belongs to the Workspace organization.
 
 ## Context
 

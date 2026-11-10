@@ -12,8 +12,8 @@ Slack's and the services' web pages change over time. These steps name each sett
 
 ## Part 1: The Slack workspace
 
-1. **Create the workspace** on Slack's "create a new workspace" page, with the operator's email address: name it **RussetLeaf**, with a workspace URL such as `russetleaf.slack.com`. The **free plan** is enough (90 days of history, up to 10 apps; the project uses about five).
-2. **Secure the owner account:** create it with **Sign in with Google**, so every sign-in goes through the Google Account's Advanced Protection, and set no separate Slack password. Slack's own two-factor authentication offers only codes or SMS, so it is needed only if Slack requires a password: then generate the password in Bitwarden, turn on two-factor authentication with Google Authenticator, and save the **backup codes** in Bitwarden ([account sign-in setup guide](account-sign-in.md)).
+1. **Create the workspace** on Slack's "create a new workspace" page, with the operator's Workspace address (`<name>@russetleaf.dev`): name it **RussetLeaf**, with a workspace URL such as `russetleaf.slack.com`. The **free plan** is enough (90 days of history, up to 10 apps; the project uses about five).
+2. **Secure the owner account:** follow Part 4 of the [account sign-in setup guide](account-sign-in.md#part-4-slack-and-the-outside-monitoring-services): daily sign-in with **Continue with Google** (the Workspace account, in Advanced Protection), and the owner's password from Bitwarden protected by an authenticator code, with the **backup codes** in Bitwarden. Slack accepts no security keys.
 3. **Keep the workspace closed:** in the workspace settings, make sure people can join **only by invitation**.
 4. **Create the eight channels:**
 
@@ -99,7 +99,7 @@ The test for step 0.1:
     The response starts with `{"ok":true`; `not_in_channel` means the bot was not invited to that channel.
 
 - [ ] A test message to `#rl-critical` raises a phone notification, and one to another channel does not.
-- [ ] Slack signs in with Google; the heartbeat service asks for a YubiKey; the uptime checker asks for its second factor.
+- [ ] Slack signs in with the Workspace account through "Continue with Google", and its password requires an authenticator code; the heartbeat service asks for a YubiKey; the uptime checker asks for its second factor.
 - [ ] The heartbeat service and the uptime checker can each send a test notification to `#rl-critical`.
 - [ ] The workspace has only invited members, and `#rl-security` is private.
 - [ ] Bitwarden has both services' logins (and Slack's password and backup codes, if they exist).

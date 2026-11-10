@@ -1,9 +1,11 @@
 # ADR 1038: Separate documentation repo, published as a docs site
 
-- **Status:** Accepted; updated by [ADR 1046](1046-incident-response-and-runbook-index.md) and [ADR 1053](1053-open-source-tools-by-default.md)
+- **Status:** Accepted; updated by [ADR 1046](1046-incident-response-and-runbook-index.md), [ADR 1053](1053-open-source-tools-by-default.md) and [ADR 1060](1060-github-organization-and-gitlab-group.md)
 - **Date:** 2026-11-02
 - **Applies to:** the project documentation and planning, across all repos
 - **Phase:** 1 (all phases add their documents here)
+
+> **Update ([ADR 1060](1060-github-organization-and-gitlab-group.md)):** the repo moves to the `russetleaf` GitHub organization, and the docs site is served from it: the `docs` CNAME points at `russetleaf.github.io`, and the domain is verified for the organization.
 
 > **Update ([ADR 1046](1046-incident-response-and-runbook-index.md)):** runbooks still live with their code, but the docs site's [Runbooks](../../runbooks.md) page is the **one index** of every runbook in every repo; `russetleaf-gitops/docs/runbooks/README.md` points to it.
 

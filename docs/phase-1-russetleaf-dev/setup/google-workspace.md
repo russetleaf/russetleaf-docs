@@ -1,0 +1,72 @@
+# Setup guide: Google Workspace on russetleaf.dev
+
+The step-by-step procedure for the project's **Google Workspace** organization on the russetleaf.dev domain (Phase 1 [step 0.1](../plan.md#step-01-accounts-tools-and-budget-alert)): the operator's account `<name>@russetleaf.dev`, the domain's mail records, security keys enforced for every sign-in, Advanced Protection, and the groups that receive the AWS accounts' email. The reasoning is in [ADR 1059](../adr/1059-google-workspace-identity.md).
+
+The steps follow Google's Admin Help ([verify the domain](https://knowledge.workspace.google.com/admin/domains/verify-your-domain-with-a-txt-record), [MX records](https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace), [SPF](https://knowledge.workspace.google.com/admin/security/set-up-spf), [DKIM](https://knowledge.workspace.google.com/admin/security/set-up-dkim), [DMARC](https://knowledge.workspace.google.com/admin/security/set-up-dmarc), [2-Step Verification](https://knowledge.workspace.google.com/admin/security/deploy-2-step-verification), [Advanced Protection](https://knowledge.workspace.google.com/admin/security/enable-user-enrollment-in-the-advanced-protection-program), [admin recovery](https://knowledge.workspace.google.com/admin/users/recovering-administrator-access-to-your-account)). The Admin console changes over time; where the wording differs, follow the setting's name.
+
+**Important:** two Google Accounts are involved. The **Workspace account** is the project's identity. The operator's **personal Google Account** (in Advanced Protection, [account sign-in setup guide](account-sign-in.md)) is kept for the two jobs that must not depend on russetleaf.dev: the Workspace account's **recovery email**, and the **Cloudflare** sign-in. Cloudflare is the registrar and DNS host for russetleaf.dev, and Google's own admin recovery proves ownership of the domain through a DNS record; if either depended on the Workspace account, a domain or DNS problem would lock the operator out of the one place that can fix it.
+
+## Before starting
+
+Have these ready:
+
+- **Both YubiKeys**, each with a FIDO2 PIN.
+- **Bitwarden**, for the Workspace account's password and backup codes.
+- **The Cloudflare dashboard**, signed in, for the DNS records of russetleaf.dev.
+- **The personal Google Account's address** and the operator's **phone number**, for recovery.
+
+## Part 1: Sign up and verify the domain
+
+1. **Sign up** for **Google Workspace Business Starter**, with the existing domain **russetleaf.dev**, one user: the operator's account `<name>@russetleaf.dev`, which is also the organization's **super administrator**. Generate its password in Bitwarden.
+2. **Verify the domain:** in the Admin console, go to **Menu → Account → Domains → Manage domains**, select **Verify domain**, then **Get started**; choose Cloudflare as the host (or "My domain uses a different host") and copy the TXT value, which starts with `google-site-verification=`.
+3. **Add the TXT record** in Cloudflare's DNS for russetleaf.dev: type **TXT**, name `@`, the copied value exactly. Keep it in place; Google rechecks it later.
+4. Back in the Admin console, choose to confirm, and select **Confirm**. Google can take up to 72 hours to see the record.
+
+## Part 2: Mail records
+
+1. **MX:** in Cloudflare, add type **MX**, name `@`, mail server `smtp.google.com`, priority **1**, and remove any other MX record. Then select **Activate Gmail** under **Manage domains**.
+2. **SPF:** add type **TXT**, name `@`, value `v=spf1 include:_spf.google.com ~all`. SES, which sends WordPress's mail, uses its own MAIL FROM domain by default and does not need an entry here; its DKIM records are added in [step 2.3](../plan.md#step-23-aws-and-cloudflare-resources-for-the-home-lab).
+3. **DKIM**, 24 to 72 hours after Gmail is active: go to **Menu → Apps → Google Workspace → Gmail → Authenticate email**, select russetleaf.dev, choose **Generate New Record** with a **2048**-bit key and the default prefix `google`, and add the TXT record it shows (name `google._domainkey`, value starting `v=DKIM1; k=rsa; p=`). Then select **Start authentication**; the status becomes "Authenticating email with DKIM".
+4. **DMARC**, 48 hours after SPF and DKIM: create the reports group first (Part 4), then add type **TXT**, name `_dmarc`, value `v=DMARC1; p=none; rua=mailto:<dmarc-reports-group>@russetleaf.dev`. Start at `p=none`, review the reports, and tighten to `quarantine` and then `reject` once only Google and SES appear ([improvement I1-5](../improvements.md)).
+
+These records are imported into OpenTofu with the rest of russetleaf.dev's DNS in [step 2.3](../plan.md#step-23-aws-and-cloudflare-resources-for-the-home-lab).
+
+## Part 3: The account's sign-in
+
+1. **Recovery information:** in **Menu → Directory → Users**, select the operator's account, then **Security → Recovery information**: the **personal Google Account** as the recovery email and the operator's phone as the recovery phone.
+2. **Security keys:** signed in as the Workspace account, under **Security → Passkeys and security keys**, register `yubikey-primary` and `yubikey-backup` (security keys, named as such).
+3. **Enforce security keys for the organization:** go to **Menu → Security → Authentication → 2-step verification**; select **Allow users to turn on 2-Step Verification**, set **Enforcement** to **On**, choose **Only security key** as the method, and set a short **new user enrollment period** (for example, one week). Do this only after both keys are registered, since the enforcement applies to the operator's own account.
+4. **Backup codes:** with **Only security key** enforced, users cannot generate their own backup codes; generate them for the operator's account as the administrator (the user's **Security** settings), save them in Bitwarden, and add them to the printed kit at the end of step 0.1 ([break-glass kit setup guide](break-glass-kit.md)).
+5. **Advanced Protection:** in **Menu → Security → Authentication → Advanced Protection Program**, keep **Enable user enrollment** (the default) and the option "Don't allow users to generate security codes"; then enroll the Workspace account on Google's Advanced Protection page, signing in with a YubiKey. Enrolling signs the account out of every device.
+
+## Part 4: Groups
+
+Each address that a service sends important mail to is a **group** with the operator as its member, so the address is not tied to one mailbox and can gain a second member later:
+
+1. In **Menu → Directory → Groups**, select **Create group** for each of these, with the operator as member and owner:
+    - one group per **AWS account's root email** (the management account first; the accounts step 2.0 creates later), named in Bitwarden, for example `<aws-account-group>@russetleaf.dev`
+    - the **DMARC reports** group
+2. In each group's settings, set **Who can post** so that people **outside the organization** can post, since the mail comes from AWS and the DMARC reporters.
+3. **Test** each group by sending a message from the personal Google Account, and confirm it arrives in the operator's Gmail.
+
+## Part 5: Where the Workspace account is used
+
+- **Sign-in with Google** for Slack ([account sign-in setup guide](account-sign-in.md)), Google sign-in for the WordPress admins and Dex (restricted to the russetleaf.dev domain; [ADR 1008](../adr/1008-google-sign-in-for-admins.md), [ADR 1033](../adr/1033-identity-and-access.md)), and the Google Cloud project that issues those OAuth clients.
+- **The email address** of the AWS accounts (groups, Part 4), the IAM Identity Center user, the GitHub organization's and GitLab group's contact email, the heartbeat service and the uptime checker.
+- **Not** for Cloudflare, Bitwarden or Microsoft, which stay on the operator's personal accounts.
+
+## Checks
+
+- [ ] russetleaf.dev shows as **verified** under **Manage domains**, and Gmail as active.
+- [ ] A message from an outside address reaches `<name>@russetleaf.dev`, and a message from it to an outside Gmail address shows `spf=pass`, `dkim=pass` and `dmarc=pass` under **Show original**.
+- [ ] Signing in to the Workspace account asks for a security key, both YubiKeys work, and **2-step verification** shows **Only security key** enforced.
+- [ ] The account is enrolled in **Advanced Protection**, and its recovery email is the personal Google Account.
+- [ ] The backup codes are in Bitwarden.
+- [ ] Each group receives a message from outside the organization.
+
+## If something goes wrong
+
+- **Lost `yubikey-primary`:** sign in with `yubikey-backup`, remove the lost key under **Passkeys and security keys**, and register a replacement; then follow the [account sign-in setup guide](account-sign-in.md#if-something-goes-wrong) for the other accounts.
+- **Locked out of the Workspace account** (both keys lost): sign in with a backup code from the kit; failing that, use Google's account recovery with the recovery email or phone; failing that, Google's administrator recovery, which proves ownership of russetleaf.dev with a DNS record added at Cloudflare. That last path is why Cloudflare does not sign in with the Workspace account.
+- **Mail stops arriving:** check the MX record and the domain's verification under **Manage domains**; removing the TXT verification record can cost the domain its verified status.
+- **The Workspace subscription lapses:** mail to russetleaf.dev stops, and with it the AWS root email path. Keep the subscription's payment method current, and the domain's auto-renew on.

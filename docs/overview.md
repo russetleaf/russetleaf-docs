@@ -271,19 +271,19 @@ Each phase's plan tiers every step as **Core** (a complete, working, secure plat
 
 | Plan | Core | Extended | Advanced | Total |
 |---|---|---|---|---|
-| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~179–294 | ~103–181 | ~89–144 | **~371–619** |
+| [Phase 1: russetleaf.dev](phase-1-russetleaf-dev/plan.md#priorities-and-time-estimates) | ~183–301 | ~103–181 | ~89–144 | **~375–626** |
 | [Phase 2: AI summaries and MLOps](phase-2-ai-mlops/plan.md#priorities-and-time-estimates) (optional) | ~50–86 | ~33–54 | ~64–104 | **~147–244** |
 | [Phase 3: aws.russetleaf.dev](phase-3-aws-russetleaf-dev/plan.md#priorities-and-time-estimates) (optional) | ~74–123 | ~14–22 | ~16–25 | **~104–170** |
-| **Whole project** | ~303–503 | ~150–257 | ~169–273 | **~622–1033** |
+| **Whole project** | ~307–510 | ~150–257 | ~169–273 | **~626–1040** |
 
 **Calendar time at about 20 hours a week:**
 
 | Scope | Hours | Calendar |
 |---|---|---|
-| Phase 1, Core tier | ~179–294 | 9–14 weeks |
-| Phase 1, everything | ~371–619 | 19–31 weeks (4–7 months) |
-| Phases 1 and 2 | ~518–863 | 26–43 weeks (6–10 months) |
-| All three phases | ~622–1033 | 31–52 weeks (7–12 months; 14–24 months at 10 hours a week) |
+| Phase 1, Core tier | ~183–301 | 9–15 weeks |
+| Phase 1, everything | ~375–626 | 19–31 weeks (4–7 months) |
+| Phases 1 and 2 | ~522–870 | 26–44 weeks (6–10 months) |
+| All three phases | ~626–1040 | 31–52 weeks (7–12 months; 14–24 months at 10 hours a week) |
 
 Phase 1 is built with AI assistance in conversation; Phases 2 and 3 are built with AI coding agents under [ADR 2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md), with Phase 1's actual hours as the baseline for measuring the difference. Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar. A finished Phase 1 is worth more than three unfinished phases.
 
@@ -706,6 +706,8 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [1056](phase-1-russetleaf-dev/adr/1056-aws-root-mfa-two-security-keys.md) | AWS root MFA: two hardware security keys, no authenticator app | 1 |
 | [1057](phase-1-russetleaf-dev/adr/1057-documentation-style-guide.md) | One documentation style guide, based on Google's and enforced by Vale | 1 |
 | [1058](phase-1-russetleaf-dev/adr/1058-security-detections-as-code.md) | Security detections as code in Sigma, on Loki, instead of a SIEM product | 1 |
+| [1059](phase-1-russetleaf-dev/adr/1059-google-workspace-identity.md) | Google Workspace on russetleaf.dev as the project's identity | 1 |
+| [1060](phase-1-russetleaf-dev/adr/1060-github-organization-and-gitlab-group.md) | The repos in a GitHub organization and a GitLab group | 1 |
 | [2001](phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback | 2 |
 | [2002](phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
 | [2003](phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | Self-hosted model on rl-home-cp02 (CPU llama.cpp), dedicated by taint | 2 |
