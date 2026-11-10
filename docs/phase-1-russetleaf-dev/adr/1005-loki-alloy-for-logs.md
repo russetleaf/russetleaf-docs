@@ -15,7 +15,7 @@ Constraints: `rl-home-cp01` of the home lab has 8 GB of RAM and already uses abo
 
 ## Decision
 
-- **Grafana Loki** in **single-binary mode** stores logs, with its data in an **S3 bucket** per site and a small local cache. Retention: **7 days** at home, **14 days** for russetleaf.com (bucket in the always-on edge stack, so demo logs outlive the demo).
+- **Grafana Loki** in **single-binary mode** stores logs, with its data in an **S3 bucket** per site and a small local cache. Retention: **7 days** at home, **14 days** for aws.russetleaf.dev (bucket in the always-on edge stack, so demo logs outlive the demo).
 - **Grafana Alloy** runs on every node, collects container logs, applies a **small fixed label set** (`site`, `env`, `cluster`, `namespace`, `app`, `container`), drops noise and masks obvious secrets.
 - **Talos system logs** are sent by Talos to Alloy, so node-level logs are searchable too.
 - **Loki's ruler** sends log-based alerts to the existing Alertmanager → Slack routing.

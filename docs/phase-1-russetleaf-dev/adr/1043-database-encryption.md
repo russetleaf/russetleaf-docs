@@ -35,7 +35,7 @@ Cilium's WireGuard encryption already protects pod traffic between home nodes, b
 **At rest: encrypted everywhere, with keys under the project's control where the data leaves the cluster.**
 
 - **Home:** the database volumes come from local-path-provisioner under `/var/local-path-provisioner`, which lies on Talos's **encrypted, TPM-sealed** partition ([ADR 1031](1031-kubernetes-component-hardening.md)). A test confirms this, so a volume cannot end up on an unencrypted disk.
-- **RDS:** `storage_encrypted = true` with a **customer-managed KMS key** in russetleaf-com. Automated backups, final snapshots and instances restored from them are encrypted with the same key.
+- **RDS:** `storage_encrypted = true` with a **customer-managed KMS key** in russetleaf-aws. Automated backups, final snapshots and instances restored from them are encrypted with the same key.
 - **Database backups in S3:** **SSE-KMS with a customer-managed key** and an **S3 Bucket Key** (fewer KMS requests, lower cost). The key policy lets only the backup role (write), the restore and staging-data Jobs (read) and S3 replication use it. The Backup account's copies already use their own customer-managed key.
 
 **Checks**
@@ -57,7 +57,7 @@ Cilium's WireGuard encryption already protects pod traffic between home nodes, b
 
 - Every database connection on both sites is encrypted, enforced by the server.
 - Backups and snapshots can only be read by roles the key policies name.
-- About $1 a month per customer-managed key (the backup key at home; the RDS key in russetleaf-com, only while it exists).
+- About $1 a month per customer-managed key (the backup key at home; the RDS key in russetleaf-aws, only while it exists).
 - A slight TLS handshake cost on new connections, negligible at this scale, and absorbed by RDS Proxy's pooling on AWS.
 - Certificate expiry becomes a failure mode; cert-manager renews the certificates, and its certificate-expiry alert covers them.
 

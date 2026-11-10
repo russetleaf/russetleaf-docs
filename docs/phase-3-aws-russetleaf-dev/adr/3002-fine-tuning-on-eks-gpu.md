@@ -12,7 +12,7 @@
 ## Decision
 
 - **A fine-tuning (distillation) pipeline** defined as an **Argo Workflows** template in `russetleaf-llm-summarizer/training/`, run on the EKS **spot GPU NodePool** during an AWS session: fetch the DVC-versioned dataset → **LoRA** fine-tune the 3B base model → **evaluate against the base** (including the adversarial cases) → convert to GGUF → **register** in the home MLflow as a `local-summarizer` version with its scores and lineage → propose it as **challenger** if it beats the base.
-- **Cross-account access:** the training role in russetleaf-com gets a narrow grant to write to the MLflow artifact and DVC buckets in russetleaf-home.
+- **Cross-account access:** the training role in russetleaf-aws gets a narrow grant to write to the MLflow artifact and DVC buckets in russetleaf-home.
 - **Serving at home:** the challenger is deployed to `rl-home-cp02`'s llama.cpp, gets a canary share through the gateway, is compared with the champion by online evaluation, and is promoted only if it holds up for a week.
 - **Training data:** curated summaries from the feedback loop and the evaluation set, plus a stronger **teacher** model's outputs only where the provider's terms allow; otherwise an open-weights teacher.
 - **Retraining triggers:** online quality dropping, enough new feedback, or a new base model.

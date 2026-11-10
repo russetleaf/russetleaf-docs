@@ -2,7 +2,7 @@
 
 - **Status:** Accepted; updated by [ADR 1020](1020-three-node-ha-home-cluster.md)
 - **Date:** 2026-11-01
-- **Applies to:** both sites (on for every russetleaf.com demo; always on, sampled, for russetleaf.dev)
+- **Applies to:** both sites (on for every aws.russetleaf.dev demo; always on, sampled, for russetleaf.dev)
 - **Phase:** 1 (page traces, always on at home). Later: Phase 2 traces the summary pipeline end to end (100% of summary jobs); Phase 3 runs Tempo on every demo.
 
 > **Update ([ADR 1020](1020-three-node-ha-home-cluster.md)):** The home cluster now has three nodes (`rl-home-cp03`: i5-8500T, 16 GB), so **Tempo runs always on at home** (sampled, 3-day retention), not on demand.
@@ -21,7 +21,7 @@ Constraints: `rl-home-cp01` of the home lab has 8 GB of RAM and is close to its 
     - The summarizer: the OpenTelemetry Python SDK, continuing the trace from the message.
     - The LiteLLM gateway: its built-in OpenTelemetry support.
 - **Grafana Alloy** (already deployed for logs) receives traces over OTLP and forwards them to **Grafana Tempo** (single-binary mode, S3 storage).
-- **russetleaf.com:** tracing **on for every demo**, 100% sampling, 7-day retention in a bucket that survives teardown.
+- **aws.russetleaf.dev:** tracing **on for every demo**, 100% sampling, 7-day retention in a bucket that survives teardown.
 - **russetleaf.dev:** tracing **always on** (since [ADR 1020](1020-three-node-ha-home-cluster.md)), ~10% sampling of page requests and 100% of summary jobs (Phase 2), 3-day retention.
 - **Spans hold metadata only**: no post content, prompts or summaries.
 

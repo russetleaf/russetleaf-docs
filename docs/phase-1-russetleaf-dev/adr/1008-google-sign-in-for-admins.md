@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites
-- **Phase:** 1. Later: Phase 3 adds the ALB's OIDC rule and russetleaf.com's OAuth client.
+- **Phase:** 1. Later: Phase 3 adds the ALB's OIDC rule and aws.russetleaf.dev's OAuth client.
 
 ## Context
 
@@ -16,7 +16,7 @@ Only admins and editors log in to WordPress; site visitors do not. By default Wo
 - **Password logins turned off** for people; **application passwords kept** for the REST API (the summarizer).
 - **An edge login layer** in front of `/wp-admin/*` and `/wp-login.php`:
     - russetleaf.dev: **Cloudflare Access** with Google as its login provider
-    - russetleaf.com: the **ALB's built-in OIDC authentication** with Google
+    - aws.russetleaf.dev: the **ALB's built-in OIDC authentication** with Google
 - **Break-glass** admin recovery with `wp-cli` inside the cluster, never by re-enabling password logins.
 
 ## Alternatives considered

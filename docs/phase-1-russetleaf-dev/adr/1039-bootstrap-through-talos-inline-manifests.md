@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-02
 - **Applies to:** the home Talos cluster's bootstrap (`russetleaf-infra/envs/home`, `russetleaf-gitops/platform/`)
-- **Phase:** 1. Phase 3 bootstraps EKS differently ([ADR 3003](../../phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md)).
+- **Phase:** 1. Phase 3 bootstraps EKS differently ([ADR 3003](../../phase-3-aws-russetleaf-dev/adr/3003-cilium-chaining-on-eks.md)).
 
 ## Context
 

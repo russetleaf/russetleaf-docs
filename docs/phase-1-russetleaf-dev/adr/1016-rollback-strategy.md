@@ -51,7 +51,7 @@ Rollback mechanisms existed in pieces (Argo Rollouts canaries, Git reverts, `tal
 ## When to revisit
 
 - A third node (or more memory) makes blue/green deployments affordable.
-- russetleaf.com becomes always-on: add blue/green or regional failover to its rollback options.
+- aws.russetleaf.dev becomes always-on: add blue/green or regional failover to its rollback options.
 - WordPress or a plugin adopts reversible migrations.
 
 ## Open items

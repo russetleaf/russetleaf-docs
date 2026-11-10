@@ -3,9 +3,9 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites
-- **Phase:** 1. EKS: [ADR 3003](../../phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md) (Phase 3).
+- **Phase:** 1. EKS: [ADR 3003](../../phase-3-aws-russetleaf-dev/adr/3003-cilium-chaining-on-eks.md) (Phase 3).
 
-> **Update ([ADR 3003](../../phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md)):** the project is now built in three phases ([ADR 1037](1037-project-phases.md)). This ADR covers the decision to use Cilium and its use on Talos (Phase 1). **Cilium on EKS, in chaining mode with the VPC CNI,** is recorded in [ADR 3003](../../phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md) (Phase 3).
+> **Update ([ADR 3003](../../phase-3-aws-russetleaf-dev/adr/3003-cilium-chaining-on-eks.md)):** the project is now built in three phases ([ADR 1037](1037-project-phases.md)). This ADR covers the decision to use Cilium and its use on Talos (Phase 1). **Cilium on EKS, in chaining mode with the VPC CNI,** is recorded in [ADR 3003](../../phase-3-aws-russetleaf-dev/adr/3003-cilium-chaining-on-eks.md) (Phase 3).
 
 > **Update ([ADR 1039](1039-bootstrap-through-talos-inline-manifests.md)):** at home, Cilium is installed at bootstrap through Talos's inline manifests, then adopted by Argo CD.
 
@@ -19,13 +19,13 @@ The design needs: enforced default-deny policies, **outbound rules by DNS name**
 
 - **Cilium** on both clusters, with **CiliumNetworkPolicies** (and a cluster-wide default-deny baseline), **Hubble** for flow visibility and metrics, and **WireGuard** transparent encryption.
 - **Talos:** Cilium as the full CNI, replacing Flannel **and kube-proxy**.
-- **EKS:** see [ADR 3003](../../phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md).
+- **EKS:** see [ADR 3003](../../phase-3-aws-russetleaf-dev/adr/3003-cilium-chaining-on-eks.md).
 
 ## Alternatives considered
 
 - **Flannel (Talos default):** simple, but no network policy enforcement at all.
 - **Calico:** mature, enforces standard and its own policies, supports DNS-based rules in some editions and WireGuard; a credible choice. Cilium was preferred for its eBPF data path (replacing kube-proxy), Hubble's built-in flow visibility and metrics, layer-7 policies, and its strong fit with Tetragon.
-- EKS-specific alternatives (the VPC CNI alone, Cilium in ENI mode): see [ADR 3003](../../phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md).
+- EKS-specific alternatives (the VPC CNI alone, Cilium in ENI mode): see [ADR 3003](../../phase-3-aws-russetleaf-dev/adr/3003-cilium-chaining-on-eks.md).
 
 ## Consequences
 
@@ -39,4 +39,4 @@ The design needs: enforced default-deny policies, **outbound rules by DNS name**
 
 ## Open items
 
-- Phase 1 step 2.2: install and connectivity tests (EKS: [ADR 3003](../../phase-3-russetleaf-com/adr/3003-cilium-chaining-on-eks.md)).
+- Phase 1 step 2.2: install and connectivity tests (EKS: [ADR 3003](../../phase-3-aws-russetleaf-dev/adr/3003-cilium-chaining-on-eks.md)).

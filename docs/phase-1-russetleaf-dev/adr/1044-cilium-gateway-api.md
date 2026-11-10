@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-03
-- **Applies to:** russetleaf.dev (the home cluster's ingress, canaries, SLIs and CrowdSec). russetleaf.com keeps the ALB through the AWS Load Balancer Controller.
+- **Applies to:** russetleaf.dev (the home cluster's ingress, canaries, SLIs and CrowdSec). aws.russetleaf.dev keeps the ALB through the AWS Load Balancer Controller.
 - **Phase:** 1
 
 ## Context

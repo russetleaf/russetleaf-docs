@@ -2,7 +2,7 @@
 
 - **Status:** Accepted (split from [ADR 1031](../../phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md))
 - **Date:** 2026-11-02
-- **Applies to:** the EKS cluster, its nodes and the russetleaf-com account
+- **Applies to:** the EKS cluster, its nodes and the russetleaf-aws account
 - **Phase:** 3
 
 ## Context
@@ -31,7 +31,7 @@
 
 ## When to revisit
 
-- russetleaf.com becomes always-on: consider a private endpoint and Bottlerocket nodes.
+- aws.russetleaf.dev becomes always-on: consider a private endpoint and Bottlerocket nodes.
 
 ## Open items
 

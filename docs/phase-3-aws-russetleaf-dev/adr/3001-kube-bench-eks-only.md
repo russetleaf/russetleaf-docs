@@ -9,7 +9,7 @@
 
 **kube-bench** checks a cluster against the **CIS Kubernetes Benchmark** by running on a node and inspecting configuration files, file permissions and process arguments (kubelet, API server, etcd) in the locations used by standard Linux distributions and kubeadm-style installs.
 
-- **EKS (russetleaf.com):** AWS manages the control plane, and kube-bench has an **EKS profile** that checks the worker nodes (kubelet settings, file permissions) and some policy items; the control plane is AWS's responsibility under the shared-responsibility model.
+- **EKS (aws.russetleaf.dev):** AWS manages the control plane, and kube-bench has an **EKS profile** that checks the worker nodes (kubelet settings, file permissions) and some policy items; the control plane is AWS's responsibility under the shared-responsibility model.
 - **Talos (russetleaf.dev):** Talos has no shell or SSH, an immutable read-only system, API-only management, and keeps its configuration in different locations. kube-bench's checks look for files and processes that do not exist there, so most fail or come back "not applicable", producing a noisy report that says little about Talos's real security. Talos is hardened by default (only Node and RBAC authorization, no anonymous kubelet access, webhook kubelet authorization, Pod Security `baseline`).
 
 Both sites run **Trivy Operator**, which produces **CIS compliance reports** continuously from inside the cluster and can publish them as Prometheus metrics.
@@ -44,7 +44,7 @@ Both sites run **Trivy Operator**, which produces **CIS compliance reports** con
 ## When to revisit
 
 - kube-bench or the CIS project publishes Talos-specific checks.
-- russetleaf.com moves to an always-on cluster: switch kube-bench to a scheduled CronJob with results also kept continuously.
+- aws.russetleaf.dev moves to an always-on cluster: switch kube-bench to a scheduled CronJob with results also kept continuously.
 - A compliance requirement demands the same tool on every cluster.
 
 ## Open items

@@ -26,13 +26,13 @@ All paths below are in `russetleaf-gitops` unless stated otherwise.
 
 | Runbook | Use it when | Sites | Written in | Rehearsed | Status |
 |---|---|---|---|---|---|
-| `docs/runbooks/compromised-container.md` | A container is suspected compromised: freeze, contain, capture memory and files, export logs | Both | [Phase 1 step 7.13](phase-1-russetleaf-dev/plan.md#step-713-compromised-container-runbook-and-forensics-drill); EKS section in [Phase 3 step 5.1c](phase-3-russetleaf-com/plan.md#step-51c-forensic-hold-and-forensics-drill-on-eks) | Drill in staging, then yearly; once on EKS | Planned |
+| `docs/runbooks/compromised-container.md` | A container is suspected compromised: freeze, contain, capture memory and files, export logs | Both | [Phase 1 step 7.13](phase-1-russetleaf-dev/plan.md#step-713-compromised-container-runbook-and-forensics-drill); EKS section in [Phase 3 step 5.1c](phase-3-aws-russetleaf-dev/plan.md#step-51c-forensic-hold-and-forensics-drill-on-eks) | Drill in staging, then yearly; once on EKS | Planned |
 | `docs/runbooks/wordpress-compromise.md` | A rogue admin account, injected content or defacement: a compromise in the database (and the object cache), not the container | Both | [Phase 1 step 7.14](phase-1-russetleaf-dev/plan.md#step-714-incident-runbooks-and-tabletop-drills) | In staging, step 7.14 | Planned |
-| `docs/runbooks/emergency-vulnerability.md` | A vulnerability is being exploited and no fix exists yet: a WAF rule to block it, remove the plugin, maintenance mode | Both | [Phase 1 step 7.14](phase-1-russetleaf-dev/plan.md#step-714-incident-runbooks-and-tabletop-drills); AWS WAF steps in [Phase 3 step 4.1](phase-3-russetleaf-com/plan.md#step-41-security-review) | In staging, step 7.14; once on EKS | Planned |
+| `docs/runbooks/emergency-vulnerability.md` | A vulnerability is being exploited and no fix exists yet: a WAF rule to block it, remove the plugin, maintenance mode | Both | [Phase 1 step 7.14](phase-1-russetleaf-dev/plan.md#step-714-incident-runbooks-and-tabletop-drills); AWS WAF steps in [Phase 3 step 4.1](phase-3-aws-russetleaf-dev/plan.md#step-41-security-review) | In staging, step 7.14; once on EKS | Planned |
 | `docs/runbooks/credential-leak.md` | A credential (token, key, kubeconfig) may have leaked: the credential inventory, then revoke, replace and check for use | Both | [Phase 1 step 4.2](phase-1-russetleaf-dev/plan.md#step-42-secrets-and-internal-certificates); LiteLLM keys added in [Phase 2 step 2.2](phase-2-ai-mlops/plan.md#step-22-litellm-gateway) | One credential revoked and replaced yearly | Planned |
 | `docs/runbooks/supply-chain-compromise.md` | A CI workflow, runner, dependency or the signing identity may be compromised | Both | [Phase 1 step 7.14](phase-1-russetleaf-dev/plan.md#step-714-incident-runbooks-and-tabletop-drills) | Tabletop, step 7.14 | Planned |
 | `docs/runbooks/cluster-compromise.md` | The home cluster itself is compromised (cluster-admin, or root on a node): preserve, rebuild from zero with new Talos secrets, restore data from before the compromise | Home | [Phase 1 step 7.14](phase-1-russetleaf-dev/plan.md#step-714-incident-runbooks-and-tabletop-drills) | Tabletop, step 7.14 | Planned |
-| `docs/runbooks/under-attack.md` | A bot flood or DDoS: Cloudflare's "I'm Under Attack" level, tighter rate limits, CrowdSec, AWS WAF | Both | [Phase 1 step 7.14](phase-1-russetleaf-dev/plan.md#step-714-incident-runbooks-and-tabletop-drills); AWS WAF steps in [Phase 3 step 4.1](phase-3-russetleaf-com/plan.md#step-41-security-review) | In staging, step 7.14 | Planned |
+| `docs/runbooks/under-attack.md` | A bot flood or DDoS: Cloudflare's "I'm Under Attack" level, tighter rate limits, CrowdSec, AWS WAF | Both | [Phase 1 step 7.14](phase-1-russetleaf-dev/plan.md#step-714-incident-runbooks-and-tabletop-drills); AWS WAF steps in [Phase 3 step 4.1](phase-3-aws-russetleaf-dev/plan.md#step-41-security-review) | In staging, step 7.14 | Planned |
 | `docs/runbooks/personal-data-breach.md` | Personal data may have been exposed: assess, contain, record, notify within 72 hours if required | Both | [Phase 1 step 5.12](phase-1-russetleaf-dev/plan.md#step-512-compliance-scope-and-privacy-gdpr-basics) | Tabletop with the incident tabletops | Planned |
 
 ## Access
@@ -82,14 +82,14 @@ One runbook per layer, from the [rollback strategy](phase-1-russetleaf-dev/desig
 
 A personal-data breach is handled by `docs/runbooks/personal-data-breach.md`, listed under [security incidents](#security-incidents).
 
-## russetleaf.com demo
+## aws.russetleaf.dev demo
 
 | Runbook | Use it when | Written in | Rehearsed | Status |
 |---|---|---|---|---|
-| `docs/runbooks/demo-teardown-stuck.md` (in `russetleaf-infra`) | `demo-down` hangs or leaves resources behind (and costs) | [Phase 3 step 5.1](phase-3-russetleaf-com/plan.md#step-51-demo-workflows) | Step 5.1 | Planned |
-| `docs/runbooks/aws-end-to-end-check.md` (in `russetleaf-infra`) | Verifying the whole AWS stack after bringing it up: delivery, tracing, policy, runtime security, cost and teardown | [Phase 3 step 5.2](phase-3-russetleaf-com/plan.md#step-52-full-rehearsal-and-end-to-end-verification) | Step 5.2; then after significant changes to the AWS stack | Planned |
+| `docs/runbooks/demo-teardown-stuck.md` (in `russetleaf-infra`) | `demo-down` hangs or leaves resources behind (and costs) | [Phase 3 step 5.1](phase-3-aws-russetleaf-dev/plan.md#step-51-demo-workflows) | Step 5.1 | Planned |
+| `docs/runbooks/aws-end-to-end-check.md` (in `russetleaf-infra`) | Verifying the whole AWS stack after bringing it up: delivery, tracing, policy, runtime security, cost and teardown | [Phase 3 step 5.2](phase-3-aws-russetleaf-dev/plan.md#step-52-full-rehearsal-and-end-to-end-verification) | Step 5.2; then after significant changes to the AWS stack | Planned |
 
-The shared runbooks above gain EKS sections where russetleaf.com differs (forensics, AWS WAF).
+The shared runbooks above gain EKS sections where aws.russetleaf.dev differs (forensics, AWS WAF).
 
 ## Alert runbooks
 
@@ -106,4 +106,4 @@ One runbook per alert, named after it. Each group is written in the step that ad
 | Compliance | `ComplianceFailuresIncreased` | [Phase 1 step 7.2](phase-1-russetleaf-dev/plan.md#step-72-trivy-operator-kubescape-scan-and-talos-hardening-notes) |
 | Cost | `NamespaceDailyCostSpike` | [Phase 1 step 7.3](phase-1-russetleaf-dev/plan.md#step-73-opencost) |
 | AI components | Summarizer, gateway and model alerts | [Phase 2 step 5.2](phase-2-ai-mlops/plan.md#step-52-observability-and-operations-for-the-ai-components) |
-| EKS and AWS | The persistence alarms from the EKS audit log, the demo safety net | [Phase 3 step 1.4](phase-3-russetleaf-com/plan.md#step-14-eks-cluster), [Phase 3 step 5.1](phase-3-russetleaf-com/plan.md#step-51-demo-workflows) |
+| EKS and AWS | The persistence alarms from the EKS audit log, the demo safety net | [Phase 3 step 1.4](phase-3-aws-russetleaf-dev/plan.md#step-14-eks-cluster), [Phase 3 step 5.1](phase-3-aws-russetleaf-dev/plan.md#step-51-demo-workflows) |

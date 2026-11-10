@@ -10,7 +10,7 @@ The live site it runs is **[russetleaf.dev](https://russetleaf.dev)**.
 |---|---|---|
 | **[1. russetleaf.dev](phase-1-russetleaf-dev/design.md)** | WordPress on a three-node, highly available Talos Kubernetes cluster at home, running 24/7, with the AWS Organization it uses | In progress ([roadmap](phase-1-russetleaf-dev/roadmap.md)) |
 | **[2. AI summaries and MLOps](phase-2-ai-mlops/design.md)** | AI-generated post summaries with an LLM gateway, a self-hosted model and a full MLOps lifecycle | Planned (optional) |
-| **[3. russetleaf.com](phase-3-russetleaf-com/design.md)** | The same site on the full AWS production design (EKS, RDS, CloudFront), brought up only for demos | Planned (optional) |
+| **[3. aws.russetleaf.dev](phase-3-aws-russetleaf-dev/design.md)** | The same site on the full AWS production design (EKS, RDS, CloudFront), brought up only for demos | Planned (optional) |
 
 ## Where to start
 

@@ -7,7 +7,7 @@
 
 ## Context
 
-Public TLS is handled at the edge: Cloudflare (russetleaf.dev) and ACM (russetleaf.com). Inside the clusters, several things need certificates: MariaDB's TLS for WordPress connections (required for the `wordpress` user), the optional client-certificate login, and any internal endpoint that should use TLS (for example, OTLP receivers, internal admin services). The design referred to "certificates from the operator or cert-manager" without deciding.
+Public TLS is handled at the edge: Cloudflare (russetleaf.dev) and ACM (aws.russetleaf.dev). Inside the clusters, several things need certificates: MariaDB's TLS for WordPress connections (required for the `wordpress` user), the optional client-certificate login, and any internal endpoint that should use TLS (for example, OTLP receivers, internal admin services). The design referred to "certificates from the operator or cert-manager" without deciding.
 
 ## Decision
 

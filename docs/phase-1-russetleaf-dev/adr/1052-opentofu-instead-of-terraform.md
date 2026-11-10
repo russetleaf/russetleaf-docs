@@ -3,7 +3,7 @@
 - **Status:** Accepted. It supersedes [ADR 1051](1051-terraform-for-infrastructure-as-code.md); updated by [ADR 1054](1054-opentofu-state-and-plan-encryption.md) (state and plan encryption).
 - **Date:** 2026-11-06
 - **Applies to:** both sites
-- **Phase:** 1 (`russetleaf-infra`, steps 2.0 to 2.5). Phase 2 adds the AI pipeline's AWS resources; Phase 3 adds russetleaf.com's edge and demo stacks.
+- **Phase:** 1 (`russetleaf-infra`, steps 2.0 to 2.5). Phase 2 adds the AI pipeline's AWS resources; Phase 3 adds aws.russetleaf.dev's edge and demo stacks.
 
 > **Update ([ADR 1054](1054-opentofu-state-and-plan-encryption.md)):** state and saved plans **are encrypted** by OpenTofu from the first apply, with a passphrase kept in Secrets Manager and the break-glass kit, so the Backup account's copies stay readable without the russetleaf-infra account. The deferral below no longer applies.
 
@@ -14,7 +14,7 @@
 No infrastructure code exists yet (`russetleaf-infra` is written from step 2.0), so a switch now costs only documentation. Checked before deciding (2026-11-06, OpenTofu 1.13.8):
 
 - the four providers the project uses (`hashicorp/aws`, `cloudflare/cloudflare`, `integrations/github`, `siderolabs/talos`) install from **OpenTofu's registry**, signed;
-- **ephemeral values and write-only arguments**, which keep Phase 3's database password and cache token out of state ([ADR 3007](../../phase-3-russetleaf-com/adr/3007-rds-mariadb-with-rds-proxy.md)), validate with the AWS provider;
+- **ephemeral values and write-only arguments**, which keep Phase 3's database password and cache token out of state ([ADR 3007](../../phase-3-aws-russetleaf-dev/adr/3007-rds-mariadb-with-rds-proxy.md)), validate with the AWS provider;
 - every check in the pipeline supports OpenTofu: tflint, Checkov, `terraform-docs`, Infracost, `pre-commit-terraform`, Renovate, `mise` and a GitHub Action (`opentofu/setup-opentofu`).
 
 ## Decision

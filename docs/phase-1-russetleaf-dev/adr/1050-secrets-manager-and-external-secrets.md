@@ -13,12 +13,12 @@ The design has always kept these secrets in **AWS Secrets Manager** and synced t
 
 - **One operator,** a **three-node home cluster** with a fixed memory budget ([ADR 1020](1020-three-node-ha-home-cluster.md)), and a few dollars a month for anything that is not the site itself.
 - **The project already depends on AWS:** the Organization, S3, SES, KMS, CloudTrail and the security services ([ADR 1019](1019-aws-multi-account-sra.md)), with IAM for access and CloudTrail alerts for unexpected use.
-- **Both sites** should use the same mechanism, and Phase 3's russetleaf.com runs on AWS itself.
+- **Both sites** should use the same mechanism, and Phase 3's aws.russetleaf.dev runs on AWS itself.
 - **Recovery:** a secrets store is something every other service needs at startup, so it must not be hard to bring back after a cold start or a disaster ([disaster recovery plan](../disaster-recovery.md)).
 
 ## Decision
 
-- **Secrets that come from outside the cluster live in AWS Secrets Manager,** in the account that uses them (russetleaf-home; russetleaf-com in Phase 3), encrypted with KMS, readable only by identities in the Organization ([ADR 1019](1019-aws-multi-account-sra.md)), with every read recorded by CloudTrail.
+- **Secrets that come from outside the cluster live in AWS Secrets Manager,** in the account that uses them (russetleaf-home; russetleaf-aws in Phase 3), encrypted with KMS, readable only by identities in the Organization ([ADR 1019](1019-aws-multi-account-sra.md)), with every read recorded by CloudTrail.
 - **The External Secrets Operator** syncs them into Kubernetes Secrets through a `ClusterSecretStore`, with one `ExternalSecret` per application secret. If AWS or the operator is unavailable, the Secrets already in the cluster keep working; a bad value is rolled back by pointing at the previous version (`AWSPREVIOUS`).
 - **How External Secrets signs in to AWS:** at home, a scoped IAM key created once by hand (step 4.2), the one static credential the cluster holds, until step 9.1 replaces it with keyless OIDC access; on EKS, Pod Identity.
 - **Rotation:** automatic where AWS provides it (RDS's managed master password in Phase 3); third-party tokens on the manual schedules in the ongoing-operations tables ([ADR 1019](1019-aws-multi-account-sra.md)); in-cluster passwords by the rotation job ([ADR 1047](1047-in-cluster-credentials-and-rotation.md)).

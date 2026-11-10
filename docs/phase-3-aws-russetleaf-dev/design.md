@@ -1,6 +1,6 @@
-# Phase 3 design: russetleaf.com on EKS
+# Phase 3 design: aws.russetleaf.dev on EKS
 
-**Phase 3** builds **russetleaf.com**: the same WordPress site on the full AWS production design (EKS with Karpenter, RDS for MariaDB behind RDS Proxy with IAM authentication, ElastiCache, CloudFront, ALB and AWS WAF), brought up only for demos, with an always-on CloudFront edge that shows an offline page the rest of the time. It needs Phase 1 and is optional. It is **independent of Phase 2**: russetleaf.com runs WordPress only. Posts seeded from russetleaf.dev keep the AI summaries Phase 2 generated there, but russetleaf.com generates none of its own, and the WordPress image's summary-queue plugin does nothing when no queue is configured.
+**Phase 3** builds **aws.russetleaf.dev**: the same WordPress site on the full AWS production design (EKS with Karpenter, RDS for MariaDB behind RDS Proxy with IAM authentication, ElastiCache, CloudFront, ALB and AWS WAF), brought up only for demos, with an always-on CloudFront edge that shows an offline page the rest of the time. It needs Phase 1 and is optional. It is **independent of Phase 2**: aws.russetleaf.dev runs WordPress only. Posts seeded from russetleaf.dev keep the AI summaries Phase 2 generated there, but aws.russetleaf.dev generates none of its own, and the WordPress image's summary-queue plugin does nothing when no queue is configured.
 
 - **Build plan:** [`plan.md`](plan.md)
 - **Decisions:** this phase's ADRs, in the `adr/` folder and listed in the [overview's index](../overview.md#architecture-decision-records)
@@ -17,9 +17,9 @@ flowchart LR
   visitor(["Visitor"])
   admin(["Admin"])
   op(["Operator"])
-  site["russetleaf.com<br/>WordPress on EKS, demos only"]
+  site["aws.russetleaf.dev<br/>WordPress on EKS, demos only"]
   dev["russetleaf.dev<br/>(Phase 1): Argo CD hub,<br/>CI runners, backups to seed from"]
-  aws["AWS<br/>russetleaf-com account and<br/>the Organization's security accounts"]
+  aws["AWS<br/>russetleaf-aws account and<br/>the Organization's security accounts"]
   gh["GitHub<br/>repos, Actions, GHCR"]
   slack["Slack"]
   visitor -->|HTTPS| site
@@ -45,7 +45,7 @@ flowchart TB
     wp --> proxy["RDS Proxy (IAM auth)"] --> rds[("RDS for MariaDB<br/>Multi-AZ")]
     wp --> cache[("ElastiCache Valkey")]
   end
-  cf -->|"default: origin.russetleaf.com"| alb
+  cf -->|"default: origin.aws.russetleaf.dev"| alb
   rds -.->|"final snapshot on demo-down"| snap[("Snapshot")]
 ```
 
@@ -60,15 +60,15 @@ flowchart TB
 
 ### Traffic and edge
 
-- **Application Load Balancer** through the AWS Load Balancer Controller, with **TLS certificates from ACM**. Its DNS name (`origin.russetleaf.com`) is managed by **ExternalDNS**.
-- **CloudFront** in front of both the site and the S3 media. In this project CloudFront is **always on** (it costs almost nothing idle), so it can show an offline page when the demo stack is down; see [russetleaf.com between demos](#russetleafcom-between-demos).
+- **Application Load Balancer** through the AWS Load Balancer Controller, with **TLS certificates from ACM**. Its DNS name (`origin.aws.russetleaf.dev`) is managed by **ExternalDNS**.
+- **CloudFront** in front of both the site and the S3 media. In this project CloudFront is **always on** (it costs almost nothing idle), so it can show an offline page when the demo stack is down; see [aws.russetleaf.dev between demos](#awsrussetleafdev-between-demos).
 - **The ALB accepts only CloudFront traffic:** its security group allows only AWS's CloudFront origin-facing IP list, and a listener rule requires a secret header that CloudFront adds to every request.
-- **DNSSEC** on both domains: Cloudflare's one-click DNSSEC for russetleaf.dev, and Route 53 DNSSEC signing (with a KMS key, about $1/month) for russetleaf.com, with the DS records added at each registrar.
+- **DNS and DNSSEC:** the site is a subdomain, `aws.russetleaf.dev`, whose Route 53 hosted zone is **delegated** from the russetleaf.dev zone at Cloudflare (NS records for `aws`); Route 53 DNSSEC signing (with a KMS key, about $1/month) signs the subdomain, and its DS record sits in the russetleaf.dev zone, which Cloudflare already signs ([ADR 3010](adr/3010-aws-site-on-a-subdomain.md)).
 - **AWS WAF in two places** ([ADR 3009](adr/3009-edge-waf-on-cloudfront-free-plan.md)): on **CloudFront**, through its flat-rate **Free plan** ($0), a web ACL with five rules (core rule set, known bad inputs, IP reputation, a `/wp-login.php` rate limit, `/xmlrpc.php` blocked) protects the edge around the clock; on the **ALB**, during demos only, the full web ACL adds the WordPress, PHP and SQL database rule groups, which the Free plan does not include.
 
 ## Database access on AWS
 
-### russetleaf.com: IAM authentication through RDS Proxy
+### aws.russetleaf.dev: IAM authentication through RDS Proxy
 
 ```mermaid
 flowchart LR
@@ -81,7 +81,7 @@ flowchart LR
 - **Why a proxy, not IAM straight to RDS:** WordPress opens a new database connection on almost every page request. AWS recommends direct IAM database authentication only for apps making fewer than about 200 new connections per second, and each IAM-checked connection costs a little extra time. RDS Proxy keeps a pool of connections open to the database, so WordPress's connection churn hits the proxy, not the database. It also hides Multi-AZ failovers from WordPress: a failover takes seconds instead of waiting for DNS to change.
 - **The master (admin) user:** `manage_master_user_password = true`, so **RDS generates the master password, stores it in Secrets Manager and rotates it**. Nobody chooses or sees it. It is used only by the one-off database setup Job (below) and for break-glass admin work.
 - **Creating the `wordpress` user:** the RDS instance is in private subnets, so OpenTofu (running in GitHub Actions) cannot reach it. A small, idempotent **`db-setup` Job** in `overlays/aws` (an Argo CD PreSync hook) reads the master secret and the `wordpress` secret, then runs `CREATE USER IF NOT EXISTS` and `GRANT ... ON wordpress.*`. Its own Pod Identity role reads only those two secrets, a network policy limits it to the RDS endpoint, and Argo CD deletes it once it succeeds. Because the user lives in the database, it survives demo teardowns in the final snapshot; the Job only does real work on the very first demo.
-- **The seed Job** (seeding russetleaf.com from russetleaf.dev) connects the same way as WordPress: IAM token through the proxy, with `rds-db:connect` on its own Pod Identity role.
+- **The seed Job** (seeding aws.russetleaf.dev from russetleaf.dev) connects the same way as WordPress: IAM token through the proxy, with `rds-db:connect` on its own Pod Identity role.
 
 ### Risk: confirm IAM tokens work from PHP first (with a fallback)
 
@@ -108,7 +108,7 @@ Switching between the two is an **overlay change** in `russetleaf-gitops` (`data
 | Repo | What changes |
 |---|---|
 | `russetleaf-wordpress` | The `db.php` drop-in (IAM token mode) and a chart setting **`database.auth`**, `password` (the default) or `iam`, plus the RDS CA certificate bundle for TLS |
-| `russetleaf-infra` | russetleaf.com: RDS Proxy (IAM required, TLS required), the `wordpress` secret and the proxy's role to read it, `manage_master_user_password`, `rds-db:connect` on the WordPress and seed-Job roles |
+| `russetleaf-infra` | aws.russetleaf.dev: RDS Proxy (IAM required, TLS required), the `wordpress` secret and the proxy's role to read it, `manage_master_user_password`, `rds-db:connect` on the WordPress and seed-Job roles |
 | `russetleaf-gitops` `overlays/aws` | `database.auth: iam`, the proxy endpoint, the `db-setup` PreSync Job, CiliumNetworkPolicy allowing WordPress → the proxy endpoint (by DNS name) |
 | `russetleaf-gitops` `overlays/home`, `overlays/home-staging` | `database.auth: password`, pointing at the MariaDB Operator-generated Secret |
 | `russetleaf-gitops` `base/` | Unchanged, except that **no database credential source lives in the base**: each overlay supplies its own |
@@ -119,14 +119,14 @@ The WordPress Rollout, Service, HPA and the rest of the base are the same for bo
 
 ## Demo operations
 
-### Demo noise control (russetleaf.com)
+### Demo noise control (aws.russetleaf.dev)
 
-- `demo-down` creates an Alertmanager **silence** for russetleaf.com before tearing anything down, then posts "russetleaf.com demo stopped" to `#rl-com-alerts`.
-- `demo-up` posts "russetleaf.com demo started" once the site returns 200. CloudWatch alarms are created with the demo stack and deleted with it.
+- `demo-down` creates an Alertmanager **silence** for aws.russetleaf.dev before tearing anything down, then posts "aws.russetleaf.dev demo stopped" to `#rl-aws-alerts`.
+- `demo-up` posts "aws.russetleaf.dev demo started" once the site returns 200. CloudWatch alarms are created with the demo stack and deleted with it.
 
 ## Example Helm values (outline)
 
-These are illustrative russetleaf.com (AWS overlay) values for the project's own WordPress chart; the exact keys are defined when the chart is written. The russetleaf.dev overlay differs only in the site-specific settings: its domain, the in-cluster MariaDB and Valkey hosts, an HTTPRoute on the Cilium Gateway instead of the ALB Ingress, its own bucket and email settings, scoped keys instead of Pod Identity, and the Prometheus-based canary analysis.
+These are illustrative aws.russetleaf.dev (AWS overlay) values for the project's own WordPress chart; the exact keys are defined when the chart is written. The russetleaf.dev overlay differs only in the site-specific settings: its domain, the in-cluster MariaDB and Valkey hosts, an HTTPRoute on the Cilium Gateway instead of the ALB Ingress, its own bucket and email settings, scoped keys instead of Pod Identity, and the Prometheus-based canary analysis.
 
 ```yaml
 image:
@@ -134,7 +134,7 @@ image:
   tag: "1.0.0"                     # bumped by the russetleaf-wordpress release bot
 
 site:
-  url: https://russetleaf.com      # sets WP_HOME and WP_SITEURL
+  url: https://aws.russetleaf.dev      # sets WP_HOME and WP_SITEURL
 
 replicas: 3
 autoscaling:
@@ -161,8 +161,8 @@ cache:
   existingSecret: valkey-auth
 
 media:
-  bucket: russetleaf-com-media
-  cdnDomain: russetleaf.com        # media served through CloudFront
+  bucket: russetleaf-aws-media
+  cdnDomain: aws.russetleaf.dev        # media served through CloudFront
 
 email:
   smtpSecret: ses-smtp             # Amazon SES SMTP credentials
@@ -183,13 +183,13 @@ wpCron:
 
 ingress:
   className: alb
-  host: origin.russetleaf.com      # CloudFront's origin; visitors use russetleaf.com
+  host: origin.aws.russetleaf.dev      # CloudFront's origin; visitors use aws.russetleaf.dev
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
     alb.ingress.kubernetes.io/wafv2-acl-arn: <waf-web-acl-arn>
-    external-dns.alpha.kubernetes.io/hostname: origin.russetleaf.com
+    external-dns.alpha.kubernetes.io/hostname: origin.aws.russetleaf.dev
 
 rollout:
   canarySteps: [20, 50, 100]
@@ -240,27 +240,27 @@ The last two rows (CloudTrail and GuardDuty; Security Hub, Config and KMS) are o
 
 GuardDuty EKS Runtime Monitoring, if used instead of Falco, is billed per vCPU monitored and would add roughly $10–$20/month at this size.
 
-## russetleaf.com between demos
+## aws.russetleaf.dev between demos
 
 ### Requirement
 
-When the EKS demo stack is not running, **russetleaf.com must still answer** with a simple static page, served by CloudFront, that says the AWS demo is offline and links visitors to **russetleaf.dev**. It must switch to the offline page **automatically** when the stack is destroyed, and back to the live site automatically when the stack comes up, with no manual DNS changes.
+When the EKS demo stack is not running, **aws.russetleaf.dev must still answer** with a simple static page, served by CloudFront, that says the AWS demo is offline and links visitors to **russetleaf.dev**. It must switch to the offline page **automatically** when the stack is destroyed, and back to the live site automatically when the stack comes up, with no manual DNS changes.
 
 ### Mechanism: an always-on CloudFront edge with error fallback (recommended)
 
 Split the AWS OpenTofu into two root modules in `russetleaf-infra`:
 
-- **`envs/aws-edge` (always on, ~$1/month):** the Route 53 hosted zone for russetleaf.com, ACM certificates, the CloudFront distribution, the S3 bucket holding the offline page, the russetleaf.com **media bucket**, and the secret header value CloudFront sends to the ALB.
-- **`envs/aws` (demo stack):** everything else (VPC, EKS, Karpenter, RDS, ElastiCache, WAF, SQS and the rest). The ALB itself is created by the AWS Load Balancer Controller from the WordPress Ingress, and **ExternalDNS** creates the `origin.russetleaf.com` record pointing at it.
+- **`envs/aws-edge` (always on, ~$1/month):** the Route 53 hosted zone for aws.russetleaf.dev, ACM certificates, the CloudFront distribution, the S3 bucket holding the offline page, the aws.russetleaf.dev **media bucket**, and the secret header value CloudFront sends to the ALB.
+- **`envs/aws` (demo stack):** everything else (VPC, EKS, Karpenter, RDS, ElastiCache, WAF, SQS and the rest). The ALB itself is created by the AWS Load Balancer Controller from the WordPress Ingress, and **ExternalDNS** creates the `origin.aws.russetleaf.dev` record pointing at it.
 
 The CloudFront distribution is set up like this:
 
 | Setting | Value |
 |---|---|
 | Pricing plan | **Flat-rate Free plan** ($0): CloudFront, the edge web ACL (five rules) and the Route 53 hosted zone ([ADR 3009](adr/3009-edge-waf-on-cloudfront-free-plan.md)) |
-| Default behavior (`*`) | Origin `origin.russetleaf.com` (the ALB), HTTPS only, all HTTP methods; **uncached** (managed `CachingDisabled` policy) with the managed **`AllViewerExceptHostHeader`** origin-request policy, so cookies and query strings reach WordPress on every path, including the admin and sign-in paths |
+| Default behavior (`*`) | Origin `origin.aws.russetleaf.dev` (the ALB), HTTPS only, all HTTP methods; **uncached** (managed `CachingDisabled` policy) with the managed **`AllViewerExceptHostHeader`** origin-request policy, so cookies and query strings reach WordPress on every path, including the admin and sign-in paths |
 | Response headers | AWS's managed **`SecurityHeadersPolicy`** (HSTS and the other security headers) |
-| `/wp-content/uploads/*` | Origin: the russetleaf.com media bucket (Origin Access Control) |
+| `/wp-content/uploads/*` | Origin: the aws.russetleaf.dev media bucket (Origin Access Control) |
 | `/offline/*` | Origin: the offline-page bucket (Origin Access Control) |
 | Custom error responses | **502, 503, 504 → `/offline/index.html`**, returned with status **503** |
 | Error caching (minimum TTL) | **10 seconds**, so the live site returns quickly once the demo is up |
@@ -269,8 +269,8 @@ The CloudFront distribution is set up like this:
 
 How the switch works:
 
-1. **Demo stack down:** `origin.russetleaf.com` does not exist, so CloudFront cannot reach the origin and gets a 502. The custom error response serves the offline page instead. Visitors see "The AWS demo of this site is offline. Visit russetleaf.dev to see the live site."
-2. **Demo stack up:** Argo CD deploys WordPress, the Load Balancer Controller creates the ALB, and ExternalDNS creates `origin.russetleaf.com`. Within a minute or so (the DNS record's TTL plus the 10-second error cache), CloudFront reaches the origin and serves the live site.
+1. **Demo stack down:** `origin.aws.russetleaf.dev` does not exist, so CloudFront cannot reach the origin and gets a 502. The custom error response serves the offline page instead. Visitors see "The AWS demo of this site is offline. Visit russetleaf.dev to see the live site."
+2. **Demo stack up:** Argo CD deploys WordPress, the Load Balancer Controller creates the ALB, and ExternalDNS creates `origin.aws.russetleaf.dev`. Within a minute or so (the DNS record's TTL plus the 10-second error cache), CloudFront reaches the origin and serves the live site.
 3. **Demo stack torn down:** removing the Argo CD Applications deletes the Ingress, so the ALB is removed and ExternalDNS deletes the DNS record (run ExternalDNS with `--policy=sync` so it removes records it created). CloudFront falls back to the offline page again.
 
 Returning **503** (rather than 200) tells search engines the site is temporarily unavailable, so they do not index the offline page as the site's content. If the live site is ever broken during a demo (the ALB returns 5xx), visitors see the same offline page rather than an error.
@@ -279,33 +279,33 @@ This also works for any HTTP method (logins and form posts get the offline page 
 
 **Alternative: Route 53 failover routing.** A primary record pointing at the demo stack with a Route 53 health check, and a secondary record pointing at the offline page. It works, but it is a worse fit here: the primary record would point at resources that are deleted after every demo, health checks add cost (about $0.50–$2/month each), and DNS caching slows the switch. The CloudFront approach needs neither.
 
-### Keeping russetleaf.com content between demos
+### Keeping aws.russetleaf.dev content between demos
 
 Each demo creates a new RDS instance, so content needs a plan:
 
 - **Final snapshot on destroy (recommended):** set `skip_final_snapshot = false` on the RDS instance, and have the next `tofu apply` restore from the most recent snapshot. Posts, summaries and settings carry over. Snapshot storage costs a few cents a month for a site this size.
-- **Media is never lost:** the russetleaf.com media bucket lives in `envs/aws-edge`, so uploads survive between demos.
-- **Optional: seed from russetleaf.dev.** For the first demo, or to refresh russetleaf.com with the live site's content, run the **seed Job** (`russetleaf-gitops/apps/seed-from-dev/`, an Argo CD Application set to manual sync, AWS only). It:
+- **Media is never lost:** the aws.russetleaf.dev media bucket lives in `envs/aws-edge`, so uploads survive between demos.
+- **Optional: seed from russetleaf.dev.** For the first demo, or to refresh aws.russetleaf.dev with the live site's content, run the **seed Job** (`russetleaf-gitops/apps/seed-from-dev/`, an Argo CD Application set to manual sync, AWS only). It:
     1. downloads the latest backup of russetleaf.dev from its S3 backup bucket (see [russetleaf.dev database backups](../phase-1-russetleaf-dev/design.md#russetleafdev-database-backups))
     2. imports it into RDS for MariaDB through RDS Proxy, logging in with an IAM auth token like WordPress (same engine, so no conversion is needed)
-    3. runs `wp search-replace 'russetleaf.dev' 'russetleaf.com' --all-tables` to fix links and settings
-    4. copies the media with `aws s3 sync` from the russetleaf.dev media bucket to the russetleaf.com media bucket
+    3. runs `wp search-replace 'russetleaf.dev' 'aws.russetleaf.dev' --all-tables` to fix links and settings
+    4. copies the media with `aws s3 sync` from the russetleaf.dev media bucket to the aws.russetleaf.dev media bucket
 
-  Its IAM role (Pod Identity) may only read the russetleaf.dev backup and media buckets, write to the russetleaf.com media bucket, and `rds-db:connect` through the proxy. After it runs, russetleaf.com shows the same posts as the live site, and the next final snapshot keeps them.
+  Its IAM role (Pod Identity) may only read the russetleaf.dev backup and media buckets, write to the aws.russetleaf.dev media bucket, and `rds-db:connect` through the proxy. After it runs, aws.russetleaf.dev shows the same posts as the live site, and the next final snapshot keeps them.
 
-### Always-on cost for russetleaf.com
+### Always-on cost for aws.russetleaf.dev
 
 | Item | Est. monthly cost (USD) |
 |---|---|
 | CloudFront flat-rate Free plan (distribution, edge WAF, Route 53 hosted zone and queries) | $0 |
-| S3 (offline page + russetleaf.com media) | <$0.50 |
+| S3 (offline page + aws.russetleaf.dev media) | <$0.50 |
 | ACM certificates | $0 |
 | RDS final snapshot storage | <$0.25 |
 | **Total** | **~$1 / month** |
 
 ### Short AWS demos
 
-The full AWS design costs roughly **$0.70 an hour** while running. Run `tofu apply` in `envs/aws`, run the end-to-end verification (Phase 3 step 5.2), then tear it down. The `demo-up` and `demo-down` GitHub Actions workflows in `russetleaf-infra` do this in the right order, and a scheduled safety-net workflow alerts (or tears down) if the stack is left running too long; see [Building it from scratch](../overview.md#building-it-from-scratch). The always-on edge (`envs/aws-edge`) is never destroyed, so russetleaf.com switches to its offline page automatically.
+The full AWS design costs roughly **$0.70 an hour** while running. Run `tofu apply` in `envs/aws`, run the end-to-end verification (Phase 3 step 5.2), then tear it down. The `demo-up` and `demo-down` GitHub Actions workflows in `russetleaf-infra` do this in the right order, and a scheduled safety-net workflow alerts (or tears down) if the stack is left running too long; see [Building it from scratch](../overview.md#building-it-from-scratch). The always-on edge (`envs/aws-edge`) is never destroyed, so aws.russetleaf.dev switches to its offline page automatically.
 
 | Demo time per month | Est. cost |
 |---|---|
@@ -317,19 +317,19 @@ Together with the home lab (about $14–33 a month always on), the total is abou
 
 **Tip:** set an AWS Budget with an email alert (for example, at $25) so a forgotten `tofu destroy` does not run up a bill. NAT Gateways and RDS are the most expensive items to leave running.
 
-## How russetleaf.com differs in the shared platform
+## How aws.russetleaf.dev differs in the shared platform
 
 These parts of Phase 1's shared platform sections apply only to the EKS site.
 
 ### Sandboxed runtimes (gVisor)
 
-**russetleaf.com (EKS):** gVisor is not used. AWS does not offer it as a managed option, and installing it through a custom AMI or node user data is not worth it for a demo cluster (the CI runners only run at home anyway). seccomp `RuntimeDefault` still applies.
+**aws.russetleaf.dev (EKS):** gVisor is not used. AWS does not offer it as a managed option, and installing it through a custom AMI or node user data is not worth it for a demo cluster (the CI runners only run at home anyway). seccomp `RuntimeDefault` still applies.
 
 ### Workload permissions and database security
 
 - S3 and SES access through **EKS Pod Identity** (IRSA only for any component that does not support Pod Identity), not stored AWS access keys. Each role gets only what it needs:
     - WordPress may write to its S3 bucket and `rds-db:connect` as the `wordpress` user through RDS Proxy.
-- **No application database password on russetleaf.com:** WordPress logs in to RDS Proxy with IAM auth tokens; the master password is generated and rotated by RDS. At home, MariaDB Operator generates and rotates the passwords. See [Database access and credentials](../phase-1-russetleaf-dev/design.md#database-access-and-credentials).
+- **No application database password on aws.russetleaf.dev:** WordPress logs in to RDS Proxy with IAM auth tokens; the master password is generated and rotated by RDS. At home, MariaDB Operator generates and rotates the passwords. See [Database access and credentials](../phase-1-russetleaf-dev/design.md#database-access-and-credentials).
 - RDS in **private subnets**, with **TLS required by the server** (`require_secure_transport = ON`) on every connection, including RDS Proxy's and the `db-setup` Job's, and **encrypted with a customer-managed KMS key** ([ADR 1043](../phase-1-russetleaf-dev/adr/1043-database-encryption.md)).
 
 ### Intrusion detection and prevention
@@ -360,7 +360,7 @@ Built and rehearsed in Phase 3 step 5.1c.
 ### Backup and recovery
 
 - **Database Insights (Standard)** on RDS: database load and the top SQL statements, free with 7 days of history, used in the load tests.
-- Automated **RDS backups** with point-in-time recovery, plus a **final snapshot** each time the russetleaf.com demo stack is destroyed.
+- Automated **RDS backups** with point-in-time recovery, plus a **final snapshot** each time the aws.russetleaf.dev demo stack is destroyed.
 
 ### Node autoscaling (Karpenter)
 
@@ -374,7 +374,7 @@ Built and rehearsed in Phase 3 step 5.1c.
 
 ### Admin sign-in
 
-- **CloudFront (russetleaf.com):** the default behavior is uncached and forwards cookies and query strings, so `/wp-login.php`, `/wp-admin/*` and the OIDC callback path need no separate behaviors ([ADR 3009](adr/3009-edge-waf-on-cloudfront-free-plan.md)).
+- **CloudFront (aws.russetleaf.dev):** the default behavior is uncached and forwards cookies and query strings, so `/wp-login.php`, `/wp-admin/*` and the OIDC callback path need no separate behaviors ([ADR 3009](adr/3009-edge-waf-on-cloudfront-free-plan.md)).
 
 ### Logging
 
@@ -386,19 +386,19 @@ Built and rehearsed in Phase 3 step 5.1c.
 
 | Channel | What goes there | Sources |
 |---|---|---|
-| `#rl-com-alerts` | All russetleaf.com warning and critical alerts, plus demo started/stopped messages | Alertmanager (EKS), CloudWatch alarms (ALB, RDS, ElastiCache), uptime checks, demo workflows |
+| `#rl-aws-alerts` | All aws.russetleaf.dev warning and critical alerts, plus demo started/stopped messages | Alertmanager (EKS), CloudWatch alarms (ALB, RDS, ElastiCache), uptime checks, demo workflows |
 
 ### Uptime checks
 
-- russetleaf.com must return **either** the live site (200) **or** the offline page (503 with its known text). Either is fine; anything else means the always-on edge is broken.
+- aws.russetleaf.dev must return **either** the live site (200) **or** the offline page (503 with its known text). Either is fine; anything else means the always-on edge is broken.
 
 ### Environments
 
 | Environment | Where it runs | Purpose | When it runs | Cost |
 |---|---|---|---|---|
-| **prod (AWS demo)** | russetleaf.com | The full production design, for demos | On demand | see the AWS costs |
+| **prod (AWS demo)** | aws.russetleaf.dev | The full production design, for demos | On demand | see the AWS costs |
 
-AWS has no separate staging: russetleaf.com is already temporary, its OpenTofu is checked with `plan`, `tofu test` and Checkov before each demo, and its application versions have already passed home staging and production.
+AWS has no separate staging: aws.russetleaf.dev is already temporary, its OpenTofu is checked with `plan`, `tofu test` and Checkov before each demo, and its application versions have already passed home staging and production.
 
 ### Cost alerts
 
@@ -431,10 +431,10 @@ AWS has no separate staging: russetleaf.com is already temporary, its OpenTofu i
 
 ### Database content
 
-**Same engine on both sites:** russetleaf.com uses **RDS for MariaDB**, so russetleaf.dev's backups restore into it directly, with no collation rewrites or MySQL compatibility fixes. Pin the home MariaDB to the **same major version** RDS offers (for example, 11.4 LTS), so a dump from one always loads into the other.
+**Same engine on both sites:** aws.russetleaf.dev uses **RDS for MariaDB**, so russetleaf.dev's backups restore into it directly, with no collation rewrites or MySQL compatibility fixes. Pin the home MariaDB to the **same major version** RDS offers (for example, 11.4 LTS), so a dump from one always loads into the other.
 
 ### Running costs
 
-| Component | russetleaf.dev (home, 24/7) | russetleaf.com (AWS, OpenTofu in GitHub) | Est. monthly cost (USD) |
+| Component | russetleaf.dev (home, 24/7) | aws.russetleaf.dev (AWS, OpenTofu in GitHub) | Est. monthly cost (USD) |
 |---|---|---|---|
-| russetleaf.com always-on edge | n/a | Route 53 zone, CloudFront, offline page, media bucket, RDS snapshot (`envs/aws-edge`) | ~$1 |
+| aws.russetleaf.dev always-on edge | n/a | Route 53 zone, CloudFront, offline page, media bucket, RDS snapshot (`envs/aws-edge`) | ~$1 |

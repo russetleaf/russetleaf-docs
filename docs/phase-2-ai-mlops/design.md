@@ -341,10 +341,10 @@ One trace then shows: a post is published → queued → picked up by the summar
 
 ### Running costs
 
-| Component | russetleaf.dev (home, 24/7) | russetleaf.com (AWS, OpenTofu in GitHub) | Est. monthly cost (USD) |
+| Component | russetleaf.dev (home, 24/7) | aws.russetleaf.dev (AWS, OpenTofu in GitHub) | Est. monthly cost (USD) |
 |---|---|---|---|
-| AI post summaries | **Real SQS** + KEDA-scaled summarizer | — (not on russetleaf.com) | <$1 |
-| LLM gateway | LiteLLM in-cluster, routing to **real Amazon Bedrock** and the self-hosted model | — (not on russetleaf.com) | ~$1–$2 (Bedrock tokens) |
-| Self-hosted model | llama.cpp (CPU build) on `rl-home-cp02`, CPU-limited to protect etcd | — (not on russetleaf.com) | ~$2–$4 (electricity for `rl-home-cp02`) |
-| Prompt evaluation | GitHub Actions on ARC runners in the cluster | — (not on russetleaf.com) | (included above) |
-| MLOps lifecycle | MLflow, Argo Workflows, online evaluation with Evidently, feedback, DVC (home cluster); fine-tuning on a rented spot GPU | — (not on russetleaf.com) | ~$0 always on; a few $ per fine-tuning run |
+| AI post summaries | **Real SQS** + KEDA-scaled summarizer | — (not on aws.russetleaf.dev) | <$1 |
+| LLM gateway | LiteLLM in-cluster, routing to **real Amazon Bedrock** and the self-hosted model | — (not on aws.russetleaf.dev) | ~$1–$2 (Bedrock tokens) |
+| Self-hosted model | llama.cpp (CPU build) on `rl-home-cp02`, CPU-limited to protect etcd | — (not on aws.russetleaf.dev) | ~$2–$4 (electricity for `rl-home-cp02`) |
+| Prompt evaluation | GitHub Actions on ARC runners in the cluster | — (not on aws.russetleaf.dev) | (included above) |
+| MLOps lifecycle | MLflow, Argo Workflows, online evaluation with Evidently, feedback, DVC (home cluster); fine-tuning on a rented spot GPU | — (not on aws.russetleaf.dev) | ~$0 always on; a few $ per fine-tuning run |

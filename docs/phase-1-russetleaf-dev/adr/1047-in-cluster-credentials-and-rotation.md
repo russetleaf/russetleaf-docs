@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-03
-- **Applies to:** russetleaf.dev. russetleaf.com has no equivalent passwords: WordPress uses IAM authentication through RDS Proxy, and the ElastiCache AUTH token is regenerated on every `demo-up` ([ADR 3007](../../phase-3-russetleaf-com/adr/3007-rds-mariadb-with-rds-proxy.md)).
+- **Applies to:** russetleaf.dev. aws.russetleaf.dev has no equivalent passwords: WordPress uses IAM authentication through RDS Proxy, and the ElastiCache AUTH token is regenerated on every `demo-up` ([ADR 3007](../../phase-3-aws-russetleaf-dev/adr/3007-rds-mariadb-with-rds-proxy.md)).
 - **Phase:** 1
 
 ## Context

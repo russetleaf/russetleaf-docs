@@ -2,7 +2,7 @@
 
 - **Status:** Accepted; updated by [ADR 1046](1046-incident-response-and-runbook-index.md)
 - **Date:** 2026-11-01
-- **Applies to:** russetleaf.dev (and russetleaf.com during demos)
+- **Applies to:** russetleaf.dev (and aws.russetleaf.dev during demos)
 - **Phase:** 1. Later: Phase 2 adds latency injected into model calls.
 
 > **Update ([ADR 1046](1046-incident-response-and-runbook-index.md)):** incidents now have **severity levels** (SEV1–3) and an incident thread in `#rl-critical` as the timeline; a postmortem is required for every **SEV1 and SEV2**, and incident tabletop exercises run twice a year.

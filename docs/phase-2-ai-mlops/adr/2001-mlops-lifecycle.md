@@ -1,11 +1,11 @@
 # ADR 2001: Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback
 
-- **Status:** Accepted; fine-tuning covered by [ADR 2005](2005-fine-tuning-on-a-rented-gpu.md) (earlier [ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md), superseded)
+- **Status:** Accepted; fine-tuning covered by [ADR 2005](2005-fine-tuning-on-a-rented-gpu.md) (earlier [ADR 3002](../../phase-3-aws-russetleaf-dev/adr/3002-fine-tuning-on-eks-gpu.md), superseded)
 - **Date:** 2026-11-01
 - **Applies to:** `russetleaf-llm-summarizer`, the LLM gateway and the self-hosted model, on russetleaf.dev
 - **Phase:** 2, including fine-tuning ([ADR 2005](2005-fine-tuning-on-a-rented-gpu.md)).
 
-> **Update ([ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)):** the project is now built in three phases ([ADR 1037](../../phase-1-russetleaf-dev/adr/1037-project-phases.md)). This ADR is Phase 2's. **Fine-tuning** (the distillation pipeline and deploying a fine-tuned challenger) needs a GPU, so it moved to Phase 3 and is recorded in [ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md); the rest of the lifecycle below runs at home in Phase 2.
+> **Update ([ADR 3002](../../phase-3-aws-russetleaf-dev/adr/3002-fine-tuning-on-eks-gpu.md)):** the project is now built in three phases ([ADR 1037](../../phase-1-russetleaf-dev/adr/1037-project-phases.md)). This ADR is Phase 2's. **Fine-tuning** (the distillation pipeline and deploying a fine-tuned challenger) needs a GPU, so it moved to Phase 3 and is recorded in [ADR 3002](../../phase-3-aws-russetleaf-dev/adr/3002-fine-tuning-on-eks-gpu.md); the rest of the lifecycle below runs at home in Phase 2.
 
 > **Update ([ADR 2005](2005-fine-tuning-on-a-rented-gpu.md)):** fine-tuning is back in Phase 2, on a rented spot GPU in AWS, with drift-triggered retraining proposals; the note below about Phase 3 is superseded.
 
@@ -26,7 +26,7 @@ The summary pipeline already had strong **inference-side** practices (often call
 - **Guardrails** in the summarizer: injection-resistant prompting, output validation, personal-data redaction before calls leave the cluster, adversarial evaluation cases, and guardrail metrics and alerts.
 - **Online evaluation and drift monitoring:** a daily sampled scoring job (Argo Workflows) logging to MLflow and Prometheus, with `SummaryQualityDegraded` and `InputDriftDetected` alerts.
 - **Argo Workflows** as the workflow engine for the in-cluster pipelines: the **daily online evaluation** (sample summaries → score them → Evidently drift report → log to MLflow and Prometheus → open a retraining pull request when needed), the **nightly feedback export** into DVC, and the **retraining proposals**. Each step runs as a pod (using the cluster's scheduling, policies and monitoring), with artifacts passed between steps, retries per step and a visible history of every run; workflows are YAML in Git, synced by Argo CD; it is light (a controller and a server, about 0.2–0.3 GB) and part of the Argo family the project already uses. Fine-tuning itself runs outside the cluster on a rented GPU, started by a GitHub Actions workflow ([ADR 2005](2005-fine-tuning-on-a-rented-gpu.md)).
-- **Fine-tuning** (the distillation pipeline, the challenger and drift-triggered retraining): [ADR 2005](2005-fine-tuning-on-a-rented-gpu.md), on a rented spot GPU (an earlier plan for the EKS GPU node pool, [ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md), is superseded).
+- **Fine-tuning** (the distillation pipeline, the challenger and drift-triggered retraining): [ADR 2005](2005-fine-tuning-on-a-rented-gpu.md), on a rented spot GPU (an earlier plan for the EKS GPU node pool, [ADR 3002](../../phase-3-aws-russetleaf-dev/adr/3002-fine-tuning-on-eks-gpu.md), is superseded).
 - **DVC** for the evaluation, adversarial and training datasets (S3 remote), recorded in every MLflow run.
 - **An editor feedback loop** in WordPress, exported nightly into the datasets.
 

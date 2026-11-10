@@ -21,7 +21,7 @@ Slack's and the services' web pages change over time. These steps name each sett
     |---|---|
     | `#rl-critical` | Critical alerts from both sites; the only channel with phone notifications |
     | `#rl-dev-alerts` | russetleaf.dev warning and critical alerts |
-    | `#rl-com-alerts` | russetleaf.com warning and critical alerts (Phase 3) |
+    | `#rl-aws-alerts` | aws.russetleaf.dev warning and critical alerts (Phase 3) |
     | `#rl-deploys` | Syncs, rollouts, rollbacks and version bumps |
     | `#rl-security` | Falco, Kyverno, audit alerts, GuardDuty and Security Hub findings |
     | `#rl-mlops` | The AI components (Phase 2) |
@@ -78,7 +78,7 @@ Incoming webhooks, which Falcosidekick and Policy Reporter use instead of the to
 Two free services watch the platform from outside, so a dead cluster or a broken internet connection still raises an alert ([Alerting and notifications](../design.md#alerting-and-notifications-slack)). Their checks are created in step 4.4; this part creates the accounts and their Slack connections.
 
 1. **The heartbeat service** (for example healthchecks.io): sign up, register **both YubiKeys** as its two-factor sign-in (security keys are its only second factor), and connect its **Slack integration** to `#rl-critical`. In step 4.4, Alertmanager's always-firing `Watchdog` alert pings a check here every few minutes; if the pings stop, this service posts to `#rl-critical`.
-2. **The uptime checker** (for example UptimeRobot or Better Stack): prefer one that offers security keys or Google sign-in (UptimeRobot offers only authenticator codes); sign up, turn on its strongest **two-factor authentication**, and connect its **Slack integration** to `#rl-critical` and `#rl-dev-alerts`. Step 4.4 adds the checks for `https://russetleaf.dev` (and Phase 3 for russetleaf.com).
+2. **The uptime checker** (for example UptimeRobot or Better Stack): prefer one that offers security keys or Google sign-in (UptimeRobot offers only authenticator codes); sign up, turn on its strongest **two-factor authentication**, and connect its **Slack integration** to `#rl-critical` and `#rl-dev-alerts`. Step 4.4 adds the checks for `https://russetleaf.dev` (and Phase 3 for aws.russetleaf.dev).
 3. **The break-glass kit** ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)): add the logins for both services (and any recovery codes); Slack signs in through Google, so it adds nothing unless a Slack password and backup codes were needed.
 
 ## Checks

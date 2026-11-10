@@ -88,7 +88,7 @@ The project plans runbooks for **changes and losses**: one per alert, a rollback
 ## When to revisit
 
 - A second operator joins: split the incident roles, add an on-call rotation and consider a paging or incident tool.
-- russetleaf.com becomes always-on or holds user data: consider a status page and tighter response targets.
+- aws.russetleaf.dev becomes always-on or holds user data: consider a status page and tighter response targets.
 - An incident happens for which no runbook existed: write one, and check the index for similar gaps.
 
 ## Open items

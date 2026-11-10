@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-03
 - **Applies to:** every S3 bucket in `russetleaf-infra` (the shared `s3-*` modules, `envs/security`, `envs/dr`, `envs/home`, `envs/aws-edge`)
-- **Phase:** 1. Phase 2 applies it to the MLflow and DVC buckets; Phase 3 applies it to russetleaf.com's buckets.
+- **Phase:** 1. Phase 2 applies it to the MLflow and DVC buckets; Phase 3 applies it to aws.russetleaf.dev's buckets.
 
 ## Context
 
@@ -53,4 +53,4 @@ The buckets had versioning where it mattered and lifecycle rules that delete sho
 
 - Phase 1 step 2.0b: the Log Archive rules; step 2.1: the state bucket rules; step 2.3: the russetleaf.dev bucket rules; step 2.5: the Backup account rules.
 - Phase 2 step 4.4: the MLflow and DVC bucket rules.
-- Phase 3 step 1.2: the russetleaf.com bucket rules.
+- Phase 3 step 1.2: the aws.russetleaf.dev bucket rules.

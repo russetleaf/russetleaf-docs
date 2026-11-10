@@ -2,8 +2,8 @@
 
 - **Status:** Accepted; updated by [ADR 1019](1019-aws-multi-account-sra.md); Kubernetes backup approach, Backup-account keys, monitoring and monthly copies added 2026-11-03; encryption changed from `age` to GPG, and the kit's storage set, 2026-11-05
 - **Date:** 2026-11-01
-- **Applies to:** both sites, the AWS accounts, and the supporting services (GitHub, Cloudflare, Google, domain registrars)
-- **Phase:** 1. Later: Phase 3 adds russetleaf.com's logical dump at `demo-down` and its restore drill.
+- **Applies to:** both sites, the AWS accounts, and the supporting services (GitHub, Cloudflare, Google, the domain registrar)
+- **Phase:** 1. Later: Phase 3 adds aws.russetleaf.dev's logical dump at `demo-down` and its restore drill.
 
 > **Update ([ADR 1019](1019-aws-multi-account-sra.md)):** The Organization now has a **dedicated management account** that runs nothing (rather than the workload account acting as management), and the Backup account sits in the **Security OU** alongside **Security Tooling** and **Log Archive**. CloudTrail logs are in the Log Archive account's locked buckets rather than replicated from a workload account. Member accounts have no root credentials (centralized root access management), so the break-glass kit holds only the management account's root access plus the Identity Center logins.
 
@@ -23,7 +23,7 @@ The design could already rebuild most things from code (OpenTofu, GitOps, image 
 ## Decision
 
 - **A separate backup AWS account** (in an AWS Organization), holding **S3 Object Lock** buckets in **`us-west-2`** (30-day retention; governance mode first, compliance mode once proven), receiving **S3 replication** from the main account's backup, OpenTofu state, media and CloudTrail buckets through a write-only replication role. Access through a separate login kept in the break-glass kit.
-- **russetleaf.com's database:** a logical dump at every `demo-down`, stored in its backup bucket and replicated (instead of cross-account snapshot copies, which would need KMS key sharing).
+- **aws.russetleaf.dev's database:** a logical dump at every `demo-down`, stored in its backup bucket and replicated (instead of cross-account snapshot copies, which would need KMS key sharing).
 - **Daily repo mirrors** (`git bundle`) of every repo (the four code repos and `russetleaf-docs`) into the backup account, through a write-only OIDC role. Images and charts are rebuilt rather than copied.
 - **A copy outside AWS:** a daily job on the home cluster encrypts the latest MariaDB dump and etcd snapshot with **GPG** (the cluster holds only the public key; the private key is kept only in the break-glass kit) and uploads them with `rclone` to a **Cloudflare R2** bucket with a **bucket lock** rule of 30 days (objects deleted after 35). It covers the worst case, losing or compromising the AWS management account and with it the whole Organization. The project already has a Cloudflare account, R2 has no download charges, and data this small fits its free tier (check current terms); the bucket and its lock rule are managed with OpenTofu's Cloudflare provider where supported. The R2 token is limited to that bucket and kept in Secrets Manager.
 - **The copies do not depend on the accounts they protect against:** replication explicitly includes KMS-encrypted objects and re-encrypts each copy with a **key owned by the Backup account**, so losing a workload account, or its keys, leaves the copies readable. The quarterly restore drill proves it by signing in only to the Backup account.
@@ -32,7 +32,7 @@ The design could already rebuild most things from code (OpenTofu, GitOps, image 
 - **No cluster-level backup tool:** Kubernetes objects are restored by **Argo CD from Git**, and data from **its own application-consistent backups** (MariaDB logical dumps, S3 versions and replicas). The weekly **etcd snapshots** are only for losing the control plane: restoring one rewinds the whole cluster, so they are never used to recover a single namespace or resource. Every stateful component is listed in the [disaster recovery plan](../disaster-recovery.md) as either backed up or rebuildable, and recovering deleted resources has its own runbook (`restore-deleted-resources.md`).
 - **Regenerate secrets rather than copy them**, except those that cannot be regenerated (account access, the Talos secrets bundle), which go in the **break-glass kit**: the password manager, a printed copy of the essentials in a safe, and a GPG-encrypted copy in Google Drive and OneDrive.
 - **A written plan** (the [disaster recovery plan](../disaster-recovery.md)): an asset inventory, scenarios with data-loss and recovery-time targets and procedures, and the bootstrap order from zero.
-- **Drills:** monthly restore; quarterly restore from the backup account; a yearly full "home lab destroyed" rebuild using only the kit and backups; a once-then-yearly russetleaf.com restore; a 6-monthly break-glass kit check.
+- **Drills:** monthly restore; quarterly restore from the backup account; a yearly full "home lab destroyed" rebuild using only the kit and backups; a once-then-yearly aws.russetleaf.dev restore; a 6-monthly break-glass kit check.
 
 ## Alternatives considered
 
@@ -59,7 +59,7 @@ The design could already rebuild most things from code (OpenTofu, GitOps, image 
 
 ## When to revisit
 
-- russetleaf.com becomes always-on or holds user data: consider a warm standby in `us-west-2` and AWS Backup.
+- aws.russetleaf.dev becomes always-on or holds user data: consider a warm standby in `us-west-2` and AWS Backup.
 - The data grows enough that the off-AWS copy leaves R2's free tier, or more than the database and etcd need a copy outside AWS (for example, the media).
 - Data grows enough that replication or Object Lock costs matter.
 

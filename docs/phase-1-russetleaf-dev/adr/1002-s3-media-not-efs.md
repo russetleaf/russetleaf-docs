@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites
-- **Phase:** 1. Later: Phase 3 serves russetleaf.com's media from its own bucket through CloudFront.
+- **Phase:** 1. Later: Phase 3 serves aws.russetleaf.dev's media from its own bucket through CloudFront.
 
 ## Context
 
@@ -14,7 +14,7 @@ This project is containerized and GitOps-managed. Images are signed and pinned b
 ## Decision
 
 - **WordPress code** (core, plugins, themes) is **built into the container image** in the `russetleaf-wordpress` repo. Plugin installs and updates from the admin screen are disabled (`DISALLOW_FILE_MODS`).
-- **Media uploads go to S3** through an offload plugin, served through CloudFront on russetleaf.com and from S3 at home.
+- **Media uploads go to S3** through an offload plugin, served through CloudFront on aws.russetleaf.dev and from S3 at home.
 - **No shared filesystem** is used on either site.
 
 This is the pattern used by large containerized WordPress platforms such as WordPress VIP and Human Made's Altis.

@@ -2,7 +2,7 @@
 
 - **Status:** Accepted; credential hardening added 2026-11-03
 - **Date:** 2026-11-02
-- **Applies to:** russetleaf.com's database, `russetleaf-wordpress`'s `db.php` drop-in, `russetleaf-infra/envs/aws`
+- **Applies to:** aws.russetleaf.dev's database, `russetleaf-wordpress`'s `db.php` drop-in, `russetleaf-infra/envs/aws`
 - **Phase:** 3
 
 ## Context
@@ -22,7 +22,7 @@ At home, MariaDB runs in the cluster with operator-generated passwords (Phase 1)
 - **The proxy's `wordpress` password is rotated:** Secrets Manager automatic rotation for MariaDB (for example, every 30 days). Only RDS Proxy uses this password, and the proxy reads the new value from the secret, so WordPress is unaffected.
 - **No database password in OpenTofu state:** OpenTofu creates the `wordpress` secret with an **ephemeral** random password (the ephemeral `aws_secretsmanager_random_password` resource) written through the secret's **write-only** `secret_string_wo` argument, so the value is never saved in state or plan files; a version number is bumped to set a new value. OpenTofu never reads the secret back: the `db-setup` Job reads it from Secrets Manager when it runs. Letting Secrets Manager generate the value is not enough on its own, because a non-ephemeral data source or a read-back would still save it in state. (Ephemeral resources need OpenTofu 1.10 or later and write-only arguments 1.11 or later; confirm the versions and provider support when building.)
 - **The `db-setup` Job is tightly scoped:** its own Pod Identity role may read only the master secret and the `wordpress` secret; a CiliumNetworkPolicy allows it to reach only the RDS endpoint; it is deleted after it succeeds (Argo CD hook delete policy `HookSucceeded`); it runs only during syncs, so the master credential is never held by a long-running pod.
-- **Passwords as files, never environment variables:** wherever WordPress uses a password (the fallback on russetleaf.com and the home sites), it is mounted from a Kubernetes Secret as a file and read through `WORDPRESS_DB_PASSWORD_FILE`, not `WORDPRESS_DB_PASSWORD`, in line with the Kyverno rule from [ADR 1032](../../phase-1-russetleaf-dev/adr/1032-defense-in-depth.md).
+- **Passwords as files, never environment variables:** wherever WordPress uses a password (the fallback on aws.russetleaf.dev and the home sites), it is mounted from a Kubernetes Secret as a file and read through `WORDPRESS_DB_PASSWORD_FILE`, not `WORDPRESS_DB_PASSWORD`, in line with the Kyverno rule from [ADR 1032](../../phase-1-russetleaf-dev/adr/1032-defense-in-depth.md).
 - **The Valkey AUTH token is regenerated on every `demo-up`** (ephemeral, write-only, never in OpenTofu state), so it changes each demo without a rotation job.
 - **The early PHP IAM token test stays first** (Phase 3 step 1.6): it is the one open risk in the design.
 
@@ -42,7 +42,7 @@ At home, MariaDB runs in the cluster with operator-generated passwords (Phase 1)
 ## When to revisit
 
 - The early test fails: adopt the rotated-password fallback and record it here.
-- russetleaf.com becomes always-on: review instance size, Multi-AZ cost and Reserved Instances.
+- aws.russetleaf.dev becomes always-on: review instance size, Multi-AZ cost and Reserved Instances.
 
 ## Open items
 

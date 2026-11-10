@@ -12,7 +12,7 @@
 The project builds two images, each with a Helm chart published as an OCI artifact: the WordPress image (`russetleaf-wordpress`) and the post-summarizer (`russetleaf-llm-summarizer`). Both sites must pull them:
 
 - **russetleaf.dev** runs 24/7 on a home Talos cluster, **outside AWS**.
-- **russetleaf.com** runs on EKS only during demos.
+- **aws.russetleaf.dev** runs on EKS only during demos.
 
 Images are built and signed (cosign keyless) in GitHub Actions, and Kyverno only admits images signed by those workflows and pulled from allowed registries. ~~The repos are private while being built and become public later (Phase 1 step 9.2).~~ **Superseded by [ADR 1030](1030-github-actions-ci.md):** the repos are made public early (step 1.1).
 

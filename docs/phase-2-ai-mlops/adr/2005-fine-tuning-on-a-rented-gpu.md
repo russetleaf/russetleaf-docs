@@ -1,13 +1,13 @@
 # ADR 2005: Fine-tuning on a rented spot GPU, with drift-triggered retraining
 
-- **Status:** Accepted; supersedes [ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)
+- **Status:** Accepted; supersedes [ADR 3002](../../phase-3-aws-russetleaf-dev/adr/3002-fine-tuning-on-eks-gpu.md)
 - **Date:** 2026-11-02
 - **Applies to:** `russetleaf-llm-summarizer/training/`, the russetleaf-home AWS account, the home MLflow registry and llama.cpp
 - **Phase:** 2. Training is entirely within Phase 2; Phase 3 does not depend on it.
 
 ## Context
 
-[ADR 2001](2001-mlops-lifecycle.md) defines the MLOps lifecycle; [ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md) put fine-tuning on the EKS GPU node pool, because the home lab has no GPU. That left Phase 2, if built without Phase 3, with no model training at all: evaluation, registry, serving and monitoring, but no training step and no retraining loop. Training and drift-triggered retraining are central to MLOps, and a review against a common MLOps curriculum (KodeKloud's 100 Days of MLOps: data versioning, experiment tracking, training, GPU training, registry, serving, canary deploys, drift-triggered retraining, GitOps) found this the one significant gap.
+[ADR 2001](2001-mlops-lifecycle.md) defines the MLOps lifecycle; [ADR 3002](../../phase-3-aws-russetleaf-dev/adr/3002-fine-tuning-on-eks-gpu.md) put fine-tuning on the EKS GPU node pool, because the home lab has no GPU. That left Phase 2, if built without Phase 3, with no model training at all: evaluation, registry, serving and monitoring, but no training step and no retraining loop. Training and drift-triggered retraining are central to MLOps, and a review against a common MLOps curriculum (KodeKloud's 100 Days of MLOps: data versioning, experiment tracking, training, GPU training, registry, serving, canary deploys, drift-triggered retraining, GitOps) found this the one significant gap.
 
 ## Decision
 
@@ -21,7 +21,7 @@
 
 ## Alternatives considered
 
-- **Fine-tuning on the EKS GPU node pool** ([ADR 3002](../../phase-3-russetleaf-com/adr/3002-fine-tuning-on-eks-gpu.md)): runs inside a cluster with its policies and monitoring, but only exists if Phase 3 is built, which would tie the phases together.
+- **Fine-tuning on the EKS GPU node pool** ([ADR 3002](../../phase-3-aws-russetleaf-dev/adr/3002-fine-tuning-on-eks-gpu.md)): runs inside a cluster with its policies and monitoring, but only exists if Phase 3 is built, which would tie the phases together.
 - **A hosted notebook (Google Colab, SageMaker Studio Lab):** cheaper or free, but manual and outside infrastructure as code.
 - **Amazon SageMaker training jobs:** managed and capable, but a separate platform from the home registry, at more cost and setup than one instance.
 - **Fine-tuning on CPU at home:** impractically slow for a 3B model on these CPUs.

@@ -29,7 +29,7 @@
 
 ## When to revisit
 
-- russetleaf.com becomes always-on, or more people need access: add per-team permission sets and namespace-scoped access policies.
+- aws.russetleaf.dev becomes always-on, or more people need access: add per-team permission sets and namespace-scoped access policies.
 
 ## Open items
 

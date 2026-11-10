@@ -2,7 +2,7 @@
 
 - **Status:** Accepted; updated by [ADR 1020](1020-three-node-ha-home-cluster.md)
 - **Date:** 2026-11-01
-- **Applies to:** russetleaf.dev (home lab). russetleaf.com uses AWS's managed EBS and S3.
+- **Applies to:** russetleaf.dev (home lab). aws.russetleaf.dev uses AWS's managed EBS and S3.
 - **Phase:** 1.
 
 > **Update ([ADR 1020](1020-three-node-ha-home-cluster.md)):** The home cluster now has three nodes. Still no Ceph (memory per storage daemon) and no Longhorn (unnecessary): **database availability now comes from MariaDB primary–replica replication with automatic failover** (primary on `rl-home-cp03`, replica on `rl-home-cp01`), so a node or disk loss costs seconds of data, not hours. The 6-hourly S3 backups remain for disasters.

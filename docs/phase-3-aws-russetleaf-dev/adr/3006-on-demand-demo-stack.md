@@ -1,13 +1,15 @@
-# ADR 3006: russetleaf.com as an on-demand demo stack behind an always-on edge
+# ADR 3006: aws.russetleaf.dev as an on-demand demo stack behind an always-on edge
 
 - **Status:** Accepted
 - **Date:** 2026-11-02
-- **Applies to:** russetleaf.com, `russetleaf-infra/envs/aws-edge` and `envs/aws`, the demo workflows
+- **Applies to:** aws.russetleaf.dev, `russetleaf-infra/envs/aws-edge` and `envs/aws`, the demo workflows
 - **Phase:** 3
+
+> **Update ([ADR 3010](3010-aws-site-on-a-subdomain.md)):** the site is `aws.russetleaf.dev`, a subdomain of russetleaf.dev, and `envs/aws-edge` holds the delegated Route 53 zone and its NS and DS records at Cloudflare.
 
 ## Context
 
-The full AWS design (EKS, RDS Multi-AZ with RDS Proxy, ElastiCache, NAT Gateways, ALB, WAF) costs roughly $515–575 a month if left running: far too much for the project's budget of $30–50 a month. But russetleaf.com should still answer when the stack is down, and bringing it up should be one command, not an afternoon.
+The full AWS design (EKS, RDS Multi-AZ with RDS Proxy, ElastiCache, NAT Gateways, ALB, WAF) costs roughly $515–575 a month if left running: far too much for the project's budget of $30–50 a month. But aws.russetleaf.dev should still answer when the stack is down, and bringing it up should be one command, not an afternoon.
 
 ## Decision
 
@@ -15,7 +17,7 @@ The full AWS design (EKS, RDS Multi-AZ with RDS Proxy, ElastiCache, NAT Gateways
 - **CloudFront's error fallback** serves the **offline page** (status 503, pointing to russetleaf.dev) whenever the origin is unreachable, with short error caching and a 2-second origin timeout, so the switch between live and offline needs no DNS changes.
 - **`demo-up` and `demo-down` workflows** (GitHub Actions on the home ARC runners): apply, wait for Argo CD and the site, run kube-bench, register with the Argo CD hub; and the reverse, with a final RDS snapshot and an Alertmanager silence. A **safety-net workflow** alerts when the stack has been up longer than its limit.
 - **Content between demos:** a final snapshot on destroy restored on the next `demo-up`; media lives in the always-on edge; an optional seed from russetleaf.dev's backups.
-- **Cost guardrails:** the russetleaf-com account's budgets and anomaly detection, a per-demo cost report, and about $0.70 per demo hour.
+- **Cost guardrails:** the russetleaf-aws account's budgets and anomaly detection, a per-demo cost report, and about $0.70 per demo hour.
 
 ## Alternatives considered
 
@@ -26,13 +28,13 @@ The full AWS design (EKS, RDS Multi-AZ with RDS Proxy, ElastiCache, NAT Gateways
 
 ## Consequences
 
-- russetleaf.com always answers; the full design costs about $0.70 an hour only while demoing.
+- aws.russetleaf.dev always answers; the full design costs about $0.70 an hour only while demoing.
 - The demo workflows become the most exercised OpenTofu paths, so drift and teardown problems surface quickly.
 - Anything stored only in the demo stack (Prometheus data, OpenCost data) is lost at `demo-down`; durable data goes to the always-on buckets.
 
 ## When to revisit
 
-- russetleaf.com needs to be always on, or to hold user data: move the full WAF rule set to CloudFront (the Pro plan; [ADR 3009](3009-edge-waf-on-cloudfront-free-plan.md)), consider a warm standby, and revisit [ADR 1018](../../phase-1-russetleaf-dev/adr/1018-disaster-recovery.md)'s AWS items.
+- aws.russetleaf.dev needs to be always on, or to hold user data: move the full WAF rule set to CloudFront (the Pro plan; [ADR 3009](3009-edge-waf-on-cloudfront-free-plan.md)), consider a warm standby, and revisit [ADR 1018](../../phase-1-russetleaf-dev/adr/1018-disaster-recovery.md)'s AWS items.
 
 ## Open items
 

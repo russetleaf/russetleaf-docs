@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-08
-- **Applies to:** russetleaf.dev; russetleaf.com reuses the rules when its cluster runs
+- **Applies to:** russetleaf.dev; aws.russetleaf.dev reuses the rules when its cluster runs
 - **Phase:** 1 (step 7.15). Later: Phase 3 converts the same rules for the EKS audit logs in CloudWatch.
 
 ## Context
@@ -55,7 +55,7 @@ A full SIEM is recorded in the [improvements list](../improvements.md) (I1-4), w
 - A second operator or a security team joins, and needs case management or shared investigations: adopt a SIEM (I1-4).
 - A compliance audit requires a SIEM, or security log retention beyond 90 days that is searchable.
 - The `security` tenant's volume makes Loki slow to query, or its memory grows past about 1 GB.
-- russetleaf.com becomes always-on, with its own logs to correlate: reconsider Security Lake under [ADR 1019](1019-aws-multi-account-sra.md)'s trigger.
+- aws.russetleaf.dev becomes always-on, with its own logs to correlate: reconsider Security Lake under [ADR 1019](1019-aws-multi-account-sra.md)'s trigger.
 
 ## Open items
 

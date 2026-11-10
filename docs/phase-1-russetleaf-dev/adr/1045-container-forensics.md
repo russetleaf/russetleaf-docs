@@ -53,11 +53,11 @@ Each platform also limits what can be collected:
 
 **Site-specific steps:**
 
-| | Home (Talos) | EKS (russetleaf.com demo) |
+| | Home (Talos) | EKS (aws.russetleaf.dev demo) |
 |---|---|---|
 | Node access | `talosctl` (`containers -k`, `logs`, `dmesg`, `processes`, `netstat`, `pcap`, `read`, `support`) plus the toolkit pod. No shell on the node | The toolkit pod, plus **SSM Session Manager** on the node. The SSM permission is attached to the node role only during an incident |
 | Whole-node memory | **Not captured.** Signed modules rule out LiME. Container process memory is the scope | **AVML** through SSM, uploaded straight to the evidence bucket with a presigned URL |
-| Disk | **Not imaged** (TPM-sealed). The writable layer and volumes are copied from the running node | **EBS snapshot** of the node's volume, tagged `ForensicHold=true`, kept in the russetleaf-com account |
+| Disk | **Not imaged** (TPM-sealed). The writable layer and volumes are copied from the running node | **EBS snapshot** of the node's volume, tagged `ForensicHold=true`, kept in the russetleaf-aws account |
 | Node isolation | If the node itself is suspected (a container escape): capture first, then disconnect its network cable. etcd keeps quorum with the other two nodes ([ADR 1020](1020-three-node-ha-home-cluster.md)) | Swap the instance's security groups for an **isolation security group** with no rules, and turn on **termination protection** |
 | gVisor pods | Memory and process state through gVisor's own tools (`runsc debug`, `runsc checkpoint`), from the toolkit pod with access to the runtime's state directory | Not applicable (gVisor is home only) |
 | Automation to hold | Argo CD | Argo CD, Karpenter, and the **forensic hold**: `demo-down` and the safety net refuse to destroy the stack while any resource in it is tagged `ForensicHold=true`; the safety net still alerts |
@@ -70,7 +70,7 @@ Each platform also limits what can be collected:
 - **A dedicated Forensics account** (the SRA pattern, for analyzing evidence in isolation): cleaner separation, but another account to run for one operator. A locked bucket in Log Archive gives the same tamper resistance. Revisit if analysis ever needs its own compute.
 - **GuardDuty Runtime Monitoring or a commercial tool** with built-in evidence collection: EKS only, extra cost per node, and duplicates Falco ([ADR 1017](1017-intrusion-detection-and-prevention.md)).
 - **Separate runbooks for each site:** the freeze, contain, export and hand-off steps are identical on both sites. Two documents would drift apart.
-- **Copying EKS snapshots to Log Archive:** better protected against a compromised russetleaf-com account, but cross-account snapshot copies need the KMS key shared with Log Archive. A compromise of the account itself is handled by moving it to the Suspended OU, which also stops any deletion.
+- **Copying EKS snapshots to Log Archive:** better protected against a compromised russetleaf-aws account, but cross-account snapshot copies need the KMS key shared with Log Archive. A compromise of the account itself is handled by moving it to the Suspended OU, which also stops any deletion.
 
 ## Consequences
 
@@ -84,7 +84,7 @@ Each platform also limits what can be collected:
 ## When to revisit
 
 - Talos ships CRIU (or an extension for it), or the kubelet checkpoint API works on the home cluster: consider checkpointing as the main capture method.
-- Evidence analysis needs its own compute, or russetleaf.com becomes always-on or holds user data: consider a dedicated Forensics account.
+- Evidence analysis needs its own compute, or aws.russetleaf.dev becomes always-on or holds user data: consider a dedicated Forensics account.
 - Tetragon enforcement is adopted ([ADR 1015](1015-process-allow-listing.md)): an unlisted process would be killed before it could be captured, so decide whether Tetragon should alert only for some workloads.
 - A real incident shows a gap in the runbook.
 

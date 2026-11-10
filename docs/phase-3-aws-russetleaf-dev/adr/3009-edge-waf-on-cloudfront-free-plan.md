@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-03
-- **Applies to:** russetleaf.com's CloudFront distribution (`envs/aws-edge`) and the ALB's web ACL (`envs/aws`)
+- **Applies to:** aws.russetleaf.dev's CloudFront distribution (`envs/aws-edge`) and the ALB's web ACL (`envs/aws`)
 - **Phase:** 3
 
 ## Context
@@ -54,7 +54,7 @@ Requests blocked by WAF do not count toward the allowance; exceeding it never ad
 
 ## When to revisit
 
-- russetleaf.com becomes always-on, or WAF logs are needed between demos: move to the Pro plan and the full rule set at the edge.
+- aws.russetleaf.dev becomes always-on, or WAF logs are needed between demos: move to the Pro plan and the full rule set at the edge.
 - AWS changes the Free plan's limits or features.
 
 ## Open items

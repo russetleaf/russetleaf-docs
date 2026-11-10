@@ -43,7 +43,7 @@ The design used OpenCost on both clusters (with Kubecost as an optional alternat
 
 ## When to revisit
 
-- russetleaf.com becomes always-on: keep OpenCost data continuously and consider Kubecost's billing reconciliation.
+- aws.russetleaf.dev becomes always-on: keep OpenCost data continuously and consider Kubecost's billing reconciliation.
 - More memory at home: Kubecost becomes affordable if its extra features are wanted.
 - Costs grow enough to justify a dedicated FinOps tool.
 

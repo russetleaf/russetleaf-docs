@@ -5,7 +5,7 @@
 - **Applies to:** both sites, the AWS accounts and the supporting SaaS accounts
 - **Phase:** 1 (most controls). Later: Phase 2 adds prompt-injection guardrails; Phase 3 adds the AWS edge and VPC controls.
 
-> **Update ([ADR 1056](1056-aws-root-mfa-two-security-keys.md), 2026-11-06):** the hardware keys are two YubiKey Security Key NFC, registered with every account that supports them ([account sign-in setup guide](../setup/account-sign-in.md)). Two services cannot be keys-only: **GitHub** requires an authenticator code before it accepts keys, so a code stays as its fallback, and **Slack** offers only codes or SMS, so it signs in with Google (Advanced Protection) instead. The registrars are Cloudflare Registrar (russetleaf.dev) and Route 53 Domains (russetleaf.com).
+> **Update ([ADR 1056](1056-aws-root-mfa-two-security-keys.md), 2026-11-06):** the hardware keys are two YubiKey Security Key NFC, registered with every account that supports them ([account sign-in setup guide](../setup/account-sign-in.md)). Two services cannot be keys-only: **GitHub** requires an authenticator code before it accepts keys, so a code stays as its fallback, and **Slack** offers only codes or SMS, so it signs in with Google (Advanced Protection) instead. The registrars are Cloudflare Registrar (russetleaf.dev) and Route 53 Domains (aws.russetleaf.dev).
 
 > **Update ([ADR 1040](1040-lab-network-and-wireguard.md)):** the lab network is a separate subnet behind a TP-Link ER605 router (the household router cannot do VLANs), and the workstation reaches the cluster over WireGuard.
 
@@ -13,7 +13,7 @@
 
 Defense in depth means layering controls so a failure at one layer is caught at another. For a Kubernetes platform, the layers are commonly named after Kubernetes' security documentation (the "4 C's"): **Cloud** (the provider and infrastructure), **Cluster** (Kubernetes), **Container** (images and runtime) and **Code** (the application and its dependencies); each depends on the one outside it. A review against those layers, and against cloud provider, infrastructure, isolation, artifact, image, workload and application-code security, found the design strong in depth but with gaps:
 
-- the project's **other providers** (GitHub, Cloudflare, Google Cloud, Slack, the domain registrars) were not hardened like AWS
+- the project's **other providers** (GitHub, Cloudflare, Google Cloud, Slack, the domain registrar) were not hardened like AWS
 - the **home network** put the nodes on the same LAN as household devices; **Secure Boot** and **BIOS passwords** were not decided
 - **user namespaces** were not used
 - **Helm charts** were not signed or pinned by digest; critical **third-party images** were not mirrored; `packages: write` was not limited to release jobs; Python and PHP dependencies were not **hash-pinned**
@@ -25,7 +25,7 @@ Defense in depth means layering controls so a failure at one layer is caught at 
 ## Decision
 
 - **Summarize the controls by layer** in the overview's "Defense in depth" section (what each layer protects against, its main controls, and where the details are), and organize the threat model and control matrix (Phase 1 step 8.5) by the same layers, with an **OWASP ASVS** mapping for the application.
-- **SaaS account hardening:** passkeys or hardware security keys for GitHub, Cloudflare, Google, AWS (Identity Center), Slack and the registrars; **registrar lock** on both domains; GitHub organization settings (default workflow token **read-only**, only verified or allow-listed Actions, required reviews, environment protections), managed with OpenTofu's **GitHub provider** where possible; Cloudflare **least-privilege API tokens** and audit-log review; a minimal Google Cloud project; a **quarterly access review** of all of them.
+- **SaaS account hardening:** passkeys or hardware security keys for GitHub, Cloudflare, Google, AWS (Identity Center), Slack and the registrar; **registrar lock** on the domain; GitHub organization settings (default workflow token **read-only**, only verified or allow-listed Actions, required reviews, environment protections), managed with OpenTofu's **GitHub provider** where possible; Cloudflare **least-privilege API tokens** and audit-log review; a minimal Google Cloud project; a **quarterly access review** of all of them.
 - **Home network and boot:** a **lab VLAN** (or separate router subnet) with rules allowing the cluster out to the internet and in from the workstation only, and blocking it from household devices; **Talos Secure Boot images** with the TPM-sealed disk encryption ([ADR 1031](1031-kubernetes-component-hardening.md)); **BIOS passwords**.
 - **User namespaces** (`hostUsers: false`) for application pods where the Kubernetes and Talos versions support them (root in a container then maps to an unprivileged user on the node).
 - **Artifact integrity:** sign **Helm charts** with cosign (verified in CI before the version-bump pull request) and **pin charts by digest** in `russetleaf-gitops`; grant `packages: write` only to release jobs; **mirror critical third-party images** into GHCR (copied by digest after verifying upstream signatures, then re-signed) for availability and rate limits; **hash-pinned dependencies** (uv's lock file with hashes; `composer.lock`).
@@ -33,7 +33,7 @@ Defense in depth means layering controls so a failure at one layer is caught at 
 - **Workload:** **Secrets mounted as files**, not environment variables (Kyverno rule), and least-privilege RBAC on Secrets.
 - **Application:**
     - **HTTP security headers**: HSTS at Cloudflare and CloudFront; Content-Security-Policy in report-only mode first, then enforced; X-Content-Type-Options, X-Frame-Options or `frame-ancestors`, Referrer-Policy, Permissions-Policy.
-    - **DAST**: OWASP **ZAP** baseline scan of staging in the promotion gate (and once against russetleaf.com during a demo).
+    - **DAST**: OWASP **ZAP** baseline scan of staging in the promotion gate (and once against aws.russetleaf.dev during a demo).
     - **WordPress hardening**: block user enumeration (author archives and the REST `users` endpoint for anonymous visitors); **auth keys and salts** from Secrets Manager, rotated (which signs everyone out); XML-RPC already off.
 
 ## Alternatives considered

@@ -3,7 +3,7 @@
 - **Status:** Accepted; retention schedule updated by [ADR 1058](1058-security-detections-as-code.md)
 - **Date:** 2026-11-02
 - **Applies to:** both sites, the clusters, the build pipeline and the security documents
-- **Phase:** 1. Later: Phase 2's guardrails redact personal data; Phase 3 adds GuardDuty's EKS findings to the ATT&CK map and the privacy notice on russetleaf.com.
+- **Phase:** 1. Later: Phase 2's guardrails redact personal data; Phase 3 adds GuardDuty's EKS findings to the ATT&CK map and the privacy notice on aws.russetleaf.dev.
 
 ## Context
 
@@ -37,7 +37,7 @@ The design was checked against common compliance frameworks: MITRE ATT&CK, GDPR,
 - **A consent-management platform:** unnecessary without tracking cookies; adds a third-party script.
 - **Mapping to NIST SP 800-53:** far more detail than a project this size needs; CSF 2.0 plus the container and SSDF guidance fit better.
 - **Treating GDPR as out of scope** (a personal, non-commercial site): GDPR's household exemption does not cover a public website, and the basics are cheap.
-- **AWS Audit Manager** (collects evidence from Config, CloudTrail and Security Hub automatically and maps it to frameworks such as CIS, NIST CSF, SOC 2 and PCI DSS): it only sees AWS, while most of the controls live in Kubernetes, CI and the home cluster; it charges per evidence item; and no audit is planned. The control matrix (Phase 1 step 8.5) maps every control to its evidence instead. Revisit for a real audit of an always-on russetleaf.com.
+- **AWS Audit Manager** (collects evidence from Config, CloudTrail and Security Hub automatically and maps it to frameworks such as CIS, NIST CSF, SOC 2 and PCI DSS): it only sees AWS, while most of the controls live in Kubernetes, CI and the home cluster; it charges per evidence item; and no audit is planned. The control matrix (Phase 1 step 8.5) maps every control to its evidence instead. Revisit for a real audit of an always-on aws.russetleaf.dev.
 - **Formal certification (SOC 2, ISO 27001):** not meaningful without customers or contracts that require it; the control matrix applies the same controls without the audit.
 
 ## Consequences
@@ -60,4 +60,4 @@ The design was checked against common compliance frameworks: MITRE ATT&CK, GDPR,
 - Phase 1 step 5.1: CIS Docker Benchmark check.
 - Phase 1 step 7.1: ATT&CK detection map and Grafana panel.
 - Phase 1 step 8.5: NIST CSF 2.0 organization, SP 800-190 and SSDF checklists, CIS evidence links.
-- Phase 3 step 4.1: GuardDuty's EKS findings in the ATT&CK map; the privacy notice and cookie check on russetleaf.com.
+- Phase 3 step 4.1: GuardDuty's EKS findings in the ATT&CK map; the privacy notice and cookie check on aws.russetleaf.dev.
