@@ -18,15 +18,16 @@ Have these ready:
 ## Part 1: Sign up and verify the domain
 
 1. **Sign up** for **Google Workspace Business Starter**, with the existing domain **russetleaf.dev**, one user: the operator's account `<name>@russetleaf.dev`, which is also the organization's **super administrator**. Generate its password in Bitwarden.
-2. **Verify the domain:** in the Admin console, go to **Menu → Account → Domains → Manage domains**, select **Verify domain**, then **Get started**; choose Cloudflare as the host (or "My domain uses a different host") and copy the TXT value, which starts with `google-site-verification=`.
-3. **Add the TXT record** in Cloudflare's DNS for russetleaf.dev: type **TXT**, name `@`, the copied value exactly. Keep it in place; Google rechecks it later.
-4. Back in the Admin console, choose to confirm, and select **Confirm**. Google can take up to 72 hours to see the record.
+2. **Verify the domain:** in the setup tool (or the Admin console's **Menu → Account → Domains → Manage domains → Verify domain**), choose **Cloudflare** as the host. Google offers to add the records itself: it opens the Cloudflare dashboard with the records filled in, and after the operator authorizes them, it verifies the domain and activates Gmail. It adds the verification TXT record, the MX record (`smtp.google.com`), SPF and a DKIM key, which are checked in Part 2.
+3. **If the automatic setup is not offered** (or fails): copy the TXT value Google shows, which starts with `google-site-verification=`, add it in Cloudflare's DNS for russetleaf.dev (type **TXT**, name `@`), and select **Confirm** in the Admin console. Google can take up to 72 hours to see the record. Keep the record in place; Google rechecks it later.
 
 ## Part 2: Mail records
 
-1. **MX:** in Cloudflare, add type **MX**, name `@`, mail server `smtp.google.com`, priority **1**, and remove any other MX record. Then select **Activate Gmail** under **Manage domains**.
-2. **SPF:** add type **TXT**, name `@`, value `v=spf1 include:_spf.google.com ~all`. SES, which sends WordPress's mail, uses its own MAIL FROM domain by default and does not need an entry here; its DKIM records are added in [step 2.3](../plan.md#step-23-aws-and-cloudflare-resources-for-the-home-lab).
-3. **DKIM**, 24 to 72 hours after Gmail is active: go to **Menu → Apps → Google Workspace → Gmail → Authenticate email**, select russetleaf.dev, choose **Generate New Record** with a **2048**-bit key and the default prefix `google`, and add the TXT record it shows (name `google._domainkey`, value starting `v=DKIM1; k=rsa; p=`). Then select **Start authentication**; the status becomes "Authenticating email with DKIM".
+Check each record in Cloudflare's DNS, and add any that the automatic setup did not create:
+
+1. **MX:** type **MX**, name `@`, mail server `smtp.google.com` (the automatic setup uses priority 10, Google's manual steps priority 1; with one MX record either works), and no other MX record. If Gmail is not yet active, select **Activate Gmail** under **Manage domains**.
+2. **SPF:** type **TXT**, name `@`, value `v=spf1 include:_spf.google.com ~all`. SES, which sends WordPress's mail, uses its own MAIL FROM domain by default and does not need an entry here; its DKIM records are added in [step 2.3](../plan.md#step-23-aws-and-cloudflare-resources-for-the-home-lab).
+3. **DKIM:** the automatic setup adds the key (name `google._domainkey`, value starting `v=DKIM1;k=rsa;p=`). Otherwise, 24 to 72 hours after Gmail is active, go to **Menu → Apps → Google Workspace → Gmail → Authenticate email**, select russetleaf.dev, choose **Generate New Record** with a **2048**-bit key and the default prefix `google`, and add the TXT record it shows. Either way, on **Authenticate email**, select **Start authentication** if the status is not already "Authenticating email with DKIM".
 4. **DMARC**, 48 hours after SPF and DKIM: create the reports group first (Part 4), then add type **TXT**, name `_dmarc`, value `v=DMARC1; p=none; rua=mailto:<dmarc-reports-group>@russetleaf.dev`. Start at `p=none`, review the reports, and tighten to `quarantine` and then `reject` once only Google and SES appear ([improvement I1-5](../improvements.md)).
 
 These records are imported into OpenTofu with the rest of russetleaf.dev's DNS in [step 2.3](../plan.md#step-23-aws-and-cloudflare-resources-for-the-home-lab).
