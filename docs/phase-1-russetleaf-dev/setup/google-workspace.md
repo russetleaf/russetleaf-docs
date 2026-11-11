@@ -59,9 +59,10 @@ Each address that a service sends important mail to is a **group** with the oper
     - the **DMARC reports** group
 
     Leave **Security** cleared. For the access type, start from **Restricted** and change only **Who can post**, selecting every option: **Group owners**, **Group managers**, **Group members**, **Entire organization** and **External**. Keep the Restricted defaults for who can contact the owners, view conversations, view members and manage members, so the group's contents stay private. Then **Create Group**.
-3. **Delivery:** make the operator a **member** with the subscription **Each email**, so every message reaches the operator's Gmail.
-4. **Spam handling:** in the group's settings, set **Spam message handling** so that held messages notify the owner, or skip moderation; an AWS verification code held in a moderation queue would block the procedure waiting for it.
-5. **Test** each group by sending a message from the personal Google Account, and confirm it arrives in the operator's Gmail.
+3. **Membership** (Admin console): open the group, then **Members**; if the operator is not listed, select **Add members**, choose the account, and **Add To Group**. The operator's role is **Owner**.
+4. **Spam handling and moderation** (the Google Groups app, not the Admin console, whose group page has only **Access settings**): at `https://groups.google.com`, open the group, then **Group settings → Posting policies**; set **Spam message handling** to "Post suspicious messages to the group" and **Message moderation** to "No moderation", and **Save changes**. A message held for moderation (an AWS verification code, for example) would otherwise block the procedure waiting for it.
+5. **Gmail filters** (the Workspace mailbox), one per group, because Gmail's own spam filter sends a new domain's group mail to **Spam** at first: in Gmail's search options, enter the group's address in **To**, select **Create filter**, then **Never send it to Spam** and **Apply the label**: `AWS/<group-name>` for each AWS account's group (Gmail creates the parent **AWS** label, so all AWS mail is together and each account is separate), and a label named after the group for DMARC reports (optionally with **Skip the Inbox**). Each AWS account that step 2.0 creates gets its own group, filter and label.
+6. **Test** each group by sending a message from the personal Google Account: it arrives in the operator's Gmail under the group's label, not in **Spam**. Mark any earlier test found in **Spam** as **Report not spam**.
 
 ## Part 5: Where the Workspace account is used
 
@@ -76,7 +77,7 @@ Each address that a service sends important mail to is a **group** with the oper
 - [ ] Signing in to the Workspace account asks for a security key, both YubiKeys work, and **2-step verification** shows enforcement **On**, **Only security key or passkey**, and security codes not allowed.
 - [ ] The account is enrolled in **Advanced Protection**, and its recovery email is the personal Google Account.
 - [ ] The backup codes are in Bitwarden.
-- [ ] Each group receives a message from outside the organization.
+- [ ] Each group receives a message from outside the organization, under its label and not in **Spam**.
 
 ## If something goes wrong
 
