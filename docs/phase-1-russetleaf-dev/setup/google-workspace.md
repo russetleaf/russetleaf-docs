@@ -35,9 +35,15 @@ These records are imported into OpenTofu with the rest of russetleaf.dev's DNS i
 ## Part 3: The account's sign-in
 
 1. **Recovery information:** in **Menu → Directory → Users**, select the operator's account, then **Security → Recovery information**: the **personal Google Account** as the recovery email and the operator's phone as the recovery phone.
-2. **Security keys:** signed in as the Workspace account, under **Security → Passkeys and security keys**, register `yubikey-primary` and `yubikey-backup` (security keys, named as such).
-3. **Enforce security keys for the organization:** go to **Menu → Security → Authentication → 2-step verification**; select **Allow users to turn on 2-Step Verification**, set **Enforcement** to **On**, choose **Only security key** as the method, and set a short **new user enrollment period** (for example, one week). Do this only after both keys are registered, since the enforcement applies to the operator's own account.
-4. **Backup codes:** with **Only security key** enforced, users cannot generate their own backup codes; generate them for the operator's account as the administrator (the user's **Security** settings), save them in Bitwarden, and add them to the printed kit at the end of step 0.1 ([break-glass kit setup guide](break-glass-kit.md)).
+2. **Security keys:** signed in as the Workspace account, under **Security → Passkeys and security keys**, register `yubikey-primary` and `yubikey-backup` (security keys, named as such). Google asks for a key at sign-in only once 2-Step Verification applies to the account, so the keys are tested in step 3.
+3. **Enforce security keys for the organization:** the setup tool's 2-Step Verification step opens the same admin setting, **Menu → Security → Authentication → 2-step verification**:
+    - **Allow users to turn on 2-Step Verification:** selected.
+    - **Enforcement:** **On**.
+    - **Methods:** **Only security key or passkey**.
+    - **Security codes:** "Don't allow users to generate security codes". A security code is a one-time code made with a key, for signing in on a device that cannot use one; the YubiKeys work by USB and, on the phone, by NFC, so none is needed, and a code is the one thing a phishing page could ask for.
+
+    **Test before leaving the page:** keep the Admin console open, signed in, in the current window, then sign in to the Workspace account in a **private window** with `yubikey-primary`, and again in a new private window with `yubikey-backup`. If either fails, set **Enforcement** back to **Off** from the open Admin console window, which stays signed in.
+4. **Backup codes:** with **Only security key or passkey** enforced, users cannot generate their own backup codes; generate them for the operator's account as the administrator (the user's **Security** settings), save them in Bitwarden, and add them to the printed kit at the end of step 0.1 ([break-glass kit setup guide](break-glass-kit.md)).
 5. **Advanced Protection:** in **Menu → Security → Authentication → Advanced Protection Program**, keep **Enable user enrollment** (the default) and the option "Don't allow users to generate security codes"; then enroll the Workspace account on Google's Advanced Protection page, signing in with a YubiKey. Enrolling signs the account out of every device.
 
 ## Part 4: Groups
@@ -60,7 +66,7 @@ Each address that a service sends important mail to is a **group** with the oper
 
 - [ ] russetleaf.dev shows as **verified** under **Manage domains**, and Gmail as active.
 - [ ] A message from an outside address reaches `<name>@russetleaf.dev`, and a message from it to an outside Gmail address shows `spf=pass`, `dkim=pass` and `dmarc=pass` under **Show original**.
-- [ ] Signing in to the Workspace account asks for a security key, both YubiKeys work, and **2-step verification** shows **Only security key** enforced.
+- [ ] Signing in to the Workspace account asks for a security key, both YubiKeys work, and **2-step verification** shows enforcement **On**, **Only security key or passkey**, and security codes not allowed.
 - [ ] The account is enrolled in **Advanced Protection**, and its recovery email is the personal Google Account.
 - [ ] The backup codes are in Bitwarden.
 - [ ] Each group receives a message from outside the organization.
