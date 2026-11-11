@@ -42,7 +42,7 @@ Have these ready:
 1. **The personal Google Account**, moving to the **Advanced Protection Program**:
     1. Under **Security → Passkeys and security keys**, register **both YubiKeys** as security keys.
     2. Under **Security**, confirm a **recovery phone** and a **recovery email address** in a mailbox other than this Google Account.
-    3. **Enroll** at `https://myaccount.google.com/advanced-protection/landing` (linked from **Get started** on `https://landing.google.com/advancedprotection/`), signing in again with a YubiKey when asked.
+    3. **Enroll** from `https://landing.google.com/advancedprotection/` with **Get started**, signing in again with a YubiKey when asked.
     4. Under **2-Step Verification**, remove any SMS, voice or authenticator-code second steps that remain. Keep the Google Authenticator app itself: it stays signed in to this account for the codes some services need (GitHub's and GitLab's, briefly, and Slack's).
     5. Sign in again on each device, and confirm Google Drive's web upload still works (Advanced Protection blocks most third-party apps from Gmail and Drive data); the encrypted kit's Google Drive copy lives here.
 2. **Microsoft account** (used for OneDrive): under **Security → Advanced security options**, add both YubiKeys (Microsoft lists them as passkeys); save the **recovery code** in Bitwarden.
