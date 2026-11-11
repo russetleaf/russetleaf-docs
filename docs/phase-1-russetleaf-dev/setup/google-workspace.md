@@ -53,11 +53,15 @@ These records are imported into OpenTofu with the rest of russetleaf.dev's DNS i
 
 Each address that a service sends important mail to is a **group** with the operator as its member, so the address is not tied to one mailbox and can gain a second member later:
 
-1. In **Menu → Directory → Groups**, select **Create group** for each of these, with the operator as member and owner:
-    - one group per **AWS account's root email** (the management account first; the accounts step 2.0 creates later), named in Bitwarden, for example `<aws-account-group>@russetleaf.dev`
+1. **Allow outside senders, once for the organization:** in **Menu → Apps → Google Workspace → Groups for Business → Sharing settings**, select "Group owners can allow incoming email from outside the organization"; leave "Group owners can allow external members" cleared and access from outside the organization **Private**; save. AWS and the DMARC reporters are outside the organization, and groups refuse their mail otherwise.
+2. **Create each group** in **Menu → Directory → Groups → Create group**, with the operator as owner:
+    - one group per **AWS account's root email** (the management account first; the accounts step 2.0 creates later), for example `<aws-account-group>@russetleaf.dev`, with the real names kept in Bitwarden rather than in these documents
     - the **DMARC reports** group
-2. In each group's settings, set **Who can post** so that people **outside the organization** can post, since the mail comes from AWS and the DMARC reporters.
-3. **Test** each group by sending a message from the personal Google Account, and confirm it arrives in the operator's Gmail.
+
+    Leave **Security** cleared. For the access type, start from **Restricted** and change only **Who can post**, selecting every option: **Group owners**, **Group managers**, **Group members**, **Entire organization** and **External**. Keep the Restricted defaults for who can contact the owners, view conversations, view members and manage members, so the group's contents stay private. Then **Create Group**.
+3. **Delivery:** make the operator a **member** with the subscription **Each email**, so every message reaches the operator's Gmail.
+4. **Spam handling:** in the group's settings, set **Spam message handling** so that held messages notify the owner, or skip moderation; an AWS verification code held in a moderation queue would block the procedure waiting for it.
+5. **Test** each group by sending a message from the personal Google Account, and confirm it arrives in the operator's Gmail.
 
 ## Part 5: Where the Workspace account is used
 
