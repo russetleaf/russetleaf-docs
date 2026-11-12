@@ -130,7 +130,7 @@ These are illustrative aws.russetleaf.dev (AWS overlay) values for the project's
 
 ```yaml
 image:
-  repository: ghcr.io/<github-user>/russetleaf-wordpress
+  repository: ghcr.io/russetleaf/russetleaf-wordpress
   tag: "1.0.0"                     # bumped by the russetleaf-wordpress release bot
 
 site:

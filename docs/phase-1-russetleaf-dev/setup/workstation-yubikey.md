@@ -44,9 +44,9 @@ Have these ready:
     ```
 
 4. **Test:** `ssh -T git@github.com` and `ssh -T git@gitlab.com` each ask for a touch and greet the GitHub or GitLab user.
-5. **Keep the old key for signing only:**
-    1. Add a passphrase: `ssh-keygen -p -f ~/.ssh/id_ed25519_github`, with the passphrase generated in and saved to Bitwarden.
-    2. On **GitHub**, delete `id_ed25519_github` from the **Authentication keys** list and keep (or add) it under **Signing keys**; on **GitLab**, set its usage to **Signing** (or remove it if it is not used there).
+5. **The commit-signing key is for signing only:** the separate key file from the [workstation setup](../plan.md#4-configuration), `id_ed25519_github`, is never used to sign in.
+    1. It has a passphrase, generated in and saved to Bitwarden (to add one: `ssh-keygen -p -f ~/.ssh/id_ed25519_github`).
+    2. On **GitHub** it is listed only under **Signing keys**, not **Authentication keys**; on **GitLab**, its usage type is **Signing**.
     3. Commits stay signed as before (`gpg.format ssh`, `user.signingkey` pointing to `id_ed25519_github.pub`); `ssh-add ~/.ssh/id_ed25519_github` unlocks it once per session.
 6. **Put `yubikey-backup` back in the safe.**
 

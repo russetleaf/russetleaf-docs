@@ -1,9 +1,11 @@
 # ADR 1004: GitHub Container Registry (GHCR) instead of Amazon ECR
 
-- **Status:** Accepted; updated by [ADR 1030](1030-github-actions-ci.md)
+- **Status:** Accepted; updated by [ADR 1030](1030-github-actions-ci.md) and [ADR 1060](1060-github-organization-and-gitlab-group.md)
 - **Date:** 2026-11-01
 - **Applies to:** both sites
 - **Phase:** 1. Later: Phase 3 may add an ECR pull-through cache for GHCR.
+
+> **Update ([ADR 1060](1060-github-organization-and-gitlab-group.md)):** the images and charts are published under the `russetleaf` GitHub organization, `ghcr.io/russetleaf/`.
 
 > **Update ([ADR 1030](1030-github-actions-ci.md)):** The repos are now made **public early** ([ADR 1030](1030-github-actions-ci.md)), so the GHCR packages are made public at first push: no private-package storage limit and no pull secrets are needed. The private-package mitigations below apply only if a repo has to stay private.
 
@@ -18,7 +20,7 @@ Images are built and signed (cosign keyless) in GitHub Actions, and Kyverno only
 
 ## Decision
 
-Use **GHCR** for all project images and charts: `ghcr.io/<github-user>/russetleaf-wordpress` and `ghcr.io/<github-user>/russetleaf-llm-summarizer`. Both sites pull from GHCR. On AWS, an **ECR pull-through cache** in front of GHCR is optional.
+Use **GHCR** for all project images and charts: `ghcr.io/russetleaf/russetleaf-wordpress` and `ghcr.io/russetleaf/russetleaf-llm-summarizer`. Both sites pull from GHCR. On AWS, an **ECR pull-through cache** in front of GHCR is optional.
 
 Reasons, in order of importance:
 
