@@ -79,7 +79,7 @@ Two free services watch the platform from outside, so a dead cluster or a broken
 
 1. **The heartbeat service** (for example healthchecks.io): sign up, register **both YubiKeys** as its two-factor sign-in (security keys are its only second factor), and connect its **Slack integration** to `#rl-critical`. In step 4.4, Alertmanager's always-firing `Watchdog` alert pings a check here every few minutes; if the pings stop, this service posts to `#rl-critical`.
 2. **The uptime checker** (for example UptimeRobot or Better Stack): prefer one that offers security keys or Google sign-in (UptimeRobot offers only authenticator codes); sign up, turn on its strongest **two-factor authentication**, and connect its **Slack integration** to `#rl-critical` and `#rl-dev-alerts`. Step 4.4 adds the checks for `https://russetleaf.dev` (and Phase 3 for aws.russetleaf.dev).
-3. **The break-glass kit** ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)): add the logins for both services (and any recovery codes); Slack signs in through Google, so it adds nothing unless a Slack password and backup codes were needed.
+3. **The break-glass kit** ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)): add the logins for both services (and any recovery codes), and Slack's **backup codes**, which open the password fallback if the Workspace account is unavailable.
 
 ## Checks
 
@@ -101,5 +101,5 @@ The test for step 0.1:
 - [ ] A test message to `#rl-critical` raises a phone notification, and one to another channel does not.
 - [ ] Slack signs in with the Workspace account through "Continue with Google", and its password requires an authenticator code; the heartbeat service asks for a YubiKey; the uptime checker asks for its second factor.
 - [ ] The heartbeat service and the uptime checker can each send a test notification to `#rl-critical`.
-- [ ] The workspace has only invited members, and `#rl-security` is private.
-- [ ] Bitwarden has both services' logins (and Slack's password and backup codes, if they exist).
+- [ ] The workspace has only invited members, `#rl-security` is private, and **Sign-in settings** require two-factor authentication with authenticator apps only.
+- [ ] Bitwarden has both services' logins, and Slack's password and backup codes.
