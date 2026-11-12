@@ -88,6 +88,8 @@ Write a note or a warning as a paragraph that starts with a bold label: `**Note:
 | critical alerts | `criticals` | |
 | security key | `passkey` (for a YubiKey) | A hardware key such as the operator's YubiKeys, whatever a service's menu calls it; name the menu as the service shows it |
 | phone passkey | `passkey` (unqualified) | A passkey stored on a phone or in a password manager |
+| Google sign-in (OIDC) | `Google route`, `Google path`, `Google login`, bare `OAuth` | Federated sign-in with a Google Account over OpenID Connect, the authentication layer on OAuth 2.0; write "(OIDC)" on first use in a document. OAuth 2.0 alone means authorization (an OAuth client, scopes, tokens) |
+| password sign-in | `password route`, `password path` | A service's own username and password, with the service's own second factor |
 
 ## Numbers, dates and units
 
