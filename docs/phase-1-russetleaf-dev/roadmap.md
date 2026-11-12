@@ -20,10 +20,10 @@ The milestones for building [Phase 1](plan.md), with target dates, and the actua
 | **M2 Cluster up** | 2.2 | 13–19 | Fri, Nov 6, 2026 | Fri, Nov 6, 2026 | | |
 | **M3 AWS, GitOps and platform services** | 2.0b, 2.3, 2.4, 3.1, 4.1–4.7 | 62–102 | Wed, Nov 18, 2026 | Sun, Nov 22, 2026 | | |
 | **M4 WordPress live with staging and promotion** | 5.1–5.7, 5.10, 5.12 | 56–95 | Fri, Nov 27, 2026 | Thu, Dec 3, 2026 | | |
-| **M5 Core tier complete and published** | 6.1, 6.3, 9.2 | 27–39 | Tue, Dec 1, 2026 | Tue, Dec 8, 2026 | | |
+| **M5 Core tier complete and published** | 6.1, 6.3, 9.2 | 33–49 | Tue, Dec 1, 2026 | Tue, Dec 8, 2026 | | |
 | **M6 Production hardening and operations** | 9.3, 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.15, 9.1 | 103–181 | Thu, Dec 17, 2026 | Tue, Dec 29, 2026 | | |
 | **M7 Advanced practices; Phase 1 complete** | 7.7, 8.1–8.9 | 89–144 | Thu, Dec 31, 2026 | Thu, Jan 14, 2027 | | |
-| **Total** | | **375–626** | | | | |
+| **Total** | | **381–636** | | | | |
 
 **The first four days:**
 

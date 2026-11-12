@@ -99,3 +99,30 @@ OpenTofu manages the Organization from step 2.0, but it needs a way to sign in f
 - **Lost the phone:** root is not affected. If Identity Center has a phone passkey, remove it, signing in with a YubiKey.
 - **Lost both YubiKeys:** on the root sign-in page, choose **Troubleshoot MFA**, then **Sign in using alternative factors**. AWS sends a link to the root email address, then calls the phone number on the account. There are no recovery codes, which is why the root email address and the phone number are kept current in the break-glass kit. If neither works, contact AWS Support.
 - **The management account is compromised or lost:** follow the [disaster recovery plan](../disaster-recovery.md#scenarios) ("Management account compromised or lost").
+
+## References
+
+The official pages these steps follow, each checked on the date shown. When a page has moved or changed, find the current one, update the step if needed, and change the date.
+
+- AWS: ["Sign up for AWS (advanced)"](https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-creating.html), checked 2026-11-12
+- AWS: ["Compare sign-up options"](https://docs.aws.amazon.com/accounts/latest/reference/sign-up-for-aws.html), checked 2026-11-12
+- AWS: ["Root user best practices for your AWS account"](https://docs.aws.amazon.com/IAM/latest/UserGuide/root-user-best-practices.html), checked 2026-11-12
+- AWS: ["Multi-factor authentication for AWS account root user"](https://docs.aws.amazon.com/IAM/latest/UserGuide/enable-mfa-for-root.html), checked 2026-11-12
+- AWS: ["Enable a passkey or security key for the root user (console)"](https://docs.aws.amazon.com/IAM/latest/UserGuide/enable-fido-mfa-for-root.html), checked 2026-11-12
+- AWS: ["Delete access keys for the root user"](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user_manage_delete-key.html), checked 2026-11-12
+- AWS: ["Overview of managing access permissions (activating access to the Billing and Cost Management console)"](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/control-access-billing.html), checked 2026-11-12
+- AWS: ["Update the alternate contacts for your AWS account"](https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-update-contact-alternate.html), checked 2026-11-12
+- AWS: ["Customizing your Billing preferences"](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/billing-pref.html), checked 2026-11-12
+- AWS: ["Creating a cost budget"](https://docs.aws.amazon.com/cost-management/latest/userguide/create-cost-budget.html), checked 2026-11-12
+- AWS: ["Getting started with AWS Cost Anomaly Detection"](https://docs.aws.amazon.com/cost-management/latest/userguide/getting-started-ad.html), checked 2026-11-12
+- AWS: ["Editing your alert preferences (Cost Anomaly Detection)"](https://docs.aws.amazon.com/cost-management/latest/userguide/edit-alert-pref.html), checked 2026-11-12
+- AWS: ["Choosing your Region"](https://docs.aws.amazon.com/awsconsolehelpdocs/latest/gsg/select-region.html), checked 2026-11-12
+- AWS: ["Creating an organization with AWS Organizations"](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_org_create.html), checked 2026-11-12
+- AWS: ["Enable IAM Identity Center"](https://docs.aws.amazon.com/singlesignon/latest/userguide/enable-identity-center.html), checked 2026-11-12
+- AWS: ["Configure MFA in IAM Identity Center"](https://docs.aws.amazon.com/singlesignon/latest/userguide/mfa-configure.html), checked 2026-11-12
+- AWS: ["Register an MFA device for users"](https://docs.aws.amazon.com/singlesignon/latest/userguide/how-to-register-device.html), checked 2026-11-12
+- AWS: ["Add users to your Identity Center directory"](https://docs.aws.amazon.com/singlesignon/latest/userguide/addusers.html), checked 2026-11-12
+- AWS: ["Create a permission set"](https://docs.aws.amazon.com/singlesignon/latest/userguide/howtocreatepermissionset.html), checked 2026-11-12
+- AWS: ["Assign user or group access to AWS accounts"](https://docs.aws.amazon.com/singlesignon/latest/userguide/assignusers.html), checked 2026-11-12
+- AWS: ["Configuring IAM Identity Center authentication with the AWS CLI"](https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html), checked 2026-11-12
+- AWS: ["AWS account root user (centrally manage root access for member accounts)"](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html), checked 2026-11-12

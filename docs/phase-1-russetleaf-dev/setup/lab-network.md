@@ -115,3 +115,11 @@ The test for step 0.3:
 - [ ] The break-glass kit has the ER605's admin login, its configuration backup, the WireGuard profile and the three BIOS passwords.
 
 Step 2.2 repeats the isolation checks from a pod inside the cluster.
+
+## References
+
+The official pages these steps follow, each checked on the date shown. When a page has moved or changed, find the current one, update the step if needed, and change the date.
+
+- TP-Link (Omada): ["ER605 support page (firmware, release notes, datasheet)"](https://support.omadanetworks.com/us/product/er605/), checked 2026-11-12
+- WireGuard: ["Quick Start"](https://www.wireguard.com/quickstart/), checked 2026-11-12
+- NetworkManager: ["nmcli reference manual"](https://networkmanager.dev/docs/api/latest/nmcli.html), checked 2026-11-12

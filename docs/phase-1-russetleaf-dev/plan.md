@@ -24,18 +24,18 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | A complete, working home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting with an incident process, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, privacy basics (GDPR), and the docs. Finished on its own, this is a complete platform. | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 5.12, 6.1, 6.3, 9.2 | **~183–301** |
+| **Core** | A complete, working home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting with an incident process, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, privacy basics (GDPR), and the docs. Finished on its own, this is a complete platform. | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 5.12, 6.1, 6.3, 9.2 | **~189–311** |
 | **Extended** | Hardening, operations and evidence: progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, security detections as code with 90-day security logs, performance and stress testing with a regression gate, and **operational readiness** (rollback, node-failure, cold-start, disaster, forensics and incident drills, with their runbooks), and the **post go-live review** of the [improvements list](improvements.md). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.15, 9.1, 9.3 | **~103–181** |
 | **Advanced** | Reliability and platform practices: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management with a local spoke cluster, chaos experiments and postmortems, a threat model and control matrix, strategy documents, knowledge sharing (engineering write-ups of the main decisions), and a custom seccomp profile for WordPress. | 7.7, 8.1–8.9 | **~89–144** |
-| **Total** | | | **~375–626** |
+| **Total** | | | **~381–636** |
 
 **Calendar time** (Phase 1 only):
 
 | Hours per week | Core | + Extended | + Advanced (everything) |
 |---|---|---|---|
-| ~10 | 4–7 months | 6–11 months | 9–14 months |
-| ~20 | 9–15 weeks | 14–24 weeks | 19–31 weeks |
-| ~40 | 5–8 weeks | 7–12 weeks | 9–16 weeks |
+| ~10 | 4–7 months | 6–11 months | 9–15 months |
+| ~20 | 9–16 weeks | 15–25 weeks | 19–32 weeks |
+| ~40 | 5–8 weeks | 7–12 weeks | 10–16 weeks |
 
 The optional later phases add about **147–244 hours** (Phase 2) and **104–170 hours** (Phase 3); see the [overview](../overview.md#build-plans-priorities-and-effort).
 
@@ -1014,9 +1014,9 @@ These steps are most of the **Advanced** tier; see the Phase 1 design's [Enginee
 
 ### Step 9.2: Documentation and polish
 
-**Do:** run an **AWS Well-Architected review** of the design in the free Well-Architected Tool (Security pillar first, then the others), save the report in `docs/`, and fix or record the high-risk items; hub README with the russetleaf.dev architecture diagram and links to all repos; screenshots of Grafana (site, cost) and Argo CD; update the Phase 1 design wherever the build differed from it; re-run `gitleaks` on every repo and confirm the repos and GHCR packages are still public (they were made public in steps 1.1 and 5.1); add each repo's **OpenSSF Scorecard** badge to its README (record the scores in the decision log), and confirm **SARIF upload** of Checkov's results to GitHub code scanning is on in each repo (it can be turned on from step 1.1, since the repos are public).
+**Do:** run an **AWS Well-Architected review** of the design in the free Well-Architected Tool (Security pillar first, then the others), save the report in `docs/`, and fix or record the high-risk items; hub README with the russetleaf.dev architecture diagram and links to all repos; screenshots of Grafana (site, cost) and Argo CD; update the Phase 1 design wherever the build differed from it; re-run `gitleaks` on every repo and confirm the repos and GHCR packages are still public (they were made public in steps 1.1 and 5.1); add each repo's **OpenSSF Scorecard** badge to its README (record the scores in the decision log), and confirm **SARIF upload** of Checkov's results to GitHub code scanning is on in each repo (it can be turned on from step 1.1, since the repos are public). Add a **References** section to every ADR, citing the official pages a decision rests on (prices, plan limits, terms of service, product features), each re-read and dated "checked YYYY-MM-DD" as in the setup guides ([style guide: links and references](../standards/documentation.md#links-and-references)), and extend the References check in `tools/check_doc_style.py` to ADRs.
 
-**Test:** someone unfamiliar with the project can follow the README to understand it in five minutes.
+**Test:** someone unfamiliar with the project can follow the README to understand it in five minutes; `tools/check_doc_style.py` passes with every ADR carrying dated references.
 
 ### Step 9.3: Post go-live improvements
 
@@ -1141,7 +1141,7 @@ Phase 1 builds most of what these need: the shared OpenTofu modules, the base ma
 | 7.14 Incident runbooks + tabletop drills | Extended | 7–11 | ☐ | | | | |
 | 7.15 Security detections as code (Sigma) | Extended | 8–14 | ☐ | | | | |
 | 9.1 Keyless AWS access | Extended | 5–10 | ☐ | | | | |
-| 9.2 Docs + go public | Core | 6–10 | ☐ | | | | |
+| 9.2 Docs + go public | Core | 12–20 | ☐ | | | | |
 | 9.3 Post go-live improvements | Extended | 2–6 | ☐ | | | | |
 | 8.1 SLOs and error budgets | Advanced | 10–15 | ☐ | | | | |
 | 8.2 DORA metrics | Advanced | 6–10 | ☐ | | | | |
@@ -1192,3 +1192,4 @@ Phase 1 builds most of what these need: the shared OpenTofu modules, the base ma
 | 2026-11-10 | **Google Workspace on russetleaf.dev** (Business Starter, one user) becomes the project's identity ([ADR 1059](adr/1059-google-workspace-identity.md); [Google Workspace setup guide](setup/google-workspace.md)): security keys enforced and Advanced Protection; Gmail for the domain; groups as the AWS accounts' root email addresses; Slack (staying on the **Free** plan) signs in with it through "Continue with Google"; Dex reads its groups; IAM Identity Center keeps its own directory. The personal Google Account remains only as the Workspace account's recovery email and the **Cloudflare** sign-in, so the domain's registrar and DNS never depend on the domain's own mail. Step 0.1 becomes 7–13 hours | One project identity on the project's domain, with groups for roles, domain-restricted Google sign-in and enforced security keys, for about $7 a month; Business Starter covers one operator's needs; Slack's Google sign-in works on the free plan, and its required-Google option (Pro) would not stop the owner's password sign-in anyway |
 | 2026-11-10 | **A `russetleaf` GitHub organization and GitLab group** hold the repos and their mirrors ([ADR 1060](adr/1060-github-organization-and-gitlab-group.md)): `russetleaf-docs` and its mirror are transferred in step 1.1, the docs site's CNAME moves to the organization, and two-factor authentication with only secure methods is required. Step 1.1 becomes 6–12 hours; with step 0.1, the Core tier becomes ~183–301 hours and Phase 1 ~375–626, M1 25–46 hours, and the milestones move to M4 Fri, Nov 27 (latest Thu, Dec 3), M5 Tue, Dec 1 (latest Tue, Dec 8), M6 Thu, Dec 17 (latest Tue, Dec 29) and M7 Thu, Dec 31, 2026 (latest Thu, Jan 14, 2027) | Organization-wide rules, a verified domain and an audit log for every repo, which the design already assumed (`envs/github`, the GitHub App on one repo); GitHub's terms allow one free personal account per person, so the organization is owned by the existing account |
 | 2026-11-12 | **Setup guides give full click paths** from the service's home page, with a standard note that consoles change and that the provider's current documentation is checked first; the same applies to instructions given in chat ([documentation style guide](../standards/documentation.md#setup-guides)). Sign-in terms are **Google sign-in (OIDC)** and **password sign-in** | Naming only the setting left the operator searching consoles whose layout differs from the providers' own documentation (Cloudflare's registrar tabs, Slack's admin menu); precise terms avoid ambiguity about what each sign-in method checks |
+| 2026-11-12 | **Dated references:** every setup guide ends with a **References** section listing the official pages its steps follow, each dated "checked YYYY-MM-DD", enforced by `tools/check_doc_style.py`; step 9.2 adds the same to every ADR (6–10 more hours: step 9.2 becomes 12–20, the Core tier ~189–311 and Phase 1 ~381–636, M5 33–49 hours). The milestone dates are recomputed in the roadmap re-baseline after the account migration, since the 2026-11-02 baseline no longer holds | Provider pages and consoles change (Cloudflare's registrar tabs differed from its own documentation); a cited, dated source shows where a step or a decision came from and when it was last confirmed |

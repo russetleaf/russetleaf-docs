@@ -86,3 +86,29 @@ Each address that a service sends important mail to is a **group** with the oper
 - **Locked out of the Workspace account** (both keys lost): sign in with a backup code from the kit; failing that, use Google's account recovery with the recovery email or phone; failing that, Google's administrator recovery, which proves ownership of russetleaf.dev with a DNS record added at Cloudflare. That last path is why Cloudflare does not sign in with the Workspace account.
 - **Mail stops arriving:** check the MX record and the domain's verification under **Manage domains**; removing the TXT verification record can cost the domain its verified status.
 - **The Workspace subscription lapses:** mail to russetleaf.dev stops, and with it the AWS root email path. Keep the subscription's payment method current, and the domain's auto-renew on.
+
+## References
+
+The official pages these steps follow, each checked on the date shown. When a page has moved or changed, find the current one, update the step if needed, and change the date.
+
+- Google: ["Choose your Google Workspace edition"](https://knowledge.workspace.google.com/admin/getting-started), checked 2026-11-12
+- Google: ["Verify your domain with a TXT record"](https://knowledge.workspace.google.com/admin/domains/verify-your-domain-with-a-txt-record), checked 2026-11-12
+- Google: ["Set up MX records for Google Workspace"](https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace), checked 2026-11-12
+- Google: ["Set up SPF"](https://knowledge.workspace.google.com/admin/security/set-up-spf), checked 2026-11-12
+- Google: ["Set up DKIM"](https://knowledge.workspace.google.com/admin/security/set-up-dkim), checked 2026-11-12
+- Google: ["Set up DMARC"](https://knowledge.workspace.google.com/admin/security/set-up-dmarc), checked 2026-11-12
+- Google: ["Recommended DMARC rollout"](https://knowledge.workspace.google.com/admin/security/recommended-dmarc-rollout), checked 2026-11-12
+- Google: ["Deploy 2-Step Verification"](https://knowledge.workspace.google.com/admin/security/deploy-2-step-verification), checked 2026-11-12
+- Google: ["Manage a user's security settings (backup verification codes)"](https://knowledge.workspace.google.com/admin/security/manage-a-users-security-settings), checked 2026-11-12
+- Google: ["Add recovery information for admins & users"](https://knowledge.workspace.google.com/admin/users/add-recovery-information-for-admins-and-users), checked 2026-11-12
+- Google: ["Enable user enrollment in the Advanced Protection Program"](https://knowledge.workspace.google.com/admin/security/enable-user-enrollment-in-the-advanced-protection-program), checked 2026-11-12
+- Google: ["Advanced Protection Program"](https://landing.google.com/advancedprotection/), checked 2026-11-12
+- Google: ["Recovering administrator access to your account"](https://knowledge.workspace.google.com/admin/users/recovering-administrator-access-to-your-account), checked 2026-11-12
+- Google: ["Set organization-wide policies for using groups"](https://knowledge.workspace.google.com/admin/groups/set-organization-wide-policies-for-using-groups), checked 2026-11-12
+- Google: ["Create a group in your organization"](https://knowledge.workspace.google.com/admin/groups/create-a-group-in-your-organization), checked 2026-11-12
+- Google: ["Add or invite users to a group"](https://knowledge.workspace.google.com/admin/groups/add-or-invite-users-to-a-group), checked 2026-11-12
+- Google: ["Create a group (Google Workspace Learning Center: posting policies, spam message handling)"](https://support.google.com/a/users/answer/9303222), checked 2026-11-12
+- Google: ["Create rules to filter your emails"](https://support.google.com/mail/answer/6579), checked 2026-11-12
+- Google: ["Trace an email with its full header (Show original)"](https://support.google.com/mail/answer/29436), checked 2026-11-12
+- Cloudflare: ["Set up Google Workspace DNS records"](https://developers.cloudflare.com/dns/manage-dns-records/how-to/set-up-google-workspace/), checked 2026-11-12
+- Cloudflare: ["Manage DNS records"](https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/), checked 2026-11-12

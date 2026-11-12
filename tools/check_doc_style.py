@@ -12,6 +12,9 @@ not in sentence case:
     capitals inside (OpenTofu), or entries in the project vocabulary
     (.vale/styles/config/vocabularies/RussetLeaf/accept.txt), which Vale shares.
 
+Setup guides (docs/phase-<n>-<site>/setup/*.md) must end with a "## References" section, and
+every item in it must carry the date its page was checked ("checked YYYY-MM-DD").
+
 Allowed: code blocks, inline code, link targets, HTML comments, and quoted text ("...") such as
 commands, test inputs or sample prompts, which must stay verbatim. A line can also be exempted
 by ending it with the comment <!-- style: allow -->.
@@ -35,6 +38,8 @@ VOCAB = Path(__file__).resolve().parent.parent / '.vale/styles/config/vocabulari
 HEADING = re.compile(r'^(#{1,6})\s+(.*?)\s*#*\s*$')
 LABEL = re.compile(r'^(?:Stage|Step|Part|ADR|Phase|Spec)(?:\s+[\w.]+)?(?:\s+\(optional\))?:\s+')
 WORD = re.compile(r"[A-Za-z][\w.'’/+-]*")
+SETUP_GUIDE = re.compile(r'(^|/)docs/phase-[^/]+/setup/[^/]+\.md$')
+CHECKED = re.compile(r'checked \d{4}-\d{2}-\d{2}\b')
 
 
 def load_vocab():
@@ -83,6 +88,23 @@ def markdown_files():
     return [Path(p) for p in out.split()]
 
 
+def check_references(path, lines):
+    """A setup guide needs a References section whose every item is dated."""
+    if not SETUP_GUIDE.search(path.as_posix()):
+        return []
+    try:
+        start = lines.index('## References')
+    except ValueError:
+        return [(len(lines), 'setup guide has no "## References" section listing the official pages it follows')]
+    problems = []
+    for n, line in enumerate(lines[start + 1:], start + 2):
+        if line.startswith('## '):
+            break
+        if line.startswith('- ') and not CHECKED.search(line):
+            problems.append((n, 'reference has no "checked YYYY-MM-DD" date'))
+    return problems
+
+
 def check(path, vocab):
     problems = []
     fence = comment = False
@@ -109,7 +131,7 @@ def check(path, vocab):
             problems.append((n, f'second person "{m.group(0)}"; use "the operator", the imperative, or rephrase'))
         for m in CONTRACTION.finditer(text):
             problems.append((n, f'contraction "{m.group(0)}"; write it out'))
-    return problems
+    return problems + check_references(path, path.read_text().splitlines())
 
 
 def main():

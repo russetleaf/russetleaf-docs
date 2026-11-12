@@ -103,3 +103,19 @@ The test for step 0.1:
 - [ ] The heartbeat service and the uptime checker can each send a test notification to `#rl-critical`.
 - [ ] The workspace has only invited members, `#rl-security` is private, and **Sign-in settings** require two-factor authentication with authenticator apps only.
 - [ ] Bitwarden has both services' logins, and Slack's password and backup codes.
+
+## References
+
+The official pages these steps follow, each checked on the date shown. When a page has moved or changed, find the current one, update the step if needed, and change the date.
+
+- Slack: ["Create a Slack workspace"](https://slack.com/help/articles/206845317-Create-a-Slack-workspace), checked 2026-11-12
+- Slack: ["Require admin approval for invitations to Slack"](https://slack.com/help/articles/115004854783-Require-admin-approval-for-invitations-to-Slack), checked 2026-11-12
+- Slack: ["Manage how people join your workspace"](https://slack.com/help/articles/115004856503-Manage-how-people-join-your-workspace), checked 2026-11-12
+- Slack: ["Create a channel"](https://slack.com/help/articles/201402297-Create-a-channel), checked 2026-11-12
+- Slack: ["Configure your Slack notifications"](https://slack.com/help/articles/201355156-Configure-your-Slack-notifications), checked 2026-11-12
+- Slack: ["Manage notifications for specific channels and direct messages"](https://slack.com/help/articles/360056534254-Manage-notifications-for-specific-channels-and-direct-messages), checked 2026-11-12
+- Slack: ["Configuring apps with app manifests"](https://docs.slack.dev/app-manifests/configuring-apps-with-app-manifests), checked 2026-11-12
+- Slack: ["chat.postMessage API method"](https://docs.slack.dev/reference/methods/chat.postMessage), checked 2026-11-12
+- GitHub: ["GitHub integration for Slack (the integrations/slack repository: /github subscribe)"](https://github.com/integrations/slack), checked 2026-11-12
+- Healthchecks.io: ["Frequently Asked Questions (authentication mechanisms)"](https://healthchecks.io/faq/), checked 2026-11-12
+- UptimeRobot: ["Set Up Two-Factor Authentication (2FA) in UptimeRobot"](https://help.uptimerobot.com/en/articles/11588518-set-up-two-factor-authentication-2fa-in-uptimerobot), checked 2026-11-12

@@ -67,6 +67,7 @@ The project follows the [Google developer documentation style guide](https://dev
 - **Relative links** between pages under `docs/`. Files outside `docs/` (scripts, `AGENTS.md`) are not on the site, so link to them with their full GitHub URL.
 - **Link text names the target** ("the [lab network setup guide](../phase-1-russetleaf-dev/setup/lab-network.md)"), never "here" or "this link".
 - **External links** use `https://` and point to the page that holds the fact, not a home page.
+- **References:** every setup guide ends with a `## References` section listing the official pages its steps follow, and from step 9.2 every ADR lists the pages a decision rests on (prices, plan limits, terms, features). Each item names the publisher, quotes the page title as the link text and gives the date the page was last read: `- Cloudflare: ["Enable DNSSEC"](https://developers.cloudflare.com/registrar/get-started/enable-dnssec/), checked 2026-11-12`. Read a page before citing it, never cite from memory, and change the date whenever the page is read again. `tools/check_doc_style.py` fails a setup guide without the section or with an undated item. Inline links stay where one step depends on one page.
 
 ## Setup guides
 

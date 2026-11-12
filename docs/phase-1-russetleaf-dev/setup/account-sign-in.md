@@ -111,3 +111,38 @@ The steps follow Cloudflare's documentation ([two-factor authentication](https:/
 - **Lost `yubikey-primary`:** sign in with `yubikey-backup`, and remove the lost key from **every** account in the table above, from AWS root and Identity Center, and from the workstation's SSH keys and `sudo` ([workstation YubiKey setup guide](workstation-yubikey.md#if-something-goes-wrong)); then register a replacement (with a PIN) everywhere.
 - **Lost the phone:** no sign-in depends on it, since the YubiKeys are the required factor. Sign out its sessions and remove any phone passkeys from each account (signing in with a YubiKey); Google Authenticator's entries (Slack's, and the uptime checker's if any) return on a new phone through sync once the personal Google Account is signed in.
 - **Lost both YubiKeys:** use each account's recovery codes from the break-glass kit, or the provider's recovery process; the Workspace account uses its backup codes, then the personal Google Account as its recovery email ([Google Workspace setup guide](google-workspace.md#if-something-goes-wrong)); AWS root uses AWS's email-and-phone recovery ([AWS management account setup guide](aws-management-account.md#if-something-goes-wrong)).
+
+## References
+
+The official pages these steps follow, each checked on the date shown. When a page has moved or changed, find the current one, update the step if needed, and change the date.
+
+- Google: ["Get Google's strongest account security with the Advanced Protection Program"](https://support.google.com/accounts/answer/7519408), checked 2026-11-12
+- Google: ["Advanced Protection Program"](https://landing.google.com/advancedprotection/), checked 2026-11-12
+- Google: ["Use a security key for 2-Step Verification"](https://support.google.com/accounts/answer/6103523), checked 2026-11-12
+- Microsoft: ["Create and save a passkey"](https://support.microsoft.com/en-us/accounts-billing/security/create-save-passkey), checked 2026-11-12
+- Microsoft: ["How to get a Microsoft account recovery code"](https://support.microsoft.com/en-us/accounts-billing/manage/how-to-get-a-microsoft-account-recovery-code), checked 2026-11-12
+- Bitwarden: ["Passkey Two-Step Login"](https://bitwarden.com/help/setup-two-step-login-fido/), checked 2026-11-12
+- Bitwarden: ["Recovery Code for Two-Step Login"](https://bitwarden.com/help/two-step-recovery-code/), checked 2026-11-12
+- Bitwarden: ["CLI Authentication via API Key"](https://bitwarden.com/help/personal-api-key/), checked 2026-11-12
+- Yubico: ["Introduction to the YubiKey Series (the Security Key Series supports FIDO2 and U2F only)"](https://docs.yubico.com/hardware/yubikey/yk-tech-manual/yk5-intro.html), checked 2026-11-12
+- GitHub: ["Configuring two-factor authentication"](https://docs.github.com/en/authentication/securing-your-account-with-two-factor-authentication-2fa/configuring-two-factor-authentication), checked 2026-11-12
+- GitHub: ["Configuring two-factor authentication recovery methods"](https://docs.github.com/en/authentication/securing-your-account-with-two-factor-authentication-2fa/configuring-two-factor-authentication-recovery-methods), checked 2026-11-12
+- GitHub: ["Changing your two-factor authentication method"](https://docs.github.com/en/authentication/securing-your-account-with-two-factor-authentication-2fa/changing-your-two-factor-authentication-method), checked 2026-11-12
+- GitHub: ["Requiring two-factor authentication in your organization"](https://docs.github.com/en/organizations/keeping-your-organization-secure/managing-two-factor-authentication-for-your-organization/requiring-two-factor-authentication-in-your-organization), checked 2026-11-12
+- GitHub: ["GitHub Terms of Service (B. Account Terms: one free account per person)"](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service), checked 2026-11-12
+- GitLab: ["Passkeys"](https://docs.gitlab.com/auth/passkeys), checked 2026-11-12
+- GitLab: ["Two-factor authentication"](https://docs.gitlab.com/user/profile/account/two_factor_authentication/), checked 2026-11-12
+- Cloudflare: ["Two-factor authentication"](https://developers.cloudflare.com/fundamentals/user-profiles/2fa/), checked 2026-11-12
+- Cloudflare: ["Email address and password"](https://developers.cloudflare.com/fundamentals/user-profiles/change-password-or-email/), checked 2026-11-12
+- Cloudflare: ["Renew domains"](https://developers.cloudflare.com/registrar/account-options/renew-domains/), checked 2026-11-12
+- Cloudflare: ["Domain management"](https://developers.cloudflare.com/registrar/account-options/domain-management/), checked 2026-11-12
+- Cloudflare: ["Transfer domain out from Cloudflare"](https://developers.cloudflare.com/registrar/account-options/transfer-out-from-cloudflare/), checked 2026-11-12
+- Cloudflare: ["Enable DNSSEC"](https://developers.cloudflare.com/registrar/get-started/enable-dnssec/), checked 2026-11-12
+- Cloudflare: ["WHOIS redaction"](https://developers.cloudflare.com/registrar/account-options/whois-redaction/), checked 2026-11-12
+- Slack: ["Change your email address"](https://slack.com/help/articles/207262907-Change-your-email-address), checked 2026-11-12
+- Slack: ["Set up two-factor authentication"](https://slack.com/help/articles/204509068-Set-up-two-factor-authentication), checked 2026-11-12
+- Slack: ["Mandatory workspace two-factor authentication"](https://slack.com/help/articles/212221668-Mandatory-workspace-two-factor-authentication), checked 2026-11-12
+- Slack: ["Sign in to Slack"](https://slack.com/help/articles/212681477-Sign-in-to-Slack), checked 2026-11-12
+- Slack: ["Change a member's role (where the admin pages open when the sidebar has no Admin item)"](https://slack.com/help/articles/218124397-Change-a-members-role), checked 2026-11-12
+- Healthchecks.io: ["Frequently Asked Questions (authentication mechanisms)"](https://healthchecks.io/faq/), checked 2026-11-12
+- UptimeRobot: ["Set Up Two-Factor Authentication (2FA) in UptimeRobot"](https://help.uptimerobot.com/en/articles/11588518-set-up-two-factor-authentication-2fa-in-uptimerobot), checked 2026-11-12

@@ -91,3 +91,15 @@ The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in th
 - **Lost `yubikey-primary`:** on GitHub and GitLab, delete its SSH key (`workstation yubikey-primary`), and delete `~/.ssh/id_ed25519_sk_primary*`; rebuild `/etc/u2f_mappings` with `yubikey-backup` and the replacement (Part 2, step 2); then do the rest of the replacement in the [account sign-in setup guide](account-sign-in.md#if-something-goes-wrong).
 - **`sudo` stops working after the PAM change:** in the root shell kept open in Part 2, remove the `pam_u2f.so` line from both files.
 - **Both keys lost, or no root shell open:** boot into **recovery mode** (GRUB's **Advanced options**, then the **root** shell; on a default Ubuntu install it needs no root password, but the disk passphrase is still asked for), run `mount -o remount,rw /`, and remove the `pam_u2f.so` line from both files.
+
+## References
+
+The official pages these steps follow, each checked on the date shown. When a page has moved or changed, find the current one, update the step if needed, and change the date.
+
+- OpenBSD: ["ssh-keygen(1) manual page (ed25519-sk keys and the FIDO authenticator options)"](https://man.openbsd.org/ssh-keygen), checked 2026-11-12
+- OpenSSH: ["OpenSSH 8.2 release notes (FIDO/U2F support)"](https://www.openssh.org/txt/release-8.2), checked 2026-11-12
+- Yubico: ["Securing SSH with FIDO2"](https://developers.yubico.com/SSH/Securing_SSH_with_FIDO2.html), checked 2026-11-12
+- Yubico: ["pam-u2f"](https://developers.yubico.com/pam-u2f/), checked 2026-11-12
+- Yubico: ["FIDO Commands (YubiKey Manager CLI)"](https://docs.yubico.com/software/yubikey/tools/ykman/FIDO_Commands.html), checked 2026-11-12
+- GitHub: ["Adding a new SSH key to your GitHub account"](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account), checked 2026-11-12
+- GitLab: ["Use SSH keys with GitLab"](https://docs.gitlab.com/user/ssh/), checked 2026-11-12
