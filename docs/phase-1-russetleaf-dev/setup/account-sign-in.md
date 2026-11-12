@@ -73,11 +73,13 @@ Have these ready:
 The steps follow Cloudflare's documentation ([two-factor authentication](https://developers.cloudflare.com/fundamentals/user-profiles/2fa/), [auto-renew](https://developers.cloudflare.com/registrar/account-options/renew-domains/), [domain management](https://developers.cloudflare.com/registrar/account-options/domain-management/), [DNSSEC](https://developers.cloudflare.com/registrar/get-started/enable-dnssec/)).
 
 1. **Cloudflare account:** sign up and sign in with **Sign in with Google**, using the **personal Google Account** (not the Workspace account: Cloudflare holds the domain that the Workspace account depends on). An account created this way has no Cloudflare password, so Cloudflare's own two-factor authentication does not apply; the Google Account's Advanced Protection protects the sign-in. Under **My Profile → Authentication**, confirm that no **Email Authentication** or **Mobile App Authentication** is turned on.
-2. **russetleaf.dev, at Cloudflare Registrar:**
-    1. **Auto-renew:** on the **Manage domains** page, confirm the **Auto-renew** toggle for russetleaf.dev is on (the default).
-    2. **Transfer lock:** under **Manage → Configuration**, an **Unlock** option means the domain is locked; leave it locked.
-    3. **Contact details:** Cloudflare redacts them from public lookups by default.
-    4. **DNSSEC:** under **Manage → Configuration**, select **Enable DNSSEC**. Cloudflare adds the DS record at the registry by itself, within one to two days; then **DNS → Settings → DNSSEC** shows it active.
+2. **russetleaf.dev, at Cloudflare Registrar:** open the **Manage domains** page at `https://dash.cloudflare.com/?to=/:account/registrar/domains` (the target of the "Go to Manage domains" button in Cloudflare's documentation), which lists the account's registered domains. The dashboard's tabs differ from those documents' wording; the names below are the dashboard's.
+    1. **Auto-renew:** in the russetleaf.dev row, the **Auto-renew** toggle is on (the default).
+    2. Select **Manage** in the same row. The domain's page has the tabs **Overview**, **Contacts** and **Settings**; open **Settings**.
+    3. **Transfer lock:** the **Transfer to another registrar** section shows an **Unlock** button while the domain is locked. Leave it locked; selecting **Unlock** generates the authorization code that lets the domain move to another registrar.
+    4. **DNSSEC:** in the **DNSSEC** section, enable it. Cloudflare sends the DS record to the registry itself, within one to two days; afterward the same section shows DNSSEC as active.
+    5. **WHOIS privacy:** the **WHOIS privacy** section shows it on (the default), so the contact details are redacted from public lookups.
+    6. Leave **Move to another Cloudflare account** and **Delete domain** untouched.
 
 ## Part 4: Slack and the outside monitoring services
 
