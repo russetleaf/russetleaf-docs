@@ -2,7 +2,7 @@
 
 The step-by-step procedure for securing the sign-in of every account the project depends on outside AWS: the Google Accounts, Microsoft, Bitwarden, GitHub, GitLab, Cloudflare (including its registrar), Slack and the outside monitoring services, plus the settings of the domain registration (Phase 1 [step 0.1](../plan.md#step-01-accounts-tools-and-budget-alert)). The project's Google Workspace organization has its own guide, the [Google Workspace setup guide](google-workspace.md), and the AWS root user and IAM Identity Center are covered by the [AWS management account setup guide](aws-management-account.md). The reasoning is in [ADR 1032](../adr/1032-defense-in-depth.md) (account hardening), [ADR 1056](../adr/1056-aws-root-mfa-two-security-keys.md) (the security keys) and [ADR 1059](../adr/1059-google-workspace-identity.md) (the Workspace identity).
 
-Providers' settings pages change over time. These steps name each setting rather than every click; where the wording differs, follow the setting's name.
+**Note:** the click paths in this guide are those the services showed when the procedure was last carried out. Providers change their consoles without notice, and their own documentation can lag behind the console. Before following a path, check the provider's current documentation, linked in each part; where the screen still differs, follow what it shows and fix this guide to match.
 
 ## The rule
 

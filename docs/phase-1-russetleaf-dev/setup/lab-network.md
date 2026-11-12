@@ -8,7 +8,7 @@ Workstation (Wi-Fi, 192.168.1.x) ──WireGuard──┐
 Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LAN (10.10.0.1) ── switch ── the three nodes
 ```
 
-The ER605's web interface changes between firmware versions. These steps name each setting rather than every click; where the wording differs, follow the setting's name.
+**Note:** the click paths in this guide are those the router's web interface showed when the procedure was last carried out. Firmware updates change the interface without notice, and TP-Link's documentation can lag behind the interface. Before following a path, check TP-Link's current documentation for the ER605 (v2); where the screen still differs, follow what it shows and fix this guide to match.
 
 ## Before starting
 

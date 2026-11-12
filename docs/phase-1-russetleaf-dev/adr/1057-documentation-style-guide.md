@@ -5,6 +5,8 @@
 - **Applies to:** every Markdown file in every RussetLeaf repo, on GitHub and on the docs site
 - **Phase:** 1 (this repo now; each code repo from step 1.1)
 
+> **Update (2026-11-12):** setup guides give the full click path to each setting, with a standard note that consoles change, instead of naming only the setting ([style guide: setup guides](../../standards/documentation.md#setup-guides); decision log, 2026-11-12).
+
 ## Context
 
 The documentation is the project's main output alongside the code: designs, plans, ADRs, setup guides and runbooks, published at docs.russetleaf.dev and read on GitHub. Its writing rules were spread across `AGENTS.md` and the [overview](../../overview.md) (third person, no contractions, references are links, the plan format), and only those few were checked. Headings, lists, code blocks, names, dates and units varied between documents, and nothing stopped the variation from growing as Claude and, from Phase 2, coding agents write more of them.

@@ -68,6 +68,17 @@ The project follows the [Google developer documentation style guide](https://dev
 - **Link text names the target** ("the [lab network setup guide](../phase-1-russetleaf-dev/setup/lab-network.md)"), never "here" or "this link".
 - **External links** use `https://` and point to the page that holds the fact, not a home page.
 
+## Setup guides
+
+- **Full click paths:** each step gives the path from the service's home page or dashboard to the setting, with the labels the service shows (**Admin home → Security → Security settings → Sign-in settings**), and names the setting and the value to choose.
+- **The click-path note,** after the opening paragraph of every guide that uses a web console:
+
+    ```markdown
+    **Note:** the click paths in this guide are those the services showed when the procedure was last carried out. Providers change their consoles without notice, and their own documentation can lag behind the console. Before following a path, check the provider's current documentation, linked in each part; where the screen still differs, follow what it shows and fix this guide to match.
+    ```
+
+- **Verified against the real procedure:** when a step is carried out and the screen differs from the guide, or from the provider's documentation, the guide is changed to what the screen showed.
+
 ## Notes and warnings
 
 Write a note or a warning as a paragraph that starts with a bold label: `**Note:**`, `**Warning:**` or `**Important:**`. Do not use Zensical's `!!! note` blocks or GitHub's `> [!NOTE]` alerts: each renders only on its own platform and shows as plain text on the other.
@@ -107,7 +118,7 @@ Each kind of document has a fixed shape. Start a new one from its template or fr
 |---|---|---|---|
 | ADR | `docs/phase-<n>-<site>/adr/<number>-<slug>.md` | [ADR template](../adr/0000-template.md) | Status, date, scope and phase; context, decision, alternatives, consequences, when to revisit. Listed in the [overview](../overview.md)'s index, the `nav` in `mkdocs.yml` and the plan's ADR table |
 | Plan step | The phase's `plan.md` | An existing step | `### Step <n>: <title>`, **Do:** and **Test:** paragraphs, and a matching progress-checklist row, which `tools/plan_to_issues.py` reads |
-| Setup guide | `docs/phase-<n>-<site>/setup/<topic>.md` | [AWS management account setup guide](../phase-1-russetleaf-dev/setup/aws-management-account.md) | What to have ready, numbered steps that name each setting, checks that match the plan step's test, and what to do if something goes wrong |
+| Setup guide | `docs/phase-<n>-<site>/setup/<topic>.md` | [AWS management account setup guide](../phase-1-russetleaf-dev/setup/aws-management-account.md) | The [click-path note](#setup-guides), what to have ready, numbered steps with the full click path to each setting, checks that match the plan step's test, and what to do if something goes wrong |
 | Runbook | The repo that runs the component | An existing runbook | Listed in the [runbook index](../runbooks.md), the only index |
 | Spec | `docs/specs/` | [Spec template](../specs/TEMPLATE.md) | The template's sections |
 | Standard | `docs/standards/` | The [bash script standard](bash.md) | The rules, a reason for each, the checks that enforce them, and its ADR |

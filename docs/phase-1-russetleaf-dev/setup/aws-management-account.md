@@ -4,7 +4,7 @@ The step-by-step procedure for the AWS **management account**: creating it (Phas
 
 The management account owns the Organization and the bill, and sets the guardrails for every other account. It is the one account those guardrails cannot restrict, so it **runs nothing**: no workloads, no OpenTofu state, no IAM users. People reach it only through IAM Identity Center; its root user is kept for the few tasks only root can do, and for break-glass.
 
-AWS's console changes over time. These steps name each setting rather than every click; where the wording differs, follow the setting's name.
+**Note:** the click paths in this guide are those the services showed when the procedure was last carried out. Providers change their consoles without notice, and their own documentation can lag behind the console. Before following a path, check the provider's current documentation, linked in each part; where the screen still differs, follow what it shows and fix this guide to match.
 
 ## Before starting
 

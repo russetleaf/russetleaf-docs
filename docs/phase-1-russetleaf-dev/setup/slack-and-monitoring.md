@@ -2,7 +2,7 @@
 
 The step-by-step procedure for the Slack workspace, the bot that posts alerts, and the two outside services that watch the platform from beyond it (Phase 1 [step 0.1](../plan.md#step-01-accounts-tools-and-budget-alert)). What goes to which channel, and why, is in the Phase 1 design's [Alerting and notifications](../design.md#alerting-and-notifications-slack).
 
-Slack's and the services' web pages change over time. These steps name each setting rather than every click; where the wording differs, follow the setting's name.
+**Note:** the click paths in this guide are those the services showed when the procedure was last carried out. Providers change their consoles without notice, and their own documentation can lag behind the console. Before following a path, check the provider's current documentation, linked in each part; where the screen still differs, follow what it shows and fix this guide to match.
 
 ## Before starting
 
