@@ -99,7 +99,7 @@ The test for step 0.1:
     The response starts with `{"ok":true`; `not_in_channel` means the bot was not invited to that channel.
 
 - [ ] A test message to `#rl-critical` raises a phone notification, and one to another channel does not.
-- [ ] Slack signs in with the Workspace account through "Continue with Google", and its password requires an authenticator code; the heartbeat service asks for a YubiKey; the uptime checker asks for its second factor.
+- [ ] In a private window, Slack signs in with the Workspace account through "Continue with Google", asking for a YubiKey and then the authenticator code; the heartbeat service asks for a YubiKey; the uptime checker asks for its second factor.
 - [ ] The heartbeat service and the uptime checker can each send a test notification to `#rl-critical`.
 - [ ] The workspace has only invited members, `#rl-security` is private, and **Sign-in settings** require two-factor authentication with authenticator apps only.
 - [ ] Bitwarden has both services' logins, and Slack's password and backup codes.
