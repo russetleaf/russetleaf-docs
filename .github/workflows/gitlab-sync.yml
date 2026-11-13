@@ -1,9 +1,8 @@
-# GitLab PAT Configuration:
-#  1. Token name: (Repo name)
-#  2. Description: PAT for GitHub backups.
-#  3. Scopes: write_repository 
-#  4. Expires: 12 months
-#  5. Role: Maintainer (or higher)
+# Mirrors main to the repo's private GitLab project in the russetleaf group.
+# Setup: docs/phase-1-russetleaf-dev/setup/gitlab-group.md
+# Secrets: GITLAB_URL (https://gitlab.com/russetleaf/<repo>.git), GITLAB_USERNAME,
+# GITLAB_PAT (a legacy personal access token named after the repo,
+# write_repository scope only, expiring after one year).
 
 name: "Backup to GitLab"
 
