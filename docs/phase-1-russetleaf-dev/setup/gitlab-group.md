@@ -21,7 +21,14 @@ Have these ready:
     - **Visibility level:** **Private**, so only the group's members can see or clone the mirrors. A private group can hold only private projects.
 3. Skip the optional questions and invitations, and select **Create group**.
 
-## Part 2: Create the mirror project (for each repo)
+## Part 2: Notifications to the Workspace address (once)
+
+Notifications about the group's projects (failed pushes, security notices) go to the personal account's email unless the group has its own notification address.
+
+1. **Add the Workspace address to the personal account:** avatar → **Edit profile** → in the left sidebar, **Emails** → **Add new email**, enter `<name>@russetleaf.dev`, select **Add email address**, and confirm it from the verification email. It becomes a secondary address; GitLab deletes a secondary address that is not verified within three days.
+2. **Use it for the group:** avatar → **Preferences** → in the left sidebar, **Notifications** → in the **Groups** section, find `russetleaf` and choose `<name>@russetleaf.dev`.
+
+## Part 3: Create the mirror project (for each repo)
 
 1. Select **Create new** (**+**), then **New project/repository**, then **Create blank project**.
 2. Fill in:
@@ -31,7 +38,7 @@ Have these ready:
     - **Initialize repository with a README:** cleared, so the project starts empty and the first sync pushes the full history
 3. Select **Create project**.
 
-## Part 3: Create the token (for each repo)
+## Part 4: Create the token (for each repo)
 
 The workflow pushes with a **fine-grained personal access token** of the operator's account, one per repo, limited to that one project and to pushing code. GitLab.com offers project access tokens only on its paid tiers, and a legacy personal access token with `write_repository` could push to every project the account can reach.
 
@@ -45,7 +52,7 @@ The workflow pushes with a **fine-grained personal access token** of the operato
 5. Under **Add resource permissions**, on the **Group and project** tab, select **Repository → Code**, and choose **Push** from its list. Select nothing else: pushing over HTTPS needs only this permission.
 6. Select **Generate token**, and copy the token into Bitwarden at once: GitLab does not show it again. Record its expiry date; the credential inventory (step 4.2) lists it for renewal.
 
-## Part 4: Give the workflow its secrets (for each repo)
+## Part 5: Give the workflow its secrets (for each repo)
 
 In the GitHub repo, **Settings → Secrets and variables → Actions → New repository secret**, add three secrets:
 
@@ -53,9 +60,9 @@ In the GitHub repo, **Settings → Secrets and variables → Actions → New rep
 |---|---|
 | `GITLAB_URL` | The mirror's HTTPS URL, `https://gitlab.com/russetleaf/<repo>.git` |
 | `GITLAB_USERNAME` | The operator's GitLab username |
-| `GITLAB_PAT` | The token from Part 3 |
+| `GITLAB_PAT` | The token from Part 4 |
 
-## Part 5: Test the mirror
+## Part 6: Test the mirror
 
 1. In the GitHub repo, open **Actions**, select the **Backup to GitLab** workflow, then **Run workflow** (on `main`).
 2. When the run succeeds, open the GitLab project: its `main` branch shows the same latest commit as GitHub.
@@ -65,12 +72,13 @@ In the GitHub repo, **Settings → Secrets and variables → Actions → New rep
 The mirror part of the step 1.1 test:
 
 - [ ] The `russetleaf` group and each mirror project are **Private**.
+- [ ] **Preferences → Notifications** shows `<name>@russetleaf.dev` for the `russetleaf` group, and **Emails** lists it as verified.
 - [ ] A push to `main` on GitHub appears in the GitLab mirror within minutes, and the **Backup to GitLab** run succeeds.
 - [ ] Each token is a fine-grained token limited to its one mirror project, with only **Repository → Code: Push**; it is in Bitwarden, and its expiry is recorded.
 
 ## If something goes wrong
 
-- **The workflow fails to authenticate:** the token has expired or been revoked. Create a new one (Part 3), replace `GITLAB_PAT` (Part 4), and run the workflow again.
+- **The workflow fails to authenticate:** the token has expired or been revoked. Create a new one (Part 4), replace `GITLAB_PAT` (Part 5), and run the workflow again.
 - **The push is refused with HTTP 403:** the token lacks **Code: Push** on that project, or the operator's account has lost its role in the project. Check both, then run the workflow again.
 - **The push is rejected:** the GitLab project is not empty, or its `main` branch is protected against the push. Check that the project was created without a README, or allow the push for `main` in the project's protected branches.
 - **GitHub is lost:** restore the repos from their mirrors, as in the [disaster recovery plan](../disaster-recovery.md).
@@ -81,6 +89,8 @@ The official pages these steps follow, each checked on the date shown. When a pa
 
 - GitLab: ["Groups"](https://docs.gitlab.com/user/group/), checked 2026-11-13
 - GitLab: ["Project and group visibility"](https://docs.gitlab.com/user/public_access/), checked 2026-11-13
+- GitLab: ["User account"](https://docs.gitlab.com/user/profile/) (adding a secondary email), checked 2026-11-13
+- GitLab: ["Notification emails"](https://docs.gitlab.com/user/profile/notifications/) (an email address per group), checked 2026-11-13
 - GitLab: ["Create a project"](https://docs.gitlab.com/user/project/), checked 2026-11-13
 - GitLab: ["Fine-grained personal access tokens"](https://docs.gitlab.com/auth/tokens/fine_grained_access_tokens/), checked 2026-11-13
 - GitLab: ["Fine-grained permissions for Git and other operations"](https://docs.gitlab.com/auth/tokens/fine_grained_access_tokens_other/) (Git over HTTPS: Code, Push), checked 2026-11-13

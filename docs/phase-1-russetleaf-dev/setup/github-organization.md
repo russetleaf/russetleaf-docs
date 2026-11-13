@@ -63,6 +63,15 @@ A domain already verified for Pages by another account cannot be verified here u
 4. **The DNS record** in Cloudflare: type **CNAME**, name `docs`, target `russetleaf.github.io` (the organization's Pages host, without the repo name), and **Proxy status** set to **DNS only**, so GitHub can issue the site's certificate.
 5. **HTTPS:** once the DNS check on the Pages settings page passes, select **Enforce HTTPS**. GitHub can take up to 24 hours to issue the certificate before the option is available.
 
+## Part 6: Notifications to the Workspace address
+
+The organization's **contact email** (Part 1) is where GitHub writes to the organization's owners about billing and the account. Notifications about the organization's repos (pull requests, failed workflows, security alerts) are sent by the personal account's own settings, so they are routed to the Workspace address here, while notifications about any personal repos stay with the personal email.
+
+1. **Add the Workspace address to the personal account:** profile picture → **Settings** → in the **Access** section of the sidebar, **Emails**. Under **Add email address**, enter `<name>@russetleaf.dev` and select **Add**, then open the verification email in the Workspace mailbox and confirm. Keep the personal address as the **Primary email address**.
+2. **Route the organization's notifications to it:** select the inbox icon in the upper-right corner → in the left sidebar, from the **Manage notifications** list, **Notification settings** → under **Default notifications email**, **Custom routing** → **Add new route** → **Pick organization**: `russetleaf` → choose `<name>@russetleaf.dev` → **Save**.
+
+GitHub's setting that restricts an organization's notifications to its verified domains needs GitHub Enterprise Cloud, so it is not used.
+
 ## Checks
 
 The organization's part of the step 1.1 test:
@@ -73,6 +82,7 @@ The organization's part of the step 1.1 test:
 - [ ] `dig +short docs.russetleaf.dev CNAME` returns `russetleaf.github.io.`.
 - [ ] `https://docs.russetleaf.dev` loads the site with a valid certificate, and `http://` redirects to it.
 - [ ] The repo's **Pages** settings show the custom domain `docs.russetleaf.dev`, the DNS check passed and **Enforce HTTPS** on.
+- [ ] **Custom routing** sends the `russetleaf` organization's notifications to `<name>@russetleaf.dev`, which the personal account lists as verified.
 
 ## If something goes wrong
 
@@ -91,4 +101,7 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - GitHub: ["Managing a custom domain for your GitHub Pages site"](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site), checked 2026-11-12
 - GitHub: ["About GitHub Pages"](https://docs.github.com/en/pages/getting-started-with-github-pages/about-github-pages), checked 2026-11-12
 - GitHub: ["Troubleshooting custom domains and GitHub Pages"](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/troubleshooting-custom-domains-and-github-pages), checked 2026-11-12
+- GitHub: ["Adding an email address to your GitHub account"](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-personal-account-on-github/managing-email-preferences/adding-an-email-address-to-your-github-account), checked 2026-11-13
+- GitHub: ["Managing organization notifications"](https://docs.github.com/en/subscriptions-and-notifications/how-tos/managing-organization-notifications) (custom routing per organization), checked 2026-11-13
+- GitHub: ["Restricting email notifications for your organization"](https://docs.github.com/en/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/restricting-email-notifications-for-your-organization) (GitHub Enterprise Cloud only), checked 2026-11-13
 - Cloudflare: ["Manage DNS records"](https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/), checked 2026-11-12
