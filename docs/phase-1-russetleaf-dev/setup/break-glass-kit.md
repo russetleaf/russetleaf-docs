@@ -150,6 +150,8 @@ The kit holds only the items needed to regain access. This part adds a copy of t
     ```
 
 5. **Store it** next to the kit: upload `russetleaf-vault-export.json.gpg` to the same Google Drive and OneDrive folders, and copy it to the USB stick in the safe.
+
+    **Note:** a second Bitwarden account, such as the operator's personal vault, is exported the same way in the same session, to its own file (for example `personal-vault-export.json.gpg`): sign the CLI out (`bw logout`), sign it in to that account, and repeat steps 1 to 5, then sign the CLI back in to the project's account.
 6. **Lock the CLI and clean up:** delete the folder in memory.
 
     ```bash
