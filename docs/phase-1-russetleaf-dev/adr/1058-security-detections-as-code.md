@@ -5,6 +5,8 @@
 - **Applies to:** russetleaf.dev; aws.russetleaf.dev reuses the rules when its cluster runs
 - **Phase:** 1 (step 7.15). Later: Phase 3 converts the same rules for the EKS audit logs in CloudWatch.
 
+> **Update (2026-11-13):** step 7.16 adds two sources to the `security` tenant, with their own Sigma rules: the DMARC aggregate reports for russetleaf.dev (parsed by parsedmarc) and the Google Workspace sign-in and admin events (from the Admin SDK Reports API) ([ADR 1059](1059-google-workspace-identity.md)).
+
 ## Context
 
 The design has no SIEM (security information and event management system). Its functions are spread across separate tools: Falco and the Kubernetes audit alert rules in Loki ([ADR 1017](1017-intrusion-detection-and-prevention.md)), GuardDuty and Security Hub in the Security Tooling account, CloudTrail and Config history in the Log Archive account ([ADR 1019](1019-aws-multi-account-sra.md)), the Cloudflare WAF and CrowdSec. Every alert reaches `#rl-security`. [ADR 1005](1005-loki-alloy-for-logs.md) left security analysis across sources to [ADR 1019](1019-aws-multi-account-sra.md)'s trigger, which adopts Security Lake once a SIEM is connected.

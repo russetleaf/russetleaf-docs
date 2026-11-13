@@ -25,17 +25,17 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
 | **Core** | A complete, working home lab: infrastructure as code (including the AWS Organization), a three-node highly available Talos cluster with Cilium, GitOps, platform services, monitoring and alerting with an incident process, backups, the WordPress image and chart with its supply-chain pipeline, ci, staging and promotion, Kyverno and network policies, single sign-on with least-privilege cluster roles, the custom site design and logo, privacy basics (GDPR), and the docs. Finished on its own, this is a complete platform. | 0.1–2.4, 3.1, 4.1–4.7, 5.1–5.7, 5.10, 5.12, 6.1, 6.3, 9.2 | **~189–311** |
-| **Extended** | Hardening, operations and evidence: progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, security detections as code with 90-day security logs, performance and stress testing with a regression gate, and **operational readiness** (rollback, node-failure, cold-start, disaster, forensics and incident drills, with their runbooks), and the **post go-live review** of the [improvements list](improvements.md). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.15, 9.1, 9.3 | **~103–181** |
+| **Extended** | Hardening, operations and evidence: progressive delivery, sandboxing, runtime security and compliance, cost monitoring, disaster-recovery copies, keyless AWS access, Google sign-in, always-on tracing, CrowdSec, security detections as code with 90-day security logs, performance and stress testing with a regression gate, and **operational readiness** (rollback, node-failure, cold-start, disaster, forensics and incident drills, with their runbooks), and the **post go-live review** of the [improvements list](improvements.md). | 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.16, 9.1, 9.3 | **~111–195** |
 | **Advanced** | Reliability and platform practices: SLOs and error budgets gating promotions, DORA metrics, an internal developer platform (Backstage, a golden path proven with a second service, multi-tenancy), fleet management with a local spoke cluster, chaos experiments and postmortems, a threat model and control matrix, strategy documents, knowledge sharing (engineering write-ups of the main decisions), and a custom seccomp profile for WordPress. | 7.7, 8.1–8.9 | **~89–144** |
-| **Total** | | | **~381–636** |
+| **Total** | | | **~389–650** |
 
 **Calendar time** (Phase 1 only):
 
 | Hours per week | Core | + Extended | + Advanced (everything) |
 |---|---|---|---|
-| ~10 | 4–7 months | 6–11 months | 9–15 months |
-| ~20 | 9–16 weeks | 15–25 weeks | 19–32 weeks |
-| ~40 | 5–8 weeks | 7–12 weeks | 10–16 weeks |
+| ~10 | 4–7 months | 7–12 months | 9–15 months |
+| ~20 | 9–16 weeks | 15–25 weeks | 19–33 weeks |
+| ~40 | 5–8 weeks | 8–13 weeks | 10–16 weeks |
 
 The optional later phases add about **147–244 hours** (Phase 2) and **104–170 hours** (Phase 3); see the [overview](../overview.md#build-plans-priorities-and-effort).
 
@@ -181,7 +181,7 @@ aws sts get-caller-identity --profile rl-home-admin
 **Do:**
 
 - Accounts: AWS: a **new, dedicated management account** (its own email address, root MFA on) for the AWS Organization in step 2.0, created by following the [AWS management account setup guide](setup/aws-management-account.md) (part 1), which creates **every other account, including russetleaf-home, new** inside it ([ADR 1019](adr/1019-aws-multi-account-sra.md)); GitHub (the personal account, owner of the `russetleaf` organization from step 1.1); Cloudflare (russetleaf.dev zone).
-- **Google Workspace** ([ADR 1059](adr/1059-google-workspace-identity.md); step by step: [Google Workspace setup guide](setup/google-workspace.md)): Business Starter on russetleaf.dev, one user, `<name>@russetleaf.dev`, the super administrator; the domain verified and Gmail's MX, SPF, DKIM and DMARC records at Cloudflare; **security keys enforced** and **Advanced Protection**; backup codes; a group per AWS account's root email and one for DMARC reports. The project's accounts use the Workspace address; Cloudflare, Bitwarden and Microsoft stay on the operator's personal accounts.
+- **Google Workspace** ([ADR 1059](adr/1059-google-workspace-identity.md); step by step: [Google Workspace setup guide](setup/google-workspace.md)): Business Starter on russetleaf.dev, one user, `<name>@russetleaf.dev`, the super administrator; the domain verified and Gmail's MX, SPF, DKIM and DMARC records at Cloudflare; **security keys enforced** and **Advanced Protection**; backup codes; a group per AWS account's root email and one for DMARC reports; Alert Center rules that email the operator about suspicious sign-ins and admin changes. The project's accounts use the Workspace address; Cloudflare, Bitwarden and Microsoft stay on the operator's personal accounts.
 - Set up the workstation: see [Local workstation setup](#local-workstation-setup-ubuntu-2404).
 - Create an **AWS Budget**, `RussetLeaf Monthly Cost Budget`, of $50/month with email alerts at 85% of actual and 100% of forecast spend, in the **new management account** (part 1 of the guide) (by hand in the console is fine; consolidated billing then covers every account step 2.0 creates, and OpenTofu takes the budget over in step 2.0).
 - The AWS region for the home lab's AWS resources is **`us-east-1`**, used everywhere (the Backup account's copies go to `us-west-2`; [disaster recovery plan](disaster-recovery.md)).
@@ -300,8 +300,8 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 | [1055 AWS root MFA: synced authenticator (superseded by 1056)](adr/1055-aws-root-mfa-synced-authenticator.md) | — | — | — |
 | [1056 AWS root MFA: two security keys](adr/1056-aws-root-mfa-two-security-keys.md) | 0.1, 2.0, 2.0b | — | — |
 | [1057 Documentation style guide](adr/1057-documentation-style-guide.md) | 1.1 | — | — |
-| [1058 Security detections as code, not a SIEM product](adr/1058-security-detections-as-code.md) | 4.6, 7.1, 7.15 | — | — |
-| [1059 Google Workspace as the project's identity](adr/1059-google-workspace-identity.md) | 0.1, 2.3, 4.7, 5.8 | — | — |
+| [1058 Security detections as code, not a SIEM product](adr/1058-security-detections-as-code.md) | 4.6, 7.1, 7.15, 7.16 | — | — |
+| [1059 Google Workspace as the project's identity](adr/1059-google-workspace-identity.md) | 0.1, 2.3, 4.7, 5.8, 7.16 | — | — |
 | [1060 GitHub organization and GitLab group](adr/1060-github-organization-and-gitlab-group.md) | 1.1, 2.4 | — | — |
 | [2001 MLOps lifecycle](../phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | — | 4.4–4.10 | — |
 | [2002 Summary pipeline architecture](../phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | — | 2.1–2.5 | — |
@@ -946,6 +946,17 @@ Then run two **tabletop exercises** (talking a scenario through against the runb
 
 **Test:** CI fails on a rule with a syntax error, on a rule whose must-match sample no longer matches, and on a map that does not match the rules; `kubectl exec` into a production pod still fires `KubeExecIntoProdPod`, now from the converted Sigma rule; 20 failed sign-ins from one test address in staging fire the failed sign-in alert in `#rl-security`; a GuardDuty sample finding and a test CloudTrail event appear in the `security` tenant within 15 minutes, on the same dashboard timeline as a Falco alert raised at the same time; a security event from 30 days earlier is still searchable while an application log from 8 days earlier is gone; signed in as operator, Grafana shows none of the security tenant.
 
+### Step 7.16: Mail and identity monitoring
+
+**Do:** bring the domain's DMARC reports and the Google Workspace account's sign-in and admin events into the `security` tenant (step 7.15), with detection rules, so that mail spoofing russetleaf.dev and misuse of the project's identity raise alerts instead of sitting in a mailbox ([ADR 1058](adr/1058-security-detections-as-code.md), [ADR 1059](adr/1059-google-workspace-identity.md)):
+
+- **DMARC reports:** **parsedmarc** (Apache-2.0) parses the aggregate (`rua`) reports and sends the results to Loki with its Loki output, in the `security` tenant. It reads mail through the Gmail API, whose scope covers a whole mailbox, so first decide where it reads from: a dedicated reports mailbox (a second Business Starter user, the only member of the DMARC reports group) or the operator's mailbox, limited to the DMARC label; record the choice in the decision log. It runs in the cluster, polling, with its credentials in Secrets Manager.
+- **DMARC detections** (Sigma, as in step 7.15): mail claiming to be from russetleaf.dev that fails DMARC from a source other than the servers of Google and SES; a sending source seen for the first time; no report for more than three days (the pipeline has stopped). Alerts go to `#rl-security`. The same data decides when to tighten the policy ([improvement I1-5](improvements.md)).
+- **Workspace audit events:** a scheduled job (a CronJob, in Python) polls the Admin SDK Reports API's `login` and `admin` activities every 15 minutes and writes them to the `security` tenant. It uses a service account with domain-wide delegation (Admin console: **Main menu → Security → Access and data control → API controls → Manage Domain Wide Delegation**), the single scope `admin.reports.audit.readonly`, and impersonates the operator's account; the key is in Secrets Manager. The Reports API keeps 180 days of events.
+- **Workspace detections:** a suspicious-login event, a sign-in from a country not seen before, an admin privilege granted, changes to 2-Step Verification or security keys, and changes to the domain's settings, to `#rl-security`. Google's own Alert Center rules, which email the operator, are set up in step 0.1 ([Google Workspace setup guide](setup/google-workspace.md#part-6-security-alerts)); these rules add the history and the Slack alert.
+
+**Test:** a test aggregate report with a failing source from an unknown address, processed by parsedmarc, raises the DMARC alert in `#rl-security`; stopping parsedmarc for three days (or lowering the threshold in staging) raises the no-reports alert; a sign-in to the Workspace account in a private window appears in Grafana within 30 minutes; granting and removing an admin role on a test user raises the alert; a write call with the job's token is refused.
+
 ## Stage 8: Engineering practices
 
 These steps are most of the **Advanced** tier; see the Phase 1 design's [Engineering practices](design.md#engineering-practices). Do them after the Core and most Extended steps.
@@ -1140,6 +1151,7 @@ Phase 1 builds most of what these need: the shared OpenTofu modules, the base ma
 | 7.13 Compromised-container runbook + forensics drill | Extended | 5–8 | ☐ | | | | |
 | 7.14 Incident runbooks + tabletop drills | Extended | 7–11 | ☐ | | | | |
 | 7.15 Security detections as code (Sigma) | Extended | 8–14 | ☐ | | | | |
+| 7.16 Mail and identity monitoring | Extended | 8–14 | ☐ | | | | |
 | 9.1 Keyless AWS access | Extended | 5–10 | ☐ | | | | |
 | 9.2 Docs + go public | Core | 12–20 | ☐ | | | | |
 | 9.3 Post go-live improvements | Extended | 2–6 | ☐ | | | | |
@@ -1195,3 +1207,4 @@ Phase 1 builds most of what these need: the shared OpenTofu modules, the base ma
 | 2026-11-12 | **Dated references:** every setup guide ends with a **References** section listing the official pages its steps follow, each dated "checked YYYY-MM-DD", enforced by `tools/check_doc_style.py`; step 9.2 adds the same to every ADR (6–10 more hours: step 9.2 becomes 12–20, the Core tier ~189–311 and Phase 1 ~381–636, M5 33–49 hours). The milestone dates are recomputed in the roadmap re-baseline after the account migration, since the 2026-11-02 baseline no longer holds | Provider pages and consoles change (Cloudflare's registrar tabs differed from its own documentation); a cited, dated source shows where a step or a decision came from and when it was last confirmed |
 | 2026-11-13 | **The roadmap is re-baselined** from Sunday, November 15, at 60 hours a week (Saturdays off) with Thanksgiving, December 24–25 and December 31–January 1 off; unfinished steps count at their full estimates. M1 now has a target of Wed, Nov 18 (latest Thu, Nov 19), M5 Mon, Dec 14 (latest Mon, Dec 21) and M7 Mon, Jan 18, 2027 (latest Tue, Feb 2, 2027); the 2026-11-02 baseline stays in Git history | The first baseline planned the foundations for November 3–4; step 0.1 grew to include the Workspace identity, security keys on every account and the GitHub organization and GitLab group, so its dates no longer held, as the roadmap's re-baselining rule requires |
 | 2026-11-13 | **The break-glass kit adds an encrypted export of the whole Bitwarden vault:** a plain JSON export piped from the Bitwarden CLI straight into GPG symmetric encryption (the kit's settings and memorized passphrase), stored with the kit in Google Drive, OneDrive and on the USB stick, and renewed with the kit and quarterly ([break-glass kit setup guide](setup/break-glass-kit.md#part-4-the-encrypted-export-of-the-bitwarden-vault)) | The kit holds only the items needed to regain access; if Bitwarden's service or account were lost for good, the apps' offline copies cannot be refreshed. Bitwarden's own encrypted exports need Bitwarden to read them, while GnuPG and the passphrase can read this one on any computer |
+| 2026-11-13 | **Step 7.16: Mail and identity monitoring** (Extended, 8–14 hours, milestone M6): parsedmarc parses the DMARC aggregate reports into Loki's `security` tenant, a job polls the Workspace Reports API's sign-in and admin events, and Sigma rules alert `#rl-security`; step 0.1 adds Google's Alert Center email rules. The Extended tier becomes ~111–195 hours, Phase 1 ~389–650, M6 111–195 hours, and M6 moves to Wed, Jan 6, 2027 (latest Mon, Jan 18) and M7 to Tue, Jan 19 (latest Wed, Feb 3, 2027) | DMARC reports in a mailbox show spoofing of the domain only if someone reads them, and nothing watched the Workspace account, the project's identity, for suspicious sign-ins or admin changes |

@@ -46,3 +46,4 @@ The project's accounts were registered to the operator's personal Google Account
 - Phase 1 step 0.1: the organization, the mail records and the groups; the existing accounts moved to the new addresses.
 - Phase 1 step 2.3: the domain's Google records imported into OpenTofu with the rest of russetleaf.dev's DNS.
 - Phase 1 step 4.7: Dex's Google connector reading Workspace groups (a service account with read access to the Directory API).
+- Phase 1 step 7.16: the DMARC reports and the account's sign-in and admin events in the `security` tenant, with detection rules.

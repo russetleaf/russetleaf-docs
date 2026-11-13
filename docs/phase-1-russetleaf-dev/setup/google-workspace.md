@@ -75,6 +75,19 @@ Each address that a service sends important mail to is a **group** with the oper
 - **The email address** of the AWS accounts (groups, Part 4), the IAM Identity Center user, the GitHub organization's and GitLab group's contact email, the heartbeat service and the uptime checker.
 - **Not** for Cloudflare, Bitwarden or Microsoft, which stay on the operator's personal accounts.
 
+## Part 6: Security alerts
+
+Google's **Alert Center** raises alerts about the organization's accounts, such as a suspicious sign-in or a new administrator. Each alert comes from a **rule**, and the rule decides whether anyone is emailed. These steps make sure the alerts that point to misuse of the account reach the operator's mailbox. Step 7.16 later sends the same events to the cluster's detections and to Slack ([plan](../plan.md#step-716-mail-and-identity-monitoring)).
+
+1. **Open the rules:** in the Admin console, **Menu → Rules**. (From **Menu → Security → Alert center**, **Manage alerts and email notifications** opens the same page.)
+2. **For each of these rules,** where it is listed for the organization's edition: **Suspicious login**, **Leaked password**, **Government-backed attacks**, **Suspicious programmatic login**, **User suspended** (for suspicious activity), **User granted Admin privilege**, **Primary admin changed**, and **Admin password reset**:
+    1. Select the rule to open **Rule details**, then the **Actions** panel.
+    2. Turn **Alerts** **On**, with the default severity.
+    3. Under **Send email notifications**, select **All super administrators**.
+    4. Select **NEXT: REVIEW**, then **UPDATE RULE**.
+3. **Record** in the decision log any of these rules that the edition does not offer.
+4. **See the alerts** at **Menu → Security → Alert center**. Google keeps alerts for about 10 years.
+
 ## Checks
 
 - [ ] russetleaf.dev shows as **verified** under **Manage domains**, and Gmail as active.
@@ -83,6 +96,7 @@ Each address that a service sends important mail to is a **group** with the oper
 - [ ] The account is enrolled in **Advanced Protection**, and its recovery email is the personal Google Account.
 - [ ] The backup codes are in Bitwarden.
 - [ ] Each group receives a message from outside the organization, under its label and not in **Spam**.
+- [ ] Each rule in Part 6 shows **Alerts** on and email notifications to **All super administrators**.
 
 ## If something goes wrong
 
@@ -114,5 +128,10 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - Google: ["Create a group (Google Workspace Learning Center: posting policies, spam message handling)"](https://support.google.com/a/users/answer/9303222), checked 2026-11-12
 - Google: ["Create rules to filter your emails"](https://support.google.com/mail/answer/6579), checked 2026-11-12
 - Google: ["Trace an email with its full header (Show original)"](https://support.google.com/mail/answer/29436), checked 2026-11-12
+- Google: ["About the alert center"](https://knowledge.workspace.google.com/admin/security/about-the-alert-center), checked 2026-11-13
+- Google: ["Use the alert center"](https://knowledge.workspace.google.com/admin/security/use-the-alert-center), checked 2026-11-13
+- Google: ["View alert details"](https://knowledge.workspace.google.com/admin/security/view-alert-details) (the alert types), checked 2026-11-13
+- Google: ["Configure alert center email notifications"](https://knowledge.workspace.google.com/admin/security/configure-alert-center-email-notifications), checked 2026-11-13
+- Google: ["Use rules to turn alerts on or off"](https://knowledge.workspace.google.com/admin/security/use-rules-to-turn-alerts-on-or-off), checked 2026-11-13
 - Cloudflare: ["Set up Google Workspace DNS records"](https://developers.cloudflare.com/dns/manage-dns-records/how-to/set-up-google-workspace/), checked 2026-11-12
 - Cloudflare: ["Manage DNS records"](https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/), checked 2026-11-12
