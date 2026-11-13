@@ -2,37 +2,43 @@
 
 The milestones for building [Phase 1](plan.md), with target dates, and the actual dates once each is reached. The steps, tiers and estimates come from the plan's [progress checklist](plan.md#progress-checklist); day-to-day work is tracked as GitHub Issues (one per step) grouped into these milestones, on a public GitHub Projects board.
 
-## Assumptions (baseline of 2026-11-02)
+## Assumptions (baseline of 2026-11-13)
 
-- **Start:** planning on Monday, November 2, 2026; building from **Tuesday, November 3**.
+This baseline replaces the first one, of 2026-11-02, which planned the foundations for November 3–4 and is kept in Git history (decision log, 2026-11-13). Between the two, step 0.2 was finished, and step 0.1 grew to include the Google Workspace identity, the security keys on every account, and the GitHub organization and GitLab group, which took the time the first baseline gave to the cluster.
+
+- **Start:** building resumes on **Sunday, November 15, 2026**.
 - **Pace:** about **60 hours a week**, worked as **10 hours a day, six days a week**, with **Saturdays off**.
-- **Fixed dates:** `rl-home-cp03` (the 16 GB server) and the ER605 lab router arrive by November 4, so **November 3–4** are for the preliminaries the servers need (accounts and tools, decisions, the lab network, the repos, the AWS accounts and the OpenTofu state bucket), and **November 5–6** are for the servers: the cluster up on November 5, hardening and tests on November 6.
-- **Time-boxing M1:** its steps are estimated at 25–46 hours against 20 available, so only what the servers need is done on November 3–4; the rest (the repos' full CI guardrails, from step 1.1) is finished after November 6 and counted in M3's dates.
-- **Order after that:** the Core tier first (in plan order), then step 9.3 (the post go-live review of the [improvements list](improvements.md)), then the other Extended steps, then the Advanced steps, as the plan recommends.
+- **Holidays:** no work on **Thanksgiving (Thursday, November 26)**, **December 24–25** and **December 31–January 1**.
+- **Hardware:** all three servers and the ER605 router are on hand, so the lab network and the cluster start as soon as the plan reaches them.
+- **Remaining work:** every unfinished step counts at its full estimate, including those already started (0.1 and 1.1); step 0.2 is done and not counted.
+- **Order:** the Core tier first (in plan order), then step 9.3 (the post go-live review of the [improvements list](improvements.md)), then the other Extended steps, then the Advanced steps, as the plan recommends.
 - **Estimates:** the plan's focused-hour ranges (expect ±50%). **Target** is the date at the midpoint of the estimates; **latest** is the date at the high end.
-- **Not included:** holidays (Thanksgiving, late December), days lost to waiting (AWS approvals, DNS), and the drop in pace that long stretches of 10-hour days usually bring. Plan around the **latest** dates.
+- **Not included:** days lost to waiting (AWS approvals, DNS), and the drop in pace that long stretches of 10-hour days usually bring. Plan around the **latest** dates.
 
 ## Milestones
 
 | Milestone | Steps | Est. hours | Target | Latest | Actual | Actual hours |
 |---|---|---|---|---|---|---|
-| **M1 Foundations** | 0.1–0.3, 1.1, 2.0, 2.1 | 25–46 | Wed, Nov 4, 2026 | Wed, Nov 4, 2026 | | |
-| **M2 Cluster up** | 2.2 | 13–19 | Fri, Nov 6, 2026 | Fri, Nov 6, 2026 | | |
-| **M3 AWS, GitOps and platform services** | 2.0b, 2.3, 2.4, 3.1, 4.1–4.7 | 62–102 | Wed, Nov 18, 2026 | Sun, Nov 22, 2026 | | |
-| **M4 WordPress live with staging and promotion** | 5.1–5.7, 5.10, 5.12 | 56–95 | Fri, Nov 27, 2026 | Thu, Dec 3, 2026 | | |
-| **M5 Core tier complete and published** | 6.1, 6.3, 9.2 | 33–49 | Tue, Dec 1, 2026 | Tue, Dec 8, 2026 | | |
-| **M6 Production hardening and operations** | 9.3, 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.15, 9.1 | 103–181 | Thu, Dec 17, 2026 | Tue, Dec 29, 2026 | | |
-| **M7 Advanced practices; Phase 1 complete** | 7.7, 8.1–8.9 | 89–144 | Thu, Dec 31, 2026 | Thu, Jan 14, 2027 | | |
-| **Total** | | **381–636** | | | | |
+| **M1 Foundations** | 0.1–0.3, 1.1, 2.0, 2.1 | 24–44 (0.2 done) | Wed, Nov 18, 2026 | Thu, Nov 19, 2026 | | |
+| **M2 Cluster up** | 2.2 | 13–19 | Thu, Nov 19, 2026 | Sun, Nov 22, 2026 | | |
+| **M3 AWS, GitOps and platform services** | 2.0b, 2.3, 2.4, 3.1, 4.1–4.7 | 62–102 | Tue, Dec 1, 2026 | Fri, Dec 4, 2026 | | |
+| **M4 WordPress live with staging and promotion** | 5.1–5.7, 5.10, 5.12 | 56–95 | Wed, Dec 9, 2026 | Tue, Dec 15, 2026 | | |
+| **M5 Core tier complete and published** | 6.1, 6.3, 9.2 | 33–49 | Mon, Dec 14, 2026 | Mon, Dec 21, 2026 | | |
+| **M6 Production hardening and operations** | 9.3, 2.5, 5.8, 5.9, 5.11, 6.2, 6.4, 6.5, 7.1–7.6, 7.8–7.15, 9.1 | 103–181 | Tue, Jan 5, 2027 | Fri, Jan 15, 2027 | | |
+| **M7 Advanced practices; Phase 1 complete** | 7.7, 8.1–8.9 | 89–144 | Mon, Jan 18, 2027 | Tue, Feb 2, 2027 | | |
+| **Total remaining** | | **380–634** | | | | |
 
-**The first four days:**
+The whole of Phase 1 is ~381–636 hours, step 0.2's 1–2 included ([plan](plan.md#priorities-and-time-estimates)).
+
+**The first five working days:**
 
 | Day | Work |
 |---|---|
-| **Tue, Nov 3** | Step 0.1 (accounts, tools, budget alert, the break-glass kit started), 0.2 (decisions), and the ER605 set up as `rl-home-rt01` (0.3: lab subnet, address reservations under the nodes' hostnames, firewall rule, WireGuard to the workstation) |
-| **Wed, Nov 4** | Step 1.1 (repos created with branch protection; full CI guardrails later), 2.0 (AWS Organization and accounts) and 2.1 (OpenTofu state bucket and CI roles); `rl-home-cp03` arrives: BIOS, TPM and Secure Boot settings on all three nodes, hostname labels on the machines, and the Talos image schematic |
-| **Thu, Nov 5** | Step 2.2, day 1: Talos on all three nodes with their hostnames (`rl-home-cp01` to `rl-home-cp03`), etcd healthy, the virtual IP, Cilium and Argo CD from the inline manifests |
-| **Fri, Nov 6** | Step 2.2, day 2: Secure Boot and disk-encryption checks, firewall, kubelet settings, the remaining tests, and the rebuild from scratch |
+| **Sun, Nov 15** | Step 0.1: the YubiKeys on the workstation ([setup guide](setup/workstation-yubikey.md)), the Slack channels, bot and monitoring accounts ([setup guide](setup/slack-and-monitoring.md)), the break-glass kit ([setup guide](setup/break-glass-kit.md)), and `yubikey-backup` into the safe |
+| **Mon, Nov 16** | Step 0.3: the ER605 as `rl-home-rt01` ([lab network setup guide](setup/lab-network.md)); step 1.1 begins: the code repos in the organization, with their mirrors |
+| **Tue, Nov 17** | Step 1.1 continued: the guardrails (secret scanning, Checkov, Renovate, the bash and documentation checks), the issues and project board |
+| **Wed, Nov 18** | Steps 2.0 and 2.1: the AWS Organization, its accounts and IAM Identity Center ([setup guide](setup/aws-management-account.md)), then the OpenTofu state bucket and CI roles |
+| **Thu, Nov 19** | Step 2.2 begins: Talos on all three nodes, etcd, the virtual IP, Cilium and Argo CD |
 
 What each milestone shows when it is done:
 
