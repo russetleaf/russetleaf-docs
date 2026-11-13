@@ -25,7 +25,7 @@ Both of the operator's YubiKeys are Security Key NFC, which have no OpenPGP func
 
 Have these ready:
 
-- **The workstation**, set up with [`setup-ubuntu.sh`](https://github.com/smscully/russetleaf-docs/blob/main/scripts/workstation/setup-ubuntu.sh), which installs `gnupg` and `paperkey`.
+- **The workstation**, set up with [`setup-ubuntu.sh`](https://github.com/russetleaf/russetleaf-docs/blob/main/scripts/workstation/setup-ubuntu.sh), which installs `gnupg` and `paperkey`.
 - **Bitwarden open,** with a new entry for the GPG key (its passphrase and fingerprint, and the public key as a secure note).
 - **A USB stick** for the safe, used for nothing else.
 - **A printer** connected by USB or on the home network, not a cloud print service, so the printed pages are not stored by a third party.

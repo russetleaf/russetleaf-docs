@@ -18,7 +18,7 @@ Both keys are **YubiKey Security Key NFC** (FIDO2 and U2F): **`yubikey-primary`*
 Have these ready:
 
 - **Both YubiKeys**, each with a FIDO2 PIN (`ykman fido access change-pin`).
-- **The setup script run** ([`setup-ubuntu.sh`](https://github.com/smscully/russetleaf-docs/blob/main/scripts/workstation/setup-ubuntu.sh)), which installs `libpam-u2f` and `pamu2fcfg`; OpenSSH and `libfido2`, which security-key SSH keys need, come with Ubuntu.
+- **The setup script run** ([`setup-ubuntu.sh`](https://github.com/russetleaf/russetleaf-docs/blob/main/scripts/workstation/setup-ubuntu.sh)), which installs `libpam-u2f` and `pamu2fcfg`; OpenSSH and `libfido2`, which security-key SSH keys need, come with Ubuntu.
 - **Bitwarden open**, for the signing key's passphrase.
 - For Part 2, **a second terminal with a root shell** (`sudo -i`), kept open until the checks pass, so a mistake in the PAM files can be undone.
 

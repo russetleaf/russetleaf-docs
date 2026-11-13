@@ -51,10 +51,10 @@ Everything is built and tested from the operator's Ubuntu 24.04 workstation, whi
 
 ### 1. Run the setup script
 
-The setup is a script in this repo, [`scripts/workstation/setup-ubuntu.sh`](https://github.com/smscully/russetleaf-docs/blob/main/scripts/workstation/setup-ubuntu.sh), rather than commands to copy: a new or replacement workstation (the [disaster recovery plan](disaster-recovery.md)'s "workstation lost" scenario) gets exactly the same setup, the script is safe to run again (a rerun changes nothing, except upgrading the packages it installs when newer versions exist), and CI lints it with shellcheck. **Read it before running it:** it uses `sudo` and adds two signed apt repositories.
+The setup is a script in this repo, [`scripts/workstation/setup-ubuntu.sh`](https://github.com/russetleaf/russetleaf-docs/blob/main/scripts/workstation/setup-ubuntu.sh), rather than commands to copy: a new or replacement workstation (the [disaster recovery plan](disaster-recovery.md)'s "workstation lost" scenario) gets exactly the same setup, the script is safe to run again (a rerun changes nothing, except upgrading the packages it installs when newer versions exist), and CI lints it with shellcheck. **Read it before running it:** it uses `sudo` and adds two signed apt repositories.
 
 ```bash
-git clone https://github.com/smscully/russetleaf-docs.git
+git clone https://github.com/russetleaf/russetleaf-docs.git
 cd russetleaf-docs
 ```
 
@@ -149,7 +149,7 @@ PHP and Composer are not needed locally: the WordPress image installs plugins in
 
 ### 5. Check the setup
 
-[`scripts/workstation/check-tools.sh`](https://github.com/smscully/russetleaf-docs/blob/main/scripts/workstation/check-tools.sh) prints every tool's version and fails if a required one is missing. Run it with `--system` right after the setup script (before any repo is cloned), then without it inside each repo, after `mise install`, to check that repo's pinned tools as well.
+[`scripts/workstation/check-tools.sh`](https://github.com/russetleaf/russetleaf-docs/blob/main/scripts/workstation/check-tools.sh) prints every tool's version and fails if a required one is missing. Run it with `--system` right after the setup script (before any repo is cloned), then without it inside each repo, after `mise install`, to check that repo's pinned tools as well.
 
 **Now** (step 0.1), after logging out and back in for the `docker` group:
 

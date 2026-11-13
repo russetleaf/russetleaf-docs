@@ -68,7 +68,7 @@ Incoming webhooks, which Falcosidekick and Policy Reporter use instead of the to
 2. **Subscribe `#rl-deploys`** to the project's repos, starting with this one:
 
     ```text
-    /github subscribe smscully/russetleaf-docs pulls releases deployments
+    /github subscribe russetleaf/russetleaf-docs pulls releases deployments
     ```
 
     Each code repo is subscribed the same way when step 1.1 creates it.
