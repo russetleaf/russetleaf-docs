@@ -26,7 +26,7 @@ Both of the operator's YubiKeys are Security Key NFC, which have no OpenPGP func
 Have these ready:
 
 - **The workstation**, set up with [`setup-ubuntu.sh`](https://github.com/russetleaf/russetleaf-docs/blob/main/scripts/workstation/setup-ubuntu.sh), which installs `gnupg` and `paperkey`.
-- **Bitwarden open,** with a new entry for the GPG key (its passphrase and fingerprint, and the public key as a secure note).
+- **Bitwarden open,** with a new entry for the GPG key (its passphrase and fingerprint, and the public key as a secure note), and the Bitwarden CLI (`bw`) signed in ([workstation configuration](../plan.md#4-configuration)), for the vault export in Part 4.
 - **A USB stick** for the safe, used for nothing else.
 - **A printer** connected by USB or on the home network, not a cloud print service, so the printed pages are not stored by a third party.
 - **Sign-ins to Google Drive and OneDrive:** the personal Google Account's Drive (not the Workspace account's, which depends on russetleaf.dev) and the personal Microsoft account.
@@ -113,11 +113,52 @@ mkdir -m 700 "${GNUPGHOME}"
     ```
 
 3. **Upload** `russetleaf-break-glass-kit.txt.gpg` to a folder in **Google Drive** and a folder in **OneDrive**, through their web pages. Neither needs sharing with anyone.
-4. **Clean up:** delete the folder in memory.
+
+## Part 4: The encrypted export of the Bitwarden vault
+
+The kit holds only the items needed to regain access. This part adds a copy of the **whole vault** that can be read **without Bitwarden**: a plain JSON export, encrypted with GPG and the memorized kit passphrase. If Bitwarden's service, apps or account are unavailable for good, GnuPG and the passphrase alone recover every entry. Bitwarden's own encrypted exports are not used, because both kinds need Bitwarden to read them: an "account restricted" export imports only into the same account, and a "password protected" one into a Bitwarden account.
+
+1. **Unlock the CLI and sync,** so the export is current:
 
     ```bash
+    export BW_SESSION="$(bw unlock --raw)"
+    bw sync
+    ```
+
+2. **Check for attachments:** a JSON export does not contain file attachments. The command prints how many items have them:
+
+    ```bash
+    bw list items | jq '[.[] | select(.attachments)] | length'
+    ```
+
+    If it is not `0`, keep each attachment's content as a secure note instead (or export the vault in the `zip` format, which includes attachments, to `"${RL_KIT}"` and encrypt that file the same way). Items in the trash and Sends are never exported.
+
+3. **Export and encrypt in one step,** so the plain export is never written to a file: with `--raw` and no output file, `bw` writes the export to standard output, which `gpg` encrypts with the same settings as the kit.
+
+    ```bash
+    bw --raw export --format json \
+      | gpg --symmetric --cipher-algo AES256 --s2k-digest-algo SHA512 --s2k-count 65011712 \
+        --output "${RL_KIT}/russetleaf-vault-export.json.gpg"
+    ```
+
+4. **Prove it,** after clearing the cached passphrase: the decrypted export is valid JSON, and its item count matches the vault's.
+
+    ```bash
+    gpgconf --reload gpg-agent
+    gpg --decrypt "${RL_KIT}/russetleaf-vault-export.json.gpg" | jq '.items | length'
+    bw list items | jq 'length'
+    ```
+
+5. **Store it** next to the kit: upload `russetleaf-vault-export.json.gpg` to the same Google Drive and OneDrive folders, and copy it to the USB stick in the safe.
+6. **Lock the CLI and clean up:** delete the folder in memory.
+
+    ```bash
+    bw lock
+    unset BW_SESSION
     rm -rf "${RL_KIT}"
     ```
+
+**Reading the export without Bitwarden:** on any computer with GnuPG, decrypt it into memory (`gpg --output /dev/shm/vault.json --decrypt russetleaf-vault-export.json.gpg`), read the entries with a text editor or `jq` (for example `jq '.items[] | {name, login}' /dev/shm/vault.json`), and delete the file when done. The same file imports into a new password manager that reads Bitwarden's JSON format, Bitwarden included.
 
 ## Checks
 
@@ -126,6 +167,7 @@ mkdir -m 700 "${GNUPGHOME}"
 - [ ] The encrypted kit **downloaded from Google Drive**, and again **from OneDrive**, decrypts with the memorized passphrase after `gpgconf --reload gpg-agent`.
 - [ ] The safe holds the printed pages, the `paperkey` printout, the USB stick and `yubikey-backup`.
 - [ ] Bitwarden holds the GPG key's fingerprint, passphrase and public key.
+- [ ] The vault export **downloaded from Google Drive** decrypts with the memorized passphrase after `gpgconf --reload gpg-agent`, and its item count matches the vault's (Part 4, step 4); a copy is on the USB stick.
 - [ ] `/dev/shm/rl-kit` no longer exists.
 
 ## Using the key
@@ -145,7 +187,8 @@ Put the USB stick back in the safe afterwards.
 
 ## Keeping the kit current
 
-- **When an item changes** (a new recovery code, a new password, the Talos secrets bundle after step 2.2): update Bitwarden, then repeat Part 2, step 1 and Part 3 with the GPG exports from the USB stick, replace both cloud copies, and replace the printed pages that changed (shredding the old ones).
+- **When an item changes** (a new recovery code, a new password, the Talos secrets bundle after step 2.2): update Bitwarden, then repeat Part 2, step 1 and Part 3 with the GPG exports from the USB stick, replace both cloud copies, and replace the printed pages that changed (shredding the old ones). Make a new vault export at the same time (Part 4), replacing the old copies.
+- **The vault export** is also renewed **quarterly**, even when the kit has not changed, since the vault changes more often than the kit.
 - **Every 6 months** ([drill](../disaster-recovery.md#drills)): download both cloud copies and decrypt them after `gpgconf --reload gpg-agent`, compare them with Bitwarden, and check the GPG key's expiry date (`gpg --show-keys gpg-public-key.asc`).
 - **Renew the GPG key** at least a month before it expires: load it as in [Using the key](#using-the-key), run `gpg --quick-set-expire "${FPR}" 2y` and `gpg --quick-set-expire "${FPR}" 2y '*'`, and export the public key, the secret key and the `paperkey` file again (Part 1, step 2). Update the public key in Bitwarden and in the cluster's backup job (step 2.5), replace the files on the USB stick and the printout, and refresh the kit (Part 2, step 1 and Part 3). The key and its fingerprint do not change, so existing backups still decrypt.
 
@@ -179,5 +222,8 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - `paperkey`: ["Paperkey - an OpenPGP key archiver"](https://www.jabberwocky.com/software/paperkey/), checked 2026-11-12
 - Yubico: ["Importing keys (keytocard)"](https://developers.yubico.com/PGP/Importing_keys.html), checked 2026-11-12
 - Yubico: ["OpenPGP Commands (YubiKey Manager CLI)"](https://docs.yubico.com/software/yubikey/tools/ykman/OpenPGP_Commands.html), checked 2026-11-12
+- Bitwarden: ["Export Vault Data"](https://bitwarden.com/help/export-your-data/), checked 2026-11-13
+- Bitwarden: ["Encrypted Exports"](https://bitwarden.com/help/encrypted-export/), checked 2026-11-13
+- Bitwarden: ["Password Manager CLI"](https://bitwarden.com/help/cli/) (and `bw export --help`, version 2026.10.1: `--raw` with no output file writes to standard output), checked 2026-11-13
 - Google: ["Upload files & folders to Google Drive"](https://support.google.com/drive/answer/2424368), checked 2026-11-12
 - Microsoft: ["Upload and save files and folders to OneDrive"](https://support.microsoft.com/en-us/onedrive/upload-and-save-files-and-folders-to-onedrive), checked 2026-11-12
