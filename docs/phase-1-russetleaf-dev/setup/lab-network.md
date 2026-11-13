@@ -96,7 +96,14 @@ The workstation's private key is generated on the workstation and never leaves i
     nmcli connection down rl-lab
     ```
 
-6. **Keep a copy in the break-glass kit:** store the profile in the password manager ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)), then delete the files in `~/.config/wireguard/` (NetworkManager keeps its own copy, readable only by root).
+    **Note:** the `nmcli` manual for NetworkManager 1.46 (Ubuntu 24.04) says `connection import` supports "only VPN configurations", imported by VPN plugins, and its WireGuard settings include no way to add a peer. Whether the import above works is confirmed when this step is first carried out, and this guide is updated with the result. If `nmcli` refuses it, use `wg-quick`, from the `wireguard-tools` package the setup script installs, which reads the same file and names the interface after it (`rl-lab`); it needs the file to stay in place, readable only by the operator:
+
+    ```bash
+    sudo wg-quick up ~/.config/wireguard/rl-lab.conf      # when working on the cluster
+    sudo wg-quick down ~/.config/wireguard/rl-lab.conf
+    ```
+
+6. **Keep a copy in the break-glass kit:** store the profile in the password manager ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)). With the NetworkManager import, then delete the files in `~/.config/wireguard/` (NetworkManager keeps its own copy, readable only by root); with `wg-quick`, keep `rl-lab.conf` (mode `600`) and delete only `rl-lab.key` and `rl-lab.pub`, since the profile holds the private key.
 
 ## Part 5: Backups and BIOS passwords
 
@@ -123,3 +130,5 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - TP-Link (Omada): ["ER605 support page (firmware, release notes, datasheet)"](https://support.omadanetworks.com/us/product/er605/), checked 2026-11-12
 - WireGuard: ["Quick Start"](https://www.wireguard.com/quickstart/), checked 2026-11-12
 - NetworkManager: ["nmcli reference manual"](https://networkmanager.dev/docs/api/latest/nmcli.html), checked 2026-11-12
+- Ubuntu: ["nmcli - command-line tool for controlling NetworkManager"](https://manpages.ubuntu.com/manpages/noble/man1/nmcli.1.html) (Ubuntu 24.04, NetworkManager 1.46: `connection import` supports only VPN configurations), checked 2026-11-13
+- Ubuntu: ["wg-quick - set up a WireGuard interface simply"](https://manpages.ubuntu.com/manpages/noble/man8/wg-quick.8.html) (Ubuntu 24.04), checked 2026-11-13
