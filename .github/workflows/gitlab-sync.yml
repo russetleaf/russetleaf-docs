@@ -1,8 +1,8 @@
 # Mirrors main to the repo's private GitLab project in the russetleaf group.
 # Setup: docs/phase-1-russetleaf-dev/setup/gitlab-group.md
 # Secrets: GITLAB_URL (https://gitlab.com/russetleaf/<repo>.git), GITLAB_USERNAME,
-# GITLAB_PAT (a legacy personal access token named after the repo,
-# write_repository scope only, expiring after one year).
+# GITLAB_PAT (a fine-grained personal access token named after the repo,
+# limited to the mirror project with Repository > Code: Push, expiring after one year).
 
 name: "Backup to GitLab"
 
