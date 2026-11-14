@@ -9,7 +9,7 @@ Both keys are **YubiKey Security Key NFC** (FIDO2 and U2F): **`yubikey-primary`*
 | Use | How it is protected |
 |---|---|
 | SSH to GitHub and GitLab (push, pull, `gh`) | A **security-key SSH key** per YubiKey (`ed25519-sk`): a new connection needs the key plugged in and a touch, and is reused for 10 minutes of activity, so a copied `~/.ssh` folder is useless without the YubiKey. Day-to-day work uses only GitHub; the keys are registered on GitLab too so that, if GitHub is lost, the repos can be restored from their GitLab mirrors, or work can continue there, at once ([disaster recovery plan](../disaster-recovery.md)), and the yearly renewal proves it |
-| Commit signing | A separate key file, `~/.ssh/id_ed25519_github`, with a **passphrase** (kept in Bitwarden) and unlocked once per session through `ssh-agent`, registered only as a **signing** key, on GitHub and on GitLab, with no expiry date. A YubiKey could hold it, but this model (FIDO2 only, with no cached-touch setting) would ask for a touch on every commit, and again for every commit a rebase rewrites; the passphrase protects the file instead ([workstation configuration](../plan.md#4-configuration)) |
+| Commit signing | A separate key file, `~/.ssh/id_ed25519_signing`, used with the project's Git identity (the Workspace address) in RussetLeaf repos only, with a **passphrase** (kept in Bitwarden) and unlocked once per session through `ssh-agent`, registered only as a **signing** key, on GitHub and on GitLab, with no expiry date. A YubiKey could hold it, but this model (FIDO2 only, with no cached-touch setting) would ask for a touch on every commit, and again for every commit a rebase rewrites; the passphrase protects the file instead (Part 1, step 5) |
 | `sudo` and `sudo -i` | **A YubiKey touch, then the password** (`pam_u2f`); the touch is needed again only when `sudo`'s 15-minute timestamp expires |
 | Graphical admin prompts (polkit), the login screen, the disk passphrase | The password only |
 
@@ -60,11 +60,51 @@ Have these ready:
     **Connection reuse:** the first push or pull opens an authenticated connection (one touch) and keeps it open; later pushes and pulls to the same host reuse it without a touch, until it has been idle for 10 minutes. The socket lives in `~/.ssh`, which only the operator can write to, as the `ssh_config` manual recommends. `ssh -O exit git@github.com` (or `git@gitlab.com`) closes it at once, for example before leaving the workstation unlocked. Anyone using the operator's logged-in session during that window can push without a touch, so the window stays short.
 
 4. **Test:** `ssh -T git@github.com` and `ssh -T git@gitlab.com` each ask for a touch and greet the user (GitHub: `Hi <user>! You've successfully authenticated, but GitHub does not provide shell access.`; GitLab: `Welcome to GitLab, @<user>!`). The first connection to each asks to confirm the host's fingerprint; compare it with [GitHub's SSH key fingerprints](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints) and [GitLab.com's SSH host key fingerprints](https://docs.gitlab.com/user/gitlab_com/) (section "SSH host keys fingerprints") before answering `yes`.
-5. **The commit-signing key is for signing only:** the separate key file from the [workstation setup](../plan.md#4-configuration), `id_ed25519_github`, is never used to sign in.
-    1. It has a passphrase, generated in and saved to Bitwarden (to add one: `ssh-keygen -p -f ~/.ssh/id_ed25519_github`).
-    2. **GitHub:** it is added as in step 2, with the key type for **signing**, so it appears under **Signing keys** and not under **Authentication keys**.
-    3. **GitLab:** it is added as in step 2 (from `cat ~/.ssh/id_ed25519_github.pub`), with the title `workstation signing` in place of any title GitLab fills in from the key's comment, the **Usage type** **Signing**, and the **Expiration date** cleared, so the key does not expire. GitLab then shows commits signed with it as **Verified**, which matters if work moves to GitLab ([disaster recovery plan](../disaster-recovery.md)). The key is replaced only with the workstation, or at once if it may be compromised.
-    4. Git signs every commit with it (`git config --global gpg.format ssh`, and `git config --global user.signingkey ~/.ssh/id_ed25519_github.pub`, from the workstation setup); `ssh-add ~/.ssh/id_ed25519_github` unlocks it once per session.
+5. **Set up commit signing and the project's Git identity.** Commits are signed with an Ed25519 key file that has a passphrase, not with the YubiKeys (see the table above), and is never used to sign in. RussetLeaf repos use the project's identity, the operator's Workspace address, so no personal address reaches the public history; other repos on the machine keep their own settings.
+    1. **Create the signing key.** Generate a passphrase in Bitwarden first and save it in a new item, `workstation signing key`; enter it when `ssh-keygen` asks:
+
+        ```bash
+        ssh-keygen -t ed25519 -C "workstation signing" -f ~/.ssh/id_ed25519_signing
+        ```
+
+    2. **Write the project's Git settings** to their own file, replacing `<name>@russetleaf.dev` with the operator's Workspace address, and run the whole block:
+
+        ```bash
+        email="<name>@russetleaf.dev"
+        mkdir -p ~/.config/git
+        cat >~/.config/git/russetleaf.gitconfig <<EOF
+        [user]
+            email = ${email}
+            signingkey = ${HOME}/.ssh/id_ed25519_signing.pub
+        [gpg]
+            format = ssh
+        [gpg "ssh"]
+            allowedSignersFile = ${HOME}/.config/git/allowed_signers
+        [commit]
+            gpgsign = true
+        [tag]
+            gpgsign = true
+        EOF
+        printf '%s namespaces="git" %s\n' "${email}" "$(cut -d' ' -f1,2 ~/.ssh/id_ed25519_signing.pub)" >>~/.config/git/allowed_signers
+        ```
+
+        The `allowed_signers` line lets `git log --show-signature` check the project's signatures on the workstation.
+    3. **Apply them only to RussetLeaf repos:** an `includeIf` in the global Git configuration loads the file in any repo with a remote in the `russetleaf` organization or group, over SSH or HTTPS ([`git-config` conditional includes](https://git-scm.com/docs/git-config#_conditional_includes), Git 2.36 or later). Run the whole block:
+
+        ```bash
+        for url in git@github.com:russetleaf/** https://github.com/russetleaf/** git@gitlab.com:russetleaf/** https://gitlab.com/russetleaf/**; do
+          git config --global "includeIf.hasconfig:remote.*.url:${url}.path" ~/.config/git/russetleaf.gitconfig
+        done
+        ```
+
+        `git config --global` adds these lines at the end of the global file, so they override an earlier `user.email` or `user.signingkey`.
+    4. **Register the public key** (`cat ~/.ssh/id_ed25519_signing.pub`, the whole line) with the title `workstation signing`:
+        - **GitHub:** as in step 2, with the key type for **signing**, so it appears under **Signing keys** only. GitHub shows a commit as **Verified** when its email is a verified address of the account, so the Workspace address must be one ([GitHub organization setup guide](github-organization.md)).
+        - **GitLab:** as in step 2, with the **Usage type** **Signing** and the **Expiration date** cleared, so the key does not expire. GitLab shows commits signed with it as **Verified** when the Workspace address is a verified email of the account ([GitLab group setup guide](gitlab-group.md#part-2-notifications-to-the-workspace-address-once)), which matters if work moves to GitLab ([disaster recovery plan](../disaster-recovery.md)).
+
+        The key is replaced only with the workstation, or at once if it may be compromised.
+    5. **Unlock it once per session** with `ssh-add ~/.ssh/id_ed25519_signing` (the passphrase from Bitwarden). Git signs through `ssh-agent`, so commits made without a terminal, such as a coding agent's, also work while the key is unlocked; `ssh-add -D` clears it, for example before leaving the workstation unlocked.
+    6. **Test,** inside a RussetLeaf repo: `git config user.email` shows the Workspace address and `git config user.signingkey` the new key; after the next commit, `git log --show-signature -1` reports a good signature for the Workspace address, and the commit shows **Verified** on GitHub once pushed. Outside a RussetLeaf repo, `git config user.email` shows the global value.
 6. **Put `yubikey-backup` back in the safe.**
 
 ## Part 2: `sudo` with a YubiKey and the password
@@ -130,14 +170,15 @@ The `pam_u2f` registration for `sudo` (Part 2) does not expire and is not renewe
 Nothing in this guide is stored on the YubiKeys themselves: the SSH keys are not resident (the YubiKey holds the secret, and a handle file in `~/.ssh` on each machine points to it), and the `pam_u2f` registration lives in each machine's `/etc/u2f_mappings`. Each workstation therefore gets its own registrations, and adding or retiring one changes nothing on the others:
 
 1. **Set up the new machine** with the setup script ([workstation configuration](../plan.md#4-configuration)), then follow Parts 1 and 2 on it, naming its keys after the machine, for example `-C "laptop yubikey-primary $(date +%Y)"` and `-f ~/.ssh/id_ed25519_sk_laptop_primary_"$(date +%Y)"`, and the same titles on GitHub and GitLab. Its keys are renewed every year in the same way.
-2. **Commit signing:** create a new signing key on the new machine (as in the workstation configuration) and register it as a signing key on GitHub and GitLab (Part 1, step 5). A signing key is replaced, never copied, and commits signed by the old one stay verified after it is removed: GitHub stores a verification record with each commit when it is pushed and does not re-check it when a key is rotated, revoked or deleted, and GitLab keeps them verified when a key is deleted rather than revoked.
+2. **Commit signing:** follow Part 1, step 5 on the new machine, naming its key after it (for example `-C "laptop signing"` and the title `laptop signing`). A signing key is replaced, never copied, and commits signed by the old one stay verified after it is removed: GitHub stores a verification record with each commit when it is pushed and does not re-check it when a key is rotated, revoked or deleted, and GitLab keeps them verified when a key is deleted rather than revoked.
 3. **Retire the old machine:** on GitHub and GitLab, delete its SSH keys and its signing key (on GitLab with **Remove** and **Delete**, not **Revoke**); on the machine itself, delete `~/.ssh` and `/etc/u2f_mappings` before it is wiped or given away.
 
 ## Checks
 
 - [ ] `ssh -T git@github.com` and `ssh -T git@gitlab.com` work with each YubiKey and fail with none plugged in.
-- [ ] GitHub lists the current year's two `ed25519-sk` keys, and no older ones, under **Authentication keys** (a subheading of **SSH keys** on the **SSH and GPG keys** page) and `id_ed25519_github` only as a **signing** key; GitLab lists the two as **Authentication** and `workstation signing` as **Signing**, with no expiry date; a new commit shows **Verified** on GitHub.
-- [ ] `ssh-keygen -y -P "" -f ~/.ssh/id_ed25519_github` fails (the signing key has a passphrase), and the passphrase is in Bitwarden.
+- [ ] GitHub lists the current year's two `ed25519-sk` keys, and no older ones, under **Authentication keys** (a subheading of **SSH keys** on the **SSH and GPG keys** page) and `workstation signing` only under **Signing keys**; GitLab lists the two as **Authentication** and `workstation signing` as **Signing**, with no expiry date; a new commit shows **Verified** on GitHub.
+- [ ] `ssh-keygen -y -P "" -f ~/.ssh/id_ed25519_signing` fails (the signing key has a passphrase), and the passphrase is in Bitwarden.
+- [ ] Inside a RussetLeaf repo, `git config user.email` shows the Workspace address, and `git log --show-signature -1` reports a good signature for it.
 - [ ] `sudo -k; sudo true` needs a touch of either key and the password, and fails without a key.
 - [ ] `/etc/u2f_mappings` is owned by root and holds both keys.
 
@@ -165,5 +206,6 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - GitLab: ["GitLab.com settings"](https://docs.gitlab.com/user/gitlab_com/) (SSH host key fingerprints), checked 2026-11-14
 - GitLab: ["Use SSH keys with GitLab"](https://docs.gitlab.com/user/ssh/) (adding a key, the `ED25519_SK` type, the optional expiry date and its notifications, removing a key, verifying the connection), checked 2026-11-14
 - GitLab: ["Sign commits with SSH keys"](https://docs.gitlab.com/user/project/repository/signed_commits/ssh/) (section "Signed commits with removed SSH keys": Delete compared with Revoke), checked 2026-11-14
+- Git: ["git-config"](https://git-scm.com/docs/git-config) (section "Conditional includes", `hasconfig:remote.*.url`), checked 2026-11-14 (and the installed `man git-config`, Git 2.43.0)
 - GitHub: ["About commit signature verification"](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification) (section "Persistent commit signature verification"), checked 2026-11-14
 - GitHub: ["Reviewing your SSH keys"](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/reviewing-your-ssh-keys) (deleting a key), checked 2026-11-14
