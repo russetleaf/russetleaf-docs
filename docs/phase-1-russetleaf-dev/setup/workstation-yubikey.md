@@ -32,8 +32,8 @@ Have these ready:
 
     `ssh-keygen` asks for a touch but not for the FIDO2 PIN: a key that is not resident (no `-O resident`) and not created with `-O verify-required` needs only proof that someone is present at the YubiKey, both to create it and to use it. Then swap to `yubikey-backup` and repeat with `-C "workstation yubikey-backup" -f ~/.ssh/id_ed25519_sk_backup`. Press Enter at the passphrase prompts: the files hold only a handle that is useless without its YubiKey. (A key that does not support Ed25519 fails with `invalid format` or `feature not supported`; the Security Key NFC supports it.)
 2. **Register both public keys** (`~/.ssh/id_ed25519_sk_primary.pub` and `~/.ssh/id_ed25519_sk_backup.pub`), each under its key's name (`workstation yubikey-primary`, `workstation yubikey-backup`). Print a key with `cat ~/.ssh/id_ed25519_sk_primary.pub` and copy the whole line: the key type `sk-ssh-ed25519@openssh.com` (an OpenSSH type name, not an email address), the key itself, and the comment, separated by spaces.
-    - **GitHub:** profile picture → **Settings** → in the **Access** section of the sidebar, **SSH and GPG keys** → **New SSH key**. Fill in the **Title**, choose the key type for **authentication** (GitHub offers authentication or signing), paste the line into **Key**, select **Add SSH key**, and confirm with a YubiKey if GitHub asks.
-    - **GitLab:** avatar → **Edit profile** → in the left sidebar, **Access → SSH keys** → **Add new key**. Paste the line into **Key**, fill in the **Title**, set **Usage type** to **Authentication** (the default is **Authentication & Signing**), keep the default **Expiration date** and record it in Bitwarden, and select **Add key**.
+    - **GitHub:** profile picture → **Settings** → in the **Access** section of the sidebar, **SSH and GPG keys** → **New SSH key**. Fill in the **Title**, choose the key type for **authentication** (GitHub offers authentication or signing), paste the line into **Key**, select **Add SSH key**. GitHub asks for a YubiKey before the first key is added (its **sudo mode**) and not again for the second while the session stays in sudo mode.
+    - **GitLab:** avatar → **Edit profile** → in the left sidebar, **Access → SSH keys** → **Add new key**. Paste the line into **Key**, fill in the **Title**, set **Usage type** to **Authentication** (the default is **Authentication & Signing**), keep the default **Expiration date** (one year from the day the key is added), and select **Add key**. Record the date in Bitwarden: open the GitLab login item, select **Edit**, and under **Custom fields** select **New custom field**, with the type **Text**, the **Name** `SSH keys expire (workstation)` and the date as the **Value**; then **Save**. GitLab emails a warning seven days before the date; renew the keys before it (see [Renewing the keys on GitLab](#renewing-the-keys-on-gitlab)).
 3. **Point SSH at them** in `~/.ssh/config` (create it with `chmod 600`), and let one touch serve a burst of pushes:
 
     ```text
@@ -82,6 +82,16 @@ The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in th
     `required` means the touch must succeed and the password (from `common-auth`) is still asked for; `cue` prints "Please touch the device".
 4. **Test in a new terminal** (not the root shell): `sudo -k; sudo true` shows the touch prompt, then asks for the password, and succeeds; repeat with `yubikey-backup`; with no YubiKey plugged in, `sudo -k; sudo true` fails even with the right password. Only then close the root shell.
 5. **Put `yubikey-backup` back in the safe.**
+
+## Renewing the keys on GitLab
+
+A GitLab SSH key stops working for Git on its expiry date and cannot be extended: GitLab requires a new key. GitHub keys do not expire. Before the date in Bitwarden (GitLab's email arrives seven days before):
+
+1. **Create new keys** as in Part 1, step 1, with new file names that carry the year, for example `-f ~/.ssh/id_ed25519_sk_primary_2027` and `-f ~/.ssh/id_ed25519_sk_backup_2027` (and the same comments).
+2. **Register them on GitLab only** (Part 1, step 2), with the year in the title, for example `workstation yubikey-primary 2027`, and record the new expiry date in Bitwarden.
+3. **Add them to `~/.ssh/config`** in a separate `Host gitlab.com` block above the shared one, with its own `IdentityFile` lines, `IdentitiesOnly yes` and the same connection-reuse lines, and remove `gitlab.com` from the shared `Host` line.
+4. **Test** with `ssh -O exit git@gitlab.com` then `ssh -T git@gitlab.com`, with each YubiKey.
+5. **Delete the old keys on GitLab** (avatar → **Edit profile** → **Access → SSH keys** → the key → **Delete**).
 
 ## A second or replacement workstation
 
