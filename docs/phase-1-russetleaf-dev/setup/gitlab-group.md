@@ -23,10 +23,12 @@ Have these ready:
 
 ## Part 2: Notifications to the Workspace address (once)
 
-Notifications about the group's projects (failed pushes, security notices) go to the personal account's email unless the group has its own notification address.
+Notifications about the group's projects (failed pushes, security notices) go to the personal account's email unless the group has its own notification address. The intent is to send them to the Workspace address, but GitLab.com does not currently keep that setting (see step 2), so for now they go to the account's **Global notification email**, an exception recorded as [improvement I1-8](../improvements.md).
 
 1. **Add the Workspace address to the personal account:** avatar → **Edit profile** → in the left sidebar, **Emails** → **Add new email**, enter `<name>@russetleaf.dev`, select **Add email address**, and confirm it from the verification email. It becomes a secondary address; GitLab deletes a secondary address that is not verified within three days.
-2. **Use it for the group:** avatar → **Preferences** → in the left sidebar, **Notifications** → in the **Groups** section, find `russetleaf` and choose `<name>@russetleaf.dev`.
+2. **Use it for the group:** avatar → **Preferences** → in the left sidebar, **Notifications** → in the **Groups** section, find `russetleaf` and choose `<name>@russetleaf.dev` in its email list. Leave **Global notification email** on the personal address, so notifications about the account's other projects stay there.
+
+    **Note:** on 2026-11-13 this setting did not take effect. The page reported the change as saved, but after a reload the group's email list showed **Global notification email** again, in two browsers and with the group's level set to **Participate**, and a test notification (a new issue, with "Receive notifications about your own activity" on) still went to the global address. GitLab's API has no per-group email setting, so it cannot be set another way. Until GitLab fixes it, the group's notifications go to the Global notification email; to test whether a fix has arrived, set the group's email again, reload, and check that the row keeps it.
 
 ## Part 3: Create the mirror project (for each repo)
 
@@ -72,7 +74,7 @@ In the GitHub repo, **Settings → Secrets and variables → Actions → New rep
 The mirror part of the step 1.1 test:
 
 - [ ] The `russetleaf` group and each mirror project are **Private**.
-- [ ] **Preferences → Notifications** shows `<name>@russetleaf.dev` for the `russetleaf` group, and **Emails** lists it as verified.
+- [ ] **Emails** lists `<name>@russetleaf.dev` as verified. Once GitLab keeps the per-group setting ([improvement I1-8](../improvements.md)), **Preferences → Notifications** shows it for the `russetleaf` group.
 - [ ] A push to `main` on GitHub appears in the GitLab mirror within minutes, and the **Backup to GitLab** run succeeds.
 - [ ] Each token is a fine-grained token limited to its one mirror project, with only **Repository → Code: Push**; it is in Bitwarden, and its expiry is recorded.
 
@@ -91,6 +93,7 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - GitLab: ["Project and group visibility"](https://docs.gitlab.com/user/public_access/), checked 2026-11-13
 - GitLab: ["User account"](https://docs.gitlab.com/user/profile/) (adding a secondary email), checked 2026-11-13
 - GitLab: ["Notification emails"](https://docs.gitlab.com/user/profile/notifications/) (an email address per group), checked 2026-11-13
+- GitLab: ["Notification settings API"](https://docs.gitlab.com/api/notification_settings/) (`notification_email` is global only; the group endpoints take a level), checked 2026-11-13
 - GitLab: ["Create a project"](https://docs.gitlab.com/user/project/), checked 2026-11-13
 - GitLab: ["Fine-grained personal access tokens"](https://docs.gitlab.com/auth/tokens/fine_grained_access_tokens/), checked 2026-11-13
 - GitLab: ["Fine-grained permissions for Git and other operations"](https://docs.gitlab.com/auth/tokens/fine_grained_access_tokens_other/) (Git over HTTPS: Code, Push), checked 2026-11-13
