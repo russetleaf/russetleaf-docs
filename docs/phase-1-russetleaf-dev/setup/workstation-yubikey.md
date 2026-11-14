@@ -4,14 +4,14 @@ The step-by-step procedure for using the two YubiKeys on the Ubuntu workstation 
 
 Both keys are **YubiKey Security Key NFC** (FIDO2 and U2F): **`yubikey-primary`**, carried on the keychain for daily use, and **`yubikey-backup`**, kept in the safe as the backup. Each is registered everywhere below, so losing one never locks the operator out.
 
-## What changes, and what does not
+## What each key protects
 
-| Use | Before | After |
-|---|---|---|
-| SSH to GitHub and GitLab (push, pull, `gh`) | `~/.ssh/id_ed25519_github`, a key file with no passphrase | A **security-key SSH key** per YubiKey (`ed25519-sk`); each push or pull needs the key plugged in and a touch. A copied `~/.ssh` folder is useless without the YubiKey. |
-| Commit signing | The same key file | Unchanged: `id_ed25519_github` stays the **signing** key, now with a **passphrase** (kept in Bitwarden) and unlocked through `ssh-agent`, because signing every commit with a touch would be impractical ([workstation configuration](../plan.md#4-configuration)) |
-| `sudo` and `sudo -i` | Password | **A YubiKey touch, then the password** (`pam_u2f`). The touch is needed again only when `sudo`'s 15-minute timestamp expires. |
-| Graphical admin prompts (polkit), the login screen, the disk passphrase | Password | Unchanged |
+| Use | How it is protected |
+|---|---|
+| SSH to GitHub and GitLab (push, pull, `gh`) | A **security-key SSH key** per YubiKey (`ed25519-sk`): each push or pull needs the key plugged in and a touch, so a copied `~/.ssh` folder is useless without the YubiKey |
+| Commit signing | A separate key file, `~/.ssh/id_ed25519_github`, with a **passphrase** (kept in Bitwarden) and unlocked once per session through `ssh-agent`, registered only as a **signing** key; signing every commit with a touch would be impractical ([workstation configuration](../plan.md#4-configuration)) |
+| `sudo` and `sudo -i` | **A YubiKey touch, then the password** (`pam_u2f`); the touch is needed again only when `sudo`'s 15-minute timestamp expires |
+| Graphical admin prompts (polkit), the login screen, the disk passphrase | The password only |
 
 ## Before starting
 
@@ -30,10 +30,10 @@ Have these ready:
     ssh-keygen -t ed25519-sk -O application=ssh:russetleaf -C "workstation yubikey-primary" -f ~/.ssh/id_ed25519_sk_primary
     ```
 
-    Then swap to `yubikey-backup` and repeat with `-C "workstation yubikey-backup" -f ~/.ssh/id_ed25519_sk_backup`. Press Enter at the passphrase prompts: the files hold only a handle that is useless without its YubiKey.
-2. **Register both public keys** (`~/.ssh/id_ed25519_sk_primary.pub` and `~/.ssh/id_ed25519_sk_backup.pub`):
-    - **GitHub:** **Settings → SSH and GPG keys → New SSH key**, key type **Authentication key**.
-    - **GitLab:** **Preferences → SSH Keys → Add new key**, usage type **Authentication**.
+    Enter the key's FIDO2 PIN if `ssh-keygen` asks for it. Then swap to `yubikey-backup` and repeat with `-C "workstation yubikey-backup" -f ~/.ssh/id_ed25519_sk_backup`. Press Enter at the passphrase prompts: the files hold only a handle that is useless without its YubiKey. (A key that does not support Ed25519 fails with `invalid format` or `feature not supported`; the Security Key NFC supports it.)
+2. **Register both public keys** (`~/.ssh/id_ed25519_sk_primary.pub` and `~/.ssh/id_ed25519_sk_backup.pub`), each under its key's name (`workstation yubikey-primary`, `workstation yubikey-backup`). Print a key with `cat ~/.ssh/id_ed25519_sk_primary.pub` and copy the whole line.
+    - **GitHub:** profile picture → **Settings** → in the **Access** section of the sidebar, **SSH and GPG keys** → **New SSH key**. Fill in the **Title**, choose the key type for **authentication** (GitHub offers authentication or signing), paste the line into **Key**, select **Add SSH key**, and confirm with a YubiKey if GitHub asks.
+    - **GitLab:** avatar → **Edit profile** → in the left sidebar, **Access → SSH keys** → **Add new key**. Paste the line into **Key**, fill in the **Title**, set **Usage type** to **Authentication** (the default is **Authentication & Signing**), keep the default **Expiration date** and record it in Bitwarden, and select **Add key**.
 3. **Point SSH at them** in `~/.ssh/config` (create it with `chmod 600`):
 
     ```text
@@ -43,11 +43,11 @@ Have these ready:
         IdentitiesOnly yes
     ```
 
-4. **Test:** `ssh -T git@github.com` and `ssh -T git@gitlab.com` each ask for a touch and greet the GitHub or GitLab user.
+4. **Test:** `ssh -T git@github.com` and `ssh -T git@gitlab.com` each ask for a touch and greet the user (GitHub: `Hi <user>! You've successfully authenticated, but GitHub does not provide shell access.`; GitLab: `Welcome to GitLab, <user>!`). The first connection to each asks to confirm the host's fingerprint; compare it with [GitHub's SSH key fingerprints](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints) and [GitLab.com's SSH host key fingerprints](https://docs.gitlab.com/user/gitlab_com/) (section "SSH host keys fingerprints") before answering `yes`.
 5. **The commit-signing key is for signing only:** the separate key file from the [workstation setup](../plan.md#4-configuration), `id_ed25519_github`, is never used to sign in.
     1. It has a passphrase, generated in and saved to Bitwarden (to add one: `ssh-keygen -p -f ~/.ssh/id_ed25519_github`).
-    2. On **GitHub** it is listed only under **Signing keys**, not **Authentication keys**; on **GitLab**, its usage type is **Signing**.
-    3. Commits stay signed as before (`gpg.format ssh`, `user.signingkey` pointing to `id_ed25519_github.pub`); `ssh-add ~/.ssh/id_ed25519_github` unlocks it once per session.
+    2. On **GitHub** it is added (as in step 2) with the key type for **signing**, and does not appear under **Authentication keys**; on **GitLab**, its **Usage type** is **Signing**.
+    3. Git signs every commit with it (`git config --global gpg.format ssh`, and `git config --global user.signingkey ~/.ssh/id_ed25519_github.pub`, from the workstation setup); `ssh-add ~/.ssh/id_ed25519_github` unlocks it once per session.
 6. **Put `yubikey-backup` back in the safe.**
 
 ## Part 2: `sudo` with a YubiKey and the password
@@ -81,7 +81,7 @@ The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in th
 ## Checks
 
 - [ ] `ssh -T git@github.com` and `ssh -T git@gitlab.com` work with each YubiKey and fail with none plugged in.
-- [ ] GitHub lists the two `ed25519-sk` keys as **authentication** keys and `id_ed25519_github` only as a **signing** key; a new commit shows **Verified**.
+- [ ] GitHub lists the two `ed25519-sk` keys as **authentication** keys and `id_ed25519_github` only as a **signing** key; GitLab lists the two as **Authentication** and the signing key as **Signing**; a new commit shows **Verified** on GitHub.
 - [ ] `ssh-keygen -y -P "" -f ~/.ssh/id_ed25519_github` fails (the signing key has a passphrase), and the passphrase is in Bitwarden.
 - [ ] `sudo -k; sudo true` needs a touch of either key and the password, and fails without a key.
 - [ ] `/etc/u2f_mappings` is owned by root and holds both keys.
@@ -96,10 +96,15 @@ The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in th
 
 The official pages these steps follow, each checked on the date shown. When a page has moved or changed, find the current one, update the step if needed, and change the date.
 
-- OpenBSD: ["ssh-keygen(1) manual page (ed25519-sk keys and the FIDO authenticator options)"](https://man.openbsd.org/ssh-keygen), checked 2026-11-12
+- OpenBSD: ["ssh-keygen(1) manual page (ed25519-sk keys and the FIDO authenticator options)"](https://man.openbsd.org/ssh-keygen), checked 2026-11-14 (and the installed `man ssh-keygen`, OpenSSH 9.6p1)
 - OpenSSH: ["OpenSSH 8.2 release notes (FIDO/U2F support)"](https://www.openssh.org/txt/release-8.2), checked 2026-11-12
 - Yubico: ["Securing SSH with FIDO2"](https://developers.yubico.com/SSH/Securing_SSH_with_FIDO2.html), checked 2026-11-12
-- Yubico: ["pam-u2f"](https://developers.yubico.com/pam-u2f/), checked 2026-11-12
+- Yubico: ["pam-u2f"](https://developers.yubico.com/pam-u2f/), checked 2026-11-12 (and the installed `man pamu2fcfg` and `man pam_u2f`, version 1.1.0)
 - Yubico: ["FIDO Commands (YubiKey Manager CLI)"](https://docs.yubico.com/software/yubikey/tools/ykman/FIDO_Commands.html), checked 2026-11-12
-- GitHub: ["Adding a new SSH key to your GitHub account"](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account), checked 2026-11-12
-- GitLab: ["Use SSH keys with GitLab"](https://docs.gitlab.com/user/ssh/), checked 2026-11-12
+- GitHub: ["Adding a new SSH key to your GitHub account"](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account), checked 2026-11-14
+- GitHub: ["Generating a new SSH key and adding it to the ssh-agent"](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) (a key for a hardware security key), checked 2026-11-14
+- GitHub: ["Telling Git about your signing key"](https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key), checked 2026-11-14
+- GitHub: ["Testing your SSH connection"](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/testing-your-ssh-connection), checked 2026-11-14
+- GitHub: ["GitHub's SSH key fingerprints"](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints), checked 2026-11-14
+- GitLab: ["GitLab.com settings"](https://docs.gitlab.com/user/gitlab_com/) (SSH host key fingerprints), checked 2026-11-14
+- GitLab: ["Use SSH keys with GitLab"](https://docs.gitlab.com/user/ssh/) (adding a key, the `ED25519_SK` type, verifying the connection), checked 2026-11-14
