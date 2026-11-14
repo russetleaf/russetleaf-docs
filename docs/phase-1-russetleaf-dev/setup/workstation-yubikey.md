@@ -24,17 +24,16 @@ Have these ready:
 
 ## Part 1: SSH keys on the YubiKeys
 
-1. **Create one SSH key per YubiKey,** with the current year in the file name and the comment, so each yearly generation ([Renewing the keys every year](#renewing-the-keys-every-year)) has its own names. Plug in `yubikey-primary` only, and touch it when it blinks:
+1. **Create one SSH key per YubiKey,** with the current year in the file name and the comment, so each yearly generation ([Renewing the keys every year](#renewing-the-keys-every-year)) has its own names. Each command is complete on one line (`$(date +%Y)` fills in the year), so it can be copied on its own. Plug in `yubikey-primary` only, and touch it when it blinks:
 
     ```bash
-    year="$(date +%Y)"
-    ssh-keygen -t ed25519-sk -O application=ssh:russetleaf -C "workstation yubikey-primary ${year}" -f ~/.ssh/id_ed25519_sk_primary_"${year}"
+    ssh-keygen -t ed25519-sk -O application=ssh:russetleaf -C "workstation yubikey-primary $(date +%Y)" -f ~/.ssh/id_ed25519_sk_primary_"$(date +%Y)"
     ```
 
-    Then swap to `yubikey-backup`, and in the same terminal:
+    Then swap to `yubikey-backup`:
 
     ```bash
-    ssh-keygen -t ed25519-sk -O application=ssh:russetleaf -C "workstation yubikey-backup ${year}" -f ~/.ssh/id_ed25519_sk_backup_"${year}"
+    ssh-keygen -t ed25519-sk -O application=ssh:russetleaf -C "workstation yubikey-backup $(date +%Y)" -f ~/.ssh/id_ed25519_sk_backup_"$(date +%Y)"
     ```
 
     `ssh-keygen` asks for a touch but not for the FIDO2 PIN: a key that is not resident (no `-O resident`) and not created with `-O verify-required` needs only proof that someone is present at the YubiKey, both to create it and to use it. Press Enter at the passphrase prompts: the files hold only a handle that is useless without its YubiKey. (A key that does not support Ed25519 fails with `invalid format` or `feature not supported`; the Security Key NFC supports it.)
@@ -44,11 +43,10 @@ Have these ready:
 3. **Point SSH at them** in `~/.ssh/config`, readable only by the operator, and let one touch serve a burst of pushes. A new Ubuntu install has no `~/.ssh/config`; this creates it, with the year filled in:
 
     ```bash
-    year="$(date +%Y)"
     cat >~/.ssh/config <<EOF
     Host github.com gitlab.com
-        IdentityFile ~/.ssh/id_ed25519_sk_primary_${year}
-        IdentityFile ~/.ssh/id_ed25519_sk_backup_${year}
+        IdentityFile ~/.ssh/id_ed25519_sk_primary_$(date +%Y)
+        IdentityFile ~/.ssh/id_ed25519_sk_backup_$(date +%Y)
         IdentitiesOnly yes
         ControlMaster auto
         ControlPath ~/.ssh/cm-%C
@@ -105,12 +103,11 @@ A GitLab SSH key stops working for Git on its expiry date and cannot be extended
 3. **Test the new keys on their own,** without `~/.ssh/config`, so SSH cannot fall back to an old key. For each YubiKey, plugged in alone, and with its own file:
 
     ```bash
-    year="$(date +%Y)"
-    ssh -F /dev/null -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519_sk_primary_"${year}" -T git@github.com
-    ssh -F /dev/null -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519_sk_primary_"${year}" -T git@gitlab.com
+    ssh -F /dev/null -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519_sk_primary_"$(date +%Y)" -T git@github.com
+    ssh -F /dev/null -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519_sk_primary_"$(date +%Y)" -T git@gitlab.com
     ```
 
-    and the same with `id_ed25519_sk_backup_"${year}"` and `yubikey-backup`. Each asks for a touch and greets the user, as in Part 1, step 4.
+    and the same with `id_ed25519_sk_backup_"$(date +%Y)"` and `yubikey-backup`. Each asks for a touch and greets the user, as in Part 1, step 4.
 4. **Switch `~/.ssh/config` to the new keys:** close any open connections (`ssh -O exit git@github.com` and `ssh -O exit git@gitlab.com`), replace the old year in the two `IdentityFile` lines with the new one (with `vim ~/.ssh/config`), and repeat the test in Part 1, step 4.
 5. **Remove the old keys,** only after step 4 passes:
     - **GitHub:** profile picture → **Settings** → in the **Access** section of the sidebar, **SSH and GPG keys** → next to each old key, **Delete**.
@@ -124,7 +121,7 @@ The `pam_u2f` registration for `sudo` (Part 2) does not expire and is not renewe
 
 Nothing in this guide is stored on the YubiKeys themselves: the SSH keys are not resident (the YubiKey holds the secret, and a handle file in `~/.ssh` on each machine points to it), and the `pam_u2f` registration lives in each machine's `/etc/u2f_mappings`. Each workstation therefore gets its own registrations, and adding or retiring one changes nothing on the others:
 
-1. **Set up the new machine** with the setup script ([workstation configuration](../plan.md#4-configuration)), then follow Parts 1 and 2 on it, naming its keys after the machine, for example `-C "laptop yubikey-primary ${year}"` and `-f ~/.ssh/id_ed25519_sk_laptop_primary_"${year}"`, and the same titles on GitHub and GitLab. Its keys are renewed every year in the same way.
+1. **Set up the new machine** with the setup script ([workstation configuration](../plan.md#4-configuration)), then follow Parts 1 and 2 on it, naming its keys after the machine, for example `-C "laptop yubikey-primary $(date +%Y)"` and `-f ~/.ssh/id_ed25519_sk_laptop_primary_"$(date +%Y)"`, and the same titles on GitHub and GitLab. Its keys are renewed every year in the same way.
 2. **Commit signing:** create a new signing key on the new machine (as in the workstation configuration) and register it as a signing key; a signing key is replaced, never copied, and commits signed by the old one stay verified.
 3. **Retire the old machine:** on GitHub and GitLab, delete its SSH keys and its signing key; on the machine itself, delete `~/.ssh` and `/etc/u2f_mappings` before it is wiped or given away.
 
