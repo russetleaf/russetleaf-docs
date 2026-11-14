@@ -80,13 +80,12 @@ Each address that a service sends important mail to is a **group** with the oper
 Google's **Alert Center** raises alerts about the organization's accounts, such as a suspicious sign-in or a new administrator. Each alert comes from a **rule**, and the rule decides whether anyone is emailed. These steps make sure the alerts that point to misuse of the account reach the operator's mailbox. Step 7.16 later sends the same events to the cluster's detections and to Slack ([plan](../plan.md#step-716-mail-and-identity-monitoring)).
 
 1. **Open the rules:** in the Admin console, **Menu → Rules**. (From **Menu → Security → Alert center**, **Manage alerts and email notifications** opens the same page.)
-2. **For each of these rules,** where it is listed for the organization's edition: **Suspicious login**, **Leaked password**, **Government-backed attacks**, **Suspicious programmatic login**, **User suspended** (for suspicious activity), **User granted Admin privilege**, **Primary admin changed**, and **Admin password reset**:
+2. **For each of these rules** (all are available on Business Starter): **Suspicious login**, **Leaked password**, **Government-backed attacks**, **Suspicious programmatic login**, **User suspended due to suspicious activity**, **User granted Admin privilege**, **Primary admin changed**, and **Admin password reset**:
     1. Select the rule to open **Rule details**, then the **Actions** panel.
     2. Turn **Alerts** **On**, with the default severity.
     3. Under **Send email notifications**, select **All super administrators**.
     4. Select **NEXT: REVIEW**, then **UPDATE RULE**.
-3. **Record** in the decision log any of these rules that the edition does not offer.
-4. **See the alerts** at **Menu → Security → Alert center**. Google keeps alerts for about 10 years.
+3. **See the alerts** at **Menu → Security → Alert center**. Google keeps alerts for about 10 years.
 
 ## Checks
 
