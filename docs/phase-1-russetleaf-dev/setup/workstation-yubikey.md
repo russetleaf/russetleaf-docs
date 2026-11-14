@@ -83,6 +83,14 @@ The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in th
 4. **Test in a new terminal** (not the root shell): `sudo -k; sudo true` shows the touch prompt, then asks for the password, and succeeds; repeat with `yubikey-backup`; with no YubiKey plugged in, `sudo -k; sudo true` fails even with the right password. Only then close the root shell.
 5. **Put `yubikey-backup` back in the safe.**
 
+## A second or replacement workstation
+
+Nothing in this guide is stored on the YubiKeys themselves: the SSH keys are not resident (the YubiKey holds the secret, and a handle file in `~/.ssh` on each machine points to it), and the `pam_u2f` registration lives in each machine's `/etc/u2f_mappings`. Each workstation therefore gets its own registrations, and adding or retiring one changes nothing on the others:
+
+1. **Set up the new machine** with the setup script ([workstation configuration](../plan.md#4-configuration)), then follow Parts 1 and 2 on it, naming its keys after the machine, for example `-C "laptop yubikey-primary"` and `-f ~/.ssh/id_ed25519_sk_laptop_primary`, and the same titles on GitHub and GitLab.
+2. **Commit signing:** create a new signing key on the new machine (as in the workstation configuration) and register it as a signing key; a signing key is replaced, never copied, and commits signed by the old one stay verified.
+3. **Retire the old machine:** on GitHub and GitLab, delete its SSH keys and its signing key; on the machine itself, delete `~/.ssh` and `/etc/u2f_mappings` before it is wiped or given away.
+
 ## Checks
 
 - [ ] `ssh -T git@github.com` and `ssh -T git@gitlab.com` work with each YubiKey and fail with none plugged in.
