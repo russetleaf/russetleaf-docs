@@ -24,27 +24,40 @@ Have these ready:
 
 ## Part 1: SSH keys on the YubiKeys
 
-1. **Create one SSH key per YubiKey.** With `yubikey-primary` plugged in (touch it when it blinks):
+1. **Create one SSH key per YubiKey,** with the current year in the file name and the comment, so each yearly generation ([Renewing the keys every year](#renewing-the-keys-every-year)) has its own names. Plug in `yubikey-primary` only, and touch it when it blinks:
 
     ```bash
-    ssh-keygen -t ed25519-sk -O application=ssh:russetleaf -C "workstation yubikey-primary" -f ~/.ssh/id_ed25519_sk_primary
+    year="$(date +%Y)"
+    ssh-keygen -t ed25519-sk -O application=ssh:russetleaf -C "workstation yubikey-primary ${year}" -f ~/.ssh/id_ed25519_sk_primary_"${year}"
     ```
 
-    `ssh-keygen` asks for a touch but not for the FIDO2 PIN: a key that is not resident (no `-O resident`) and not created with `-O verify-required` needs only proof that someone is present at the YubiKey, both to create it and to use it. Then swap to `yubikey-backup` and repeat with `-C "workstation yubikey-backup" -f ~/.ssh/id_ed25519_sk_backup`. Press Enter at the passphrase prompts: the files hold only a handle that is useless without its YubiKey. (A key that does not support Ed25519 fails with `invalid format` or `feature not supported`; the Security Key NFC supports it.)
-2. **Register both public keys** (`~/.ssh/id_ed25519_sk_primary.pub` and `~/.ssh/id_ed25519_sk_backup.pub`), each under its key's name (`workstation yubikey-primary`, `workstation yubikey-backup`). Print a key with `cat ~/.ssh/id_ed25519_sk_primary.pub` and copy the whole line: the key type `sk-ssh-ed25519@openssh.com` (an OpenSSH type name, not an email address), the key itself, and the comment, separated by spaces.
-    - **GitHub:** profile picture → **Settings** → in the **Access** section of the sidebar, **SSH and GPG keys** → **New SSH key**. Fill in the **Title**, choose the key type for **authentication** (GitHub offers authentication or signing), paste the line into **Key**, select **Add SSH key**. GitHub asks for a YubiKey before the first key is added (its **sudo mode**) and not again for the second while the session stays in sudo mode.
-    - **GitLab:** avatar → **Edit profile** → in the left sidebar, **Access → SSH keys** → **Add new key**. Paste the line into **Key**, fill in the **Title**, set **Usage type** to **Authentication** (the default is **Authentication & Signing**), keep the default **Expiration date** (one year from the day the key is added), and select **Add key**. Record the date in Bitwarden: open the GitLab login item, select **Edit**, and under **Custom fields** select **New custom field**, with the type **Text**, the **Name** `SSH keys expire (workstation)` and the date as the **Value**; then **Save**. GitLab emails a warning seven days before the date; renew the keys before it (see [Renewing the keys on GitLab](#renewing-the-keys-on-gitlab)).
-3. **Point SSH at them** in `~/.ssh/config` (create it with `chmod 600`), and let one touch serve a burst of pushes:
+    Then swap to `yubikey-backup`, and in the same terminal:
 
-    ```text
+    ```bash
+    ssh-keygen -t ed25519-sk -O application=ssh:russetleaf -C "workstation yubikey-backup ${year}" -f ~/.ssh/id_ed25519_sk_backup_"${year}"
+    ```
+
+    `ssh-keygen` asks for a touch but not for the FIDO2 PIN: a key that is not resident (no `-O resident`) and not created with `-O verify-required` needs only proof that someone is present at the YubiKey, both to create it and to use it. Press Enter at the passphrase prompts: the files hold only a handle that is useless without its YubiKey. (A key that does not support Ed25519 fails with `invalid format` or `feature not supported`; the Security Key NFC supports it.)
+2. **Register both public keys** on GitHub and on GitLab, each with its comment as the title (for example `workstation yubikey-primary 2026` and `workstation yubikey-backup 2026`). Print a key with `cat ~/.ssh/id_ed25519_sk_primary_<year>.pub`, triple-click the line to select all of it, and copy the whole line: the key type `sk-ssh-ed25519@openssh.com` (an OpenSSH type name, not an email address), the key itself, and the comment, separated by spaces.
+    - **GitHub:** profile picture → **Settings** → in the **Access** section of the sidebar, **SSH and GPG keys** → **New SSH key**. Fill in the **Title**, choose the key type for **authentication** (GitHub offers authentication or signing), paste the line into **Key**, select **Add SSH key**. GitHub asks for a YubiKey before the first key is added (its **sudo mode**) and not again for the second while the session stays in sudo mode.
+    - **GitLab:** avatar → **Edit profile** → in the left sidebar, **Access → SSH keys** → **Add new key**. Paste the line into **Key**, fill in the **Title**, set **Usage type** to **Authentication** (the default is **Authentication & Signing**), keep the default **Expiration date** (one year from the day the key is added), and select **Add key**. Record the date in Bitwarden: open the GitLab login item, select **Edit**, and under **Custom fields** select **New custom field**, with the type **Text**, the **Name** `SSH keys expire (workstation)` and the date as the **Value**; then **Save**. GitLab emails a warning seven days before the date; renew the keys before it ([Renewing the keys every year](#renewing-the-keys-every-year)).
+3. **Point SSH at them** in `~/.ssh/config`, readable only by the operator, and let one touch serve a burst of pushes. A new Ubuntu install has no `~/.ssh/config`; this creates it, with the year filled in:
+
+    ```bash
+    year="$(date +%Y)"
+    cat >~/.ssh/config <<EOF
     Host github.com gitlab.com
-        IdentityFile ~/.ssh/id_ed25519_sk_primary
-        IdentityFile ~/.ssh/id_ed25519_sk_backup
+        IdentityFile ~/.ssh/id_ed25519_sk_primary_${year}
+        IdentityFile ~/.ssh/id_ed25519_sk_backup_${year}
         IdentitiesOnly yes
         ControlMaster auto
         ControlPath ~/.ssh/cm-%C
         ControlPersist 10m
+    EOF
+    chmod 600 ~/.ssh/config
     ```
+
+    `IdentitiesOnly yes` makes SSH offer only these two keys, never the signing key.
 
     **Connection reuse:** the first push or pull opens an authenticated connection (one touch) and keeps it open; later pushes and pulls to the same host reuse it without a touch, until it has been idle for 10 minutes. The socket lives in `~/.ssh`, which only the operator can write to, as the `ssh_config` manual recommends. `ssh -O exit git@github.com` (or `git@gitlab.com`) closes it at once, for example before leaving the workstation unlocked. Anyone using the operator's logged-in session during that window can push without a touch, so the window stays short.
 
@@ -83,35 +96,49 @@ The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in th
 4. **Test in a new terminal** (not the root shell): `sudo -k; sudo true` shows the touch prompt, then asks for the password, and succeeds; repeat with `yubikey-backup`; with no YubiKey plugged in, `sudo -k; sudo true` fails even with the right password. Only then close the root shell.
 5. **Put `yubikey-backup` back in the safe.**
 
-## Renewing the keys on GitLab
+## Renewing the keys every year
 
-A GitLab SSH key stops working for Git on its expiry date and cannot be extended: GitLab requires a new key. GitHub keys do not expire. Before the date in Bitwarden (GitLab's email arrives seven days before):
+A GitLab SSH key stops working for Git on its expiry date and cannot be extended: GitLab requires a new key. GitHub keys do not expire, but they are renewed at the same time, so each YubiKey has one current key for both services and the year in its names shows which generation it is. The new keys are created, registered and tested **before** the old ones are removed, so a working key is registered at every point. Start before the date in Bitwarden (GitLab's email arrives seven days before), with `yubikey-backup` taken out of the safe:
 
-1. **Create new keys** as in Part 1, step 1, with new file names that carry the year, for example `-f ~/.ssh/id_ed25519_sk_primary_2027` and `-f ~/.ssh/id_ed25519_sk_backup_2027` (and the same comments).
-2. **Register them on GitLab only** (Part 1, step 2), with the year in the title, for example `workstation yubikey-primary 2027`, and record the new expiry date in Bitwarden.
-3. **Add them to `~/.ssh/config`** in a separate `Host gitlab.com` block above the shared one, with its own `IdentityFile` lines, `IdentitiesOnly yes` and the same connection-reuse lines, and remove `gitlab.com` from the shared `Host` line.
-4. **Test** with `ssh -O exit git@gitlab.com` then `ssh -T git@gitlab.com`, with each YubiKey.
-5. **Delete the old keys on GitLab** (avatar → **Edit profile** → **Access → SSH keys** → the key → **Delete**).
+1. **Create the new keys:** Part 1, step 1. The new year goes into the names; the old files stay in place.
+2. **Register them on GitHub and GitLab:** Part 1, step 2, with the new year in the titles. Replace the date in the Bitwarden custom field with the new expiry date.
+3. **Test the new keys on their own,** without `~/.ssh/config`, so SSH cannot fall back to an old key. For each YubiKey, plugged in alone, and with its own file:
+
+    ```bash
+    year="$(date +%Y)"
+    ssh -F /dev/null -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519_sk_primary_"${year}" -T git@github.com
+    ssh -F /dev/null -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519_sk_primary_"${year}" -T git@gitlab.com
+    ```
+
+    and the same with `id_ed25519_sk_backup_"${year}"` and `yubikey-backup`. Each asks for a touch and greets the user, as in Part 1, step 4.
+4. **Switch `~/.ssh/config` to the new keys:** close any open connections (`ssh -O exit git@github.com` and `ssh -O exit git@gitlab.com`), replace the old year in the two `IdentityFile` lines with the new one (with `vim ~/.ssh/config`), and repeat the test in Part 1, step 4.
+5. **Remove the old keys,** only after step 4 passes:
+    - **GitHub:** profile picture → **Settings** → in the **Access** section of the sidebar, **SSH and GPG keys** → next to each old key, **Delete**.
+    - **GitLab:** avatar → **Edit profile** → in the left sidebar, **Access → SSH keys** → next to each old key, **Remove** (the remove icon), then **Delete**. (**Revoke** is for a compromised key.)
+    - **The workstation:** `rm ~/.ssh/id_ed25519_sk_primary_<old-year> ~/.ssh/id_ed25519_sk_primary_<old-year>.pub ~/.ssh/id_ed25519_sk_backup_<old-year> ~/.ssh/id_ed25519_sk_backup_<old-year>.pub`.
+6. **Put `yubikey-backup` back in the safe.**
+
+The `pam_u2f` registration for `sudo` (Part 2) does not expire and is not renewed.
 
 ## A second or replacement workstation
 
 Nothing in this guide is stored on the YubiKeys themselves: the SSH keys are not resident (the YubiKey holds the secret, and a handle file in `~/.ssh` on each machine points to it), and the `pam_u2f` registration lives in each machine's `/etc/u2f_mappings`. Each workstation therefore gets its own registrations, and adding or retiring one changes nothing on the others:
 
-1. **Set up the new machine** with the setup script ([workstation configuration](../plan.md#4-configuration)), then follow Parts 1 and 2 on it, naming its keys after the machine, for example `-C "laptop yubikey-primary"` and `-f ~/.ssh/id_ed25519_sk_laptop_primary`, and the same titles on GitHub and GitLab.
+1. **Set up the new machine** with the setup script ([workstation configuration](../plan.md#4-configuration)), then follow Parts 1 and 2 on it, naming its keys after the machine, for example `-C "laptop yubikey-primary ${year}"` and `-f ~/.ssh/id_ed25519_sk_laptop_primary_"${year}"`, and the same titles on GitHub and GitLab. Its keys are renewed every year in the same way.
 2. **Commit signing:** create a new signing key on the new machine (as in the workstation configuration) and register it as a signing key; a signing key is replaced, never copied, and commits signed by the old one stay verified.
 3. **Retire the old machine:** on GitHub and GitLab, delete its SSH keys and its signing key; on the machine itself, delete `~/.ssh` and `/etc/u2f_mappings` before it is wiped or given away.
 
 ## Checks
 
 - [ ] `ssh -T git@github.com` and `ssh -T git@gitlab.com` work with each YubiKey and fail with none plugged in.
-- [ ] GitHub lists the two `ed25519-sk` keys as **authentication** keys and `id_ed25519_github` only as a **signing** key; GitLab lists the two as **Authentication** and the signing key as **Signing**; a new commit shows **Verified** on GitHub.
+- [ ] GitHub lists the current year's two `ed25519-sk` keys, and no older ones, as **authentication** keys and `id_ed25519_github` only as a **signing** key; GitLab lists the two as **Authentication** and the signing key as **Signing**; a new commit shows **Verified** on GitHub.
 - [ ] `ssh-keygen -y -P "" -f ~/.ssh/id_ed25519_github` fails (the signing key has a passphrase), and the passphrase is in Bitwarden.
 - [ ] `sudo -k; sudo true` needs a touch of either key and the password, and fails without a key.
 - [ ] `/etc/u2f_mappings` is owned by root and holds both keys.
 
 ## If something goes wrong
 
-- **Lost `yubikey-primary`:** on GitHub and GitLab, delete its SSH key (`workstation yubikey-primary`), and delete `~/.ssh/id_ed25519_sk_primary*`; rebuild `/etc/u2f_mappings` with `yubikey-backup` and the replacement (Part 2, step 2); then do the rest of the replacement in the [account sign-in setup guide](account-sign-in.md#if-something-goes-wrong).
+- **Lost `yubikey-primary`:** on GitHub and GitLab, delete its SSH key (`workstation yubikey-primary <year>`), delete `~/.ssh/id_ed25519_sk_primary_*`, and create and register a key on the replacement (Part 1, steps 1 and 2, the `yubikey-primary` command only), with its file in the first `IdentityFile` line of `~/.ssh/config`; rebuild `/etc/u2f_mappings` with `yubikey-backup` and the replacement (Part 2, step 2); then do the rest of the replacement in the [account sign-in setup guide](account-sign-in.md#if-something-goes-wrong).
 - **`sudo` stops working after the PAM change:** in the root shell kept open in Part 2, remove the `pam_u2f.so` line from both files.
 - **Both keys lost, or no root shell open:** boot into **recovery mode** (GRUB's **Advanced options**, then the **root** shell; on a default Ubuntu install it needs no root password, but the disk passphrase is still asked for), run `mount -o remount,rw /`, and remove the `pam_u2f.so` line from both files.
 
