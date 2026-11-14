@@ -8,8 +8,8 @@ Both keys are **YubiKey Security Key NFC** (FIDO2 and U2F): **`yubikey-primary`*
 
 | Use | How it is protected |
 |---|---|
-| SSH to GitHub and GitLab (push, pull, `gh`) | A **security-key SSH key** per YubiKey (`ed25519-sk`): a new connection needs the key plugged in and a touch, and is reused for 10 minutes of activity, so a copied `~/.ssh` folder is useless without the YubiKey |
-| Commit signing | A separate key file, `~/.ssh/id_ed25519_github`, with a **passphrase** (kept in Bitwarden) and unlocked once per session through `ssh-agent`, registered only as a **signing** key; signing every commit with a touch would be impractical ([workstation configuration](../plan.md#4-configuration)) |
+| SSH to GitHub and GitLab (push, pull, `gh`) | A **security-key SSH key** per YubiKey (`ed25519-sk`): a new connection needs the key plugged in and a touch, and is reused for 10 minutes of activity, so a copied `~/.ssh` folder is useless without the YubiKey. Day-to-day work uses only GitHub; the keys are registered on GitLab too so that, if GitHub is lost, the repos can be restored from their GitLab mirrors, or work can continue there, at once ([disaster recovery plan](../disaster-recovery.md)), and the yearly renewal proves it |
+| Commit signing | A separate key file, `~/.ssh/id_ed25519_github`, with a **passphrase** (kept in Bitwarden) and unlocked once per session through `ssh-agent`, registered only as a **signing** key, on GitHub and on GitLab, with no expiry date. A YubiKey could hold it, but this model (FIDO2 only, with no cached-touch setting) would ask for a touch on every commit, and again for every commit a rebase rewrites; the passphrase protects the file instead ([workstation configuration](../plan.md#4-configuration)) |
 | `sudo` and `sudo -i` | **A YubiKey touch, then the password** (`pam_u2f`); the touch is needed again only when `sudo`'s 15-minute timestamp expires |
 | Graphical admin prompts (polkit), the login screen, the disk passphrase | The password only |
 
@@ -39,7 +39,7 @@ Have these ready:
     `ssh-keygen` asks for a touch but not for the FIDO2 PIN: a key that is not resident (no `-O resident`) and not created with `-O verify-required` needs only proof that someone is present at the YubiKey, both to create it and to use it. Press Enter at the passphrase prompts: the files hold only a handle that is useless without its YubiKey. (A key that does not support Ed25519 fails with `invalid format` or `feature not supported`; the Security Key NFC supports it.)
 2. **Register both public keys** on GitHub and on GitLab, each with its comment as the title (for example `workstation yubikey-primary 2026` and `workstation yubikey-backup 2026`). Print a key with `cat ~/.ssh/id_ed25519_sk_primary_<year>.pub`, triple-click the line to select all of it, and copy the whole line: the key type `sk-ssh-ed25519@openssh.com` (an OpenSSH type name, not an email address), the key itself, and the comment, separated by spaces.
     - **GitHub:** profile picture → **Settings** → in the **Access** section of the sidebar, **SSH and GPG keys** → **New SSH key**. Fill in the **Title**, choose the key type for **authentication** (GitHub offers authentication or signing), paste the line into **Key**, select **Add SSH key**. GitHub asks for a YubiKey before the first key is added (its **sudo mode**) and not again for the second while the session stays in sudo mode.
-    - **GitLab:** avatar → **Edit profile** → in the left sidebar, **Access → SSH keys** → **Add new key**. Paste the line into **Key**, fill in the **Title**, set **Usage type** to **Authentication** (the default is **Authentication & Signing**), keep the default **Expiration date** (one year from the day the key is added), and select **Add key**. Record the date in Bitwarden: open the GitLab login item, select **Edit**, and under **Custom fields** select **New custom field**, with the type **Text**, the **Name** `SSH keys expire (workstation)` and the date as the **Value**; then **Save**. GitLab emails a warning seven days before the date; renew the keys before it ([Renewing the keys every year](#renewing-the-keys-every-year)).
+    - **GitLab:** avatar → **Edit profile** → in the left sidebar, **Access → SSH keys** → **Add new key**. Paste the line into **Key**, fill in the **Title**, set **Usage type** to **Authentication** (the default is **Authentication & Signing**), keep the default **Expiration date** (one year from the day the key is added), and select **Add key**. The date is optional on GitLab.com; it is kept so that the [yearly renewal](#renewing-the-keys-every-year) happens, which also proves that the YubiKeys and a restore from GitLab still work. Record the date in Bitwarden: open the GitLab login item, select **Edit**, and under **Custom fields** select **New custom field**, with the type **Text**, the **Name** `SSH keys expire (workstation)` and the date as the **Value**; then **Save**. GitLab emails a warning seven days before the date; renew the keys before it ([Renewing the keys every year](#renewing-the-keys-every-year)).
 3. **Point SSH at them** in `~/.ssh/config`, readable only by the operator, and let one touch serve a burst of pushes. A new Ubuntu install has no `~/.ssh/config`; this creates it, with the year filled in:
 
     ```bash
@@ -62,8 +62,9 @@ Have these ready:
 4. **Test:** `ssh -T git@github.com` and `ssh -T git@gitlab.com` each ask for a touch and greet the user (GitHub: `Hi <user>! You've successfully authenticated, but GitHub does not provide shell access.`; GitLab: `Welcome to GitLab, @<user>!`). The first connection to each asks to confirm the host's fingerprint; compare it with [GitHub's SSH key fingerprints](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints) and [GitLab.com's SSH host key fingerprints](https://docs.gitlab.com/user/gitlab_com/) (section "SSH host keys fingerprints") before answering `yes`.
 5. **The commit-signing key is for signing only:** the separate key file from the [workstation setup](../plan.md#4-configuration), `id_ed25519_github`, is never used to sign in.
     1. It has a passphrase, generated in and saved to Bitwarden (to add one: `ssh-keygen -p -f ~/.ssh/id_ed25519_github`).
-    2. On **GitHub** it is added (as in step 2) with the key type for **signing**, and does not appear under **Authentication keys**; on **GitLab**, its **Usage type** is **Signing**.
-    3. Git signs every commit with it (`git config --global gpg.format ssh`, and `git config --global user.signingkey ~/.ssh/id_ed25519_github.pub`, from the workstation setup); `ssh-add ~/.ssh/id_ed25519_github` unlocks it once per session.
+    2. **GitHub:** it is added as in step 2, with the key type for **signing**, so it appears under **Signing keys** and not under **Authentication keys**.
+    3. **GitLab:** it is added as in step 2 (from `cat ~/.ssh/id_ed25519_github.pub`), with the title `workstation signing` in place of any title GitLab fills in from the key's comment, the **Usage type** **Signing**, and the **Expiration date** cleared, so the key does not expire. GitLab then shows commits signed with it as **Verified**, which matters if work moves to GitLab ([disaster recovery plan](../disaster-recovery.md)). The key is replaced only with the workstation, or at once if it may be compromised.
+    4. Git signs every commit with it (`git config --global gpg.format ssh`, and `git config --global user.signingkey ~/.ssh/id_ed25519_github.pub`, from the workstation setup); `ssh-add ~/.ssh/id_ed25519_github` unlocks it once per session.
 6. **Put `yubikey-backup` back in the safe.**
 
 ## Part 2: `sudo` with a YubiKey and the password
@@ -96,7 +97,7 @@ The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in th
 
 ## Renewing the keys every year
 
-A GitLab SSH key stops working for Git on its expiry date and cannot be extended: GitLab requires a new key. GitHub keys do not expire, but they are renewed at the same time, so each YubiKey has one current key for both services and the year in its names shows which generation it is. The new keys are created, registered and tested **before** the old ones are removed, so a working key is registered at every point. Start before the date in Bitwarden (GitLab's email arrives seven days before), with `yubikey-backup` taken out of the safe:
+The authentication keys are given GitLab's default one-year expiry on purpose (the date is optional on GitLab.com): the renewal it forces is a yearly check that both YubiKeys work, that the procedure is current, and that the repos can be cloned from GitLab, as a restore would need. A GitLab SSH key stops working for Git on its expiry date and cannot be extended: GitLab requires a new key. GitHub keys do not expire, but they are renewed at the same time, so each YubiKey has one current key for both services and the year in its names shows which generation it is. The new keys are created, registered and tested **before** the old ones are removed, so a working key is registered at every point. Start before the date in Bitwarden (GitLab's email arrives seven days before), with `yubikey-backup` taken out of the safe:
 
 1. **Create the new keys:** Part 1, step 1. The new year goes into the names; the old files stay in place.
 2. **Register them on GitHub and GitLab:** Part 1, step 2, with the new year in the titles. Replace the date in the Bitwarden custom field with the new expiry date.
@@ -109,11 +110,18 @@ A GitLab SSH key stops working for Git on its expiry date and cannot be extended
 
     and the same with `id_ed25519_sk_backup_"$(date +%Y)"` and `yubikey-backup`. Each asks for a touch and greets the user, as in Part 1, step 4.
 4. **Switch `~/.ssh/config` to the new keys:** close any open connections (`ssh -O exit git@github.com` and `ssh -O exit git@gitlab.com`), replace the old year in the two `IdentityFile` lines with the new one (with `vim ~/.ssh/config`), and repeat the test in Part 1, step 4.
-5. **Remove the old keys,** only after step 4 passes:
+5. **Clone a mirror from GitLab,** as a restore would, into a temporary folder that is deleted afterwards:
+
+    ```bash
+    tmp="$(mktemp -d)" && git clone git@gitlab.com:russetleaf/russetleaf-docs.git "${tmp}/russetleaf-docs" && git -C "${tmp}/russetleaf-docs" log -1 --oneline && rm -rf "${tmp}"
+    ```
+
+    The commit it prints is the latest one on `main` on GitHub. Record the result in the decision log, as for the other [drills](../disaster-recovery.md#drills).
+6. **Remove the old keys,** only after steps 4 and 5 pass:
     - **GitHub:** profile picture → **Settings** → in the **Access** section of the sidebar, **SSH and GPG keys** → next to each old key, **Delete**.
-    - **GitLab:** avatar → **Edit profile** → in the left sidebar, **Access → SSH keys** → next to each old key, **Remove** (the remove icon), then **Delete**. (**Revoke** is for a compromised key.)
+    - **GitLab:** avatar → **Edit profile** → in the left sidebar, **Access → SSH keys** → next to each old key, **Remove** (the remove icon), then **Delete**. **Revoke** is only for a compromised key: on GitLab it also marks the commits a signing key has signed as **Unverified**, while **Delete** leaves them verified.
     - **The workstation:** `rm ~/.ssh/id_ed25519_sk_primary_<old-year> ~/.ssh/id_ed25519_sk_primary_<old-year>.pub ~/.ssh/id_ed25519_sk_backup_<old-year> ~/.ssh/id_ed25519_sk_backup_<old-year>.pub`.
-6. **Put `yubikey-backup` back in the safe.**
+7. **Put `yubikey-backup` back in the safe.**
 
 The `pam_u2f` registration for `sudo` (Part 2) does not expire and is not renewed.
 
@@ -122,13 +130,13 @@ The `pam_u2f` registration for `sudo` (Part 2) does not expire and is not renewe
 Nothing in this guide is stored on the YubiKeys themselves: the SSH keys are not resident (the YubiKey holds the secret, and a handle file in `~/.ssh` on each machine points to it), and the `pam_u2f` registration lives in each machine's `/etc/u2f_mappings`. Each workstation therefore gets its own registrations, and adding or retiring one changes nothing on the others:
 
 1. **Set up the new machine** with the setup script ([workstation configuration](../plan.md#4-configuration)), then follow Parts 1 and 2 on it, naming its keys after the machine, for example `-C "laptop yubikey-primary $(date +%Y)"` and `-f ~/.ssh/id_ed25519_sk_laptop_primary_"$(date +%Y)"`, and the same titles on GitHub and GitLab. Its keys are renewed every year in the same way.
-2. **Commit signing:** create a new signing key on the new machine (as in the workstation configuration) and register it as a signing key; a signing key is replaced, never copied, and commits signed by the old one stay verified.
-3. **Retire the old machine:** on GitHub and GitLab, delete its SSH keys and its signing key; on the machine itself, delete `~/.ssh` and `/etc/u2f_mappings` before it is wiped or given away.
+2. **Commit signing:** create a new signing key on the new machine (as in the workstation configuration) and register it as a signing key on GitHub and GitLab (Part 1, step 5). A signing key is replaced, never copied, and commits signed by the old one stay verified after it is removed: GitHub stores a verification record with each commit when it is pushed and does not re-check it when a key is rotated, revoked or deleted, and GitLab keeps them verified when a key is deleted rather than revoked.
+3. **Retire the old machine:** on GitHub and GitLab, delete its SSH keys and its signing key (on GitLab with **Remove** and **Delete**, not **Revoke**); on the machine itself, delete `~/.ssh` and `/etc/u2f_mappings` before it is wiped or given away.
 
 ## Checks
 
 - [ ] `ssh -T git@github.com` and `ssh -T git@gitlab.com` work with each YubiKey and fail with none plugged in.
-- [ ] GitHub lists the current year's two `ed25519-sk` keys, and no older ones, under **Authentication keys** (a subheading of **SSH keys** on the **SSH and GPG keys** page) and `id_ed25519_github` only as a **signing** key; GitLab lists the two as **Authentication** and the signing key as **Signing**; a new commit shows **Verified** on GitHub.
+- [ ] GitHub lists the current year's two `ed25519-sk` keys, and no older ones, under **Authentication keys** (a subheading of **SSH keys** on the **SSH and GPG keys** page) and `id_ed25519_github` only as a **signing** key; GitLab lists the two as **Authentication** and `workstation signing` as **Signing**, with no expiry date; a new commit shows **Verified** on GitHub.
 - [ ] `ssh-keygen -y -P "" -f ~/.ssh/id_ed25519_github` fails (the signing key has a passphrase), and the passphrase is in Bitwarden.
 - [ ] `sudo -k; sudo true` needs a touch of either key and the password, and fails without a key.
 - [ ] `/etc/u2f_mappings` is owned by root and holds both keys.
@@ -155,4 +163,7 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - GitHub: ["Testing your SSH connection"](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/testing-your-ssh-connection), checked 2026-11-14
 - GitHub: ["GitHub's SSH key fingerprints"](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints), checked 2026-11-14
 - GitLab: ["GitLab.com settings"](https://docs.gitlab.com/user/gitlab_com/) (SSH host key fingerprints), checked 2026-11-14
-- GitLab: ["Use SSH keys with GitLab"](https://docs.gitlab.com/user/ssh/) (adding a key, the `ED25519_SK` type, verifying the connection), checked 2026-11-14
+- GitLab: ["Use SSH keys with GitLab"](https://docs.gitlab.com/user/ssh/) (adding a key, the `ED25519_SK` type, the optional expiry date and its notifications, removing a key, verifying the connection), checked 2026-11-14
+- GitLab: ["Sign commits with SSH keys"](https://docs.gitlab.com/user/project/repository/signed_commits/ssh/) (section "Signed commits with removed SSH keys": Delete compared with Revoke), checked 2026-11-14
+- GitHub: ["About commit signature verification"](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification) (section "Persistent commit signature verification"), checked 2026-11-14
+- GitHub: ["Reviewing your SSH keys"](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/reviewing-your-ssh-keys) (deleting a key), checked 2026-11-14
