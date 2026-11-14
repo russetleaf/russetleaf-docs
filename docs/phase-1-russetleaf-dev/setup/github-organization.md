@@ -68,7 +68,9 @@ A domain already verified for Pages by another account cannot be verified here u
 The organization's **contact email** (Part 1) is where GitHub writes to the organization's owners about billing and the account. Notifications about the organization's repos (pull requests, failed workflows, security alerts) are sent by the personal account's own settings, so they are routed to the Workspace address here, while notifications about any personal repos stay with the personal email.
 
 1. **Add the Workspace address to the personal account:** profile picture → **Settings** → in the **Access** section of the sidebar, **Emails**. Under **Add email address**, enter `<name>@russetleaf.dev` and select **Add**, then open the verification email in the Workspace mailbox and confirm. Keep the personal address as the **Primary email address**.
-2. **Route the organization's notifications to it:** select the inbox icon in the upper-right corner → in the left sidebar, from the **Manage notifications** list, **Notification settings** → under **Default notifications email**, **Custom routing** → **Add new route** → **Pick organization**: `russetleaf` → choose `<name>@russetleaf.dev` → **Save**.
+2. **Route the organization's notifications to it:** profile picture → **Settings** → in the left sidebar, **Notifications**.
+    1. **Default notifications email** has a list of the account's verified addresses: leave it on the personal address. It applies to every notification the account receives, including those about personal repos.
+    2. Next to it, select **Custom routing**, then **Add new route**: **Pick organization** `russetleaf`, choose `<name>@russetleaf.dev`, and **Save**. Only the organization's notifications then go to the Workspace address.
 
 GitHub's setting that restricts an organization's notifications to its verified domains needs GitHub Enterprise Cloud, so it is not used.
 
