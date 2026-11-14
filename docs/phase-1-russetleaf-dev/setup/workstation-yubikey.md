@@ -8,7 +8,7 @@ Both keys are **YubiKey Security Key NFC** (FIDO2 and U2F): **`yubikey-primary`*
 
 | Use | How it is protected |
 |---|---|
-| SSH to GitHub and GitLab (push, pull, `gh`) | A **security-key SSH key** per YubiKey (`ed25519-sk`): each push or pull needs the key plugged in and a touch, so a copied `~/.ssh` folder is useless without the YubiKey |
+| SSH to GitHub and GitLab (push, pull, `gh`) | A **security-key SSH key** per YubiKey (`ed25519-sk`): a new connection needs the key plugged in and a touch, and is reused for 10 minutes of activity, so a copied `~/.ssh` folder is useless without the YubiKey |
 | Commit signing | A separate key file, `~/.ssh/id_ed25519_github`, with a **passphrase** (kept in Bitwarden) and unlocked once per session through `ssh-agent`, registered only as a **signing** key; signing every commit with a touch would be impractical ([workstation configuration](../plan.md#4-configuration)) |
 | `sudo` and `sudo -i` | **A YubiKey touch, then the password** (`pam_u2f`); the touch is needed again only when `sudo`'s 15-minute timestamp expires |
 | Graphical admin prompts (polkit), the login screen, the disk passphrase | The password only |
@@ -34,14 +34,19 @@ Have these ready:
 2. **Register both public keys** (`~/.ssh/id_ed25519_sk_primary.pub` and `~/.ssh/id_ed25519_sk_backup.pub`), each under its key's name (`workstation yubikey-primary`, `workstation yubikey-backup`). Print a key with `cat ~/.ssh/id_ed25519_sk_primary.pub` and copy the whole line.
     - **GitHub:** profile picture → **Settings** → in the **Access** section of the sidebar, **SSH and GPG keys** → **New SSH key**. Fill in the **Title**, choose the key type for **authentication** (GitHub offers authentication or signing), paste the line into **Key**, select **Add SSH key**, and confirm with a YubiKey if GitHub asks.
     - **GitLab:** avatar → **Edit profile** → in the left sidebar, **Access → SSH keys** → **Add new key**. Paste the line into **Key**, fill in the **Title**, set **Usage type** to **Authentication** (the default is **Authentication & Signing**), keep the default **Expiration date** and record it in Bitwarden, and select **Add key**.
-3. **Point SSH at them** in `~/.ssh/config` (create it with `chmod 600`):
+3. **Point SSH at them** in `~/.ssh/config` (create it with `chmod 600`), and let one touch serve a burst of pushes:
 
     ```text
     Host github.com gitlab.com
         IdentityFile ~/.ssh/id_ed25519_sk_primary
         IdentityFile ~/.ssh/id_ed25519_sk_backup
         IdentitiesOnly yes
+        ControlMaster auto
+        ControlPath ~/.ssh/cm-%C
+        ControlPersist 10m
     ```
+
+    **Connection reuse:** the first push or pull opens an authenticated connection (one touch) and keeps it open; later pushes and pulls to the same host reuse it without a touch, until it has been idle for 10 minutes. The socket lives in `~/.ssh`, which only the operator can write to, as the `ssh_config` manual recommends. `ssh -O exit git@github.com` (or `git@gitlab.com`) closes it at once, for example before leaving the workstation unlocked. Anyone using the operator's logged-in session during that window can push without a touch, so the window stays short.
 
 4. **Test:** `ssh -T git@github.com` and `ssh -T git@gitlab.com` each ask for a touch and greet the user (GitHub: `Hi <user>! You've successfully authenticated, but GitHub does not provide shell access.`; GitLab: `Welcome to GitLab, <user>!`). The first connection to each asks to confirm the host's fingerprint; compare it with [GitHub's SSH key fingerprints](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints) and [GitLab.com's SSH host key fingerprints](https://docs.gitlab.com/user/gitlab_com/) (section "SSH host keys fingerprints") before answering `yes`.
 5. **The commit-signing key is for signing only:** the separate key file from the [workstation setup](../plan.md#4-configuration), `id_ed25519_github`, is never used to sign in.
@@ -97,6 +102,7 @@ The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in th
 The official pages these steps follow, each checked on the date shown. When a page has moved or changed, find the current one, update the step if needed, and change the date.
 
 - OpenBSD: ["ssh-keygen(1) manual page (ed25519-sk keys and the FIDO authenticator options)"](https://man.openbsd.org/ssh-keygen), checked 2026-11-14 (and the installed `man ssh-keygen`, OpenSSH 9.6p1)
+- OpenBSD: ["ssh_config(5) manual page (ControlMaster, ControlPath, ControlPersist)"](https://man.openbsd.org/ssh_config), checked 2026-11-14 (and the installed `man ssh_config`)
 - OpenSSH: ["OpenSSH 8.2 release notes (FIDO/U2F support)"](https://www.openssh.org/txt/release-8.2), checked 2026-11-12
 - Yubico: ["Securing SSH with FIDO2"](https://developers.yubico.com/SSH/Securing_SSH_with_FIDO2.html), checked 2026-11-12
 - Yubico: ["pam-u2f"](https://developers.yubico.com/pam-u2f/), checked 2026-11-12 (and the installed `man pamu2fcfg` and `man pam_u2f`, version 1.1.0)
