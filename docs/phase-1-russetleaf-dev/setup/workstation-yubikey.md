@@ -128,7 +128,7 @@ Nothing in this guide is stored on the YubiKeys themselves: the SSH keys are not
 ## Checks
 
 - [ ] `ssh -T git@github.com` and `ssh -T git@gitlab.com` work with each YubiKey and fail with none plugged in.
-- [ ] GitHub lists the current year's two `ed25519-sk` keys, and no older ones, as **authentication** keys and `id_ed25519_github` only as a **signing** key; GitLab lists the two as **Authentication** and the signing key as **Signing**; a new commit shows **Verified** on GitHub.
+- [ ] GitHub lists the current year's two `ed25519-sk` keys, and no older ones, under **SSH keys** (the authentication keys) and `id_ed25519_github` only as a **signing** key; GitLab lists the two as **Authentication** and the signing key as **Signing**; a new commit shows **Verified** on GitHub.
 - [ ] `ssh-keygen -y -P "" -f ~/.ssh/id_ed25519_github` fails (the signing key has a passphrase), and the passphrase is in Bitwarden.
 - [ ] `sudo -k; sudo true` needs a touch of either key and the password, and fails without a key.
 - [ ] `/etc/u2f_mappings` is owned by root and holds both keys.
