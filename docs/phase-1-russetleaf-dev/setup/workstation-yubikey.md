@@ -112,26 +112,32 @@ Have these ready:
 The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in the home folder, so a program running as the operator cannot add a key of its own. A fixed **origin** (`pam://russetleaf-workstation`) keeps the registration valid if the hostname changes.
 
 1. **Open a root shell in a second terminal** (`sudo -i`) and leave it open until the checks below pass.
-2. **Register both keys** (touch each when it blinks):
+2. **Register both keys,** one command per key, each complete on its own line so that the YubiKey can be swapped between them. With only `yubikey-primary` plugged in, start the file with its registration (touch it when it blinks; `sudo` asks for the password):
 
     ```bash
-    origin="pam://russetleaf-workstation"
-    first="$(pamu2fcfg -u "${USER}" -o "${origin}" -i "${origin}")"   # yubikey-primary plugged in
-    # swap to yubikey-backup
-    second="$(pamu2fcfg -n -o "${origin}" -i "${origin}")"            # -n: no user name, appended to the line
-    printf '%s%s\n' "${first}" "${second}" | sudo tee /etc/u2f_mappings >/dev/null
-    sudo chown root:root /etc/u2f_mappings
-    sudo chmod 644 /etc/u2f_mappings
+    pamu2fcfg -u "${USER}" -o pam://russetleaf-workstation -i pam://russetleaf-workstation | sudo tee /etc/u2f_mappings >/dev/null
     ```
 
-    The file holds one line, `<user>:<primary-key>:<backup-key>`; it contains public data only.
-3. **Require the key for `sudo` and `sudo -i`:** with `sudo vim`, add this line to **both** `/etc/pam.d/sudo` and `/etc/pam.d/sudo-i`, directly **above** `@include common-auth`:
+    Then swap to `yubikey-backup` and append its registration to the same line (`-n` leaves out the user name):
 
-    ```text
-    auth       required   pam_u2f.so authfile=/etc/u2f_mappings origin=pam://russetleaf-workstation appid=pam://russetleaf-workstation cue
+    ```bash
+    sudo sed -i "1s|\$|$(pamu2fcfg -n -o pam://russetleaf-workstation -i pam://russetleaf-workstation)|" /etc/u2f_mappings
     ```
 
-    `required` means the touch must succeed and the password (from `common-auth`) is still asked for; `cue` prints "Please touch the device".
+    Check the result:
+
+    ```bash
+    sudo chown root:root /etc/u2f_mappings && sudo chmod 644 /etc/u2f_mappings && ls -l /etc/u2f_mappings && sudo awk -F: '{print NR": user "$1", "NF-1" keys"}' /etc/u2f_mappings
+    ```
+
+    It shows `-rw-r--r-- 1 root root` and a single line, `1: user <user>, 2 keys`. The file holds `<user>:<primary-key>:<backup-key>`, public data only.
+3. **Require the key for `sudo` and `sudo -i`:** add the `pam_u2f` line directly **above** `@include common-auth` in **both** `/etc/pam.d/sudo` and `/etc/pam.d/sudo-i`, then show the result:
+
+    ```bash
+    sudo sed -i '/^@include common-auth$/i auth       required   pam_u2f.so authfile=/etc/u2f_mappings origin=pam://russetleaf-workstation appid=pam://russetleaf-workstation cue' /etc/pam.d/sudo /etc/pam.d/sudo-i && grep -n -B1 '^@include common-auth$' /etc/pam.d/sudo /etc/pam.d/sudo-i
+    ```
+
+    Each file shows the `pam_u2f.so` line once, directly above `@include common-auth`; run the command only once. `required` means the touch must succeed and the password (from `common-auth`) is still asked for; `cue` prints "Please touch the device".
 4. **Test in a new terminal** (not the root shell): `sudo -k; sudo true` shows the touch prompt, then asks for the password, and succeeds; repeat with `yubikey-backup`; with no YubiKey plugged in, `sudo -k; sudo true` fails even with the right password. Only then close the root shell.
 5. **Put `yubikey-backup` back in the safe.**
 
