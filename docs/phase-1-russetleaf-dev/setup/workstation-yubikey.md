@@ -112,13 +112,20 @@ Have these ready:
 The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in the home folder, so a program running as the operator cannot add a key of its own. A fixed **origin** (`pam://russetleaf-workstation`) keeps the registration valid if the hostname changes.
 
 1. **Open a root shell in a second terminal** (`sudo -i`) and leave it open until the checks below pass.
-2. **Register both keys,** one command per key, each complete on its own line so that the YubiKey can be swapped between them. With only `yubikey-primary` plugged in, start the file with its registration (touch it when it blinks; `sudo` asks for the password):
+2. **Remove any `NOPASSWD` rule for the operator.** A sudoers rule with `NOPASSWD` makes `sudo` skip authentication entirely, so neither the password nor the `pam_u2f` line below is ever checked, and any program running as the operator becomes root without a prompt. In the root shell, list the rules and find where any `NOPASSWD` entry is defined:
+
+    ```bash
+    sudo -l -U "${SUDO_USER}"; grep -rn NOPASSWD /etc/sudoers /etc/sudoers.d/
+    ```
+
+    Remove each entry that applies to the operator with `visudo` (`visudo` for `/etc/sudoers`, `visudo -f /etc/sudoers.d/<file>` for a drop-in file; it checks the syntax before saving), then confirm in the other terminal that `sudo -k; sudo true` asks for the password.
+3. **Register both keys,** one command per key, each complete on its own line so that the YubiKey can be swapped between them. With only `yubikey-primary` plugged in, start the file with its registration (touch it when it blinks; `sudo` asks for the password):
 
     ```bash
     pamu2fcfg -u "${USER}" -o pam://russetleaf-workstation -i pam://russetleaf-workstation | sudo tee /etc/u2f_mappings >/dev/null
     ```
 
-    Then swap to `yubikey-backup` and append its registration to the same line (`-n` leaves out the user name):
+    `sudo tee` writes the registration to the root-owned file and also prints it, so `>/dev/null` hides the copy on screen. Then swap to `yubikey-backup` and append its registration to the end of the same line (`-n` leaves out the user name); `sed -i` edits the file in place and prints nothing, so it needs no redirect:
 
     ```bash
     sudo sed -i "1s|\$|$(pamu2fcfg -n -o pam://russetleaf-workstation -i pam://russetleaf-workstation)|" /etc/u2f_mappings
@@ -131,15 +138,15 @@ The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in th
     ```
 
     It shows `-rw-r--r-- 1 root root` and a single line, `1: user <user>, 2 keys`. The file holds `<user>:<primary-key>:<backup-key>`, public data only.
-3. **Require the key for `sudo` and `sudo -i`:** add the `pam_u2f` line directly **above** `@include common-auth` in **both** `/etc/pam.d/sudo` and `/etc/pam.d/sudo-i`, then show the result:
+4. **Require the key for `sudo` and `sudo -i`:** add the `pam_u2f` line directly **above** `@include common-auth` in **both** `/etc/pam.d/sudo` and `/etc/pam.d/sudo-i`, then show the result:
 
     ```bash
     sudo sed -i '/^@include common-auth$/i auth       required   pam_u2f.so authfile=/etc/u2f_mappings origin=pam://russetleaf-workstation appid=pam://russetleaf-workstation cue' /etc/pam.d/sudo /etc/pam.d/sudo-i && grep -n -B1 '^@include common-auth$' /etc/pam.d/sudo /etc/pam.d/sudo-i
     ```
 
     Each file shows the `pam_u2f.so` line once, directly above `@include common-auth`; run the command only once. `required` means the touch must succeed and the password (from `common-auth`) is still asked for; `cue` prints "Please touch the device".
-4. **Test in a new terminal** (not the root shell): `sudo -k; sudo true` shows the touch prompt, then asks for the password, and succeeds; repeat with `yubikey-backup`; with no YubiKey plugged in, `sudo -k; sudo true` fails even with the right password. Only then close the root shell.
-5. **Put `yubikey-backup` back in the safe.**
+5. **Test in a new terminal** (not the root shell): `sudo -k; sudo true` shows the touch prompt, then asks for the password, and succeeds; repeat with `yubikey-backup`; with no YubiKey plugged in, `sudo -k; sudo true` fails even with the right password. Only then close the root shell.
+6. **Put `yubikey-backup` back in the safe.**
 
 ## Renewing the keys every year
 
@@ -185,12 +192,13 @@ Nothing in this guide is stored on the YubiKeys themselves: the SSH keys are not
 - [ ] GitHub lists the current year's two `ed25519-sk` keys, and no older ones, under **Authentication keys** (a subheading of **SSH keys** on the **SSH and GPG keys** page) and `workstation russetleaf git signing` only under **Signing keys**; GitLab lists the two as **Authentication** and `workstation russetleaf git signing` as **Signing**, with no expiry date; a new commit shows **Verified** on GitHub.
 - [ ] `ssh-keygen -y -P "" -f ~/.ssh/id_ed25519_russetleaf_git_signing` fails (the signing key has a passphrase), and the passphrase is in Bitwarden.
 - [ ] Inside a RussetLeaf repo, `git config user.email` shows the Workspace address, and `git log --show-signature -1` reports a good signature for it.
+- [ ] `sudo -l` lists no `NOPASSWD` entry for the operator.
 - [ ] `sudo -k; sudo true` needs a touch of either key and the password, and fails without a key.
 - [ ] `/etc/u2f_mappings` is owned by root and holds both keys.
 
 ## If something goes wrong
 
-- **Lost `yubikey-primary`:** on GitHub and GitLab, delete its SSH key (`workstation yubikey-primary <year>`), delete `~/.ssh/id_ed25519_sk_primary_*`, and create and register a key on the replacement (Part 1, steps 1 and 2, the `yubikey-primary` command only), with its file in the first `IdentityFile` line of `~/.ssh/config`; rebuild `/etc/u2f_mappings` with `yubikey-backup` and the replacement (Part 2, step 2); then do the rest of the replacement in the [account sign-in setup guide](account-sign-in.md#if-something-goes-wrong).
+- **Lost `yubikey-primary`:** on GitHub and GitLab, delete its SSH key (`workstation yubikey-primary <year>`), delete `~/.ssh/id_ed25519_sk_primary_*`, and create and register a key on the replacement (Part 1, steps 1 and 2, the `yubikey-primary` command only), with its file in the first `IdentityFile` line of `~/.ssh/config`; rebuild `/etc/u2f_mappings` with `yubikey-backup` and the replacement (Part 2, step 3); then do the rest of the replacement in the [account sign-in setup guide](account-sign-in.md#if-something-goes-wrong).
 - **`sudo` stops working after the PAM change:** in the root shell kept open in Part 2, remove the `pam_u2f.so` line from both files.
 - **Both keys lost, or no root shell open:** boot into **recovery mode** (GRUB's **Advanced options**, then the **root** shell; on a default Ubuntu install it needs no root password, but the disk passphrase is still asked for), run `mount -o remount,rw /`, and remove the `pam_u2f.so` line from both files.
 
