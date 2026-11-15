@@ -150,7 +150,12 @@ The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in th
     ```
 
     Each file shows the `pam_u2f.so` line once, directly above `@include common-auth`; run the command only once. `required` means the touch must succeed and the password (from `common-auth`) is still asked for; `cue` prints "Please touch the device".
-5. **Test in a new terminal** (not the root shell): `sudo -k; sudo true` shows the touch prompt, then asks for the password, and succeeds; repeat with `yubikey-backup`; with no YubiKey plugged in, `sudo -k; sudo true` fails even with the right password. Only then close the root shell.
+5. **Test in a new terminal** (not the root shell), each command for `sudo` (`/etc/pam.d/sudo`) and `sudo -i` (`/etc/pam.d/sudo-i`). `sudo -k` clears `sudo`'s timestamp, so each test asks again:
+    1. With only `yubikey-primary` plugged in, `sudo -k; sudo true && echo PASS` and `sudo -k; sudo -i true && echo PASS` each show "Please touch the device.", then ask for the password, and print `PASS`.
+    2. The same two commands with only `yubikey-backup` plugged in.
+    3. With no YubiKey plugged in, `sudo -k; sudo true || echo REFUSED` and `sudo -k; sudo -i true || echo REFUSED` each fail, even with the right password, and print `REFUSED`.
+
+    Only then close the root shell.
 6. **Put `yubikey-backup` back in the safe.**
 
 ## Renewing the keys every year
@@ -198,7 +203,7 @@ Nothing in this guide is stored on the YubiKeys themselves: the SSH keys are not
 - [ ] `ssh-keygen -y -P "" -f ~/.ssh/id_ed25519_russetleaf_git_signing` fails (the signing key has a passphrase), and the passphrase is in Bitwarden.
 - [ ] Inside a RussetLeaf repo, `git config user.email` shows the Workspace address, and `git log --show-signature -1` reports a good signature for it.
 - [ ] `sudo -l` lists no `NOPASSWD` entry for the operator.
-- [ ] `sudo -k; sudo true` needs a touch of either key and the password, and fails without a key.
+- [ ] `sudo -k; sudo true` and `sudo -k; sudo -i true` each need a touch of either key and the password, and fail without a key.
 - [ ] `/etc/u2f_mappings` is owned by root and holds both keys.
 
 ## If something goes wrong
