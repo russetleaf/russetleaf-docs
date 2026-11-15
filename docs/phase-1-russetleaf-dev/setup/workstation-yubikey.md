@@ -61,7 +61,7 @@ Have these ready:
 
 4. **Test:** `ssh -T git@github.com` and `ssh -T git@gitlab.com` each ask for a touch and greet the user (GitHub: `Hi <user>! You've successfully authenticated, but GitHub does not provide shell access.`; GitLab: `Welcome to GitLab, @<user>!`). The first connection to each asks to confirm the host's fingerprint; compare it with [GitHub's SSH key fingerprints](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints) and [GitLab.com's SSH host key fingerprints](https://docs.gitlab.com/user/gitlab_com/) (section "SSH host keys fingerprints") before answering `yes`.
 5. **Set up commit signing and the project's Git identity.** Commits are signed with an Ed25519 key file that has a passphrase, not with the YubiKeys (see the table above), and is never used to sign in. RussetLeaf repos use the project's identity, the operator's Workspace address, so no personal address reaches the public history; other repos on the machine keep their own settings.
-    1. **Create the signing key.** Generate a passphrase in Bitwarden first and save it in a new item, `workstation git signing key`; enter it when `ssh-keygen` asks:
+    1. **Create the signing key.** Generate a passphrase in Bitwarden first and save it in a new item named **Workstation Git signing key**; enter it when `ssh-keygen` asks:
 
         ```bash
         ssh-keygen -t ed25519 -C "workstation git signing" -f ~/.ssh/id_ed25519_git_signing
