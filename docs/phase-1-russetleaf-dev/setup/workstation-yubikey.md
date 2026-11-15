@@ -112,13 +112,18 @@ Have these ready:
 The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in the home folder, so a program running as the operator cannot add a key of its own. A fixed **origin** (`pam://russetleaf-workstation`) keeps the registration valid if the hostname changes.
 
 1. **Open a root shell in a second terminal** (`sudo -i`) and leave it open until the checks below pass.
-2. **Remove any `NOPASSWD` rule for the operator.** A sudoers rule with `NOPASSWD` makes `sudo` skip authentication entirely, so neither the password nor the `pam_u2f` line below is ever checked, and any program running as the operator becomes root without a prompt. In the root shell, list the rules and find where any `NOPASSWD` entry is defined:
+2. **Check for a `NOPASSWD` rule, and remove it if there is one.** A sudoers rule with `NOPASSWD` makes `sudo` skip authentication entirely, so neither the password nor the `pam_u2f` line added in step 4 is ever checked, and any program running as the operator becomes root without a prompt. In the root shell:
 
     ```bash
-    sudo -l -U "${SUDO_USER}"; grep -rn NOPASSWD /etc/sudoers /etc/sudoers.d/
+    grep -rn NOPASSWD /etc/sudoers /etc/sudoers.d/
     ```
 
-    Remove each entry that applies to the operator with `visudo` (`visudo` for `/etc/sudoers`, `visudo -f /etc/sudoers.d/<file>` for a drop-in file; it checks the syntax before saving), then confirm in the other terminal that `sudo -k; sudo true` asks for the password.
+    No output means there is none; go on to step 3. Otherwise each line of output is `<file>:<line>:<rule>`. Delete each rule that applies to the operator with `visudo`, which checks the syntax before it saves:
+    1. Open the file: `EDITOR=vim visudo` for `/etc/sudoers`, or `EDITOR=vim visudo -f /etc/sudoers.d/<file>` for a drop-in file.
+    2. In vim, type `:<line>` and Enter to go to the rule's line, check that it is the `NOPASSWD` rule, type `dd` to delete it, then `:wq` and Enter to save.
+    3. Run `visudo -c`: every file reports `parsed OK`. Run the `grep` again: it prints nothing for the operator.
+    4. In the other terminal, `sudo -k; sudo true` asks for the password.
+
 3. **Register both keys,** one command per key, each complete on its own line so that the YubiKey can be swapped between them. With only `yubikey-primary` plugged in, start the file with its registration (touch it when it blinks; `sudo` asks for the password):
 
     ```bash
