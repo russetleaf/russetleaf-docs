@@ -912,7 +912,7 @@ One Slack workspace for the project. The free plan is enough: it keeps 90 days o
 | Channel | What goes there | Sources |
 |---|---|---|
 | `#rl-critical` | Critical alerts from **both** sites: site down, database down, backups failing, monitoring dead. The only channel with phone notifications on. | Alertmanager (both clusters), dead man's switch, external uptime checks |
-| `#rl-dev-alerts` | All russetleaf.dev warning and critical alerts | Alertmanager (home), Cloudflare notifications, uptime checks |
+| `#rl-dev-alerts` | All russetleaf.dev warning and critical alerts | Alertmanager (home), Cloudflare notifications |
 | `#rl-deploys` | Syncs, failed syncs, unhealthy apps, canary progress and automatic rollbacks, merged version-bump pull requests | Argo CD Notifications, Argo Rollouts notifications, GitHub |
 | `#rl-security` | Falco alerts, Kyverno policy violations, critical vulnerabilities in running images, Kubernetes API audit alerts, GuardDuty and Security Hub findings, DMARC failures and Google Workspace sign-in and admin alerts (step 7.16) | Falcosidekick, Policy Reporter (Kyverno's reporting add-on), Trivy Operator metrics → Alertmanager, Loki ruler, EventBridge → SNS → Amazon Q Developer |
 | `#rl-costs` | AWS Budgets, Cost Anomaly Detection, Bedrock budget, OpenCost-based alerts (`NamespaceDailyCostSpike`), the weekly OpenCost summary, the per-demo actual-cost report, the demo safety net | Amazon Q Developer in chat applications (formerly AWS Chatbot), Alertmanager, scheduled workflows |
@@ -937,7 +937,7 @@ Every message carries a **`site=dev` or `site=aws` label** (or a `[dev]` / `[aws
 A cluster cannot report that it is completely down, so two outside checks back up Alertmanager:
 
 - **Dead man's switch:** Alertmanager's always-firing `Watchdog` alert pings a free heartbeat service, **healthchecks.io**, every few minutes. If the pings stop (cluster down, Alertmanager broken, home internet out), the heartbeat service posts to `#rl-critical`.
-- **External uptime checks** from **Better Stack**'s free plan, every few minutes. The heartbeat and the uptime checks use different providers, so one provider's outage cannot silence both outside checks; UptimeRobot's free plan has no Slack integration ([ADR 1053](adr/1053-open-source-tools-by-default.md) records Better Stack as an exception):
+- **External uptime checks** from **Better Stack**'s free plan, every few minutes, posting to `#rl-critical` only (a site that does not answer is critical, and one Better Stack integration posts to one channel). The heartbeat and the uptime checks use different providers, so one provider's outage cannot silence both outside checks; UptimeRobot's free plan has no Slack integration ([ADR 1053](adr/1053-open-source-tools-by-default.md) records Better Stack as an exception):
     - russetleaf.dev must return 200
 
 ### AWS and Cloudflare alerts
