@@ -68,7 +68,7 @@ In the GitHub repo, **Settings → Secrets and variables → Actions → New rep
 
 1. In the GitHub repo, open **Actions**, select the **Backup to GitLab** workflow, then **Run workflow** (on `main`).
 2. When the run succeeds, open the GitLab project: its `main` branch shows the same latest commit as GitHub.
-3. **Check that `main` refuses force-pushes.** GitLab protects a project's default branch when it is created, with no force-pushes allowed. In the GitLab project, select **Settings → Repository**, expand **Branch rules**, and select **View details** next to `main`: it is protected, and **Allowed to force push** is off. Leave it off. Together with the workflow, which never force-pushes (the `gitlab-sync` action's `force_push` input stays at its default, `false`), this keeps a rewrite of `main` on GitHub, by mistake or by an attacker, from overwriting the mirror's history: the sync fails instead, and the failed run is the alert.
+3. **Check that `main` refuses force-pushes.** GitLab protects a project's default branch when it is created, with no force-pushes allowed. In the GitLab project, select **Settings → Repository**, expand **Branch rules**, and select **View details** next to `main`. Under **Protect branch**, **Allowed to merge** and **Allowed to push and merge** both show **Maintainers**, and **Allowed to force push** is off. Leave it off. Together with the workflow, which never force-pushes (the `gitlab-sync` action's `force_push` input stays at its default, `false`), this keeps a rewrite of `main` on GitHub, by mistake or by an attacker, from overwriting the mirror's history: the sync fails instead, and the failed run is the alert.
 
 ## Checks
 
@@ -77,7 +77,7 @@ The mirror part of the step 1.1 test:
 - [ ] The `russetleaf` group and each mirror project are **Private**.
 - [ ] **Emails** lists `<name>@russetleaf.dev` as verified. Once GitLab keeps the per-group setting ([improvement I1-8](../improvements.md)), **Preferences → Notifications** shows it for the `russetleaf` group.
 - [ ] A push to `main` on GitHub appears in the GitLab mirror within minutes, and the **Backup to GitLab** run succeeds.
-- [ ] In each mirror, `main` is protected with **Allowed to force push** off, and the workflow sets no `force_push` input.
+- [ ] In each mirror, the **Branch rules** for `main` show **Maintainers** for **Allowed to merge** and **Allowed to push and merge**, with **Allowed to force push** off, and the workflow sets no `force_push` input.
 - [ ] Each token is a fine-grained token limited to its one mirror project, with only **Repository → Code: Push**; it is in Bitwarden, and its expiry is recorded.
 
 ## If something goes wrong
