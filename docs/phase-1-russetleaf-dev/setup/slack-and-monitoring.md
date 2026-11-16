@@ -21,13 +21,13 @@ The step-by-step procedure for the Slack workspace, the bot that posts alerts, a
 
     | Channel | Used for |
     |---|---|
-    | `#rl-critical` | Critical alerts from both sites; the only channel with phone notifications |
-    | `#rl-dev-alerts` | russetleaf.dev warning and critical alerts |
     | `#rl-aws-alerts` | aws.russetleaf.dev warning and critical alerts (Phase 3) |
-    | `#rl-deploys` | Syncs, rollouts, rollbacks and version bumps |
-    | `#rl-security` | Falco, Kyverno, audit alerts, GuardDuty and Security Hub findings |
-    | `#rl-mlops` | The AI components (Phase 2) |
     | `#rl-costs` | Budgets, cost anomalies and cost reports |
+    | `#rl-critical` | Critical alerts from both sites; the only channel with phone notifications |
+    | `#rl-deploys` | Syncs, rollouts, rollbacks and version bumps |
+    | `#rl-dev-alerts` | russetleaf.dev warning and critical alerts |
+    | `#rl-mlops` | The AI components (Phase 2) |
+    | `#rl-security` | Falco, Kyverno, audit alerts, GuardDuty and Security Hub findings |
     | `#rl-staging` | Staging runs and staging alerts |
 
     Create `#rl-security` as a **private** channel: its findings can include details worth keeping from anyone invited to the workspace later. The others can be public within the workspace. A private channel cannot be made public later.
