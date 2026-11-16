@@ -70,14 +70,23 @@ Incoming webhooks, which Falcosidekick and Policy Reporter use instead of the to
 
 ## Part 3: The GitHub app for Slack
 
-1. **Add the GitHub app** to the workspace from Slack's app directory, and connect the operator's GitHub account when it asks.
-2. **Subscribe `#rl-deploys`** to the project's repos, starting with this one:
+`#rl-deploys` receives each repo's pull requests, releases and deployments from GitHub's app for Slack.
+
+1. **Add the GitHub app** to the workspace: in the Slack sidebar, select **Agents & tools** (or, if it is not shown, **More** or **Tools**), then **Apps**; search for **GitHub**, select **Add**, then **Add to Slack** in the Slack Marketplace, and follow the prompts.
+2. **Connect the operator's GitHub account** when Slack asks, or with `/github signin` in any channel; GitHub asks for a YubiKey.
+3. **Subscribe `#rl-deploys`** to each repo, starting with this one. In `#rl-deploys`, send these three commands one at a time:
 
     ```text
     /github subscribe russetleaf/russetleaf-docs pulls releases deployments
+    /github unsubscribe russetleaf/russetleaf-docs issues commits
+    /github subscribe list features
     ```
 
-    Each code repo is subscribed the same way when step 1.1 creates it.
+    A subscription can start with event types the README lists as defaults (issues, pull requests, commits, releases and deployments), so the second command turns off issues and commits: every commit in a deploys channel is noise. The third must list exactly `pulls`, `releases` and `deployments` for the repo; if one is missing, subscribe to it again (`/github subscribe russetleaf/russetleaf-docs <type>`).
+
+    The first subscription to a repo of the `russetleaf` organization asks to **install the GitHub app on the organization**; as its owner, approve it for **only select repositories**, and add each new repo there when it is subscribed. `#rl-deploys` is public, so the app needs no invitation to it; a private channel would need `/invite @github` first.
+
+Each repo created later (Phase 1 step 1.1, Phase 2 step 1.1) is subscribed the same way, with its own name in the three commands.
 
 ## Part 4: The outside monitoring services
 
@@ -124,6 +133,7 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - Slack: ["App manifest reference"](https://docs.slack.dev/reference/app-manifest) (the manifest's keys are current), checked 2026-11-16
 - Slack: ["Guide to apps in Slack"](https://slack.com/help/articles/360001537467-Guide-to-apps-in-Slack) (adding an app to a channel from the **Agents & apps** tab), checked 2026-11-16
 - Slack: ["chat.postMessage API method"](https://docs.slack.dev/reference/methods/chat.postMessage), checked 2026-11-12
-- GitHub: ["GitHub integration for Slack (the integrations/slack repository: /github subscribe)"](https://github.com/integrations/slack), checked 2026-11-12
+- GitHub: ["GitHub integration for Slack (the integrations/slack repository: installing, signing in, subscribing and the default event types)"](https://github.com/integrations/slack), checked 2026-11-16
+- Slack: ["Add apps to your Slack workspace"](https://slack.com/help/articles/202035138-Add-apps-to-your-Slack-workspace), checked 2026-11-16
 - Healthchecks.io: ["Frequently Asked Questions (authentication mechanisms)"](https://healthchecks.io/faq/), checked 2026-11-12
 - UptimeRobot: ["Set Up Two-Factor Authentication (2FA) in UptimeRobot"](https://help.uptimerobot.com/en/articles/11588518-set-up-two-factor-authentication-2fa-in-uptimerobot), checked 2026-11-12
