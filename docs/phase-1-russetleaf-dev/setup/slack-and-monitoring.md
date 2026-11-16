@@ -32,7 +32,11 @@ The step-by-step procedure for the Slack workspace, the bot that posts alerts, a
 
     Create `#rl-security` as a **private** channel: its findings can include details worth keeping from anyone invited to the workspace later. The others can be public within the workspace. A private channel cannot be made public later.
 
-5. **Phone notifications:** in the Slack app's notification preferences, set mobile notifications to **nothing** by default, then set `#rl-critical` to notify on **every new message**. Everything else is read when convenient.
+5. **Phone notifications,** only for `#rl-critical`. Slack has no setting for no mobile notifications at all; the lowest level, **Mentions and direct messages**, is enough, since the bot mentions no one. In the Slack app on the phone:
+    1. Select the profile picture, then **Preferences**, then **Notifications**: leave **Mobile notifications** on, and under "What to notify you about", choose **Mentions and direct messages**.
+    2. In `#rl-critical`, select the channel name at the top, then **Settings & Details**, then **Notifications**, and choose **All new posts**.
+
+    Everything else is read when convenient. **Pause notifications** (under the profile picture) is a temporary do-not-disturb, not this setting.
 
 ## Part 2: The bot (`russetleaf-bot`)
 
