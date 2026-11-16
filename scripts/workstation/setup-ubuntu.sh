@@ -42,6 +42,11 @@ function init_script() {
   readonly UV_TOOLS=(pre-commit checkov ruff pip-audit prowler zizmor)
   # The same Vale version as the docs CI workflow (.github/workflows/docs.yml)
   readonly VALE_VERSION="3.25.1"
+  # Opengrep 2.0.0 renamed its Linux release files (opengrep_manylinux_x86 became
+  # opengrep_linux_x86) and mise's aqua registry still expects the old names, so
+  # "latest" fails to install; pinned to the last 1.x release until the registry
+  # catches up (improvement I1-9)
+  readonly OPENGREP_VERSION="1.33.1"
   readonly KEYRING_DIR="/etc/apt/keyrings"
   readonly SOURCES_DIR="/etc/apt/sources.list.d"
   readonly BASHRC="${HOME}/.bashrc"
@@ -305,12 +310,14 @@ function install_bitwarden_cli() {
 ########################################
 # Install Opengrep (static analysis, the open-source fork of Semgrep) globally with
 # mise, which verifies the release's checksum
+# Globals:
+#   OPENGREP_VERSION (read)
 # Arguments:
 #   None
 ########################################
 function install_opengrep() {
-  log_step "Opengrep"
-  mise use --global opengrep@latest
+  log_step "Opengrep ${OPENGREP_VERSION}"
+  mise use --global "opengrep@${OPENGREP_VERSION}"
 }
 
 ########################################

@@ -103,7 +103,7 @@ Afterwards, **log out and back in** (for the `docker` group), clone each repo, a
 | `pre-commit` | Setup script (uv) | Git hooks in every repo: secret scan, YAML checks, and in `russetleaf-infra` the `pre-commit-terraform` hooks (fmt, validate, tflint, `terraform-docs` and Checkov), pointed at `tofu` |
 | `checkov` | Setup script (uv) | Scanning OpenTofu (source and plan), rendered Kubernetes manifests and Helm values for insecure settings (also in CI) |
 | `vale` | Setup script (mise, global, the version CI uses) | The prose checks of the [documentation style guide](../standards/documentation.md) in pre-commit, the Claude Code hook and CI ([ADR 1057](adr/1057-documentation-style-guide.md)); `vale sync` once per clone downloads its Google style package |
-| `opengrep` | Setup script (mise, global) | Static analysis (SAST) of the repos' code with the project's rules and open rule sets (also in CI); the open-source fork of Semgrep ([ADR 1053](adr/1053-open-source-tools-by-default.md)) |
+| `opengrep` | Setup script (mise, global; pinned to 1.33.1 until mise's registry knows the 2.x release file names, [improvement I1-9](improvements.md)) | Static analysis (SAST) of the repos' code with the project's rules and open rule sets (also in CI); the open-source fork of Semgrep ([ADR 1053](adr/1053-open-source-tools-by-default.md)) |
 | `ruff` | Setup script (uv) | Linting and formatting Python (this repo's tools; the summarizer in Phase 2) |
 | `pip-audit` | Setup script (uv) | Checking Python dependencies for known vulnerabilities (also in CI) |
 | `prowler` | Setup script (uv) | AWS account posture scans (CIS AWS Foundations) across every account; also monthly in CI ([ADR 1007](adr/1007-prowler-not-threatmapper.md)) |
