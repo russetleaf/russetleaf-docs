@@ -92,8 +92,8 @@ Each repo created later (Phase 1 step 1.1, Phase 2 step 1.1) is subscribed the s
 
 Two free services watch the platform from outside, so a dead cluster or a broken internet connection still raises an alert ([Alerting and notifications](../design.md#alerting-and-notifications-slack)). Their checks are created in step 4.4; this part creates the accounts and their Slack connections.
 
-1. **The heartbeat service** (for example healthchecks.io): sign up, register **both YubiKeys** as its two-factor sign-in (security keys are its only second factor), and connect its **Slack integration** to `#rl-critical`. In step 4.4, Alertmanager's always-firing `Watchdog` alert pings a check here every few minutes; if the pings stop, this service posts to `#rl-critical`.
-2. **The uptime checker** (for example UptimeRobot or Better Stack): prefer one that offers security keys or Google sign-in (UptimeRobot offers only authenticator codes); sign up, turn on its strongest **two-factor authentication**, and connect its **Slack integration** to `#rl-critical` and `#rl-dev-alerts`. Step 4.4 adds the checks for `https://russetleaf.dev` (and Phase 3 for aws.russetleaf.dev).
+1. **The heartbeat service, healthchecks.io** (open source, BSD-3-Clause; the free **Hobbyist** plan has 20 checks and includes Slack): sign up with the Workspace address (it emails a sign-in link), set a password from Bitwarden, register **both YubiKeys** as its two-factor sign-in (it also offers authenticator codes, which are not used), and connect its **Slack integration** to `#rl-critical`. In step 4.4, Alertmanager's always-firing `Watchdog` alert pings a check here every few minutes; if the pings stop, this service posts to `#rl-critical`.
+2. **The uptime checker, Better Stack** (free plan, for personal projects; Slack included; a different provider from the heartbeat, so one outage cannot silence both): sign up with the Workspace address, preferring Google sign-in (OIDC) if it is offered, turn on its strongest **two-factor authentication**, and connect its **Slack integration** to `#rl-critical` and `#rl-dev-alerts`. Step 4.4 adds the checks for `https://russetleaf.dev` (and Phase 3 for aws.russetleaf.dev).
 3. **The break-glass kit** ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)): add the logins for both services (and any recovery codes), and Slack's **backup codes**, which open the password fallback if the Workspace account is unavailable.
 
 ## Checks
@@ -135,5 +135,7 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - Slack: ["chat.postMessage API method"](https://docs.slack.dev/reference/methods/chat.postMessage), checked 2026-11-12
 - GitHub: ["GitHub integration for Slack (the integrations/slack repository: installing, signing in, subscribing and the default event types)"](https://github.com/integrations/slack), checked 2026-11-16
 - Slack: ["Add apps to your Slack workspace"](https://slack.com/help/articles/202035138-Add-apps-to-your-Slack-workspace), checked 2026-11-16
-- Healthchecks.io: ["Frequently Asked Questions (authentication mechanisms)"](https://healthchecks.io/faq/), checked 2026-11-12
-- UptimeRobot: ["Set Up Two-Factor Authentication (2FA) in UptimeRobot"](https://help.uptimerobot.com/en/articles/11588518-set-up-two-factor-authentication-2fa-in-uptimerobot), checked 2026-11-12
+- Healthchecks.io: ["Frequently Asked Questions (authentication mechanisms)"](https://healthchecks.io/faq/), checked 2026-11-16
+- Healthchecks.io: ["Pricing"](https://healthchecks.io/pricing/) (the Hobbyist plan) and ["Configuring notifications"](https://healthchecks.io/docs/configuring_notifications/) (the Slack integration), checked 2026-11-16
+- Better Stack: ["Pricing"](https://betterstack.com/pricing) (the free plan, with Slack alerts), checked 2026-11-16
+- UptimeRobot: ["Pricing"](https://uptimerobot.com/pricing/) (Slack only on paid plans, so it is not used), checked 2026-11-16

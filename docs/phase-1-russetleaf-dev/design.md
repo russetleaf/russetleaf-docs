@@ -936,8 +936,8 @@ Every message carries a **`site=dev` or `site=aws` label** (or a `[dev]` / `[aws
 
 A cluster cannot report that it is completely down, so two outside checks back up Alertmanager:
 
-- **Dead man's switch:** Alertmanager's always-firing `Watchdog` alert pings a free heartbeat service (for example, healthchecks.io) every few minutes. If the pings stop (cluster down, Alertmanager broken, home internet out), the heartbeat service posts to `#rl-critical`.
-- **External uptime checks** (for example, UptimeRobot or Better Stack free plans), every few minutes:
+- **Dead man's switch:** Alertmanager's always-firing `Watchdog` alert pings a free heartbeat service, **healthchecks.io**, every few minutes. If the pings stop (cluster down, Alertmanager broken, home internet out), the heartbeat service posts to `#rl-critical`.
+- **External uptime checks** from **Better Stack**'s free plan, every few minutes. The heartbeat and the uptime checks use different providers, so one provider's outage cannot silence both outside checks; UptimeRobot's free plan has no Slack integration ([ADR 1053](adr/1053-open-source-tools-by-default.md) records Better Stack as an exception):
     - russetleaf.dev must return 200
 
 ### AWS and Cloudflare alerts

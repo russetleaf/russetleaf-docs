@@ -218,3 +218,6 @@ Wazuh
 yubikey-(?:primary|backup)
 [Ww]orkspace
 parsedmarc
+Uptime Kuma
+Kuma
+Gatus

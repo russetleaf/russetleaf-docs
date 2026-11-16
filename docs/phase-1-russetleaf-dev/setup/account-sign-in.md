@@ -26,7 +26,7 @@ The step-by-step procedure for securing the sign-in of every account the project
 | **Cloudflare** (DNS, tunnel, Access, and the registrar for russetleaf.dev) | Google sign-in (OIDC) with the personal Google Account; password sign-in with the password from Bitwarden | Both YubiKeys (Cloudflare's own, required on both sign-in methods); Advanced Protection on the Google sign-in | Backup codes |
 | **Slack** (workspace owner, Free plan) | Google sign-in (OIDC) with the Workspace account in the workstation's browser; password sign-in with the password from Bitwarden on the phone app, and as the fallback | An authenticator code (Slack's own, required on both sign-in methods); Advanced Protection on the Google sign-in | Backup codes |
 | **Heartbeat service** (healthchecks.io) | Password from Bitwarden | Both YubiKeys (WebAuthn) | A second key is the only backup |
-| **Uptime checker** | Google sign-in with the Workspace account, or a password | Security keys if the service offers them, otherwise an authenticator code | The service's recovery codes |
+| **Uptime checker** (Better Stack) | Google sign-in with the Workspace account, or a password | Security keys if the service offers them, otherwise an authenticator code | The service's recovery codes |
 
 ## Before starting
 
@@ -95,8 +95,8 @@ The steps follow Cloudflare's documentation ([two-factor authentication](https:/
     5. **For the whole workspace:** in the admin pages, **Security → Security settings → Sign-in settings** (open them from **Admin** in the sidebar, or, if the sidebar has no **Admin**, from the workspace name at the top left, which opens the admin home); next to **Two-factor authentication for email sign-in**, select **Edit**, then **Require members to have 2FA set up** and **Authenticator apps only**, and **Save**.
     6. **Google sign-in (OIDC):** sign out in the browser, then at `slack.com/signin` select **Continue with Google** and choose the Workspace account; Google asks for a YubiKey, then Slack asks for its own authenticator code (Slack's two-factor authentication applies to both sign-in methods), and opens the existing workspace with the owner account. Test it in a private window, since a browser already signed in to Google asks for no key. If Slack offers to create a new account or workspace instead, stop: the address in step 1 does not match. The workstation uses Slack in the browser; no Slack desktop app is installed. Password sign-in, with the password from Bitwarden and the authenticator code, is the fallback.
     7. **The phone app signs in with the password.** Its **Continue with Google** offers only the Google Accounts added to the phone, and the Workspace account is not added there: it is the super administrator of the Google organization, so a phone signed in to it would carry an administrator session for Gmail, Drive and the Admin console, and Google's mobile management would apply to the phone. In the Slack app, select **Sign in with email** and enter the Workspace address; at the bottom of the confirmation-code page, select the **Workspace URL** option and enter the workspace URL (`russetleaf.slack.com`); then sign in with the password from Bitwarden and the authenticator code.
-2. **Heartbeat service** (healthchecks.io): sign up with the Workspace address, and register both YubiKeys under **Account Settings → Two-factor authentication** (security keys are its only second factor).
-3. **Uptime checker:** prefer a service that offers security keys or Google sign-in (OIDC) with the Workspace account; if it offers only authenticator codes (UptimeRobot, for example), use Google Authenticator and save its recovery codes.
+2. **Heartbeat service** (healthchecks.io): sign up with the Workspace address, and register both YubiKeys under **Account Settings → Two-factor authentication** (it also offers authenticator codes, which are not used).
+3. **Uptime checker** (Better Stack): sign up with the Workspace address, with Google sign-in (OIDC) if it is offered; use security keys as its second factor if it offers them, otherwise an authenticator code in Google Authenticator, and save its recovery codes.
 
 ## Checks
 
@@ -146,4 +146,4 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - Slack: ["Sign in to Slack"](https://slack.com/help/articles/212681477-Sign-in-to-Slack), checked 2026-11-12
 - Slack: ["Change a member's role (where the admin pages open when the sidebar has no Admin item)"](https://slack.com/help/articles/218124397-Change-a-members-role), checked 2026-11-12
 - Healthchecks.io: ["Frequently Asked Questions (authentication mechanisms)"](https://healthchecks.io/faq/), checked 2026-11-12
-- UptimeRobot: ["Set Up Two-Factor Authentication (2FA) in UptimeRobot"](https://help.uptimerobot.com/en/articles/11588518-set-up-two-factor-authentication-2fa-in-uptimerobot), checked 2026-11-12
+- Better Stack: ["Pricing"](https://betterstack.com/pricing) (the free plan; two-factor authentication and Google single sign-on are listed, the plans they come with are not), checked 2026-11-16
