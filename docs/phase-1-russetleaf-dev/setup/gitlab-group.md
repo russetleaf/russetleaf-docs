@@ -48,7 +48,7 @@ The workflow pushes with a **fine-grained personal access token** of the operato
 2. In the left sidebar, select **Access → Personal access tokens**.
 3. From the **Generate token** list, select **Fine-grained token**, and fill in:
     - **Name:** the repo's name
-    - **Description:** `GitHub to GitLab backup`
+    - **Description:** `PAT for GitHub backups`
     - **Expiration date:** one year from today (GitLab's default maximum)
 4. Under **Group and project access**, add the mirror project only, for example `russetleaf/russetleaf-docs`.
 5. Under **Add resource permissions**, on the **Group and project** tab, select **Repository → Code**, and choose **Push** from its list. Select nothing else: pushing over HTTPS needs only this permission.
