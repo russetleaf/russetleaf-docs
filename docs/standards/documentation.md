@@ -78,6 +78,7 @@ The project follows the [Google developer documentation style guide](https://dev
     **Note:** the click paths in this guide are those the services showed when the procedure was last carried out. Providers change their consoles without notice, and their own documentation can lag behind the console. Before following a path, check the provider's current documentation, linked in each part; where the screen still differs, follow what it shows and fix this guide to match.
     ```
 
+- **Every security key is tested on its own:** a guide that registers YubiKeys (or any security keys) with an account ends that part with one sign-in per key, after signing out, with only that key plugged in, and its checks say so. Registering a key shows only that the service accepted it, not that a sign-in asks for it and succeeds.
 - **Verified against the real procedure:** when a step is carried out and the screen differs from the guide, or from the provider's documentation, the guide is changed to what the screen showed.
 
 ## Notes and warnings

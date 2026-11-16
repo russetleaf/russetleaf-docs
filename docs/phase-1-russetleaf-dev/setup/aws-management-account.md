@@ -29,7 +29,7 @@ Have these ready:
 4. **Payment and identity:** add the card, then complete the SMS or voice check.
 5. **Support plan:** choose **Basic** (free). Paid support is not needed for this project.
 6. **Sign in as the root user** (the "root user" option on the sign-in page, with the email address).
-7. **MFA on root,** before anything else: open **IAM → Security credentials** (the page for the root user) and assign an MFA device. Register **`yubikey-primary`** (device name `yubikey-primary`, type **Security key**; enter its PIN and touch it when asked), then **`yubikey-backup`** the same way, named `yubikey-backup`. AWS cannot rename an MFA device: to change a name, remove the device and register it again, while another factor is still registered. An account allows several MFA devices on root; register no authenticator app. Sign out and back in to confirm MFA is asked for.
+7. **MFA on root,** before anything else: open **IAM → Security credentials** (the page for the root user) and assign an MFA device. Register **`yubikey-primary`** (device name `yubikey-primary`, type **Security key**; enter its PIN and touch it when asked), then **`yubikey-backup`** the same way, named `yubikey-backup`. AWS cannot rename an MFA device: to change a name, remove the device and register it again, while another factor is still registered. An account allows several MFA devices on root; register no authenticator app. Then sign out and sign in as root once with each key, with only that key plugged in, to confirm MFA is asked for and both keys work.
 8. **No root access keys:** on the same page, confirm the **Access keys** section is empty. Never create one: the root user only ever signs in to the console.
 9. **Billing access for Identity Center roles:** in **Account** (from the account menu), turn on **IAM user and role access to Billing information**. Only root can do this; without it, the admin role from Part 2 cannot see budgets or costs.
 10. **Alternate contacts:** in the same **Account** page, set the **Security**, **Billing** and **Operations** contacts to the operator, with the account's group address as their email, so AWS's notices reach a person through the same protected mailbox. (OpenTofu manages these from step 2.0.)
@@ -63,7 +63,7 @@ OpenTofu manages the Organization from step 2.0, but it needs a way to sign in f
 4. **Identity source:** keep the default, the **Identity Center directory**.
 5. **The AWS access portal address:** under **Settings**, change the portal's subdomain to something memorable (for example `russetleaf`, giving `https://russetleaf.awsapps.com/start`), and record it in the break-glass kit.
 6. **MFA settings:** under **Settings → Authentication**, require MFA **every time users sign in**, require users to **register an MFA device at sign-in**, and allow **security keys and built-in authenticators** (passkeys) only, with **authenticator apps** turned off: Identity Center is signed in to daily, so it keeps phishing-resistant factors only (decision log, 2026-11-05).
-7. **The operator's user:** under **Users**, add a user for the operator (their name, and the Workspace address `<name>@russetleaf.dev`), and accept the invitation from the email: set a password (from the password manager) and register MFA devices: **`yubikey-primary`** for daily sign-in, and **`yubikey-backup`** as the backup; a phone passkey is optional ([account sign-in setup guide](account-sign-in.md#the-rule)).
+7. **The operator's user:** under **Users**, add a user for the operator (their name, and the Workspace address `<name>@russetleaf.dev`), and accept the invitation from the email: set a password (from the password manager) and register MFA devices: **`yubikey-primary`** for daily sign-in, and **`yubikey-backup`** as the backup; a phone passkey is optional ([account sign-in setup guide](account-sign-in.md#the-rule)). Then sign out of the access portal and sign in once with each key on its own.
 8. **A bootstrap admin permission set:** under **Permission sets**, create one from the predefined **AdministratorAccess** policy, named **`admin`** (the name OpenTofu manages it under from step 2.0), with a session duration of **4 hours**.
 9. **Assign it:** under **AWS accounts**, select the management account, and assign the operator's user with the **`admin`** permission set.
 10. **Sign in from the workstation:**
@@ -88,7 +88,7 @@ OpenTofu manages the Organization from step 2.0, but it needs a way to sign in f
 **Checks:**
 
 - [ ] The Organization exists with **all features** enabled, and the management account is its only account so far.
-- [ ] Signing in to the **AWS access portal** asks for MFA, and shows the management account with the `admin` role.
+- [ ] Signing in to the **AWS access portal** asks for MFA, works with each YubiKey on its own, and shows the management account with the `admin` role.
 - [ ] `aws sts get-caller-identity --profile rl-mgmt-admin` returns the management account, with an `AWSReservedSSO_admin_...` role.
 - [ ] No IAM users exist in the management account, and root still has no access keys.
 - [ ] After the import, `tofu plan` in `envs/org` proposes no changes to the imported resources.
