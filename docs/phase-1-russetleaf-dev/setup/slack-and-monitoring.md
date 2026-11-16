@@ -42,7 +42,7 @@ The step-by-step procedure for the Slack workspace, the bot that posts alerts, a
 
 The clusters and workflows post through one custom Slack app, with a single permission: posting messages to channels it has been invited to.
 
-1. **Create the app** on Slack's API site ("Your apps" → **Create New App** → **From an app manifest**), choose the RussetLeaf workspace, and paste:
+1. **Create the app** from a manifest: signed in to the workspace in the browser, open `https://api.slack.com/apps?new_app=1`, choose to create the app from a manifest, pick the RussetLeaf workspace, and on the **YAML** tab replace the sample with the manifest below; select **Next**, check that the summary lists the one scope, `chat:write`, and select **Create**:
 
     ```yaml
     display_information:
@@ -62,9 +62,9 @@ The clusters and workflows post through one custom Slack app, with a single perm
       token_rotation_enabled: false
     ```
 
-2. **Install it** to the workspace (**Install App**), and copy the **Bot User OAuth Token** (it starts with `xoxb-`) into the password manager. It moves to AWS Secrets Manager in step 4.2; it is never committed or put in a shell profile. Add it to the credential inventory when that is written (step 4.2).
-3. **Invite the bot** to every channel: in each one, run `/invite @russetleaf-bot`. The bot can post only to channels it is a member of.
-4. **Note each channel's ID** (in the channel's details, at the bottom) in the password manager entry: the API addresses channels most reliably by ID, and private channels only by ID.
+2. **Install it** to the workspace from the app's settings page, and copy the **Bot token** (it starts with `xoxb-`) into a new Bitwarden item. It moves to AWS Secrets Manager in step 4.2; it is never committed or put in a shell profile. Add it to the credential inventory when that is written (step 4.2).
+3. **Add the bot to every channel:** in each one, select the channel name in the header, open the **Agents & apps** tab, select **Add agents and apps**, and add `russetleaf-bot`. The bot can post only to channels it is a member of.
+4. **Note each channel's ID** in the bot token's Bitwarden item: it is at the bottom of the first tab of the same channel details, and starts with `C`. The API addresses channels most reliably by ID, and private channels only by ID.
 
 Incoming webhooks, which Falcosidekick and Policy Reporter use instead of the token, are added to this app when those tools are installed (Policy Reporter in step 6.1, Falcosidekick in step 7.1).
 
@@ -120,7 +120,9 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - Slack: ["Create a channel"](https://slack.com/help/articles/201402297-Create-a-channel), checked 2026-11-12
 - Slack: ["Configure your Slack notifications"](https://slack.com/help/articles/201355156-Configure-your-Slack-notifications), checked 2026-11-12
 - Slack: ["Manage notifications for specific channels and direct messages"](https://slack.com/help/articles/360056534254-Manage-notifications-for-specific-channels-and-direct-messages), checked 2026-11-12
-- Slack: ["Configuring apps with app manifests"](https://docs.slack.dev/app-manifests/configuring-apps-with-app-manifests), checked 2026-11-12
+- Slack: ["Configuring apps with app manifests"](https://docs.slack.dev/app-manifests/configuring-apps-with-app-manifests), checked 2026-11-16
+- Slack: ["App manifest reference"](https://docs.slack.dev/reference/app-manifest) (the manifest's keys are current), checked 2026-11-16
+- Slack: ["Guide to apps in Slack"](https://slack.com/help/articles/360001537467-Guide-to-apps-in-Slack) (adding an app to a channel from the **Agents & apps** tab), checked 2026-11-16
 - Slack: ["chat.postMessage API method"](https://docs.slack.dev/reference/methods/chat.postMessage), checked 2026-11-12
 - GitHub: ["GitHub integration for Slack (the integrations/slack repository: /github subscribe)"](https://github.com/integrations/slack), checked 2026-11-12
 - Healthchecks.io: ["Frequently Asked Questions (authentication mechanisms)"](https://healthchecks.io/faq/), checked 2026-11-12
