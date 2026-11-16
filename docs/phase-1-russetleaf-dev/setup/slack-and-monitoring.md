@@ -7,14 +7,14 @@ The step-by-step procedure for the Slack workspace, the bot that posts alerts, a
 ## Before starting
 
 - **Bitwarden** (the project's password manager) open, with entries ready for Slack, the bot token, the heartbeat service and the uptime checker.
-- The **Slack app** on the operator's phone, for the `#rl-critical` notifications.
+- The **Slack app** on the operator's phone, for the `#rl-critical` notifications, signed in with password sign-in and the authenticator code, without adding the Workspace account to the phone ([account sign-in setup guide](account-sign-in.md#part-4-slack-and-the-outside-monitoring-services)). On the workstation, Slack is used in a browser, with no desktop app.
 - The two **YubiKeys** and the operator's **Google Account** (in Advanced Protection), for each account's sign-in ([account sign-in setup guide](account-sign-in.md)).
 
 ## Part 1: The Slack workspace
 
 1. **Create the workspace** on Slack's "create a new workspace" page, with the operator's Workspace address (`<name>@russetleaf.dev`): name it **RussetLeaf**, with a workspace URL such as `russetleaf.slack.com`. The **free plan** is enough (90 days of history, up to 10 apps; the project uses about five).
 2. **Secure the owner account:** follow Part 4 of the [account sign-in setup guide](account-sign-in.md#part-4-slack-and-the-outside-monitoring-services): daily sign-in with **Continue with Google** (the Workspace account, in Advanced Protection), and the owner's password from Bitwarden protected by an authenticator code, with the **backup codes** in Bitwarden. Slack accepts no security keys.
-3. **Keep the workspace closed,** so the only way in is an invitation the owner approves. Open the admin pages from **Admin** in the desktop sidebar, or, if the sidebar has no **Admin**, from the workspace name at the top left, then select **Workspace settings**:
+3. **Keep the workspace closed,** so the only way in is an invitation the owner approves. Open the admin pages from **Admin** in the sidebar, or, if the sidebar has no **Admin**, from the workspace name at the top left, then select **Workspace settings**:
     1. Next to **Allow people with approved email domains to join this workspace**, select **Expand**, and check that **Let people with approved email addresses join this workspace** is **not** checked.
     2. On the **Permissions** tab, next to **Invitations**, select **Expand**, check **Require admin approval**, and select **Save**.
 4. **Create the eight channels:** for each, select the **+** in the sidebar, then **Channel**, enter the name (without `#`), choose public or private, and select **Create**; skip adding people.
