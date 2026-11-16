@@ -66,7 +66,7 @@ A copy that silently stopped arriving is found only when it is needed, so each o
 
 A scheduled GitHub Actions workflow (daily) creates a `git bundle` of each of the five repos (including `russetleaf-docs`) and uploads it to a bucket in the backup account, using an OIDC role that can only **write** new objects. Images and charts are not copied: they are rebuilt from the mirrored source.
 
-Every repo is also **mirrored to GitLab on every push** to `main`, by a `gitlab-sync` workflow with a per-repo GitLab token. That copy sits outside both GitHub and AWS and is never more than one push behind, so it is the first place to restore from if GitHub is lost; the bundles in the backup account are the fallback, with history GitLab may not keep (for example after a force-push).
+Every repo is also **mirrored to GitLab on every push** to `main`, by a `gitlab-sync` workflow with a per-repo GitLab token. That copy sits outside both GitHub and AWS and is never more than one push behind, so it is the first place to restore from if GitHub is lost. A rewrite of `main` on GitHub (a force-push) does not reach it: the workflow never force-pushes, and GitLab's default protection of `main` refuses force-pushes, so the sync fails and GitLab keeps the earlier history ([GitLab group setup guide](setup/gitlab-group.md#part-6-test-the-mirror)). The bundles in the backup account are the fallback if a GitLab project itself is lost.
 
 ## Break-glass kit
 

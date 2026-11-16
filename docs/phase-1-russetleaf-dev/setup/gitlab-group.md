@@ -68,6 +68,7 @@ In the GitHub repo, **Settings → Secrets and variables → Actions → New rep
 
 1. In the GitHub repo, open **Actions**, select the **Backup to GitLab** workflow, then **Run workflow** (on `main`).
 2. When the run succeeds, open the GitLab project: its `main` branch shows the same latest commit as GitHub.
+3. **Check that `main` refuses force-pushes.** GitLab protects a project's default branch when it is created, with no force-pushes allowed. In the GitLab project, select **Settings → Repository**, expand **Branch rules**, and select **View details** next to `main`: it is protected, and **Allowed to force push** is off. Leave it off. Together with the workflow, which never force-pushes (the `gitlab-sync` action's `force_push` input stays at its default, `false`), this keeps a rewrite of `main` on GitHub, by mistake or by an attacker, from overwriting the mirror's history: the sync fails instead, and the failed run is the alert.
 
 ## Checks
 
@@ -76,13 +77,15 @@ The mirror part of the step 1.1 test:
 - [ ] The `russetleaf` group and each mirror project are **Private**.
 - [ ] **Emails** lists `<name>@russetleaf.dev` as verified. Once GitLab keeps the per-group setting ([improvement I1-8](../improvements.md)), **Preferences → Notifications** shows it for the `russetleaf` group.
 - [ ] A push to `main` on GitHub appears in the GitLab mirror within minutes, and the **Backup to GitLab** run succeeds.
+- [ ] In each mirror, `main` is protected with **Allowed to force push** off, and the workflow sets no `force_push` input.
 - [ ] Each token is a fine-grained token limited to its one mirror project, with only **Repository → Code: Push**; it is in Bitwarden, and its expiry is recorded.
 
 ## If something goes wrong
 
 - **The workflow fails to authenticate:** the token has expired or been revoked. Create a new one (Part 4), replace `GITLAB_PAT` (Part 5), and run the workflow again.
 - **The push is refused with HTTP 403:** the token lacks **Code: Push** on that project, or the operator's account has lost its role in the project. Check both, then run the workflow again.
-- **The push is rejected:** the GitLab project is not empty, or its `main` branch is protected against the push. Check that the project was created without a README, or allow the push for `main` in the project's protected branches.
+- **The push is rejected on the first sync:** the GitLab project is not empty. Check that it was created without a README; if it was not, delete the project and create it again empty (Part 3).
+- **The push is rejected later, as not a fast-forward:** `main` on GitHub no longer contains the commit at the top of the mirror, so its history has been rewritten. Treat it as a possible incident: find out who rewrote it and why before anything else. Only if the rewrite was deliberate, turn on **Allowed to force push** for `main` in the mirror, run the workflow once with `force_push` set, and turn the toggle off again; otherwise restore `main` on GitHub from the mirror.
 - **GitHub is lost:** restore the repos from their mirrors, as in the [disaster recovery plan](../disaster-recovery.md).
 
 ## References
@@ -98,5 +101,7 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - GitLab: ["Fine-grained personal access tokens"](https://docs.gitlab.com/auth/tokens/fine_grained_access_tokens/), checked 2026-11-13
 - GitLab: ["Fine-grained permissions for Git and other operations"](https://docs.gitlab.com/auth/tokens/fine_grained_access_tokens_other/) (Git over HTTPS: Code, Push), checked 2026-11-13
 - GitLab: ["Project access tokens"](https://docs.gitlab.com/user/project/settings/project_access_tokens/), checked 2026-11-13
+- GitLab: ["Protected branches"](https://docs.gitlab.com/user/project/repository/branches/protected/) (**Branch rules**, **Allowed to force push**), checked 2026-11-16
+- GitLab: ["Default branch"](https://docs.gitlab.com/user/project/repository/branches/default/) (the default branch is protected against force-pushes, "Fully protected" by default), checked 2026-11-16
 - GitLab: ["Manage projects"](https://docs.gitlab.com/user/project/working_with_projects/), checked 2026-11-13
-- GitHub: ["kujov/gitlab-sync"](https://github.com/kujov/gitlab-sync) (the sync action's README: the secrets and their format), checked 2026-11-13
+- GitHub: ["kujov/gitlab-sync"](https://github.com/kujov/gitlab-sync) (the sync action's README: the secrets and their format; its `action.yml` at the pinned commit runs `git push` with `--force` only when `force_push` is `true`), checked 2026-11-16
