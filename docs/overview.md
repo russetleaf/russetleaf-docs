@@ -708,6 +708,7 @@ Every decision, in number order. Each lives in the `adr/` folder of the phase th
 | [1058](phase-1-russetleaf-dev/adr/1058-security-detections-as-code.md) | Security detections as code in Sigma, on Loki, instead of a SIEM product | 1 |
 | [1059](phase-1-russetleaf-dev/adr/1059-google-workspace-identity.md) | Google Workspace on russetleaf.dev as the project's identity | 1 |
 | [1060](phase-1-russetleaf-dev/adr/1060-github-organization-and-gitlab-group.md) | The repos in a GitHub organization and a GitLab group | 1 |
+| [1061](phase-1-russetleaf-dev/adr/1061-credential-rotation.md) | Credential rotation: on events for passwords, on a schedule for machine credentials | 1 |
 | [2001](phase-2-ai-mlops/adr/2001-mlops-lifecycle.md) | Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback | 2 |
 | [2002](phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md) | Summary pipeline: event-driven summarizer behind an LLM gateway | 2 |
 | [2003](phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md) | Self-hosted model on rl-home-cp02 (CPU llama.cpp), dedicated by taint | 2 |

@@ -147,6 +147,7 @@ nav:
           - "1058 Security detections as code, not a SIEM product": phase-1-russetleaf-dev/adr/1058-security-detections-as-code.md
           - "1059 Google Workspace as the project's identity": phase-1-russetleaf-dev/adr/1059-google-workspace-identity.md
           - "1060 GitHub organization and GitLab group": phase-1-russetleaf-dev/adr/1060-github-organization-and-gitlab-group.md
+          - "1061 Credential rotation": phase-1-russetleaf-dev/adr/1061-credential-rotation.md
   - "Phase 2: AI and MLOps":
       - Design: phase-2-ai-mlops/design.md
       - Plan: phase-2-ai-mlops/plan.md

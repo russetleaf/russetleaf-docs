@@ -110,6 +110,7 @@ The kit file is generated from Bitwarden rather than typed, so every password an
           (if .notes then "Notes:", .notes else empty end),
           (if (.attachments // []) | length > 0 then "WARNING: this item has attachments, which are not in the kit" else empty end),
           ""' "${RL_KIT}/items.json"
+      printf -- '---- end of the Bitwarden items ----\n'
     } >"${RL_KIT}/kit.txt"
     jq length "${RL_KIT}/items.json"
     grep -c '^==== ' "${RL_KIT}/kit.txt"
@@ -227,9 +228,18 @@ Put the USB stick back in the safe afterwards.
 
 ## Keeping the kit current
 
-- **When an item changes** (a new recovery code, a new password, the Talos secrets bundle after step 2.2): update Bitwarden, then repeat Part 2, steps 1 to 4, and Part 3 with the GPG exports from the USB stick, replace both cloud copies, and replace the printed pages that changed (shredding the old ones). Make a new vault export at the same time (Part 4), replacing the old copies.
+- **When an item changes** (a new recovery code, a new password, a rotated machine credential, the Talos secrets bundle after step 2.2; [ADR 1061](../adr/1061-credential-rotation.md)): update Bitwarden, then repeat Part 2, steps 1 to 4, and Part 3 with the GPG exports from the USB stick, replace both cloud copies, and replace the printed pages that changed (shredding the old ones). Make a new vault export at the same time (Part 4), replacing the old copies.
 - **The vault export** is also renewed **quarterly**, even when the kit has not changed, since the vault changes more often than the kit.
-- **Every 6 months** ([drill](../disaster-recovery.md#drills)): download both cloud copies and decrypt them after `gpgconf --reload gpg-agent`, compare them with Bitwarden, and check the GPG key's expiry date (`gpg --show-keys gpg-public-key.asc`).
+- **Every 6 months** ([drill](../disaster-recovery.md#drills)): download both cloud copies and decrypt them after `gpgconf --reload gpg-agent`, check the GPG key's expiry date (`gpg --show-keys gpg-public-key.asc`), and check the kit for **drift** from Bitwarden: generate a fresh kit file (Part 2, step 1, after the setup lines in [Before starting](#before-starting)), and compare its Bitwarden items with the cloud copy's, without printing either:
+
+    ```bash
+    items='/^==== /,/^---- end of the Bitwarden items ----$/p'
+    gpg --decrypt russetleaf-break-glass-kit.txt.gpg | sed -n "${items}" >"${RL_KIT}/kit-cloud.txt"
+    sed -n "${items}" "${RL_KIT}/kit.txt" >"${RL_KIT}/kit-now.txt"
+    cmp -s "${RL_KIT}/kit-cloud.txt" "${RL_KIT}/kit-now.txt" && echo "The kit is current" || echo "The kit is stale: refresh it"
+    ```
+
+    A stale kit means a refresh was missed: refresh it as above.
 - **Renew the GPG key** at least a month before it expires: load it as in [Using the key](#using-the-key), run `gpg --quick-set-expire "${FPR}" 2y` and `gpg --quick-set-expire "${FPR}" 2y '*'`, and export the public key, the secret key and the `paperkey` file again (Part 1, step 2). Update the public key in Bitwarden and in the cluster's backup job (step 2.5), replace the files on the USB stick and the printout, and refresh the kit (Part 2, steps 1 to 4, and Part 3). The key and its fingerprint do not change, so existing backups still decrypt.
 
 ## Moving the key to a YubiKey later

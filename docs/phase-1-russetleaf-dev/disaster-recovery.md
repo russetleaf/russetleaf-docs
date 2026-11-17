@@ -151,6 +151,6 @@ The step-by-step runbooks for these scenarios (etcd recovery, node replacement, 
 | Control-plane recovery (`etcd-recovery.md`, on a local Talos-in-Docker cluster) | Yearly | Quorum loss is recoverable |
 | Full power cut (`cold-start.md`) | Yearly | The cluster and database come back on their own, or by the checklist |
 | Clone a repo from its GitLab mirror over SSH with each YubiKey, during the yearly SSH key renewal ([workstation YubiKey setup guide](setup/workstation-yubikey.md#renewing-the-keys-every-year)) | Yearly | The first restore path for a lost GitHub works from the workstation, with no credentials to set up |
-| Check the break-glass kit (logins work, recovery codes valid, printed copy current, both encrypted cloud copies decrypt with the memorized passphrase, the GPG key not near expiry) | Every 6 months | Access can be recovered |
+| Check the break-glass kit (logins work, recovery codes valid, printed copy current, both encrypted cloud copies decrypt with the memorized passphrase, a freshly generated kit file matches the cloud copy's Bitwarden items, the GPG key not near expiry) | Every 6 months | Access can be recovered |
 
 Each drill's result and time are recorded in the decision log; this document is updated whenever a drill finds something wrong.
