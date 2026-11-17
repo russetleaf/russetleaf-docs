@@ -26,7 +26,8 @@ Both of the operator's YubiKeys are Security Key NFC, which have no OpenPGP func
 Have these ready:
 
 - **The workstation**, set up with [`setup-ubuntu.sh`](https://github.com/russetleaf/russetleaf-docs/blob/main/scripts/workstation/setup-ubuntu.sh), which installs `gnupg` and `paperkey`.
-- **Bitwarden open,** with a new entry for the GPG key (its passphrase and fingerprint, and the public key as a secure note), and the Bitwarden CLI (`bw`) signed in ([workstation configuration](../plan.md#4-configuration)), for the vault export in Part 4.
+- **Bitwarden open,** with every item the kit needs in the vault's **`russetleaf` folder**, as text in each item's fields or notes (not as attachments, which the kit cannot read): the list is in the [disaster recovery plan](../disaster-recovery.md#break-glass-kit). Create a new item in that folder for the GPG key (its passphrase and fingerprint, and the public key in its notes).
+- **The Bitwarden CLI (`bw`) signed in** with the account's personal API key, since the CLI cannot use a security key: in the Bitwarden web app, **Settings → Security → Keys → View API key** (it asks for the master password) shows the `client_id` and `client_secret`; run `bw login --apikey` and paste them when asked ([workstation configuration](../plan.md#4-configuration)). `bw status` then shows `locked`.
 - **A USB stick** for the safe, used for nothing else.
 - **A printer** connected by USB or on the home network, not a cloud print service, so the printed pages are not stored by a third party.
 - **Sign-ins to Google Drive and OneDrive:** the personal Google Account's Drive (not the Workspace account's, which depends on russetleaf.dev) and the personal Microsoft account.
@@ -86,15 +87,54 @@ mkdir -m 700 "${GNUPGHOME}"
 
 ## Part 2: The kit file and the printed copy
 
-1. **Write the kit file** in `"${RL_KIT}/kit.txt"` with `vim -n -i NONE -c 'setlocal noundofile nobackup nowritebackup'`, from the entries in Bitwarden. The options keep every copy of the text in the folder in memory: `-n` turns off the swap file and `-i NONE` the `viminfo` file (which would save yanked text in the home folder), and the settings turn off undo and backup files, which a `vimrc` may send to a folder on disk. The kit file lists every item in the [disaster recovery plan's list](../disaster-recovery.md#break-glass-kit), plus the GPG key's **fingerprint** and **passphrase**. Then append the GPG key's public key and secret key export:
+The kit file is generated from Bitwarden rather than typed, so every password and recovery code in it is an exact copy, and every refresh is the same command.
+
+1. **Generate the kit file** from the `russetleaf` folder, as text in memory. Run the whole block; `bw unlock` asks for the master password:
+
+    ```bash
+    export BW_SESSION="$(bw unlock --raw)"
+    bw sync
+    folder_id="$(bw list folders | jq -r '.[] | select(.name == "russetleaf") | .id')"
+    bw list items --folderid "${folder_id}" >"${RL_KIT}/items.json"
+    {
+      printf 'RussetLeaf break-glass kit, generated %s from the Bitwarden folder "russetleaf"\n\n' "$(date +%F)"
+      jq -r 'sort_by(.name | ascii_downcase)[]
+        | "==== \(.name) ====",
+          (if .login then
+             (if .login.username then "Username: \(.login.username)" else empty end),
+             (if .login.password then "Password: \(.login.password)" else empty end),
+             (if .login.totp then "Authenticator key (TOTP): \(.login.totp)" else empty end),
+             ((.login.uris // [])[] | "URL: \(.uri)")
+           else empty end),
+          ((.fields // [])[] | "\(.name): \(.value // "")"),
+          (if .notes then "Notes:", .notes else empty end),
+          (if (.attachments // []) | length > 0 then "WARNING: this item has attachments, which are not in the kit" else empty end),
+          ""' "${RL_KIT}/items.json"
+    } >"${RL_KIT}/kit.txt"
+    jq length "${RL_KIT}/items.json"
+    grep -c '^==== ' "${RL_KIT}/kit.txt"
+    grep -c '^WARNING' "${RL_KIT}/kit.txt"
+    rm "${RL_KIT}/items.json"
+    ```
+
+    The first two numbers match (every item in the folder is in the file), and the third is `0`. An item with attachments is reported by name in the file: move what the attachment holds into the item's notes, and generate the file again.
+
+2. **Add Bitwarden's own recovery details,** which cannot live in the vault they unlock: the account email, the **master password** and the **two-step login recovery code**. Type them at the top of the file with `vim -n -i NONE -c 'setlocal noundofile nobackup nowritebackup' "${RL_KIT}/kit.txt"`. The options keep every copy of the text in the folder in memory: `-n` turns off the swap file and `-i NONE` the `viminfo` file (which would save yanked text in the home folder), and the settings turn off undo and backup files, which a `vimrc` may send to a folder on disk.
+3. **Print** the kit file, the `paperkey` file and the public key, on a printer connected by USB or on the home network, straight from memory: `lpstat -p` lists the printers, then
+
+    ```bash
+    lp -d <printer> "${RL_KIT}/kit.txt" "${RL_KIT}/gpg-paperkey.txt" "${RL_KIT}/gpg-public-key.asc"
+    ```
+
+    The kit file carries the date it was generated on its first page.
+4. **Append the GPG key's exports** to the kit file, for the encrypted copy (Part 3), after printing, so the long secret key export is not printed (the `paperkey` printout is its paper form):
 
     ```bash
     cat "${RL_KIT}/gpg-public-key.asc" "${RL_KIT}/gpg-secret-key.asc" >>"${RL_KIT}/kit.txt"
     ```
 
-2. **Print** the starred items of the kit file, the GPG fingerprint and passphrase, and `gpg-paperkey.txt` with the public key (`gpg-public-key.asc`). Date each page.
-3. **Copy to the USB stick** `gpg-public-key.asc`, `gpg-secret-key.asc` and `gpg-paperkey.txt`.
-4. **Put in the safe:** the printed pages, the USB stick and `yubikey-backup`. The safe then holds the AWS root password and an MFA device together, which is accepted for a home safe (decision log, 2026-11-05).
+5. **Copy to the USB stick** `gpg-public-key.asc`, `gpg-secret-key.asc` and `gpg-paperkey.txt`.
+6. **Put in the safe:** the printed pages, the USB stick and `yubikey-backup`. The safe then holds the AWS root password and an MFA device together, which is accepted for a home safe (decision log, 2026-11-05).
 
 ## Part 3: The encrypted copy in Google Drive and OneDrive
 
@@ -118,7 +158,7 @@ mkdir -m 700 "${GNUPGHOME}"
 
 The kit holds only the items needed to regain access. This part adds a copy of the **whole vault** that can be read **without Bitwarden**: a plain JSON export, encrypted with GPG and the memorized kit passphrase. If Bitwarden's service, apps or account are unavailable for good, GnuPG and the passphrase alone recover every entry. Bitwarden's own encrypted exports are not used, because both kinds need Bitwarden to read them: an "account restricted" export imports only into the same account, and a "password protected" one into a Bitwarden account.
 
-1. **Unlock the CLI and sync,** so the export is current:
+1. **Unlock the CLI and sync,** so the export is current (skip this if the CLI is still unlocked from Part 2):
 
     ```bash
     export BW_SESSION="$(bw unlock --raw)"
@@ -187,10 +227,10 @@ Put the USB stick back in the safe afterwards.
 
 ## Keeping the kit current
 
-- **When an item changes** (a new recovery code, a new password, the Talos secrets bundle after step 2.2): update Bitwarden, then repeat Part 2, step 1 and Part 3 with the GPG exports from the USB stick, replace both cloud copies, and replace the printed pages that changed (shredding the old ones). Make a new vault export at the same time (Part 4), replacing the old copies.
+- **When an item changes** (a new recovery code, a new password, the Talos secrets bundle after step 2.2): update Bitwarden, then repeat Part 2, steps 1 to 4, and Part 3 with the GPG exports from the USB stick, replace both cloud copies, and replace the printed pages that changed (shredding the old ones). Make a new vault export at the same time (Part 4), replacing the old copies.
 - **The vault export** is also renewed **quarterly**, even when the kit has not changed, since the vault changes more often than the kit.
 - **Every 6 months** ([drill](../disaster-recovery.md#drills)): download both cloud copies and decrypt them after `gpgconf --reload gpg-agent`, compare them with Bitwarden, and check the GPG key's expiry date (`gpg --show-keys gpg-public-key.asc`).
-- **Renew the GPG key** at least a month before it expires: load it as in [Using the key](#using-the-key), run `gpg --quick-set-expire "${FPR}" 2y` and `gpg --quick-set-expire "${FPR}" 2y '*'`, and export the public key, the secret key and the `paperkey` file again (Part 1, step 2). Update the public key in Bitwarden and in the cluster's backup job (step 2.5), replace the files on the USB stick and the printout, and refresh the kit (Part 2, step 1 and Part 3). The key and its fingerprint do not change, so existing backups still decrypt.
+- **Renew the GPG key** at least a month before it expires: load it as in [Using the key](#using-the-key), run `gpg --quick-set-expire "${FPR}" 2y` and `gpg --quick-set-expire "${FPR}" 2y '*'`, and export the public key, the secret key and the `paperkey` file again (Part 1, step 2). Update the public key in Bitwarden and in the cluster's backup job (step 2.5), replace the files on the USB stick and the printout, and refresh the kit (Part 2, steps 1 to 4, and Part 3). The key and its fingerprint do not change, so existing backups still decrypt.
 
 ## Moving the key to a YubiKey later
 
