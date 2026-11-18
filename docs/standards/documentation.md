@@ -39,6 +39,7 @@ The project follows the [Google developer documentation style guide](https://dev
 
 - **Numbered lists** only for steps done in order. Number them `1.`, `2.`, `3.`.
 - **Bulleted lists** (`-`) for everything else.
+- **Alphabetical order** for lists and table rows of names (accounts, services, channels, tools, files) whose order carries no meaning, so a reader can find an item and check that none is missing. Where the order does carry meaning (priority, severity, the order of steps or of recovery), keep it and say what it is.
 - **A bold lead-in** for items that start with a term or a label: `- **Term:** the explanation.` The text after the colon starts with a capital when it is a full sentence, and with lowercase otherwise; keep one form within a list.
 - **Parallel items:** every item in a list has the same grammatical form, either all full sentences ending with a period or all fragments without one.
 - **Nesting:** four spaces per level, at most two levels below the top.
