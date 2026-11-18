@@ -171,6 +171,7 @@ function check_base_packages() {
   check_tool jq required jq --version
   check_tool gpg required gpg --version
   check_tool paperkey required paperkey --version
+  check_tool mkfs.exfat required mkfs.exfat -V
   check_tool ykman required ykman --version
   check_tool pamu2fcfg required pamu2fcfg --version
   check_tool python3 required python3 --version

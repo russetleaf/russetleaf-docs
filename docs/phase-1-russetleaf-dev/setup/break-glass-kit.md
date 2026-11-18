@@ -28,7 +28,7 @@ Have these ready:
 - **The workstation**, set up with [`setup-ubuntu.sh`](https://github.com/russetleaf/russetleaf-docs/blob/main/scripts/workstation/setup-ubuntu.sh), which installs `gnupg` and `paperkey`.
 - **Bitwarden open,** with every item the kit needs in the vault's **`russetleaf` folder**, as text in each item's fields or notes (not as attachments, which the kit cannot read): the list is in the [disaster recovery plan](../disaster-recovery.md#break-glass-kit). Create a new item in that folder for the GPG key (its passphrase and fingerprint, and the public key in its notes).
 - **The Bitwarden CLI (`bw`) signed in** with the account's personal API key, since the CLI cannot use a security key: in the Bitwarden web app, **Settings → Security → Keys → View API key** (it asks for the master password) shows the `client_id` and `client_secret`; run `bw login --apikey` and paste them when asked ([workstation configuration](../plan.md#4-configuration)). `bw status` then shows `locked`.
-- **A USB stick** for the safe, used for nothing else.
+- **A USB stick** for the safe, used for nothing else, formatted as **exFAT** (which Linux, Windows and macOS all read and write, so any computer at hand can open it years later) and named **`RL-KIT`**. Formatting erases the stick. Open **Disks** from the Activities overview, select the stick in the list of devices on the left (check its size and model, so the right one is erased), then in the toolbar under **Volumes** select the menu button, then **Format Partition…**. Enter the name `RL-KIT`, choose the type **Other**, then **exFAT** (Disks offers it once `exfatprogs` is installed, which the setup script does), select **Next**, check the details, and select **Format**. `lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINT` then shows the partition with `exfat` and `RL-KIT`, mounted at `/media/<user>/RL-KIT`.
 - **A printer** connected by USB or on the home network, not a cloud print service, so the printed pages are not stored by a third party.
 - **Sign-ins to Google Drive and OneDrive:** the personal Google Account's Drive (not the Workspace account's, which depends on russetleaf.dev) and the personal Microsoft account.
 - **The kit passphrase:** generate a passphrase of six or more words with Bitwarden's generator (passphrase type) **without saving it**, and memorize it. It is written down nowhere except, optionally, a sealed copy with a trusted person. Everything in the encrypted copy depends on remembering it, so the 6-monthly check below tests it.
@@ -134,7 +134,7 @@ The kit file is generated from Bitwarden rather than typed, so every password an
     cat "${RL_KIT}/gpg-public-key.asc" "${RL_KIT}/gpg-secret-key.asc" >>"${RL_KIT}/kit.txt"
     ```
 
-5. **Copy to the USB stick** `gpg-public-key.asc`, `gpg-secret-key.asc` and `gpg-paperkey.txt`.
+5. **Copy to the USB stick** `gpg-public-key.asc`, `gpg-secret-key.asc` and `gpg-paperkey.txt`: `cp "${RL_KIT}"/gpg-{public-key.asc,secret-key.asc,paperkey.txt} /media/"${USER}"/RL-KIT/`.
 6. **Put in the safe:** the printed pages, the USB stick and `yubikey-backup`. The safe then holds the AWS root password and an MFA device together, which is accepted for a home safe (decision log, 2026-11-05).
 
 ## Part 3: The encrypted copy in Google Drive and OneDrive
@@ -217,7 +217,7 @@ For a restore from Cloudflare R2 or the quarterly drill, load the key from the U
 
 ```bash
 export GNUPGHOME="$(mktemp -d -p /dev/shm)"
-gpg --import /media/"${USER}"/<usb-stick>/gpg-secret-key.asc
+gpg --import /media/"${USER}"/RL-KIT/gpg-secret-key.asc
 gpg --output mariadb-dump.sql.gz --decrypt mariadb-dump.sql.gz.gpg
 gpgconf --kill gpg-agent
 rm -rf "${GNUPGHOME}"

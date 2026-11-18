@@ -86,6 +86,7 @@ Afterwards, **log out and back in** (for the `docker` group), clone each repo, a
 | `scdaemon`, `pcscd`, `yubikey-manager` | Setup script (apt) | Checking the YubiKey (`ykman info`); moving the GPG key onto a YubiKey 5 later ([improvement I1-1](improvements.md); `scdaemon`, `pcscd`, and `ykman` for its PINs and touch policy; [setup guide](setup/break-glass-kit.md#moving-the-key-to-a-yubikey-later)) |
 | `libpam-u2f`, `pamu2fcfg` | Setup script (apt) | `sudo` that needs a YubiKey touch as well as the password, and registering the keys for it ([workstation YubiKey setup guide](setup/workstation-yubikey.md)) |
 | `paperkey` | Setup script (apt) | A printable backup of the GPG secret key, for the safe |
+| `exfatprogs` (`mkfs.exfat`) | Setup script (apt) | Formatting the break-glass kit's USB stick as exFAT, which Linux, Windows and macOS all read and write; GNOME Disks offers exFAT only when it is installed |
 | `python3`, `python3-venv` | Setup script (apt) | Building this docs site locally (Zensical) and running this repo's tools (`plan_to_issues.py`, the reference and style checks) |
 | `procps` | Setup script (apt) | `sysctl`, which the setup script uses to set kind's file-watch limits (already on most Ubuntu installs) |
 | `shellcheck` | Setup script (apt) | Linting shell scripts, including these workstation scripts (also in CI) |

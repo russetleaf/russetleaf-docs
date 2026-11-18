@@ -28,7 +28,7 @@ function init_script() {
   readonly SCRIPT_DIR
   readonly SCRIPT_NAME="${0##*/}"
   readonly APT_PACKAGES=(
-    git curl wget unzip jq ca-certificates gnupg scdaemon pcscd paperkey yubikey-manager
+    git curl wget unzip jq ca-certificates gnupg scdaemon pcscd paperkey exfatprogs yubikey-manager
     libpam-u2f pamu2fcfg
     python3 python3-venv shellcheck shfmt bats direnv wireguard-tools procps
   )
