@@ -95,7 +95,7 @@ The kit file is **generated from Bitwarden**: every item in the project's own Bi
 - The project's **GPG key**, which decrypts the backup copies in Cloudflare R2. It is kept **only in the kit**, never in a keyring on the workstation: a passphrase-protected **export of the secret key** (on the USB stick, and inside the encrypted copy), a `paperkey` printout in the safe, its fingerprint and its passphrase. It is loaded into memory only for a restore or a drill. Moving it onto a YubiKey 5 is [improvement I1-1](improvements.md) ([setup guide](setup/break-glass-kit.md#moving-the-key-to-a-yubikey-later))
 - The **internal CA root** (certificate and key) from cert-manager ([ADR 1028](adr/1028-internal-pki.md))
 - The **YubiKeys' FIDO2 PINs** (both keys), so a key can still be used, rather than reset, if its PIN is forgotten
-- The **workstation's** login (user name and password), and its disk encryption passphrase if the disk is encrypted: the workstation is dedicated to the project, holds the signing key and the YubiKey SSH key handles, and is the machine the recovery is run from
+- The **workstation's** login (user name and password) and its **disk encryption passphrase**: the workstation is dedicated to the project, holds the signing key and the YubiKey SSH key handles, and is the machine the recovery is run from
 - Logins for the **outside monitoring services** (the heartbeat service behind the dead man's switch, and the uptime checker), so monitoring can be repaired when the cluster is down
 
 ## Scenarios
