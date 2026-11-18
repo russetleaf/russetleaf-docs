@@ -56,7 +56,7 @@ mkdir -m 700 "${GNUPGHOME}"
 
 ## Part 1: Create the GPG key
 
-1. **Create the key:** a primary key for certifying (it renews the key's expiry) and an encryption subkey, both expiring after two years. First create the item in Bitwarden: **New → Secure note**, named `RussetLeaf backups GPG key`, then generate a passphrase with the generator's **Passphrase** type (six or more words) and add it in the item's **Custom fields** section as a field of type **Hidden**, with the **Name** `Passphrase` and the passphrase as its **Value**, and save. When `gpg` asks for the key's passphrase (twice, in a passphrase window), paste it from the item.
+1. **Create the key:** a primary key for certifying (it renews the key's expiry) and an encryption subkey, both expiring after two years. First create the item in Bitwarden: **New → Secure note**, named `RussetLeaf backups GPG key`, then generate a passphrase with the generator's **Passphrase** type (six or more words) and in the item's **Custom fields** section, select **Add field** and add a field of type **Hidden**, with the **Name** `Passphrase` and the passphrase as its **Value**, and save. When `gpg` asks for the key's passphrase (twice, in a passphrase window), paste it from the item.
 
     ```bash
     gpg --quick-generate-key "RussetLeaf backups" ed25519 cert 2y
