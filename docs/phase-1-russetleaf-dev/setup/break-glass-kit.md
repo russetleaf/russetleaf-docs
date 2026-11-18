@@ -26,8 +26,8 @@ Both of the operator's YubiKeys are Security Key NFC, which have no OpenPGP func
 Have these ready:
 
 - **The workstation**, set up with [`setup-ubuntu.sh`](https://github.com/russetleaf/russetleaf-docs/blob/main/scripts/workstation/setup-ubuntu.sh), which installs `gnupg` and `paperkey`.
-- **Bitwarden open,** with every item the kit needs in the vault's **`russetleaf` folder**, as text in each item's fields or notes (not as attachments, which the kit cannot read): the list is in the [disaster recovery plan](../disaster-recovery.md#break-glass-kit). Create a new item in that folder for the GPG key (its passphrase and fingerprint, and the public key in its notes).
-- **The Bitwarden CLI (`bw`) signed in** with the account's personal API key, since the CLI cannot use a security key: in the Bitwarden web app, **Settings → Security → Keys → View API key** (it asks for the master password) shows the `client_id` and `client_secret`; run `bw login --apikey` and paste them when asked ([workstation configuration](../plan.md#4-configuration)). `bw status` then shows `locked`.
+- **The project's Bitwarden account open,** with every item the kit needs, as text in each item's fields or notes (not as attachments, which the kit cannot read): the list is in the [disaster recovery plan](../disaster-recovery.md#break-glass-kit). The kit holds the whole vault, which holds only the project's items ([account sign-in setup guide](account-sign-in.md#part-1-the-personal-google-account-microsoft-and-bitwarden)). Create a new item for the GPG key (its passphrase and fingerprint, and the public key in its notes).
+- **The Bitwarden CLI (`bw`) signed in** with the account's personal API key, since the CLI cannot use a security key: in the Bitwarden web app, **Settings → Security → Keys → View API key** (it asks for the master password) shows the `client_id` and `client_secret`; run `bw login --apikey` in the project's CLI data folder (set up below) and paste them when asked ([workstation configuration](../plan.md#4-configuration)). `bw status` then shows `locked` and the Workspace address.
 - **A USB stick** for the safe, used for nothing else, formatted as **exFAT** (which Linux, Windows and macOS all read and write, so any computer at hand can open it years later) and named **`RL-KIT`**. Formatting erases the stick. Disks offers exFAT once `exfatprogs` is installed, which the setup script does.
     1. Open **Disks** from the Activities overview.
     2. In the list of devices on the left, select the USB stick. Check its size and model, so the right device is erased.
@@ -41,9 +41,10 @@ Have these ready:
 - **Sign-ins to Google Drive and OneDrive:** the personal Google Account's Drive (not the Workspace account's, which depends on russetleaf.dev) and the personal Microsoft account.
 - **The kit passphrase:** generate a passphrase of six or more words with Bitwarden's generator (passphrase type) **without saving it**, and memorize it. It is written down nowhere except, optionally, a sealed copy with a trusted person. Everything in the encrypted copy depends on remembering it, so the 6-monthly check below tests it.
 
-All secret files, and the keyring the key is created in, are made in memory (`/dev/shm`), so they never reach the disk, and they are deleted at the end:
+The first line points `bw` at the project's account rather than any personal one. All secret files, and the keyring the key is created in, are made in memory (`/dev/shm`), so they never reach the disk, and they are deleted at the end:
 
 ```bash
+export BITWARDENCLI_APPDATA_DIR="${HOME}/.config/Bitwarden CLI RussetLeaf"
 RL_KIT=/dev/shm/rl-kit
 mkdir -m 700 "${RL_KIT}"
 export GNUPGHOME="${RL_KIT}/gnupg"
@@ -97,15 +98,14 @@ mkdir -m 700 "${GNUPGHOME}"
 
 The kit file is generated from Bitwarden rather than typed, so every password and recovery code in it is an exact copy, and every refresh is the same command.
 
-1. **Generate the kit file** from the `russetleaf` folder, as text in memory. Run the whole block; `bw unlock` asks for the master password:
+1. **Generate the kit file** from the whole vault, as text in memory. Run the whole block; `bw unlock` asks for the master password:
 
     ```bash
     export BW_SESSION="$(bw unlock --raw)"
     bw sync
-    folder_id="$(bw list folders | jq -r '.[] | select(.name == "russetleaf") | .id')"
-    bw list items --folderid "${folder_id}" >"${RL_KIT}/items.json"
+    bw list items >"${RL_KIT}/items.json"
     {
-      printf 'RussetLeaf break-glass kit, generated %s from the Bitwarden folder "russetleaf"\n\n' "$(date +%F)"
+      printf "RussetLeaf break-glass kit, generated %s from the project's Bitwarden vault\n\n" "$(date +%F)"
       jq -r 'sort_by(.name | ascii_downcase)[]
         | "==== \(.name) ====",
           (if .login then
@@ -126,7 +126,7 @@ The kit file is generated from Bitwarden rather than typed, so every password an
     rm "${RL_KIT}/items.json"
     ```
 
-    The first two numbers match (every item in the folder is in the file), and the third is `0`. An item with attachments is reported by name in the file: move what the attachment holds into the item's notes, and generate the file again.
+    The first two numbers match (every item in the vault is in the file), and the third is `0`. An item with attachments is reported by name in the file: move what the attachment holds into the item's notes, and generate the file again.
 
 2. **Add Bitwarden's own recovery details,** which cannot live in the vault they unlock: the account email, the **master password** and the **two-step login recovery code**. Type them at the top of the file with `vim -n -i NONE -c 'setlocal noundofile nobackup nowritebackup' "${RL_KIT}/kit.txt"`. The options keep every copy of the text in the folder in memory: `-n` turns off the swap file and `-i NONE` the `viminfo` file (which would save yanked text in the home folder), and the settings turn off undo and backup files, which a `vimrc` may send to a folder on disk.
 3. **Print** the kit file, the `paperkey` file and the public key, on a printer connected by USB or on the home network, straight from memory: `lpstat -p` lists the printers, then

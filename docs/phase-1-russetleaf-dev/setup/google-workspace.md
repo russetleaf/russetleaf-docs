@@ -12,15 +12,16 @@ The steps follow Google's Admin Help ([verify the domain](https://knowledge.work
 Have these ready:
 
 - **Both YubiKeys**, each with a FIDO2 PIN.
-- **Bitwarden**, for the Workspace account's password and backup codes.
+- **Paper and a pen** for a temporary password. The project's Bitwarden account is created with the Workspace address, so it does not exist yet; the password is replaced by one generated in Bitwarden as soon as that account exists (Part 1, step 4).
 - **The Cloudflare dashboard**, signed in, for the DNS records of russetleaf.dev.
 - **The personal Google Account's address** and the operator's **phone number**, for recovery.
 
 ## Part 1: Sign up and verify the domain
 
-1. **Sign up** for **Google Workspace Business Starter**, with the existing domain **russetleaf.dev**, one user: the operator's account `<name>@russetleaf.dev`, which is also the organization's **super administrator**. Generate its password in Bitwarden.
+1. **Sign up** for **Google Workspace Business Starter**, with the existing domain **russetleaf.dev**, one user: the operator's account `<name>@russetleaf.dev`, which is also the organization's **super administrator**. Give it a **temporary** password of at least 16 random characters, written on paper only.
 2. **Verify the domain:** in the setup tool (or the Admin console's **Menu → Account → Domains → Manage domains → Verify domain**), choose **Cloudflare** as the host. Google offers to add the records itself: it opens the Cloudflare dashboard with the records filled in, and after the operator authorizes them, it verifies the domain and activates Gmail. It adds the verification TXT record, the MX record (`smtp.google.com`), SPF and a DKIM key, which are checked in Part 2.
 3. **If the automatic setup is not offered** (or fails): copy the TXT value Google shows, which starts with `google-site-verification=`, add it in Cloudflare's DNS for russetleaf.dev (type **TXT**, name `@`), and select **Confirm** in the Admin console. Google can take up to 72 hours to see the record. Keep the record in place; Google rechecks it later.
+4. **Create the project's Bitwarden account and replace the temporary password:** once mail to `<name>@russetleaf.dev` arrives (Part 2), create the project's Bitwarden account with that address ([account sign-in setup guide](account-sign-in.md#part-1-the-personal-google-account-microsoft-and-bitwarden)). Then, signed in to the Workspace account, change its password at `myaccount.google.com` (**Security → Password**) to one generated in Bitwarden and saved there, and shred the paper. Every later step uses Bitwarden for passwords and backup codes.
 
 ## Part 2: Mail records
 

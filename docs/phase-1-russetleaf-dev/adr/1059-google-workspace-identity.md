@@ -5,6 +5,8 @@
 - **Applies to:** the project's accounts and sign-ins, both sites
 - **Phase:** 1 (step 0.1). Later phases use the same identity.
 
+> **Update (decision log, 2026-11-18):** the project's password manager is its own Bitwarden account, created with the Workspace address once the Workspace exists, separate from the operator's personal Bitwarden account. The Workspace account's first password is therefore temporary (on paper) and is replaced by one generated in the new vault.
+
 ## Context
 
 The project's accounts were registered to the operator's personal Google Account: the AWS root email addresses (as aliases of the personal mailbox), Slack, the Google sign-in for the WordPress admins and Dex, and the Google Cloud project that issues the OAuth clients. That ties the platform's identity to a personal mailbox, offers no groups for role-based access (Dex maps cluster roles from groups, [ADR 1033](1033-identity-and-access.md)), and gives no administrator control over how the identity signs in.

@@ -20,7 +20,7 @@ The step-by-step procedure for securing the sign-in of every account the project
 | **Google Workspace** (`<name>@russetleaf.dev`, the project's identity) | Password from Bitwarden | Both YubiKeys, enforced by the organization; Advanced Protection | Administrator-generated backup codes; then the personal Google Account as recovery email ([Google Workspace setup guide](google-workspace.md)) |
 | **Personal Google Account** (Workspace recovery, Cloudflare sign-in, Google Authenticator) | Advanced Protection | Both YubiKeys | Google's Advanced Protection recovery (takes several days) |
 | **Microsoft** (OneDrive, for the encrypted kit) | Password from Bitwarden | Both YubiKeys | Recovery code |
-| **Bitwarden** | Master password | Both YubiKeys (FIDO2) | Two-step login recovery code; the `bw` CLI signs in with an API key |
+| **Bitwarden** (the project's own account, `<name>@russetleaf.dev`, separate from any personal one) | Master password | Both YubiKeys (FIDO2) | Two-step login recovery code; the `bw` CLI signs in with an API key |
 | **GitHub** (the personal account, owner of the `russetleaf` organization) | Password from Bitwarden | Both YubiKeys; an authenticator code is set up first (required), then deleted from the app | Recovery codes |
 | **GitLab** (the personal account, owner of the `russetleaf` group of mirrors) | Password from Bitwarden | Both YubiKeys (WebAuthn devices); an authenticator code is set up first for the recovery codes, then deleted from the app; email OTP off | Recovery codes |
 | **Cloudflare** (DNS, tunnel, Access, and the registrar for russetleaf.dev) | Google sign-in (OIDC) with the personal Google Account; password sign-in with the password from Bitwarden | Both YubiKeys (Cloudflare's own, required on both sign-in methods); Advanced Protection on the Google sign-in | Backup codes |
@@ -34,7 +34,7 @@ Have these ready:
 
 - **Both YubiKeys**, each with a FIDO2 PIN (set with `ykman fido access change-pin`).
 - **The operator's phone**, with Google Authenticator signed in to the personal Google Account (to set up GitHub's, GitLab's and Slack's codes).
-- **Bitwarden open**, with an entry for each account.
+- **The project's Bitwarden account** (created in Part 1, step 3, once the Workspace address receives mail), with an entry for each account.
 - **The Workspace account**, set up by the [Google Workspace setup guide](google-workspace.md).
 
 ## Part 1: The personal Google Account, Microsoft and Bitwarden
@@ -47,7 +47,7 @@ Have these ready:
     5. **Test each key:** sign out, or use a private window, and sign in with only `yubikey-primary`; then again with only `yubikey-backup`.
     6. Sign in again on each device, and confirm Google Drive's web upload still works (Advanced Protection blocks most third-party apps from Gmail and Drive data); the encrypted kit's Google Drive copy lives here.
 2. **Microsoft account** (used for OneDrive): under **Security → Advanced security options**, add both YubiKeys (Microsoft lists them as passkeys); save the **recovery code** in Bitwarden. Then sign out and sign in once with each key on its own.
-3. **Bitwarden:** under **Settings → Security → Two-step login**, add both YubiKeys under **Passkey / FIDO2 WebAuthn** (Bitwarden's name for security keys), and save the **two-step login recovery code** (it goes into the printed kit, since it cannot live in the vault it unlocks). Then log out of the web vault and log in once with each key on its own. Sign the CLI in with the account's **personal API key** (`bw login --apikey`), since the CLI cannot use a security key ([workstation configuration](../plan.md#4-configuration)).
+3. **Bitwarden, the project's own account:** create it at `bitwarden.com` with the **Workspace address**, after the Workspace exists ([Google Workspace setup guide](google-workspace.md), Part 1), and keep it separate from any personal Bitwarden account, so the project's vault, exports and break-glass kit hold only the project's items. Its **master password** is a passphrase generated in Bitwarden's generator and memorized; it is never stored in the vault, and its only written copy is the printed break-glass kit. The desktop app and the browser extension can stay signed in to several accounts at once and switch between them. Under **Settings → Security → Two-step login**, add both YubiKeys under **Passkey / FIDO2 WebAuthn** (Bitwarden's name for security keys), and save the **two-step login recovery code** (it goes into the printed kit, since it cannot live in the vault it unlocks). Then log out of the web vault and log in once with each key on its own. Sign the CLI in with the account's **personal API key** (`bw login --apikey`), since the CLI cannot use a security key, in the project's own CLI data folder ([workstation configuration](../plan.md#4-configuration)).
 
 ## Part 2: GitHub and GitLab
 

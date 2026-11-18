@@ -9,7 +9,7 @@
 
 The project holds two kinds of credential. The first is the operator's **passwords** for the accounts it depends on (AWS root and Identity Center, the Google Accounts, Microsoft, Bitwarden, GitHub, GitLab, Cloudflare, Slack and the outside monitoring services). Each is long, random and unique, generated in Bitwarden, and every account also needs a second factor: one of the two YubiKeys wherever the service supports security keys, otherwise an authenticator code ([ADR 1056](1056-aws-root-mfa-two-security-keys.md), [account sign-in setup guide](../setup/account-sign-in.md)). The second is **machine credentials**: tokens, keys, client secrets and passphrases used by workflows and the clusters, which have no second factor and are copied into secret stores, workflow secrets and sometimes logs.
 
-Several machine credentials already have rotation schedules, set one at a time ([ADR 1047](1047-in-cluster-credentials-and-rotation.md), [ADR 1054](1054-opentofu-state-and-plan-encryption.md) and the plan's recurring tasks), but no decision covers passwords, and nothing ties a rotation to the **break-glass kit**, which is generated from the Bitwarden folder `russetleaf` and goes stale when an item in it changes ([break-glass kit setup guide](../setup/break-glass-kit.md)).
+Several machine credentials already have rotation schedules, set one at a time ([ADR 1047](1047-in-cluster-credentials-and-rotation.md), [ADR 1054](1054-opentofu-state-and-plan-encryption.md) and the plan's recurring tasks), but no decision covers passwords, and nothing ties a rotation to the **break-glass kit**, which is generated from the project's Bitwarden vault and goes stale when an item in it changes ([break-glass kit setup guide](../setup/break-glass-kit.md)).
 
 Current guidance has moved away from scheduled password changes. NIST SP 800-63B-4, section 3.1.1.2, says: "Verifiers and CSPs SHALL NOT require subscribers to change passwords periodically. However, verifiers SHALL force a change if there is evidence that the authenticator has been compromised." The UK National Cyber Security Centre (NCSC) says, in its password guidance: "Regular password changing harms rather than improves security."
 
@@ -36,7 +36,7 @@ Current guidance has moved away from scheduled password changes. NIST SP 800-63B
     | GPG backup key | Its expiry is extended every 2 years (the key itself is kept, so existing backups still decrypt) | [Break-glass kit setup guide](../setup/break-glass-kit.md#keeping-the-kit-current) |
 
     The **credential inventory** (step 4.2) lists every credential that is not a short-lived session, with its interval. A credential with no interval of its own (for example the Slack bot token or a webhook URL) is replaced on the same events as a password, and its row says so.
-- **The break-glass kit is refreshed after every change** to an item in the Bitwarden folder `russetleaf`, whether a scheduled rotation or an event: the kit file is generated again, printed, encrypted and uploaded ([break-glass kit setup guide](../setup/break-glass-kit.md#keeping-the-kit-current)). The **6-monthly kit drill** generates a fresh kit file and compares it with the decrypted cloud copy, so a missed refresh is found.
+- **The break-glass kit is refreshed after every change** to an item in the project's Bitwarden vault, whether a scheduled rotation or an event: the kit file is generated again, printed, encrypted and uploaded ([break-glass kit setup guide](../setup/break-glass-kit.md#keeping-the-kit-current)). The **6-monthly kit drill** generates a fresh kit file and compares it with the decrypted cloud copy, so a missed refresh is found.
 
 ## Alternatives considered
 
@@ -47,7 +47,7 @@ Current guidance has moved away from scheduled password changes. NIST SP 800-63B
 ## Consequences
 
 - Passwords stay stable, so the printed and encrypted kit change only when something happens, and each change has a recorded reason.
-- The scheduled rotations stay where they already are, now under one rule, and each one that touches the `russetleaf` folder ends with a kit refresh.
+- The scheduled rotations stay where they already are, now under one rule, and each one that changes an item in the vault ends with a kit refresh.
 - The rule depends on the second factors: an account that loses its second factor, or a service that offers none, gets no protection from a stable password.
 
 ## When to revisit
