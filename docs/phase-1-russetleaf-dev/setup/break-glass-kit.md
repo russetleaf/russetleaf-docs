@@ -26,7 +26,7 @@ Both of the operator's YubiKeys are Security Key NFC, which have no OpenPGP func
 Have these ready:
 
 - **The workstation**, set up with [`setup-ubuntu.sh`](https://github.com/russetleaf/russetleaf-docs/blob/main/scripts/workstation/setup-ubuntu.sh), which installs `gnupg` and `paperkey`.
-- **The project's Bitwarden account open,** with every item the kit needs, as text in each item's fields or notes (not as attachments, which the kit cannot read): the list is in the [disaster recovery plan](../disaster-recovery.md#break-glass-kit). The kit holds the whole vault, which holds only the project's items ([account sign-in setup guide](account-sign-in.md#part-1-the-personal-google-account-microsoft-and-bitwarden)). Create a new item for the GPG key (its passphrase and fingerprint, and the public key in its notes).
+- **The project's Bitwarden account open,** with every item the kit needs, as text in each item's fields or notes (not as attachments, which the kit cannot read): the list is in the [disaster recovery plan](../disaster-recovery.md#break-glass-kit). The kit holds the whole vault, which holds only the project's items, and the `Shared accounts` collection of the project's organization ([account sign-in setup guide](account-sign-in.md#part-1-the-personal-google-account-microsoft-and-bitwarden)). Create a new item for the GPG key (its passphrase and fingerprint, and the public key in its notes).
 - **The Bitwarden CLI (`bw`) signed in** with the account's personal API key, since the CLI cannot use a security key: in the Bitwarden web app, **Settings → Security → Keys → View API key** (it asks for the master password) shows the `client_id` and `client_secret`; run `bw login --apikey` in the project's CLI data folder (set up below) and paste them when asked ([workstation configuration](../plan.md#4-configuration)). `bw status` then shows `locked` and the Workspace address.
 - **A USB stick** for the safe, used for nothing else, formatted as **exFAT** (which Linux, Windows and macOS all read and write, so any computer at hand can open it years later) and named **`RL-KIT`**. Formatting erases the stick. Disks offers exFAT once `exfatprogs` is installed, which the setup script does.
     1. Open **Disks** from the Activities overview.
@@ -123,10 +123,11 @@ The kit file is generated from Bitwarden rather than typed, so every password an
     jq length "${RL_KIT}/items.json"
     grep -c '^==== ' "${RL_KIT}/kit.txt"
     grep -c '^WARNING' "${RL_KIT}/kit.txt"
+    jq '[.[] | select(.organizationId != null)] | length' "${RL_KIT}/items.json"
     rm "${RL_KIT}/items.json"
     ```
 
-    The first two numbers match (every item in the vault is in the file), and the third is `0`. An item with attachments is reported by name in the file: move what the attachment holds into the item's notes, and generate the file again.
+    The first two numbers match (every item `bw` lists is in the file), the third is `0`, and the fourth is the number of items in the `Shared accounts` collection (four), which shows that `bw list items` included the organization's items as well as the vault's. An item with attachments is reported by name in the file: move what the attachment holds into the item's notes, and generate the file again.
 
 2. **Add Bitwarden's own recovery details,** which are kept out of the vault: with them, the account signs in without a YubiKey, so they are not left where anyone reading the unlocked vault would find them ([account sign-in setup guide](account-sign-in.md#part-1-the-personal-google-account-microsoft-and-bitwarden)). Open the file with `vim -n -i NONE -c 'setlocal noundofile nobackup nowritebackup' "${RL_KIT}/kit.txt"` (the options keep every copy of the text in memory: `-n` turns off the swap file and `-i NONE` the `viminfo` file, which would save yanked text in the home folder, and the settings turn off undo and backup files, which a `vimrc` may send to a folder on disk), and add these three lines at the top, each exactly in this form:
 
@@ -184,7 +185,7 @@ The kit file is generated from Bitwarden rather than typed, so every password an
 
 ## Part 4: The encrypted export of the Bitwarden vault
 
-The kit holds only the items needed to regain access. This part adds a copy of the **whole vault** that can be read **without Bitwarden**: a plain JSON export, encrypted with GPG and the memorized kit passphrase. If Bitwarden's service, apps or account are unavailable for good, GnuPG and the passphrase alone recover every entry. Bitwarden's own encrypted exports are not used, because both kinds need Bitwarden to read them: an "account restricted" export imports only into the same account, and a "password protected" one into a Bitwarden account.
+This part adds a copy of the **whole vault** that can be read and imported **without Bitwarden**: a plain JSON export, encrypted with GPG and the memorized kit passphrase. If Bitwarden's service, apps or account are unavailable for good, GnuPG and the passphrase alone recover every entry. Bitwarden's own encrypted exports are not used, because both kinds need Bitwarden to read them: an "account restricted" export imports only into the same account, and a "password protected" one into a Bitwarden account. A vault export does not include organization items, so the `Shared accounts` collection is exported separately, as a second file.
 
 1. **Unlock the CLI and sync,** so the export is current (skip this if the CLI is still unlocked from Part 2):
 
@@ -207,17 +208,22 @@ The kit holds only the items needed to regain access. This part adds a copy of t
     bw --raw export --format json \
       | gpg --symmetric --cipher-algo AES256 --s2k-digest-algo SHA512 --s2k-count 65011712 \
         --output "${RL_KIT}/russetleaf-vault-export.json.gpg"
+    org_id="$(bw list organizations | jq -r '.[] | select(.name == "RussetLeaf") | .id')"
+    bw --raw export --format json --organizationid "${org_id}" \
+      | gpg --symmetric --cipher-algo AES256 --s2k-digest-algo SHA512 --s2k-count 65011712 \
+        --output "${RL_KIT}/russetleaf-shared-export.json.gpg"
     ```
 
-4. **Prove it,** after clearing the cached passphrase: the decrypted export is valid JSON, and its item count matches the vault's.
+4. **Prove them,** after clearing the cached passphrase: each decrypted export is valid JSON, and the two item counts add up to the number `bw` lists.
 
     ```bash
     gpgconf --reload gpg-agent
     gpg --decrypt "${RL_KIT}/russetleaf-vault-export.json.gpg" | jq '.items | length'
+    gpg --decrypt "${RL_KIT}/russetleaf-shared-export.json.gpg" | jq '.items | length'
     bw list items | jq 'length'
     ```
 
-5. **Store it** next to the kit: upload `russetleaf-vault-export.json.gpg` to the same Google Drive and OneDrive folders, and copy it to the USB stick in the safe.
+5. **Store them** next to the kit: upload `russetleaf-vault-export.json.gpg` and `russetleaf-shared-export.json.gpg` to the same Google Drive and OneDrive folders, and copy both to the USB stick in the safe.
 6. **Lock the CLI and clean up:** delete the folder in memory.
 
     ```bash
@@ -226,7 +232,7 @@ The kit holds only the items needed to regain access. This part adds a copy of t
     rm -rf "${RL_KIT}"
     ```
 
-**Reading the export without Bitwarden:** on any computer with GnuPG, decrypt it into memory (`gpg --output /dev/shm/vault.json --decrypt russetleaf-vault-export.json.gpg`), read the entries with a text editor or `jq` (for example `jq '.items[] | {name, login}' /dev/shm/vault.json`), and delete the file when done. The same file imports into a new password manager that reads Bitwarden's JSON format, Bitwarden included.
+**Reading the exports without Bitwarden:** on any computer with GnuPG, decrypt each into memory (`gpg --output /dev/shm/vault.json --decrypt russetleaf-vault-export.json.gpg`), read the entries with a text editor or `jq` (for example `jq '.items[] | {name, login}' /dev/shm/vault.json`), and delete the file when done. The same file imports into a new password manager that reads Bitwarden's JSON format, Bitwarden included.
 
 ## Checks
 
@@ -235,7 +241,7 @@ The kit holds only the items needed to regain access. This part adds a copy of t
 - [ ] The encrypted kit **downloaded from Google Drive**, and again **from OneDrive**, decrypts with the memorized passphrase after `gpgconf --reload gpg-agent`.
 - [ ] The safe holds the printed pages, the `paperkey` printout, the USB stick and `yubikey-backup`.
 - [ ] Bitwarden holds the GPG key's fingerprint, passphrase and public key.
-- [ ] The vault export **downloaded from Google Drive** decrypts with the memorized passphrase after `gpgconf --reload gpg-agent`, and its item count matches the vault's (Part 4, step 4); a copy is on the USB stick.
+- [ ] Both exports (the vault and the `Shared accounts` collection), **downloaded from Google Drive**, decrypt with the memorized passphrase after `gpgconf --reload gpg-agent`, and their item counts add up to the number `bw` lists (Part 4, step 4); copies are on the USB stick.
 - [ ] `/dev/shm/rl-kit` no longer exists.
 
 ## Using the key
