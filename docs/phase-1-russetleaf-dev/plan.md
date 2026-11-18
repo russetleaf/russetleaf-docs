@@ -66,13 +66,14 @@ In order, it:
 2. Installs the **base packages** with apt.
 3. Adds **Docker's** signed apt repository and installs Docker Engine with the Buildx and Compose plugins (not the snap), then adds the user to the `docker` group.
 4. Raises the **file-watch limits** kind needs on Ubuntu (otherwise pods fail with "too many open files").
-5. Adds **mise's** signed apt repository and installs mise, so it is updated with the rest of the system, then adds the mise and direnv hooks to `~/.bashrc` (once, however often it runs).
-6. Installs the **Bitwarden CLI** (`bw`) globally with mise, which verifies the release's checksum. (The Bitwarden desktop app is installed by hand; see [Configuration](#4-configuration).)
-7. Installs **uv** globally with mise, and the **Python tools** with `uv tool install`.
+5. Sets **CUPS**, the print service, to keep no copy of a document once it has printed (`PreserveJobFiles No` in `/etc/cups/cupsd.conf`; by default it keeps each one on disk for a day), since the break-glass kit is printed from memory so that it never stays on the disk.
+6. Adds **mise's** signed apt repository and installs mise, so it is updated with the rest of the system, then adds the mise and direnv hooks to `~/.bashrc` (once, however often it runs).
+7. Installs the **Bitwarden CLI** (`bw`), **Opengrep** (pinned) and **Vale** (the version CI uses) globally with mise, which verifies each release's checksum. (The Bitwarden desktop app is installed by hand; see [Configuration](#4-configuration).)
+8. Installs **uv** globally with mise, and the **Python tools** with `uv tool install`.
 
 Both workstation scripts take `--help` (options and exit codes), `--verbose` (trace every command) and `--no-color`; colors are also off when `NO_COLOR` is set or the output is not a terminal. They follow the [bash script standard](../standards/bash.md), and share `scripts/lib/common.sh` for messages and for error and signal handling: a failed command is reported with its line number, and Ctrl+C or a `kill` stops the script instead of letting it carry on.
 
-**Tested in CI** (the `workstation scripts` workflow, on every change to the scripts and weekly): **bats** tests in `scripts/workstation/tests/` cover the options, exit codes, checks before installing, messages, and error and signal handling, using stub commands so they never install anything; and `fresh-ubuntu-test.sh` runs the setup script on a **fresh Ubuntu 24.04 container**, twice, failing if the second run changes anything, then runs `check-tools.sh --system`. The weekly run catches outside changes (a rotated signing key, a renamed package) before the next real setup does.
+**Tested in CI** (the `workstation scripts` workflow, on every change to the scripts and weekly): **bats** tests in `scripts/workstation/tests/` cover the options, exit codes, checks before installing, messages, and error and signal handling, using stub commands so they never install anything; and `fresh-ubuntu-test.sh` runs the setup script on a **fresh Ubuntu 24.04 container** (with CUPS installed, as on Ubuntu Desktop), twice, failing if the second run changes anything, then runs `check-tools.sh --system`. The weekly run catches outside changes (a rotated signing key, a renamed package) before the next real setup does.
 
 Afterwards, **log out and back in** (for the `docker` group), clone each repo, and run **`mise install`** in it.
 

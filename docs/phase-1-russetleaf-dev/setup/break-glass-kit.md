@@ -37,7 +37,10 @@ Have these ready:
     6. Check that the details name the USB stick, `RL-KIT` and exFAT, and select **Format**.
     7. **Mount it:** Disks leaves the new file system unmounted. With the partition still selected, select the mount button (the triangle) in the toolbar under the **Volumes** map, or select `RL-KIT` in the Files sidebar.
     8. Check the result: `lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINT` shows the partition with `exfat` and `RL-KIT`, mounted at `/media/<user>/RL-KIT`.
-- **A printer** connected by USB or on the home network, not a cloud print service, so the printed pages are not stored by a third party.
+- **A printer** connected by USB or on the home network, not a cloud print service, so the printed pages are not stored by a third party. The setup script sets CUPS, the workstation's print service, to keep no copy of a document once it has printed (`PreserveJobFiles No`; by default CUPS keeps each one on disk for a day), so the kit file never stays on the disk.
+    1. **Add the printer:** a USB printer is usually added on its own when it is connected and turned on. Otherwise, or for a network printer, open the **Activities** overview, start typing `Printers`, and select **Printers**; select **Unlock** in the top right corner if it is shown, then **Add Printer…**, select the printer and select **Add**. A network printer that is not listed can be added by entering its address in the text field at the bottom of the dialog, then **Add**.
+    2. **Check the print service setting:** `grep -x 'PreserveJobFiles No' /etc/cups/cupsd.conf` prints the line. If it prints nothing, run the setup script again.
+    3. **Print a test page from the terminal,** the way the kit is printed: `lpstat -p` lists the printer's name, then `printf 'RussetLeaf printer test\n' | lp -d <printer>` prints one page with that line on it.
 - **Sign-ins to Google Drive and OneDrive:** the personal Google Account's Drive (not the Workspace account's, which depends on russetleaf.dev) and the personal Microsoft account.
 - **The kit passphrase:** generate a passphrase of six or more words with Bitwarden's generator (passphrase type) **without saving it**, and memorize it. It is written down nowhere except, optionally, a sealed copy with a trusted person. Everything in the encrypted copy depends on remembering it, so the 6-monthly check below tests it.
 
@@ -308,5 +311,7 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - Bitwarden: ["Export Vault Data"](https://bitwarden.com/help/export-your-data/), checked 2026-11-13
 - Bitwarden: ["Encrypted Exports"](https://bitwarden.com/help/encrypted-export/), checked 2026-11-13
 - Bitwarden: ["Password Manager CLI"](https://bitwarden.com/help/cli/) (and `bw export --help`, version 2026.10.1: `--raw` with no output file writes to standard output), checked 2026-11-13
+- CUPS: ["cupsd.conf"](https://www.cups.org/doc/man-cupsd.conf.html) (`PreserveJobFiles`: the default keeps job files for one day), and `man cupsd.conf` for CUPS 2.4.7 on Ubuntu 24.04, checked 2026-11-18
+- GNOME Help: ["Set up a local printer"](https://help.gnome.org/users/gnome-help/stable/printing-setup.html) (GNOME Help 46, installed with Ubuntu 24.04), checked 2026-11-18
 - Google: ["Upload files & folders to Google Drive"](https://support.google.com/drive/answer/2424368), checked 2026-11-12
 - Microsoft: ["Upload and save files and folders to OneDrive"](https://support.microsoft.com/en-us/onedrive/upload-and-save-files-and-folders-to-onedrive), checked 2026-11-12

@@ -5,7 +5,8 @@ set -Eeuo pipefail
 # setup-ubuntu.sh
 #
 # Sets up an Ubuntu 24.04 workstation for RussetLeaf: the base packages, Docker
-# Engine (from Docker's repository, not the snap), kind's file-watch limits, mise
+# Engine (from Docker's repository, not the snap), kind's file-watch limits, no
+# copies of printed documents kept by CUPS, mise
 # and direnv with their shell hooks, the Bitwarden CLI and Opengrep, and the Python
 # tools installed with uv. Safe to run again: each step checks or overwrites its own files instead of appending. A
 # rerun also upgrades the packages it installs, if newer versions exist.
@@ -50,6 +51,7 @@ function init_script() {
   readonly KEYRING_DIR="/etc/apt/keyrings"
   readonly SOURCES_DIR="/etc/apt/sources.list.d"
   readonly BASHRC="${HOME}/.bashrc"
+  readonly CUPSD_CONF="/etc/cups/cupsd.conf"
   # The tests point this at a fake file, to check the Ubuntu 24.04 requirement
   readonly OS_RELEASE="${RL_OS_RELEASE:-/etc/os-release}"
 
@@ -109,8 +111,8 @@ function usage() {
 Usage: ${SCRIPT_NAME} [-h|--help] [-n|--no-color] [-v|--verbose]
 
 Sets up an Ubuntu 24.04 workstation for RussetLeaf: base packages, Docker Engine,
-kind's file-watch limits, mise and direnv, the Bitwarden CLI (bw) and Opengrep, and
-the Python tools (with uv).
+kind's file-watch limits, no copies of printed documents kept by CUPS, mise and
+direnv, the Bitwarden CLI (bw) and Opengrep, and the Python tools (with uv).
 Run it as a normal user; it uses sudo where needed. Safe to run again.
 
 Available options:
@@ -269,6 +271,35 @@ function set_kind_limits() {
 }
 
 ########################################
+# Keep no copy of a printed document in the CUPS spool once it has printed. By
+# default CUPS keeps each one on disk for a day, and the break-glass kit is
+# printed from memory so that it never reaches the disk. Nothing to do where CUPS
+# is not installed.
+# Globals:
+#   CUPSD_CONF (read)
+# Arguments:
+#   None
+########################################
+function set_print_spool() {
+  log_step "Printing: no copies kept after a document prints"
+  if [[ ! -f "${CUPSD_CONF}" ]]; then
+    printf 'CUPS is not installed: nothing to change\n'
+    return 0
+  fi
+  if grep -qx 'PreserveJobFiles No' "${CUPSD_CONF}"; then
+    printf 'Already set\n'
+    return 0
+  fi
+  sudo sed -i -e '/^[[:space:]]*PreserveJobFiles[[:space:]]/d' -e '/^# RussetLeaf: no copies of printed documents/d' "${CUPSD_CONF}"
+  printf '%s\n' '# RussetLeaf: no copies of printed documents (setup-ubuntu.sh)' 'PreserveJobFiles No' |
+    sudo tee -a "${CUPSD_CONF}" >/dev/null
+  # A container (the CI test) has no running service to restart
+  if systemctl is-active --quiet cups 2>/dev/null; then
+    sudo systemctl restart cups
+  fi
+}
+
+########################################
 # Install mise from its signed apt repository, and add the mise and direnv hooks,
 # and ~/.local/bin on the PATH, to ~/.bashrc
 # Globals:
@@ -404,6 +435,7 @@ function main() {
   install_base_packages
   install_docker
   set_kind_limits
+  set_print_spool
   install_mise
   install_bitwarden_cli
   install_opengrep

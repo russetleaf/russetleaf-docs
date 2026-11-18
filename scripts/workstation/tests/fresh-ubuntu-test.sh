@@ -123,7 +123,8 @@ function check_container() {
 function prepare_container() {
   log_step "Preparing the container"
   DEBIAN_FRONTEND=noninteractive apt-get update
-  DEBIAN_FRONTEND=noninteractive apt-get install -y sudo
+  # cups-daemon is on every Ubuntu Desktop, and the setup script changes its settings
+  DEBIAN_FRONTEND=noninteractive apt-get install -y sudo cups-daemon
   # In the sudo group (the normal Ubuntu admin rule, which asks for a password) and
   # with a NOPASSWD rule: the two together are what made `sudo -v` fail on a real
   # workstation, so the test keeps both
@@ -160,7 +161,7 @@ function snapshot() {
   {
     echo "## files"
     sha256sum "${TEST_HOME}/.bashrc" "${TEST_HOME}/.profile" /etc/sysctl.d/99-kind.conf \
-      /etc/apt/sources.list.d/* /etc/apt/keyrings/* 2>&1 || true
+      /etc/cups/cupsd.conf /etc/apt/sources.list.d/* /etc/apt/keyrings/* 2>&1 || true
     echo "## groups"
     id -nG "${TEST_USER}"
     echo "## packages"
@@ -204,6 +205,24 @@ function check_bashrc() {
     fi
   done
   log_ok "Each hook appears once."
+}
+
+########################################
+# Check that CUPS keeps no copies of printed documents, set exactly once
+# Globals:
+#   ERR_TEST_FAILED (read)
+# Arguments:
+#   None
+########################################
+function check_print_spool() {
+  local count
+
+  log_step "CUPS print spool"
+  count="$(grep -cE '^[[:space:]]*PreserveJobFiles[[:space:]]' /etc/cups/cupsd.conf || true)"
+  if [[ "${count}" -ne 1 ]] || ! grep -qx 'PreserveJobFiles No' /etc/cups/cupsd.conf; then
+    die "${ERR_TEST_FAILED}" "expected one 'PreserveJobFiles No' line in cupsd.conf, found ${count} PreserveJobFiles lines"
+  fi
+  log_ok "PreserveJobFiles No is set once."
 }
 
 ########################################
@@ -261,6 +280,7 @@ function main() {
   run_setup second
   snapshot second
   check_bashrc
+  check_print_spool
   check_idempotent
   run_check_tools
   log_step "Result"
