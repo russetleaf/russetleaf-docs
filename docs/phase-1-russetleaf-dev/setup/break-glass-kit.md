@@ -101,10 +101,15 @@ mkdir -m 700 "${GNUPGHOME}"
 
 The kit file is generated from Bitwarden rather than typed, so every password and recovery code in it is an exact copy, and every refresh is the same command.
 
-1. **Generate the kit file** from the whole vault, as text in memory. Run the whole block; `bw unlock` asks for the master password:
+1. **Generate the kit file** from the whole vault, as text in memory. First unlock Bitwarden on its own, since a prompt in the middle of a pasted block takes the lines pasted after it as its input and garbles them; `bw unlock` asks for the master password:
 
     ```bash
     export BW_SESSION="$(bw unlock --raw)"
+    ```
+
+    Then run the whole block:
+
+    ```bash
     bw sync
     bw list items >"${RL_KIT}/items.json"
     {
