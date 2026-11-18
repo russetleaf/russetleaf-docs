@@ -11,7 +11,7 @@ Both keys are **YubiKey Security Key NFC** (FIDO2 and U2F): **`yubikey-primary`*
 | SSH to GitHub and GitLab (push, pull, `gh`) | A **security-key SSH key** per YubiKey (`ed25519-sk`): a new connection needs the key plugged in and a touch, and is reused for 10 minutes of activity, so a copied `~/.ssh` folder is useless without the YubiKey. Day-to-day work uses only GitHub; the keys are registered on GitLab too so that, if GitHub is lost, the repos can be restored from their GitLab mirrors, or work can continue there, at once ([disaster recovery plan](../disaster-recovery.md)), and the yearly renewal proves it |
 | Commit signing | A separate key file, `~/.ssh/id_ed25519_russetleaf_git_signing`, used with the project's Git identity (the Workspace address) in RussetLeaf repos only, with a **passphrase** (kept in Bitwarden) and unlocked once per session through `ssh-agent`, registered only as a **signing** key, on GitHub and on GitLab, with no expiry date. A YubiKey could hold it, but this model (FIDO2 only, with no cached-touch setting) would ask for a touch on every commit, and again for every commit a rebase rewrites; the passphrase protects the file instead (Part 1, step 5) |
 | `sudo` and `sudo -i` | **A YubiKey touch, then the password** (`pam_u2f`); the touch is needed again only when `sudo`'s 15-minute timestamp expires |
-| Graphical admin prompts (polkit), the login screen, the disk passphrase | The password only |
+| Graphical admin prompts (polkit) and the login screen | The password only |
 
 ## Before starting
 
@@ -210,7 +210,7 @@ Nothing in this guide is stored on the YubiKeys themselves: the SSH keys are not
 
 - **Lost `yubikey-primary`:** on GitHub and GitLab, delete its SSH key (`workstation yubikey-primary <year>`), delete `~/.ssh/id_ed25519_sk_primary_*`, and create and register a key on the replacement (Part 1, steps 1 and 2, the `yubikey-primary` command only), with its file in the first `IdentityFile` line of `~/.ssh/config`; rebuild `/etc/u2f_mappings` with `yubikey-backup` and the replacement (Part 2, step 3); then do the rest of the replacement in the [account sign-in setup guide](account-sign-in.md#if-something-goes-wrong).
 - **`sudo` stops working after the PAM change:** in the root shell kept open in Part 2, remove the `pam_u2f.so` line from both files.
-- **Both keys lost, or no root shell open:** boot into **recovery mode** (GRUB's **Advanced options**, then the **root** shell; on a default Ubuntu install it needs no root password, but the disk passphrase is still asked for), run `mount -o remount,rw /`, and remove the `pam_u2f.so` line from both files.
+- **Both keys lost, or no root shell open:** boot into **recovery mode** (GRUB's **Advanced options**, then the **root** shell; on a default Ubuntu install it needs no root password; on an encrypted disk, the disk encryption passphrase is asked for first), run `mount -o remount,rw /`, and remove the `pam_u2f.so` line from both files.
 
 ## References
 
