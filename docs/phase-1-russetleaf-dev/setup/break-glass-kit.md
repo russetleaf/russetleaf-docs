@@ -197,7 +197,7 @@ This part adds a copy of the **whole vault** that can be read and imported **wit
 2. **Check for attachments:** a JSON export does not contain file attachments. The command prints how many items have them:
 
     ```bash
-    bw list items | jq '[.[] | select(.attachments)] | length'
+    bw list items | jq '[.[] | select((.attachments // []) | length > 0)] | length'
     ```
 
     If it is not `0`, keep each attachment's content as a secure note instead (or export the vault in the `zip` format, which includes attachments, to `"${RL_KIT}"` and encrypt that file the same way). Items in the trash and Sends are never exported.
