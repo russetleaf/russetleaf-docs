@@ -35,7 +35,8 @@ Have these ready:
     4. In the toolbar under the **Volumes** map, select the menu button, then **Format Partition…**.
     5. Enter the name `RL-KIT`, choose the type **Other**, then **exFAT**, and select **Next**.
     6. Check that the details name the USB stick, `RL-KIT` and exFAT, and select **Format**.
-    7. Check the result: `lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINT` shows the partition with `exfat` and `RL-KIT`, mounted at `/media/<user>/RL-KIT`.
+    7. **Mount it:** Disks leaves the new file system unmounted. With the partition still selected, select the mount button (the triangle) in the toolbar under the **Volumes** map, or select `RL-KIT` in the Files sidebar.
+    8. Check the result: `lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINT` shows the partition with `exfat` and `RL-KIT`, mounted at `/media/<user>/RL-KIT`.
 - **A printer** connected by USB or on the home network, not a cloud print service, so the printed pages are not stored by a third party.
 - **Sign-ins to Google Drive and OneDrive:** the personal Google Account's Drive (not the Workspace account's, which depends on russetleaf.dev) and the personal Microsoft account.
 - **The kit passphrase:** generate a passphrase of six or more words with Bitwarden's generator (passphrase type) **without saving it**, and memorize it. It is written down nowhere except, optionally, a sealed copy with a trusted person. Everything in the encrypted copy depends on remembering it, so the 6-monthly check below tests it.
