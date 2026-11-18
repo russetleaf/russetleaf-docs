@@ -26,7 +26,7 @@ Both of the operator's YubiKeys are Security Key NFC, which have no OpenPGP func
 Have these ready:
 
 - **The workstation**, set up with [`setup-ubuntu.sh`](https://github.com/russetleaf/russetleaf-docs/blob/main/scripts/workstation/setup-ubuntu.sh), which installs `gnupg` and `paperkey`.
-- **The project's Bitwarden account open,** with every item the kit needs, as text in each item's fields or notes (not as attachments, which the kit cannot read): the list is in the [disaster recovery plan](../disaster-recovery.md#break-glass-kit). The kit holds the whole vault, which holds only the project's items, and the `Shared accounts` collection of the project's organization ([account sign-in setup guide](account-sign-in.md#part-1-the-personal-google-account-microsoft-and-bitwarden)). Create a new item for the GPG key (its passphrase and fingerprint, and the public key in its notes).
+- **The project's Bitwarden account open,** with every item the kit needs, as text in each item's fields or notes (not as attachments, which the kit cannot read): the list is in the [disaster recovery plan](../disaster-recovery.md#break-glass-kit). The kit holds the whole vault, which holds only the project's items, and the `Shared accounts` collection of the project's organization ([account sign-in setup guide](account-sign-in.md#part-1-the-personal-google-account-microsoft-and-bitwarden)). Part 1 adds a **Secure note** item for the GPG key, `RussetLeaf backups GPG key`, with its passphrase in a hidden field and its fingerprint in a text field, and the public key in the notes.
 - **The Bitwarden CLI (`bw`) signed in** with the account's personal API key, since the CLI cannot use a security key: in the Bitwarden web app, **Settings → Security → Keys → View API key** (it asks for the master password) shows the `client_id` and `client_secret`, which are saved in the vault as the item `Bitwarden - RussetLeaf API key` ([account sign-in setup guide](account-sign-in.md#part-1-the-personal-google-account-microsoft-and-bitwarden), step 3); run `bw login --apikey` in the project's CLI data folder (set up below) and paste them when asked ([workstation configuration](../plan.md#4-configuration)). `bw status` then shows `locked` and the Workspace address.
 - **A USB stick** for the safe, used for nothing else, formatted as **exFAT** (which Linux, Windows and macOS all read and write, so any computer at hand can open it years later) and named **`RL-KIT`**. Formatting erases the stick. Disks offers exFAT once `exfatprogs` is installed, which the setup script does.
     1. Open **Disks** from the Activities overview.
@@ -56,13 +56,13 @@ mkdir -m 700 "${GNUPGHOME}"
 
 ## Part 1: Create the GPG key
 
-1. **Create the key:** a primary key for certifying (it renews the key's expiry) and an encryption subkey, both expiring after two years. Enter a passphrase generated in Bitwarden when asked, and save it in Bitwarden.
+1. **Create the key:** a primary key for certifying (it renews the key's expiry) and an encryption subkey, both expiring after two years. First create the item in Bitwarden: **New → Secure note**, named `RussetLeaf backups GPG key`, then generate a passphrase with the generator's **Passphrase** type (six or more words) and add it in the item's **Custom fields** section as a field of type **Hidden**, with the **Name** `Passphrase` and the passphrase as its **Value**, and save. When `gpg` asks for the key's passphrase (twice, in a passphrase window), paste it from the item.
 
     ```bash
     gpg --quick-generate-key "RussetLeaf backups" ed25519 cert 2y
     FPR="$(gpg --list-keys --with-colons "RussetLeaf backups" | awk -F: '/^fpr/ {print $10; exit}')"
     gpg --quick-add-key "${FPR}" cv25519 encr 2y
-    echo "${FPR}"    # record the fingerprint in Bitwarden
+    echo "${FPR}"    # add to the item as a Text custom field named Fingerprint
     ```
 
 2. **Export it:**
@@ -88,7 +88,7 @@ mkdir -m 700 "${GNUPGHOME}"
 
     The decryption prints `backup test` after asking for the key's passphrase.
 
-4. **Save the public key in Bitwarden** (the contents of `gpg-public-key.asc`, in the secure note). Step 2.5 gives it to the cluster's backup job.
+4. **Save the public key in Bitwarden:** paste the contents of `gpg-public-key.asc` (`cat "${RL_KIT}/gpg-public-key.asc"`) into the notes of `RussetLeaf backups GPG key`, and save. Step 2.5 gives it to the cluster's backup job.
 5. **Close the keyring in memory,** so the key exists only as the export:
 
     ```bash
@@ -117,6 +117,8 @@ The kit file is generated from Bitwarden rather than typed, so every password an
              (if .login.totp then "Authenticator key (TOTP): \(.login.totp)" else empty end),
              ((.login.uris // [])[] | "URL: \(.uri)")
            else empty end),
+          (((.sshKey // {}), (.card // {}), (.identity // {})) | to_entries[]
+             | select(.value != null and .value != "") | "\(.key): \(.value)"),
           ((.fields // [])[] | "\(.name): \(.value // "")"),
           (if .notes then "Notes:", .notes else empty end),
           (if (.attachments // []) | length > 0 then "WARNING: this item has attachments, which are not in the kit" else empty end),
@@ -130,7 +132,7 @@ The kit file is generated from Bitwarden rather than typed, so every password an
     rm "${RL_KIT}/items.json"
     ```
 
-    The first two numbers match (every item `bw` lists is in the file), the third is `0`, and the fourth is the number of items in the `Shared accounts` collection (five), which shows that `bw list items` included the organization's items as well as the vault's. An item with attachments is reported by name in the file: move what the attachment holds into the item's notes, and generate the file again.
+    Every field of a login, an SSH key, a card or an identity item is written out, with its custom fields and notes. The first two numbers match (every item `bw` lists is in the file), the third is `0`, and the fourth is the number of items in the `Shared accounts` collection (five), which shows that `bw list items` included the organization's items as well as the vault's. An item with attachments is reported by name in the file: move what the attachment holds into the item's notes, and generate the file again.
 
 2. **Add Bitwarden's own recovery details,** which are kept out of the vault: with them, the account signs in without a YubiKey, so they are not left where anyone reading the unlocked vault would find them ([account sign-in setup guide](account-sign-in.md#part-1-the-personal-google-account-microsoft-and-bitwarden)). Open the file with `vim -n -i NONE -c 'setlocal noundofile nobackup nowritebackup' "${RL_KIT}/kit.txt"` (the options keep every copy of the text in memory: `-n` turns off the swap file and `-i NONE` the `viminfo` file, which would save yanked text in the home folder, and the settings turn off undo and backup files, which a `vimrc` may send to a folder on disk), and add these three lines at the top, each exactly in this form:
 
@@ -308,6 +310,7 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - `paperkey`: ["Paperkey - an OpenPGP key archiver"](https://www.jabberwocky.com/software/paperkey/), checked 2026-11-12
 - Yubico: ["Importing keys (keytocard)"](https://developers.yubico.com/PGP/Importing_keys.html), checked 2026-11-12
 - Yubico: ["OpenPGP Commands (YubiKey Manager CLI)"](https://docs.yubico.com/software/yubikey/tools/ykman/OpenPGP_Commands.html), checked 2026-11-12
+- Bitwarden: ["Managing Items"](https://bitwarden.com/help/managing-items/) and ["Custom Fields"](https://bitwarden.com/help/custom-fields/), checked 2026-11-18
 - Bitwarden: ["Export Vault Data"](https://bitwarden.com/help/export-your-data/), checked 2026-11-13
 - Bitwarden: ["Encrypted Exports"](https://bitwarden.com/help/encrypted-export/), checked 2026-11-13
 - Bitwarden: ["Password Manager CLI"](https://bitwarden.com/help/cli/) (and `bw export --help`, version 2026.10.1: `--raw` with no output file writes to standard output), checked 2026-11-13
