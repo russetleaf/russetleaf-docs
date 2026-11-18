@@ -128,7 +128,26 @@ The kit file is generated from Bitwarden rather than typed, so every password an
 
     The first two numbers match (every item in the vault is in the file), and the third is `0`. An item with attachments is reported by name in the file: move what the attachment holds into the item's notes, and generate the file again.
 
-2. **Add Bitwarden's own recovery details,** which cannot live in the vault they unlock: the account email, the **master password** and the **two-step login recovery code**. Type them at the top of the file with `vim -n -i NONE -c 'setlocal noundofile nobackup nowritebackup' "${RL_KIT}/kit.txt"`, from memory and from the paper the recovery code was written on when two-step login was set up; this is the only way they reach both the printed and the encrypted copy. Shred that paper once the kit is printed and the encrypted copy is uploaded. The options keep every copy of the text in the folder in memory: `-n` turns off the swap file and `-i NONE` the `viminfo` file (which would save yanked text in the home folder), and the settings turn off undo and backup files, which a `vimrc` may send to a folder on disk.
+2. **Add Bitwarden's own recovery details,** which are kept out of the vault: with them, the account signs in without a YubiKey, so they are not left where anyone reading the unlocked vault would find them ([account sign-in setup guide](account-sign-in.md#part-1-the-personal-google-account-microsoft-and-bitwarden)). Open the file with `vim -n -i NONE -c 'setlocal noundofile nobackup nowritebackup' "${RL_KIT}/kit.txt"` (the options keep every copy of the text in memory: `-n` turns off the swap file and `-i NONE` the `viminfo` file, which would save yanked text in the home folder, and the settings turn off undo and backup files, which a `vimrc` may send to a folder on disk), and add these three lines at the top, each exactly in this form:
+
+    ```text
+    Bitwarden account email: <name>@russetleaf.dev
+    Bitwarden master password: <the master password>
+    Bitwarden two-step login recovery code: <the recovery code>
+    ```
+
+    - **The recovery code is pasted, not typed:** in the Bitwarden web app, **Settings → Security → Two-step login → View recovery code** (it asks for the master password) shows it; copy it and paste it into the file (**Ctrl+Shift+V** in the terminal, in vim's insert mode).
+    - **The master password is typed from memory, then checked:** this reads it back from the file and unlocks Bitwarden with it, without showing it. Unlocking also gives the CLI a new session, which the steps that follow use:
+
+        ```bash
+        BW_KIT_PASSWORD="$(sed -n 's/^Bitwarden master password: //p' "${RL_KIT}/kit.txt")"
+        export BW_KIT_PASSWORD
+        BW_SESSION="$(bw unlock --passwordenv BW_KIT_PASSWORD --raw)" && export BW_SESSION && echo "The master password in the kit is correct"
+        unset BW_KIT_PASSWORD
+        ```
+
+        If it does not print the confirmation, the line in the file is wrong: correct it and run the block again.
+
 3. **Print** the kit file, the `paperkey` file and the public key, on a printer connected by USB or on the home network, straight from memory: `lpstat -p` lists the printers, then
 
     ```bash
