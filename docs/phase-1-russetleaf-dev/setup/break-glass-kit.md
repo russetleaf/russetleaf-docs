@@ -127,7 +127,7 @@ The kit file is generated from Bitwarden rather than typed, so every password an
     rm "${RL_KIT}/items.json"
     ```
 
-    The first two numbers match (every item `bw` lists is in the file), the third is `0`, and the fourth is the number of items in the `Shared accounts` collection (four), which shows that `bw list items` included the organization's items as well as the vault's. An item with attachments is reported by name in the file: move what the attachment holds into the item's notes, and generate the file again.
+    The first two numbers match (every item `bw` lists is in the file), the third is `0`, and the fourth is the number of items in the `Shared accounts` collection (five), which shows that `bw list items` included the organization's items as well as the vault's. An item with attachments is reported by name in the file: move what the attachment holds into the item's notes, and generate the file again.
 
 2. **Add Bitwarden's own recovery details,** which are kept out of the vault: with them, the account signs in without a YubiKey, so they are not left where anyone reading the unlocked vault would find them ([account sign-in setup guide](account-sign-in.md#part-1-the-personal-google-account-microsoft-and-bitwarden)). Open the file with `vim -n -i NONE -c 'setlocal noundofile nobackup nowritebackup' "${RL_KIT}/kit.txt"` (the options keep every copy of the text in memory: `-n` turns off the swap file and `-i NONE` the `viminfo` file, which would save yanked text in the home folder, and the settings turn off undo and backup files, which a `vimrc` may send to a folder on disk), and add these three lines at the top, each exactly in this form:
 
