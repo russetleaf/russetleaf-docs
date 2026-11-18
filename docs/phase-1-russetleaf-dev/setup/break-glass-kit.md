@@ -147,7 +147,7 @@ The kit file is generated from Bitwarden rather than typed, so every password an
     Bitwarden two-step login recovery code: <the recovery code>
     ```
 
-    - **The recovery code is pasted, not typed:** in the Bitwarden web app, **Settings → Security → Two-step login → View recovery code** (it asks for the master password) shows it; copy it and paste it into the file (**Ctrl+Shift+V** in the terminal, in vim's insert mode).
+    - **The recovery code is pasted, not typed:** in the Bitwarden web app, **Settings → Security → Two-step login → View recovery code** (it asks for the master password) shows it; copy it and paste it into the file (**Ctrl+Shift+V** in the terminal, in vim's insert mode). Then copy any harmless text, so the code does not stay on the clipboard.
     - **The master password is typed from memory, then checked:** this reads it back from the file and unlocks Bitwarden with it, without showing it. Unlocking also gives the CLI a new session, which the steps that follow use:
 
         ```bash
