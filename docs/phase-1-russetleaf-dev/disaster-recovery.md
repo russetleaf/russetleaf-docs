@@ -70,7 +70,7 @@ Every repo is also **mirrored to GitLab on every push** to `main`, by a `gitlab-
 
 ## Break-glass kit
 
-Kept in three places, so that losing any two of them still leaves a way back in (decision log, 2026-11-05); how the copies are made and kept current is in the [break-glass kit setup guide](setup/break-glass-kit.md):
+Kept in three places, so that losing any two of them still leaves a way back in (decision log, 2026-11-05); how the copies are made and kept current is in the [break-glass kit setup guide](setup/break-glass-kit.md): If the kit may be exposed, or the safe is stolen, follow the [break-glass kit compromise runbook](../runbooks/break-glass-kit-compromise.md).
 
 - **Bitwarden** (the project's password manager), the working copy.
 - A **printed copy** of the kit file in the **safe** at home, with the **YubiKey** (the AWS root user's backup MFA device) and a **USB stick** holding the project's GPG key. The safe therefore holds the root password and an MFA device together, which is accepted for a home safe.
@@ -153,6 +153,6 @@ The step-by-step runbooks for these scenarios (etcd recovery, node replacement, 
 | Control-plane recovery (`etcd-recovery.md`, on a local Talos-in-Docker cluster) | Yearly | Quorum loss is recoverable |
 | Full power cut (`cold-start.md`) | Yearly | The cluster and database come back on their own, or by the checklist |
 | Clone a repo from its GitLab mirror over SSH with each YubiKey, during the yearly SSH key renewal ([workstation YubiKey setup guide](setup/workstation-yubikey.md#renewing-the-keys-every-year)) | Yearly | The first restore path for a lost GitHub works from the workstation, with no credentials to set up |
-| Check the break-glass kit (logins work, recovery codes valid, printed copy current, both encrypted cloud copies decrypt with the memorized passphrase, a freshly generated kit file matches the cloud copy's Bitwarden items, the GPG key not near expiry) | Every 6 months | Access can be recovered |
+| Check the break-glass kit (logins work, recovery codes valid, printed copy current, both encrypted cloud copies decrypt with the memorized passphrase, a freshly generated kit file matches the cloud copy's Bitwarden items, the GPG key not near expiry), and a tabletop walk-through of the [break-glass kit compromise runbook](../runbooks/break-glass-kit-compromise.md), recording any changed labels | Every 6 months | Access can be recovered, and a stolen kit can be contained |
 
 Each drill's result and time are recorded in the decision log; this document is updated whenever a drill finds something wrong.

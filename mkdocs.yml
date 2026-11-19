@@ -66,7 +66,9 @@ validation:
 nav:
   - Home: index.md
   - Overview: overview.md
-  - Runbooks: runbooks.md
+  - Runbooks:
+      - Runbook index: runbooks.md
+      - Break-glass kit compromised: runbooks/break-glass-kit-compromise.md
   - Standards:
       - Bash scripts: standards/bash.md
       - Documentation: standards/documentation.md

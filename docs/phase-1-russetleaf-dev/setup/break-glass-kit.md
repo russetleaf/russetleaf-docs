@@ -336,6 +336,7 @@ A **YubiKey 5 series** key (for example the YubiKey 5 NFC; OpenPGP with Ed25519 
 - **The USB stick fails or is lost:** take the export from the encrypted kit in Google Drive or OneDrive, or rebuild it from the `paperkey` printout (type the printed text into `gpg-paperkey.txt`, then `gpg --dearmor <gpg-public-key.asc >pub.gpg` and `paperkey --pubring pub.gpg --secrets gpg-paperkey.txt >gpg-secret-key.gpg`), and write a new stick.
 - **The GPG key's passphrase is lost:** copies of it are in Bitwarden, the printed kit and the encrypted kit; if all are lost, the R2 copies cannot be decrypted. Create a new key (Part 1), give its public key to the cluster, and rely on the copies in AWS until the R2 copies made with the old key have expired (35 days).
 - **The kit passphrase is forgotten:** the cloud copies cannot be opened. While the printed copy and Bitwarden are still available, choose a new passphrase and repeat Part 3, replacing both cloud copies.
+- **The kit may be exposed, or the safe is stolen:** follow the [break-glass kit compromise runbook](../../runbooks/break-glass-kit-compromise.md).
 - **The Google or Microsoft account is compromised:** the copy stays protected by the passphrase. Secure the account, then make a new copy with a new passphrase, and change the most important items in it (the AWS root password, the Bitwarden master password, the GPG key) if the passphrase could have been weak or seen.
 
 ## References

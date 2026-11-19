@@ -18,7 +18,7 @@ Current guidance has moved away from scheduled password changes. NIST SP 800-63B
 - **Passwords are changed on events, not on a schedule.** A password is changed at once when any of these happens:
     - there is evidence or suspicion that it was exposed (typed into a phishing page or an untrusted computer, seen by someone, found in a log or a breach notice);
     - the provider reports a breach affecting credentials;
-    - a copy of the break-glass kit, or the Bitwarden vault, may have been exposed: then every password in the kit is changed, and the kit passphrase too;
+    - a copy of the break-glass kit, or the Bitwarden vault, may have been exposed: then every password in the kit is changed, and the kit passphrase too, following the [break-glass kit compromise runbook](../../runbooks/break-glass-kit-compromise.md);
     - a device signed in to the account is lost or stolen, if the device was unlocked or the password was saved on it.
 
     The account's sessions are signed out at the same time, and a used recovery code is replaced by generating a new set.
