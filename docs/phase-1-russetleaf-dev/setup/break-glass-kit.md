@@ -185,7 +185,7 @@ The kit file is generated from Bitwarden rather than typed, so every password an
     udisksctl unmount --block-device "$(findmnt -no SOURCE "${kit_usb}")"
     ```
 
-    Each file is reported as copied, and `udisksctl` reports the stick unmounted. If it reports `target is busy`, a program still has the stick open, most often a **Files** window showing it: `fuser -vm "${kit_usb}"` names the program. Close that window, or move it to another folder, and run the `udisksctl` line again.
+    Each file is reported as copied, and `udisksctl` reports the stick unmounted. If it reports `target is busy`, a program still has the stick open, most often **Files**, which keeps running in the background after its windows close: `fuser -vm "${kit_usb}"` names the program. For Files, select the eject button next to **RL-KIT** in the Files sidebar, which unmounts the stick, or quit Files with `nautilus -q` and run the `udisksctl` line again.
 6. **Put in the safe:** the printed pages, the USB stick and `yubikey-backup`. The safe then holds the AWS root password and an MFA device together, which is accepted for a home safe (decision log, 2026-11-05).
 
 ## Part 3: The encrypted copy in Google Drive and OneDrive
