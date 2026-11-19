@@ -7,13 +7,13 @@
 
 ## Context
 
-[ADR 1032](1032-defense-in-depth.md) requires the cluster to be separated from household devices. The home network is a Spectrum router (SAX1V1K), an AC1200 Mesh Wi-Fi Extender in the server room, and an unmanaged switch (a TP-Link TL-SG105) connecting the servers. None of these can create VLANs or isolate wired devices, and Spectrum's routers do not allow custom routes. The workstation is on the household Wi-Fi and must stay there.
+[ADR 1032](1032-defense-in-depth.md) requires the cluster to be separated from household devices. The home network is a Spectrum router (SAX1V1K), a TP-Link RE315 (AC1200 Mesh Wi-Fi Range Extender) in the server room, and an unmanaged switch (a TP-Link TL-SG105) connecting the servers. None of these can create VLANs or isolate wired devices, and Spectrum's routers do not allow custom routes. The workstation is on the household Wi-Fi and must stay there.
 
 The decision is needed before Talos is installed: the nodes' addresses and the cluster's virtual IP are written into the Talos configuration and certificates, so moving the cluster to another subnet later means re-addressing or rebuilding it.
 
 ## Decision
 
-- **A TP-Link ER605 (v2) router in front of the lab:** WAN port to the AC1200 Mesh Wi-Fi Extender's Ethernet port, LAN port to the switch. The lab is its own subnet, **`10.10.0.0/24`**: gateway `10.10.0.1`, cluster virtual IP `10.10.0.10`, the three nodes at `10.10.0.11`–`.13`.
+- **A TP-Link ER605 (v2) router in front of the lab:** WAN port to the RE315's Ethernet port, LAN port to the switch. The lab is its own subnet, **`10.10.0.0/24`**: gateway `10.10.0.1`, cluster virtual IP `10.10.0.10`, the three nodes at `10.10.0.11`–`.13`.
 - **Isolation:** an access-control rule on the ER605 lets the lab reach the internet but **not `192.168.1.0/24`**; the ER605's NAT keeps household devices out; no port forwards anywhere (the Cloudflare Tunnel is outbound-only).
 - **Workstation access over WireGuard:** the ER605's WireGuard server (clients `10.10.99.0/24`) listens on its WAN address on the household network, so the workstation connects from the household Wi-Fi with **no port forwarding on the Spectrum router**. The client profile is a **split tunnel** (only `10.10.0.0/24`). The Talos host firewall allows the Kubernetes and Talos APIs only from the lab subnet and the WireGuard clients.
 - **The admin tools do not need the VPN:** Grafana, Argo CD and Hubble UI stay behind Cloudflare Access.
@@ -31,7 +31,7 @@ The decision is needed before Talos is installed: the nodes' addresses and the c
 - Household devices and the cluster cannot reach each other; `kubectl` and `talosctl` work only over the tunnel.
 - The tunnel works only inside the house (it is not exposed to the internet), which is enough for this project.
 - One more device to keep updated and backed up; double NAT for the cluster's outbound traffic (no effect on the Cloudflare Tunnel).
-- If the AC1200 Mesh Wi-Fi Extender's link to the Spectrum router is wireless, the cluster's internet connection is too; traffic between the nodes stays on the switch.
+- The RE315 reaches the Spectrum router over Wi-Fi, and its Ethernet port is **10/100 Mbps**, so the cluster's internet connection is limited to 100 Mbps and to the quality of that Wi-Fi link; traffic between the nodes stays on the switch at 1 Gbps. A faster uplink is in the [improvements list](../improvements.md) (I1-10).
 
 ## When to revisit
 

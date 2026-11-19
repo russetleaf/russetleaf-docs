@@ -5,13 +5,14 @@ The step-by-step procedure for the lab network: the **TP-Link ER605 (v2)** route
 ```text
 Workstation (Wi-Fi, 192.168.1.x) ──WireGuard──┐
                                               ▼
-Spectrum router ── AC1200 Mesh Wi-Fi Extender ── ER605 WAN (192.168.1.y) │ ER605 LAN (10.10.0.1) ── switch ── the three nodes
+Spectrum router ── RE315 extender ── ER605 WAN (192.168.1.y) │ ER605 LAN (10.10.0.1) ── switch ── the three nodes
 ```
 
 **Note:** the click paths in this guide are those the router's web interface showed when the procedure was last carried out. Firmware updates change the interface without notice, and TP-Link's documentation can lag behind the interface. Before following a path, check TP-Link's current documentation for the ER605 (v2); where the screen still differs, follow what it shows and fix this guide to match.
 
 ## Before starting
 
+- The **TP-Link RE315** extender (AC1200 Mesh Wi-Fi Range Extender), already set up in **Range Extender** mode on the household Wi-Fi: its Ethernet port connects a wired device to the extended network ([References](#references)).
 - The **ER605 (v2)**, the **TL-SG105** switch (`rl-home-sw01`), and network cables. WireGuard needs hardware version **V2**: the label underneath gives the model with its region code (for example `ER605(UN)`) and a version number, where **2.x** means V2, and Part 1 confirms it on the router's **System Status** page.
 - The **latest V2 firmware** from the ER605's download page ([References](#references)), with its release note. The release note gives a **minimum version for the update**: a router on an older version installs that version first. For 2.4.10 (September 2026) the minimum is 2.3.2.
 - The **workstation**, with `wireguard-tools` installed (the [workstation setup script](../plan.md#1-run-the-setup-script) installs it), and **Bitwarden** (the project's password manager) open.
@@ -23,7 +24,7 @@ Spectrum router ── AC1200 Mesh Wi-Fi Extender ── ER605 WAN (192.168.1.y)
 
 The ER605's web interface is used in **standalone mode** throughout: no Omada controller.
 
-1. **Wire it:** the ER605's **WAN** port to the Ethernet port of the AC1200 Mesh Wi-Fi Extender, one of its **LAN** ports to the switch, and the three nodes to the switch. The port labels show which ports are WAN and which are LAN.
+1. **Wire it:** the ER605's **WAN** port to the Ethernet port of the RE315, one of its **LAN** ports to the switch, and the three nodes to the switch. The port labels show which ports are WAN and which are LAN.
 2. **First login:** connect the second computer by cable to a spare LAN port of the ER605, with its wired connection set to get an address automatically, and open `http://192.168.0.1`. Create the **username and password** the page asks for, generated in Bitwarden and saved in a new item for the router, then log in with them.
 3. **Check the firmware:** **Status → System Status → System Status** shows the hardware and firmware versions. If the firmware is older than the release note's minimum, install that version first, as in step 4.
 4. **Update the firmware:** **System Tools → Management → Firmware Upgrade**, select the firmware file, and **Upgrade**. The router restarts; log in again and check the new version on the **System Status** page.
@@ -164,6 +165,7 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - TP-Link (Omada): ["ER605 support page (firmware, release notes, datasheet)"](https://support.omadanetworks.com/us/product/er605/), checked 2026-11-19
 - TP-Link: ["ER605 V2 User Guide (REV1.1.0)"](https://static.tp-link.com/upload/manual/2022/202208/20220830/1910013241_ER605(UN)2.0_UG.pdf) (standalone mode: login, status, WAN, LAN, DHCP, address reservation, IP groups, access control, NAT, UPnP, admin setup, controller settings, management, remote assistance), checked 2026-11-19
 - TP-Link: ["ER605(UN) V2 2.4.10 release note"](https://support.omadanetworks.com/us/document/136658/) (the minimum version for the update), checked 2026-11-19
+- TP-Link: ["RE315 AC1200 Mesh Wi-Fi Range Extender"](https://www.tp-link.com/us/home-networking/range-extender/re315/) (one 10/100 Mbps Ethernet port) and ["RE315/RE215 User Guide (REV1.1.0)"](https://static.tp-link.com/upload/manual/2024/202408/20240820/1910013762_RE315_UG_REV1.1.0.pdf) (the Ethernet port in Range Extender mode), checked 2026-11-19
 - Microsoft: ["ipconfig"](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/ipconfig), ["ping"](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/ping) and ["Resolve-DnsName"](https://learn.microsoft.com/en-us/powershell/module/dnsclient/resolve-dnsname) (the checks from a Windows PC), checked 2026-11-19
 - TP-Link (Omada): ["How to Find the Hardware Version on Your TP-Link Device"](https://support.omadanetworks.com/us/document/14139/), checked 2026-11-19
 - TP-Link (Omada): ["How to Configure WireGuard VPN on Omada Router in Standalone Mode"](https://support.omadanetworks.com/us/document/13120/) (the ER605 v2), checked 2026-11-19

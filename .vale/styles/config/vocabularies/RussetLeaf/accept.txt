@@ -226,3 +226,6 @@ udisks
 keyserver
 Better Stack
 [Hh]otwash
+Gbps
+Mbps
+uplink
