@@ -1109,7 +1109,7 @@ Phase 1 builds most of what these need: the shared OpenTofu modules, the base ma
 
 | Step | Tier | Est. hours | Done | Date | Actual hours | Node memory after | Notes |
 |---|---|---|---|---|---|---|---|
-| 0.1 Accounts, tools, budget, Google Workspace | Core | 7–13 | ☐ | | | | |
+| 0.1 Accounts, tools, budget, Google Workspace | Core | 7–13 | ☑ | 2026-11-18 | | | Break-glass kit made last; Workspace mail checks passed at setup, and DMARC reports arrive |
 | 0.2 Decisions | Core | 1–2 | ☑ | 2026-11-07 | | | Recorded in the decision log |
 | 0.3 Home network segmentation | Core | 2–4 | ☐ | | | | |
 | 1.1 Repos, GitHub organization, GitLab group | Core | 6–12 | ☐ | | | | |
