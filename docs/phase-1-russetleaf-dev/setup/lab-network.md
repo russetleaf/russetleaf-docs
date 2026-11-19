@@ -5,36 +5,36 @@ The step-by-step procedure for the lab network: the **TP-Link ER605 (v2)** route
 ```text
 Workstation (Wi-Fi, 192.168.1.x) ──WireGuard──┐
                                               ▼
-Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LAN (10.10.0.1) ── switch ── the three nodes
+Spectrum router ── AC1200 Mesh Wi-Fi Extender ── ER605 WAN (192.168.1.y) │ ER605 LAN (10.10.0.1) ── switch ── the three nodes
 ```
 
 **Note:** the click paths in this guide are those the router's web interface showed when the procedure was last carried out. Firmware updates change the interface without notice, and TP-Link's documentation can lag behind the interface. Before following a path, check TP-Link's current documentation for the ER605 (v2); where the screen still differs, follow what it shows and fix this guide to match.
 
 ## Before starting
 
-- The **ER605 (v2)**: check that the label underneath says hardware version **V2** (WireGuard needs it), the **TL-SG105** switch (`rl-home-sw01`), and network cables.
+- The **ER605 (v2)**, the **TL-SG105** switch (`rl-home-sw01`), and network cables. WireGuard needs hardware version **V2**: the label underneath gives the model with its region code (for example `ER605(UN)`) and a version number, where **2.x** means V2, and Part 1 confirms it on the router's **System Status** page.
 - The **latest V2 firmware** from the ER605's download page ([References](#references)), with its release note. The release note gives a **minimum version for the update**: a router on an older version installs that version first. For 2.4.10 (September 2026) the minimum is 2.3.2.
 - The **workstation**, with `wireguard-tools` installed (the [workstation setup script](../plan.md#1-run-the-setup-script) installs it), and **Bitwarden** (the project's password manager) open.
-- A **laptop** (or any spare device) that can be plugged into the lab switch, for the checks at the end.
-- The **MAC addresses** of the three nodes' network ports (on a label, or in each machine's BIOS), for the address reservations.
-- The **Spectrum router's** admin access, to reserve the ER605's WAN address.
+- A **second computer with an Ethernet port** (a laptop, or a desktop such as a Windows PC), for the first login (Part 1) and the checks at the end. The workstation stays on the household Wi-Fi throughout.
+- The **MAC addresses** of the three nodes' network ports, for the address reservations. They need not be known in advance: once the nodes are on the switch, the ER605 lists each one that asks it for an address (Part 2, step 5). A node with no operating system asks only while it tries to start from the network; otherwise its BIOS setup shows the MAC address.
+- The **Spectrum router** (a SAX1V1K) and the **My Spectrum** app signed in to the account, to reserve the ER605's WAN address.
 
 ## Part 1: Wiring, first login and firmware
 
 The ER605's web interface is used in **standalone mode** throughout: no Omada controller.
 
-1. **Wire it:** the ER605's **WAN** port to the mesh extender, one of its **LAN** ports to the switch, and the three nodes to the switch. The port labels show which ports are WAN and which are LAN.
-2. **First login:** connect the workstation (or laptop) by cable to a spare LAN port, with its wired connection set to get an address automatically, and open `http://192.168.0.1`. Create the **username and password** the page asks for, generated in Bitwarden and saved in a new item for the router, then log in with them.
+1. **Wire it:** the ER605's **WAN** port to the Ethernet port of the AC1200 Mesh Wi-Fi Extender, one of its **LAN** ports to the switch, and the three nodes to the switch. The port labels show which ports are WAN and which are LAN.
+2. **First login:** connect the second computer by cable to a spare LAN port of the ER605, with its wired connection set to get an address automatically, and open `http://192.168.0.1`. Create the **username and password** the page asks for, generated in Bitwarden and saved in a new item for the router, then log in with them.
 3. **Check the firmware:** **Status → System Status → System Status** shows the hardware and firmware versions. If the firmware is older than the release note's minimum, install that version first, as in step 4.
 4. **Update the firmware:** **System Tools → Management → Firmware Upgrade**, select the firmware file, and **Upgrade**. The router restarts; log in again and check the new version on the **System Status** page.
 
 ## Part 2: WAN, LAN and addresses
 
 1. **WAN:** **Network → WAN → WAN**. In the **Connection Configuration** section, the **Connection Type** stays **Dynamic IP** (from the Spectrum router); enter the **Host Name** `rl-home-rt01` ([ADR 1041](../adr/1041-naming-convention.md)), which the Spectrum router then shows for this device, and **Save**. The WAN address the router gets is shown on **Status → System Status → System Status**: it is the WireGuard endpoint. Leave **Network → WAN → WAN Mode** as it is: changing the number of WAN ports can lose the configuration.
-2. **Keep that address fixed:** on the Spectrum router, reserve the address for the ER605's WAN MAC address (shown with the WAN details). If the Spectrum router cannot reserve addresses, give the ER605 a **static WAN address** instead (**Connection Type** **Static IP**), outside the Spectrum router's DHCP range, with the Spectrum router, `192.168.1.1`, as gateway.
+2. **Keep that address fixed:** in the My Spectrum app, reserve the address the Spectrum router gave the ER605 (it appears under its host name, `rl-home-rt01`). Restart the ER605 afterwards (unplug it for ten seconds) and check on the **System Status** page that its WAN address has not changed. If the Spectrum router cannot reserve addresses, give the ER605 a **static WAN address** instead (**Connection Type** **Static IP**), outside the Spectrum router's DHCP range, with the Spectrum router, `192.168.1.1`, as gateway.
 3. **LAN:** **Network → LAN → LAN**. Set **IP Address** to **`10.10.0.1`** and **Subnet Mask** to `255.255.255.0`, and **Save**. The browser moves to `http://10.10.0.1`; if it does not, unplug and reconnect the cable, so the workstation gets a new address, and log in there.
 4. **DHCP on the LAN:** on the same page, in the DHCP server settings: **Starting/Ending IP Address** **`10.10.0.100`** to **`10.10.0.199`**, **Default Gateway** `10.10.0.1`, **Primary/Secondary DNS** **`1.1.1.1`** and **`9.9.9.9`**, and **Status** checked; then **Save**. The DNS servers are public ones, not the Spectrum router: the firewall rule in Part 3 blocks the household network, which would break DNS for anything using `192.168.1.1`.
-5. **Address reservations:** **Network → LAN → Address Reservation**, then **Add** for each node: its **MAC Address**, the **IP Address** below, the hostname as **Description** ([ADR 1041](../adr/1041-naming-convention.md)), **Status** checked, and **OK**.
+5. **Address reservations:** first find each node's MAC address: **Network → LAN → DHCP Client List** shows every device that has an address from the ER605, with its **Client Name**, **MAC Address**, **Assigned IP Address** and **Lease Time**. Then **Network → LAN → Address Reservation**, then **Add** for each node: its **MAC Address**, the **IP Address** below, the hostname as **Description** ([ADR 1041](../adr/1041-naming-convention.md)), **Status** checked, and **OK**.
 
     | Description | IP Address |
     |---|---|
@@ -140,7 +140,15 @@ The workstation's private key is generated on the workstation and never leaves i
 
 The test for step 0.3:
 
-- [ ] From a **laptop plugged into the lab switch**: the internet works, it gets a `10.10.0.1xx` address with DNS servers `1.1.1.1` and `9.9.9.9`, and the Spectrum router's admin page at `192.168.1.1` (or any household device) is **unreachable**.
+- [ ] From the **second computer plugged into the lab switch**: it gets a `10.10.0.1xx` address with DNS servers `1.1.1.1` and `9.9.9.9`, the internet works, and the Spectrum router at `192.168.1.1` (or any household device) is **unreachable**. On Windows, in PowerShell:
+
+    ```powershell
+    ipconfig /all                    # the Ethernet adapter: IPv4 Address 10.10.0.1xx, DNS Servers 1.1.1.1 and 9.9.9.9
+    ping 1.1.1.1                     # replies
+    Resolve-DnsName docs.russetleaf.dev
+    ping 192.168.1.1                 # Request timed out
+    ```
+
 - [ ] From the **workstation with WireGuard up**: `ping 10.10.0.1` answers, and ordinary internet traffic does not go through the tunnel (`ip route get 1.1.1.1` shows the Wi-Fi interface, not `rl-lab`).
 - [ ] With **WireGuard down**: `10.10.0.1` is **not** reachable.
 - [ ] From **another household device**: the lab is not reachable.
@@ -156,6 +164,8 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - TP-Link (Omada): ["ER605 support page (firmware, release notes, datasheet)"](https://support.omadanetworks.com/us/product/er605/), checked 2026-11-19
 - TP-Link: ["ER605 V2 User Guide (REV1.1.0)"](https://static.tp-link.com/upload/manual/2022/202208/20220830/1910013241_ER605(UN)2.0_UG.pdf) (standalone mode: login, status, WAN, LAN, DHCP, address reservation, IP groups, access control, NAT, UPnP, admin setup, controller settings, management, remote assistance), checked 2026-11-19
 - TP-Link: ["ER605(UN) V2 2.4.10 release note"](https://support.omadanetworks.com/us/document/136658/) (the minimum version for the update), checked 2026-11-19
+- Microsoft: ["ipconfig"](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/ipconfig), ["ping"](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/ping) and ["Resolve-DnsName"](https://learn.microsoft.com/en-us/powershell/module/dnsclient/resolve-dnsname) (the checks from a Windows PC), checked 2026-11-19
+- TP-Link (Omada): ["How to Find the Hardware Version on Your TP-Link Device"](https://support.omadanetworks.com/us/document/14139/), checked 2026-11-19
 - TP-Link (Omada): ["How to Configure WireGuard VPN on Omada Router in Standalone Mode"](https://support.omadanetworks.com/us/document/13120/) (the ER605 v2), checked 2026-11-19
 - WireGuard: ["Quick Start"](https://www.wireguard.com/quickstart/), checked 2026-11-12
 - NetworkManager: ["nmcli reference manual"](https://networkmanager.dev/docs/api/latest/nmcli.html), checked 2026-11-12

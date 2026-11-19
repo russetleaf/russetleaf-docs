@@ -222,10 +222,10 @@ Record each answer in the [decision log](#decision-log).
 ```text
 Workstation (Wi-Fi, 192.168.1.x) ──WireGuard──┐
                                               ▼
-Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LAN (10.10.0.1) ── switch ── the three nodes
+Spectrum router ── AC1200 Mesh Wi-Fi Extender ── ER605 WAN (192.168.1.y) │ ER605 LAN (10.10.0.1) ── switch ── the three nodes
 ```
 
-- **Wiring:** the ER605's WAN port to the mesh extender, its LAN port to the switch; the three nodes stay on the switch.
+- **Wiring:** the ER605's WAN port to the Ethernet port of the AC1200 Mesh Wi-Fi Extender, its LAN port to the switch; the three nodes stay on the switch.
 - **ER605 setup** (standalone mode, its own web interface; no Omada controller): update to the latest **v2 firmware** (WireGuard needs it); change the admin password; set the LAN to `10.10.0.0/24`, with DHCP handing out public DNS servers (`1.1.1.1`, `9.9.9.9`) rather than the Spectrum router, which the firewall rule below blocks; give the ER605 a **DHCP reservation on the Spectrum router** so its WAN address (the WireGuard endpoint) does not change.
 - **Addresses and names:** lab subnet `10.10.0.0/24` (gateway `10.10.0.1`), cluster virtual IP `10.10.0.10`, `rl-home-cp01` `10.10.0.11`, `rl-home-cp02` `10.10.0.12`, `rl-home-cp03` `10.10.0.13`, WireGuard clients `10.10.99.0/24`; name the router **`rl-home-rt01`** ([ADR 1041](adr/1041-naming-convention.md)); reserve the nodes' addresses on the ER605 under their hostnames, matched by MAC address (Talos also sets them statically in step 2.2) and keep `.10` free for the virtual IP.
 - **Firewall (access control rules):** the lab may reach the internet and the ER605; it **may not** reach `192.168.1.0/24` (household devices); nothing comes in from outside (the Cloudflare Tunnel is outbound-only, so no port forwards anywhere; UPnP and remote management off). Household devices cannot reach the lab, because the ER605's NAT blocks unrequested inbound traffic.
@@ -233,7 +233,7 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 - **Back up** the ER605's configuration and keep its admin login in the break-glass kit.
 - Set **BIOS passwords** on all three nodes. See the overview's [Defense in depth](../overview.md#defense-in-depth).
 
-**Test:** from a laptop plugged into the lab switch, the internet works and a household device (for example, the Spectrum router's admin page at `192.168.1.1`) is unreachable; from the workstation with WireGuard up, `10.10.0.1` answers, and with it down, the lab is not reachable; from another household device, the lab is not reachable. (Step 2.2 repeats these checks from a pod.)
+**Test:** from a computer plugged into the lab switch, the internet works and a household device (for example, the Spectrum router's admin page at `192.168.1.1`) is unreachable; from the workstation with WireGuard up, `10.10.0.1` answers, and with it down, the lab is not reachable; from another household device, the lab is not reachable. (Step 2.2 repeats these checks from a pod.)
 
 ## Stage 1: Repositories
 
