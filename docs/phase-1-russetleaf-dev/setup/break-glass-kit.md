@@ -43,7 +43,7 @@ Have these ready:
     1. **Add the printer:** a USB printer is usually added on its own when it is connected and turned on. Otherwise, or for a network printer, open the **Activities** overview, start typing `Printers`, and select **Printers**; select **Unlock** in the top right corner if it is shown, then **Add Printer…**, select the printer and select **Add**. A network printer that is not listed can be added by entering its address in the text field at the bottom of the dialog, then **Add**.
     2. **Check the print service setting:** `grep -x 'PreserveJobFiles No' /etc/cups/cupsd.conf` prints the line. If it prints nothing, run the setup script again.
     3. **Print a test page from the terminal,** the way the kit is printed: `lpstat -p` lists the printer's name, then `printf 'RussetLeaf printer test\n' | lp -d <printer>` prints one page with that line on it (`lp` reports `0 file(s)` when it reads from a pipe, which is expected). Once the page is out, `sudo find /var/spool/cups -maxdepth 1 -name 'd*'` prints nothing: CUPS keeps a document's data in a `d` file there while it prints and, with this setting, deletes it afterwards (the `c` files that remain hold only the job's name and history).
-- **Sign-ins to Google Drive and OneDrive:** the personal Google Account's Drive (not the Workspace account's, which depends on russetleaf.dev) and the personal Microsoft account.
+- **Sign-ins to Google Drive and OneDrive:** the personal Google Account's Drive and the personal Microsoft account. The Workspace account's Drive is not used: that account depends on russetleaf.dev and on credentials the kit itself holds, so it can be out of reach in exactly the cases the kit is for, and as the project's sign-in everywhere it is the account most exposed to attack; a third copy would also be one more to replace at every refresh.
 - **The kit passphrase:** generate a passphrase of six or more words with Bitwarden's generator (passphrase type) **without saving it**, and memorize it. It is written down nowhere except, optionally, a sealed copy with a trusted person. Everything in the encrypted copy depends on remembering it, so the 6-monthly check below tests it.
 
 The first line points `bw` at the project's account rather than any personal one. All secret files, and the keyring the key is created in, are made in memory (`/dev/shm`), so they never reach the disk, and they are deleted at the end:
@@ -207,6 +207,16 @@ The kit file is generated from Bitwarden rather than typed, so every password an
     It prints the kit's title line, and only that line, since the next lines hold Bitwarden's master password and recovery code.
 
 3. **Upload** `russetleaf-break-glass-kit.txt.gpg` to a folder in **Google Drive** and a folder in **OneDrive**, through their web pages. Neither needs sharing with anyone.
+4. **Check the uploaded copies:** download the file from Google Drive and from OneDrive (to `~/Downloads`, where the browser names the second one with a number), and compare each with the file decrypted in step 2. A copy with the same bytes decrypts the same way, so the kit's contents never need to be shown on screen:
+
+    ```bash
+    for f in ~/Downloads/russetleaf-break-glass-kit*.gpg; do
+      cmp "${RL_KIT}/russetleaf-break-glass-kit.txt.gpg" "${f}" && echo "${f}: identical"
+    done
+    rm ~/Downloads/russetleaf-break-glass-kit*.gpg
+    ```
+
+    Two files are reported as identical.
 
 ## Part 4: The encrypted export of the Bitwarden vault
 
@@ -248,7 +258,7 @@ This part adds a copy of the **whole vault** that can be read and imported **wit
     bw list items | jq 'length'
     ```
 
-5. **Store them** next to the kit: upload `russetleaf-vault-export.json.gpg` and `russetleaf-shared-export.json.gpg` to the same Google Drive and OneDrive folders. Then plug in the USB stick, copy both to it, check the copies and unmount it as in Part 2, step 5, and put it in the safe:
+5. **Store them** next to the kit: upload `russetleaf-vault-export.json.gpg` and `russetleaf-shared-export.json.gpg` to the same Google Drive and OneDrive folders, and check the uploaded copies as in Part 3, step 4 (with `russetleaf-vault-export*.gpg` and `russetleaf-shared-export*.gpg` in place of the kit's name). Then plug in the USB stick, copy both to it, check the copies and unmount it as in Part 2, step 5, and put it in the safe:
 
     ```bash
     kit_usb="/media/${USER}/RL-KIT"
@@ -273,10 +283,10 @@ This part adds a copy of the **whole vault** that can be read and imported **wit
 
 - [ ] The secret key export decrypted a test message in a scratch keyring (Part 1, step 3).
 - [ ] With `FPR` set to the key's fingerprint, `gpg --list-secret-keys "${FPR}"` in the workstation's own keyring finds **no** key.
-- [ ] The encrypted kit **downloaded from Google Drive**, and again **from OneDrive**, decrypts with the memorized passphrase after `gpgconf --reload gpg-agent`.
+- [ ] The encrypted kit decrypts with the memorized passphrase after `gpgconf --reload gpg-agent` (Part 3, step 2), and the copies **downloaded from Google Drive** and **from OneDrive** are identical to it (Part 3, step 4).
 - [ ] The safe holds the printed pages, the `paperkey` printout, the USB stick and `yubikey-backup`.
 - [ ] Bitwarden holds the GPG key's fingerprint, passphrase and public key.
-- [ ] Both exports (the vault and the `Shared accounts` collection), **downloaded from Google Drive**, decrypt with the memorized passphrase after `gpgconf --reload gpg-agent`, and their item counts add up to the number `bw` lists (Part 4, step 4); copies are on the USB stick.
+- [ ] Both exports (the vault and the `Shared accounts` collection) decrypt with the memorized passphrase after `gpgconf --reload gpg-agent`, and their item counts add up to the number `bw` lists (Part 4, step 4); the copies downloaded from Google Drive and OneDrive are identical to them, and copies are on the USB stick.
 - [ ] `/dev/shm/rl-kit` no longer exists.
 
 ## Using the key
