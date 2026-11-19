@@ -172,7 +172,18 @@ The kit file is generated from Bitwarden rather than typed, so every password an
     cat "${RL_KIT}/gpg-public-key.asc" "${RL_KIT}/gpg-secret-key.asc" >>"${RL_KIT}/kit.txt"
     ```
 
-5. **Copy to the USB stick** `gpg-public-key.asc`, `gpg-secret-key.asc` and `gpg-paperkey.txt`: `cp "${RL_KIT}"/gpg-{public-key.asc,secret-key.asc,paperkey.txt} /media/"${USER}"/RL-KIT/`.
+5. **Copy to the USB stick** `gpg-public-key.asc`, `gpg-secret-key.asc` and `gpg-paperkey.txt`, check the copies, and unmount the stick, which also finishes writing to it, before removing it:
+
+    ```bash
+    kit_usb="/media/${USER}/RL-KIT"
+    cp "${RL_KIT}"/gpg-{public-key.asc,secret-key.asc,paperkey.txt} "${kit_usb}/"
+    for f in gpg-public-key.asc gpg-secret-key.asc gpg-paperkey.txt; do
+      cmp "${RL_KIT}/${f}" "${kit_usb}/${f}" && echo "${f}: copied"
+    done
+    udisksctl unmount --block-device "$(findmnt -no SOURCE "${kit_usb}")"
+    ```
+
+    Each file is reported as copied, and `udisksctl` reports the stick unmounted.
 6. **Put in the safe:** the printed pages, the USB stick and `yubikey-backup`. The safe then holds the AWS root password and an MFA device together, which is accepted for a home safe (decision log, 2026-11-05).
 
 ## Part 3: The encrypted copy in Google Drive and OneDrive
@@ -320,6 +331,7 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - Bitwarden: ["Encrypted Exports"](https://bitwarden.com/help/encrypted-export/), checked 2026-11-13
 - Bitwarden: ["Password Manager CLI"](https://bitwarden.com/help/cli/) (and `bw export --help`, version 2026.10.1: `--raw` with no output file writes to standard output), checked 2026-11-13
 - CUPS: ["cupsd.conf"](https://www.cups.org/doc/man-cupsd.conf.html) (`PreserveJobFiles`: the default keeps job files for one day), and `man cupsd.conf` for CUPS 2.4.7 on Ubuntu 24.04, checked 2026-11-18
+- udisks: ["udisksctl"](https://storaged.org/doc/udisks2-api/latest/udisksctl.1.html) (`unmount`), and `man udisksctl` for udisks 2.10.1 on Ubuntu 24.04, checked 2026-11-18
 - GNOME Help: ["Set up a local printer"](https://help.gnome.org/users/gnome-help/stable/printing-setup.html) (GNOME Help 46, installed with Ubuntu 24.04), checked 2026-11-18
 - Google: ["Upload files & folders to Google Drive"](https://support.google.com/drive/answer/2424368), checked 2026-11-12
 - Microsoft: ["Upload and save files and folders to OneDrive"](https://support.microsoft.com/en-us/onedrive/upload-and-save-files-and-folders-to-onedrive), checked 2026-11-12
