@@ -179,7 +179,7 @@ The authentication keys are given GitLab's default one-year expiry on purpose (t
     tmp="$(mktemp -d)" && git clone git@gitlab.com:russetleaf/russetleaf-docs.git "${tmp}/russetleaf-docs" && git -C "${tmp}/russetleaf-docs" log -1 --oneline && rm -rf "${tmp}"
     ```
 
-    The commit it prints is the latest one on `main` on GitHub. Record the result in the decision log, as for the other [drills](../disaster-recovery.md#drills).
+    The commit it prints is the latest one on `main` on GitHub. Record the result in an after-action report, as for the other exercises ([exercise program](../../exercises.md)).
 6. **Remove the old keys,** only after steps 4 and 5 pass:
     - **GitHub:** profile picture → **Settings** → in the **Access** section of the sidebar, **SSH and GPG keys** → next to each old key, **Delete**.
     - **GitLab:** avatar → **Edit profile** → in the left sidebar, **Access → SSH keys** → next to each old key, **Remove** (the remove icon), then **Delete**. **Revoke** is only for a compromised key: on GitLab it also marks the commits a signing key has signed as **Unverified**, while **Delete** leaves them verified.

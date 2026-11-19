@@ -624,6 +624,7 @@ russetleaf-docs/
     index.md                # docs site home page
     overview.md             # this document
     runbooks.md             # the runbook index: every runbook in every repo
+    exercises.md            # the exercise program: calendar and procedure for drills and tabletops
     standards/              # bash.md, the bash script standard
     adr/0000-template.md    # ADR template (numbers: 1001+ Phase 1, 2001+ Phase 2, 3001+ Phase 3)
     phase-1-russetleaf-dev/ # design.md, plan.md, roadmap.md, disaster-recovery.md, improvements.md, adr/

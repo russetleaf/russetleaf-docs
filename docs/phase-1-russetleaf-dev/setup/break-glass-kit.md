@@ -308,7 +308,7 @@ Put the USB stick back in the safe afterwards.
 
 - **When an item changes** (a new recovery code, a new password, a rotated machine credential, the Talos secrets bundle after step 2.2; [ADR 1061](../adr/1061-credential-rotation.md)): update Bitwarden, then repeat Part 2, steps 1 to 4, and Part 3 with the GPG exports from the USB stick, replace both cloud copies, and replace the printed pages that changed (shredding the old ones). Make a new vault export at the same time (Part 4), replacing the old copies.
 - **The vault export** is also renewed **quarterly**, even when the kit has not changed, since the vault changes more often than the kit.
-- **Every 6 months** ([drill](../disaster-recovery.md#drills)): download both cloud copies and decrypt them after `gpgconf --reload gpg-agent`, check the GPG key's expiry date (`gpg --show-keys gpg-public-key.asc`), and check the kit for **drift** from Bitwarden: generate a fresh kit file (Part 2, step 1, after the setup lines in [Before starting](#before-starting)), and compare its Bitwarden items with the cloud copy's, without printing either:
+- **Every 6 months** (in May and November, by the [exercise program](../../exercises.md#calendar)'s calendar): download both cloud copies and decrypt them after `gpgconf --reload gpg-agent`, check the GPG key's expiry date (`gpg --show-keys gpg-public-key.asc`), and check the kit for **drift** from Bitwarden: generate a fresh kit file (Part 2, step 1, after the setup lines in [Before starting](#before-starting)), and compare its Bitwarden items with the cloud copy's, without printing either:
 
     ```bash
     items='/^==== /,/^---- end of the Bitwarden items ----$/p'

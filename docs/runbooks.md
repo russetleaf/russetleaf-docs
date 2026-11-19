@@ -11,6 +11,7 @@ Every runbook in the project, in one place: what each one is for, the build step
 - **Format:** every runbook follows `docs/runbooks/TEMPLATE.md` in `russetleaf-gitops`: Summary, Symptoms, Impact, Checks, Likely causes, Fixes, Escalation and Related ([Phase 1 step 4.4](phase-1-russetleaf-dev/plan.md#step-44-monitoring)).
 - **Status:** **Planned** runbooks appear as plain paths. The step that writes a runbook turns its path into a link, sets its status to **Written**, and records the date of its first rehearsal; later drills update that date.
 - **Alert runbooks** are named after their alert (`docs/runbooks/<alert>.md`) and linked from the alert's `runbook_url`. They are listed [by group](#alert-runbooks) rather than one by one.
+- **Exercises:** each runbook's **Rehearsed** cadence comes from the [exercise program](exercises.md), which holds the calendar of every drill and tabletop, the procedure for running one, and the rule that every **Written** runbook is exercised at least once a year.
 - **Review:** quarterly, check this page against the runbooks folders, and check that every alert has a runbook ([Ongoing operations](phase-1-russetleaf-dev/plan.md#ongoing-operations-after-the-build)).
 
 All paths below are in `russetleaf-gitops` unless stated otherwise.

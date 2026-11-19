@@ -69,6 +69,7 @@ nav:
   - Runbooks:
       - Runbook index: runbooks.md
       - Break-glass kit compromised: runbooks/break-glass-kit-compromise.md
+  - Exercise program: exercises.md
   - Standards:
       - Bash scripts: standards/bash.md
       - Documentation: standards/documentation.md

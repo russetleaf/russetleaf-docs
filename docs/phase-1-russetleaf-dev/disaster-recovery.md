@@ -139,20 +139,4 @@ The step-by-step runbooks for these scenarios (etcd recovery, node replacement, 
 
 ## Drills
 
-| Drill | How often | What it proves |
-|---|---|---|
-| Restore a MariaDB backup into a scratch instance | Monthly | Backups are usable |
-| Restore a MariaDB backup **from the backup account's copy**, signed in **only** to the Backup account (no access to russetleaf-home or its keys) | Quarterly | The off-account copies are readable without the account they protect against |
-| Restore a MariaDB backup **from the encrypted Cloudflare R2 copy**, using the GPG key from the break-glass kit | Quarterly | The copy outside AWS is usable without any AWS access |
-| **Full "home lab destroyed" rebuild**, using only the break-glass kit and the backups (on a local Talos-in-Docker cluster, or the real nodes during a maintenance window) | Yearly | The whole plan works; record the actual time |
-| *(Phase 3)* Restore aws.russetleaf.dev's database from the latest logical dump in the backup account | Once (then yearly) | The AWS-side copy works |
-| Recover a deleted staging namespace from Git and backups (`restore-deleted-resources.md`) | Quarterly, with the rollback drills | A deletion is recoverable without a cluster backup tool |
-| Restore a repo from its Git bundle, a media object from the replica, and OpenTofu state from the Backup account (decrypted with the passphrase from the break-glass kit) | Twice a year | The other copies are usable, not just the database's |
-| Restore a database dump from the **monthly** copies, and re-apply the erasure log | Yearly | Damage found late is recoverable |
-| Make one copy late on purpose (pause the R2 job) | Yearly | `BackupCopiesStale` fires |
-| Control-plane recovery (`etcd-recovery.md`, on a local Talos-in-Docker cluster) | Yearly | Quorum loss is recoverable |
-| Full power cut (`cold-start.md`) | Yearly | The cluster and database come back on their own, or by the checklist |
-| Clone a repo from its GitLab mirror over SSH with each YubiKey, during the yearly SSH key renewal ([workstation YubiKey setup guide](setup/workstation-yubikey.md#renewing-the-keys-every-year)) | Yearly | The first restore path for a lost GitHub works from the workstation, with no credentials to set up |
-| Check the break-glass kit (logins work, recovery codes valid, printed copy current, both encrypted cloud copies decrypt with the memorized passphrase, a freshly generated kit file matches the cloud copy's Bitwarden items, the GPG key not near expiry), and a tabletop walk-through of the [break-glass kit compromise runbook](../runbooks/break-glass-kit-compromise.md), recording any changed labels | Every 6 months | Access can be recovered, and a stolen kit can be contained |
-
-Each drill's result and time are recorded in the decision log; this document is updated whenever a drill finds something wrong.
+The drills that prove this plan (restores from each copy, the full disaster drill, control-plane recovery, the cold start, the late-copy alert, the GitLab clone, and the break-glass kit check with its compromise tabletop) are scheduled, run and reported by the [exercise program](../exercises.md#calendar). Each drill ends with an after-action report in `docs/postmortems/`, and this document is updated whenever a drill finds something wrong.
