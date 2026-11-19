@@ -17,7 +17,7 @@ The GPG key decrypts the backup copies in Cloudflare R2 ([step 2.5](../plan.md#s
 - a passphrase-protected **export** on the USB stick in the safe, and inside the encrypted kit in Google Drive and OneDrive;
 - a **`paperkey` printout** in the safe, in case the USB stick fails.
 
-The USB stick itself is **not encrypted**. The secret parts in both files on it, the export and the `paperkey` file, stay encrypted with the key's passphrase, since `gpg` exports a protected key as it is and `paperkey` copies those parts unchanged; the public key needs no protection. In the safe, that passphrase is also in the printed kit, so the safe is what protects the stick, as it protects the printed passwords. Encrypting the whole stick would add a third secret to keep, and would stop it opening on any computer at hand, which is why it is exFAT.
+The USB stick itself is **not encrypted**. It holds the GPG key's three files and the two encrypted vault exports ([Part 4](#part-4-the-encrypted-export-of-the-bitwarden-vault)). The secret parts in the key's export and its `paperkey` file stay encrypted with the key's passphrase, since `gpg` exports a protected key as it is and `paperkey` copies those parts unchanged; the public key needs no protection; and the vault exports are encrypted with the memorized kit passphrase, like the cloud copies. In the safe, that passphrase is also in the printed kit, so the safe is what protects the stick, as it protects the printed passwords. Encrypting the whole stick would add a third secret to keep, and would stop it opening on any computer at hand, which is why it is exFAT.
 
 For a restore or a drill, it is loaded into a keyring in memory (`/dev/shm`) and deleted afterwards ([Using the key](#using-the-key)). Its passphrase, kept in Bitwarden and in the kit, protects it while it is in use.
 
@@ -186,7 +186,7 @@ The kit file is generated from Bitwarden rather than typed, so every password an
     ```
 
     Each file is reported as copied, and `udisksctl` reports the stick unmounted. If it reports `target is busy`, a program still has the stick open, most often **Files**, which keeps running in the background after its windows close: `fuser -vm "${kit_usb}"` names the program. For Files, select the eject button next to **RL-KIT** in the Files sidebar, which unmounts the stick, or quit Files with `nautilus -q` and run the `udisksctl` line again.
-6. **Put in the safe:** the printed pages, the USB stick and `yubikey-backup`. The safe then holds the AWS root password and an MFA device together, which is accepted for a home safe (decision log, 2026-11-05).
+6. **Put in the safe:** the printed pages and `yubikey-backup`; the USB stick follows at the end of Part 4, which adds the vault exports to it. The safe then holds the AWS root password and an MFA device together, which is accepted for a home safe (decision log, 2026-11-05).
 
 ## Part 3: The encrypted copy in Google Drive and OneDrive
 
@@ -246,7 +246,17 @@ This part adds a copy of the **whole vault** that can be read and imported **wit
     bw list items | jq 'length'
     ```
 
-5. **Store them** next to the kit: upload `russetleaf-vault-export.json.gpg` and `russetleaf-shared-export.json.gpg` to the same Google Drive and OneDrive folders, and copy both to the USB stick in the safe.
+5. **Store them** next to the kit: upload `russetleaf-vault-export.json.gpg` and `russetleaf-shared-export.json.gpg` to the same Google Drive and OneDrive folders. Then plug in the USB stick, copy both to it, check the copies and unmount it as in Part 2, step 5, and put it in the safe:
+
+    ```bash
+    kit_usb="/media/${USER}/RL-KIT"
+    cp "${RL_KIT}"/russetleaf-{vault,shared}-export.json.gpg "${kit_usb}/"
+    for f in russetleaf-vault-export.json.gpg russetleaf-shared-export.json.gpg; do
+      cmp "${RL_KIT}/${f}" "${kit_usb}/${f}" && echo "${f}: copied"
+    done
+    udisksctl unmount --block-device "$(findmnt -no SOURCE "${kit_usb}")"
+    ```
+
 6. **Lock the CLI and clean up:** delete the folder in memory.
 
     ```bash
