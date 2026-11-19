@@ -201,8 +201,10 @@ The kit file is generated from Bitwarden rather than typed, so every password an
 
     ```bash
     gpgconf --reload gpg-agent
-    gpg --decrypt "${RL_KIT}/russetleaf-break-glass-kit.txt.gpg" | head -n 5
+    gpg --decrypt "${RL_KIT}/russetleaf-break-glass-kit.txt.gpg" | head -n 1
     ```
+
+    It prints the kit's title line, and only that line, since the next lines hold Bitwarden's master password and recovery code.
 
 3. **Upload** `russetleaf-break-glass-kit.txt.gpg` to a folder in **Google Drive** and a folder in **OneDrive**, through their web pages. Neither needs sharing with anyone.
 
