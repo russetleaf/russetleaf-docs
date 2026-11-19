@@ -1,6 +1,6 @@
 # Runbook: break-glass kit compromised
 
-**Note:** the click paths in this runbook come from each provider's documentation, checked on the dates in [References](#references). Providers change their consoles without notice, and their own documentation can lag behind the console. Where a provider's documentation does not name a button, the step says so: record the label the screen shows at the first drill, and fix the step. During an incident, follow what the screen shows.
+**Note:** the click paths in this runbook come from each provider's documentation, checked on the dates in [References](#references). Providers change their consoles without notice, and their own documentation can lag behind the console. Where a provider's documentation does not name a button, the label comes from the screen (checked on 2026-11-19, and marked so in the step), or the step says it is not yet known: record the label the screen shows at the first drill, and fix the step. During an incident, follow what the screen shows.
 
 ## Summary
 
@@ -94,16 +94,16 @@ It is the Workspace account's recovery email, the Cloudflare sign-in, and the Go
 
 It holds the OneDrive copy of the kit. **Bitwarden item:** the Microsoft item in `Shared accounts`.
 
-1. **Remove `yubikey-backup`:** on the security settings page (`https://account.live.com/proofs/manage/additional`), under "**Ways to prove who you are**", find `yubikey-backup` and select **Remove**, then confirm. Microsoft's documentation shows **Remove** only for phone, authenticator app and email methods; record the label shown for a security key at the first drill.
-2. **Change the password:** to a password generated in Bitwarden, from the same account's security settings. Microsoft's documentation page for this was not available when this runbook was written; record the path at the first drill. Update the item's password.
+1. **Remove `yubikey-backup`:** on the security settings page (`https://account.live.com/proofs/manage/additional`), under "**Ways to prove who you are**", find `yubikey-backup` and select **Remove**, then confirm. Microsoft's documentation shows **Remove** only for phone, authenticator app and email methods, and the label for a security key is not yet known; record it at the first drill.
+2. **Change the password:** on the same page, select **Change password** (the label from the screen), and enter a password generated in Bitwarden. Update the item's password.
 3. **Replace the recovery code:** on the same page, in the **Recovery code** section, select **Generate a new code**; the previous code stops working. Replace it in the item.
-4. **Sign out everywhere and review the activity:** Microsoft offers **Sign out everywhere** and a **Recent activity** page from the account's security settings; their help pages were not available when this runbook was written, so record the paths at the first drill. Note any sign-in that is not the operator's.
+4. **Sign out everywhere and review the activity:** on the same page, select **Sign out everywhere**; then, on the account's **Security** page, select "**View my sign-in activity**", which opens **Recent activity** (the labels from the screen). Note any sign-in that is not the operator's.
 
 ### Part 6: GitHub
 
 **Bitwarden item:** the GitHub item in `Shared accounts`.
 
-1. **Remove `yubikey-backup`:** the profile picture, **Settings**, then **Password and authentication** under **Access**; in **Two-factor methods**, under **Security keys**, remove `yubikey-backup`. GitHub's documentation covers adding a key but not removing one; record the labels at the first drill.
+1. **Remove `yubikey-backup`:** the profile picture, **Settings**, then **Password and authentication** under **Access**; in the **Two-factor methods** box, select **Edit** next to **Security keys**, then the trash can icon next to `yubikey-backup` (the labels from the screen; GitHub's documentation covers adding a key but not removing one).
 2. **Delete its SSH key:** **Settings → SSH and GPG keys**; under **SSH keys**, select **Delete** next to `workstation yubikey-backup <year>`.
 3. **Change the password:** **Settings → Password and authentication**; under **Change password**, enter the old password and a new one generated in Bitwarden, twice, and select **Update password**. Update the item's password.
 4. **Replace the recovery codes:** on the same page, next to **Recovery codes**, select **View**, then **Generate new recovery codes**; the old codes stop working. Replace them in the item's notes.
@@ -114,7 +114,7 @@ It holds the OneDrive copy of the kit. **Bitwarden item:** the Microsoft item in
 
 **Bitwarden item:** the GitLab item in `Shared accounts`.
 
-1. **Remove `yubikey-backup`:** the avatar, **Edit profile**, then **Access → Password and authentication**; in the **WebAuthn devices** section, remove `yubikey-backup`. GitLab's documentation says devices can be removed one at a time but does not name the control; record it at the first drill. Do **not** select **Disable 2FA**, which removes every factor.
+1. **Remove `yubikey-backup`:** the avatar, **Edit profile**, then **Access → Password and authentication**; in the **WebAuthn devices** section, select the trash can icon next to `yubikey-backup` (from the screen; GitLab's documentation does not name it). Do **not** select **Disable 2FA**, which removes every factor.
 2. **Delete its SSH key:** **Edit profile → Access → SSH keys**; next to `workstation yubikey-backup <year>`, select **Remove**, then **Delete**. (**Revoke** applies to signing keys and would mark commits as unverified.)
 3. **Change the password:** **Edit profile → Access → Password and authentication → Change password**; fill in **Current password**, **New password** (generated in Bitwarden) and **Password confirmation**, and select **Save password**. Update the item's password.
 4. **Replace the recovery codes:** on the same page, in **Recovery codes**, select **Regenerate recovery codes**, enter the password, and select **Regenerate recovery codes** again; the old codes stop working. Replace them in the item's notes.
@@ -138,7 +138,7 @@ Slack's second factor is an authenticator code, whose backup codes are in the ki
 
 1. **Change the password:** at `https://my.slack.com/account`, next to **Password**, select **Expand**, then "**Reset your password by email**", and follow the link sent to the Workspace address (secured in Part 2), with a password generated in Bitwarden. Slack's documentation describes only this reset, not a change with the current password. Update the item's password.
 2. **Sign out other sessions:** on the same page, select **Sign out all other sessions**.
-3. **Replace the backup codes:** Slack's documentation does not describe replacing them. At `https://my.slack.com/account/settings`, next to **Two-factor Authentication**, select **Expand** and use what the page offers to set up the authenticator again (which issues new backup codes), or, if it offers nothing, ask Slack support; record the labels at the first drill. Replace the authenticator entry in Google Authenticator and the backup codes in the item's notes.
+3. **Replace the authenticator key and check the backup codes:** at `https://my.slack.com/account/settings`, next to **Two-factor Authentication**, select **Expand**, then **Use a different authenticator app** (the label from the screen), and add the new key to Google Authenticator, deleting the old entry; the key in the kit then no longer works. Then open the backup codes from the link on the same section and compare them with those in the item's notes: if they are unchanged, the thief's copy still works, so ask Slack support to reset them (Slack's documentation does not describe replacing them). Update the item's notes.
 4. **Review the access logs:** at `https://my.slack.com/account`, select **Access Logs** at the top right. Note any session that is not the operator's.
 5. **The bot token** is replaced in Part 12.
 
@@ -147,7 +147,7 @@ Slack's second factor is an authenticator code, whose backup codes are in the ki
 Better Stack signs in with a link emailed to the Workspace address, secured in Part 2, so the kit's exposure affects only its authenticator key and recovery codes. **Bitwarden item:** the Better Stack item.
 
 1. **Sign in** with a new sign-in link and the current authenticator code.
-2. **Replace the authenticator key and recovery codes:** **Settings → Security** (`https://betterstack.com/settings/security`). Better Stack's documentation describes only **Enable two-factor authentication**, not turning it off or replacing the codes; turn two-factor authentication off and on again with what the page offers, add the new key to Google Authenticator (deleting the old entry), and replace the recovery codes in the item's notes. Record the labels at the first drill.
+2. **Replace the authenticator key and recovery codes:** **Settings → Security** (`https://betterstack.com/settings/security`). Select **Disable two-factor authentication** (the label from the screen; Better Stack's documentation describes only enabling it), then **Enable two-factor authentication** again, which issues a new key and new recovery codes. Add the new key to Google Authenticator, deleting the old entry, and replace the recovery codes in the item's notes.
 3. **Test:** log out, and log in with a new link and the new code.
 
 ### Part 11: healthchecks.io
