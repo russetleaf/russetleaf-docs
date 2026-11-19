@@ -12,26 +12,31 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 
 ## Before starting
 
-- The **ER605 (v2)**: check the label underneath says hardware version **V2** (WireGuard needs it), the **TL-SG105** switch (`rl-home-sw01`), and network cables.
+- The **ER605 (v2)**: check that the label underneath says hardware version **V2** (WireGuard needs it), the **TL-SG105** switch (`rl-home-sw01`), and network cables.
+- The **latest V2 firmware** from the ER605's download page ([References](#references)), with its release note. The release note gives a **minimum version for the update**: a router on an older version installs that version first. For 2.4.10 (September 2026) the minimum is 2.3.2.
 - The **workstation**, with `wireguard-tools` installed (the [workstation setup script](../plan.md#1-run-the-setup-script) installs it), and **Bitwarden** (the project's password manager) open.
 - A **laptop** (or any spare device) that can be plugged into the lab switch, for the checks at the end.
 - The **MAC addresses** of the three nodes' network ports (on a label, or in each machine's BIOS), for the address reservations.
+- The **Spectrum router's** admin access, to reserve the ER605's WAN address.
 
-## Part 1: Wiring and first login
+## Part 1: Wiring, first login and firmware
 
-1. **Wire it:** the ER605's **WAN** port to the mesh extender, one of its **LAN** ports to the switch, and the three nodes to the switch. (The port labels show which ports are WAN and which are LAN.)
-2. **First login:** connect the workstation (or laptop) by cable to a spare LAN port, and open the ER605's default address, `http://192.168.0.1`. Create the **admin username and password** it asks for, generated in the password manager. Use it in **standalone mode** (no Omada controller).
-3. **Update the firmware:** download the latest **ER605 V2** firmware from TP-Link's support site (check its release notes mention WireGuard), and install it from the **firmware upgrade** page under the system tools. The router restarts.
+The ER605's web interface is used in **standalone mode** throughout: no Omada controller.
+
+1. **Wire it:** the ER605's **WAN** port to the mesh extender, one of its **LAN** ports to the switch, and the three nodes to the switch. The port labels show which ports are WAN and which are LAN.
+2. **First login:** connect the workstation (or laptop) by cable to a spare LAN port, with its wired connection set to get an address automatically, and open `http://192.168.0.1`. Create the **username and password** the page asks for, generated in Bitwarden and saved in a new item for the router, then log in with them.
+3. **Check the firmware:** **Status → System Status → System Status** shows the hardware and firmware versions. If the firmware is older than the release note's minimum, install that version first, as in step 4.
+4. **Update the firmware:** **System Tools → Management → Firmware Upgrade**, select the firmware file, and **Upgrade**. The router restarts; log in again and check the new version on the **System Status** page.
 
 ## Part 2: WAN, LAN and addresses
 
-1. **WAN:** leave the WAN connection on **dynamic IP (DHCP)** from the Spectrum router, and note the address it gets: this is the WireGuard endpoint.
-2. **Keep that address fixed:** on the Spectrum router, reserve that address for the ER605's WAN MAC address. If the Spectrum router cannot reserve addresses, give the ER605 a **static WAN address** instead, outside the Spectrum router's DHCP range (with the Spectrum router, `192.168.1.1`, as gateway).
-3. **LAN:** change the LAN address to **`10.10.0.1`**, subnet mask `255.255.255.0`. The web interface moves to `http://10.10.0.1`; reconnect the cable (or renew the address) and sign in there.
-4. **DHCP on the LAN:** a pool of **`10.10.0.100`–`10.10.0.199`**, and set the **DNS servers** handed out to **`1.1.1.1`** and **`9.9.9.9`**, not the Spectrum router: the firewall rule in Part 3 blocks the household network, which would break DNS for anything using `192.168.1.1`.
-5. **Address reservations,** matched by MAC address under each node's hostname ([ADR 1041](../adr/1041-naming-convention.md)):
+1. **WAN:** **Network → WAN → WAN**. In the **Connection Configuration** section, the **Connection Type** stays **Dynamic IP** (from the Spectrum router); enter the **Host Name** `rl-home-rt01` ([ADR 1041](../adr/1041-naming-convention.md)), which the Spectrum router then shows for this device, and **Save**. The WAN address the router gets is shown on **Status → System Status → System Status**: it is the WireGuard endpoint. Leave **Network → WAN → WAN Mode** as it is: changing the number of WAN ports can lose the configuration.
+2. **Keep that address fixed:** on the Spectrum router, reserve the address for the ER605's WAN MAC address (shown with the WAN details). If the Spectrum router cannot reserve addresses, give the ER605 a **static WAN address** instead (**Connection Type** **Static IP**), outside the Spectrum router's DHCP range, with the Spectrum router, `192.168.1.1`, as gateway.
+3. **LAN:** **Network → LAN → LAN**. Set **IP Address** to **`10.10.0.1`** and **Subnet Mask** to `255.255.255.0`, and **Save**. The browser moves to `http://10.10.0.1`; if it does not, unplug and reconnect the cable, so the workstation gets a new address, and log in there.
+4. **DHCP on the LAN:** on the same page, in the DHCP server settings: **Starting/Ending IP Address** **`10.10.0.100`** to **`10.10.0.199`**, **Default Gateway** `10.10.0.1`, **Primary/Secondary DNS** **`1.1.1.1`** and **`9.9.9.9`**, and **Status** checked; then **Save**. The DNS servers are public ones, not the Spectrum router: the firewall rule in Part 3 blocks the household network, which would break DNS for anything using `192.168.1.1`.
+5. **Address reservations:** **Network → LAN → Address Reservation**, then **Add** for each node: its **MAC Address**, the **IP Address** below, the hostname as **Description** ([ADR 1041](../adr/1041-naming-convention.md)), **Status** checked, and **OK**.
 
-    | Hostname | Address |
+    | Description | IP Address |
     |---|---|
     | `rl-home-cp01` | `10.10.0.11` |
     | `rl-home-cp02` | `10.10.0.12` |
@@ -39,28 +44,37 @@ Spectrum router ── mesh extender ── ER605 WAN (192.168.1.y) │ ER605 LA
 
     Leave **`10.10.0.10` unused**: it is the cluster's virtual IP. Talos also sets these addresses statically in step 2.2. If the router accepts reservations only inside the pool, widen the pool to `10.10.0.11`–`10.10.0.199`; `.10` stays outside it either way.
 
-6. **Name the router `rl-home-rt01`** where the system settings allow a device name, and put a label with that name on the case.
+6. **Label the case** with the router's name, `rl-home-rt01`.
 
-## Part 3: The firewall
+## Part 3: The firewall and remote access
 
-1. **The household network as a group:** in the IP group settings, create a group named **`household`** for **`192.168.1.0/24`**.
-2. **Block the lab from it:** in the **access control** rules, add a rule:
+1. **The two networks as IP groups:** **Preferences → IP Group → IP Address**, then **Add**, twice: **Name** `household_net`, **IP Address Type** **IP Address/Mask**, `192.168.1.0` / `255.255.255.0`; and **Name** `lab_net`, `10.10.0.0` / `255.255.255.0`; each with **OK**. Then **Preferences → IP Group → IP Group**, **Add**, twice: **Group Name** `household` with **Address Name** `household_net`, and **Group Name** `lab` with `lab_net`; each with **OK**. (Names take only letters, digits and underscores.)
+2. **Block the lab from the household network:** **Firewall → Access Control → Access Control**, then **Add**:
 
     | Setting | Value |
     |---|---|
     | Name | `lab-to-household-deny` |
-    | Policy | Deny |
-    | Direction | LAN → WAN |
-    | Source | The LAN network (`10.10.0.0/24`) |
-    | Destination | The `household` group |
-    | Services | All |
+    | Policy | Block |
+    | Service Type | ALL |
+    | Direction | LAN -> WAN |
+    | Source | `lab` |
+    | Destination | `household` |
+    | Effective Time | Any |
 
-    The lab can still reach the internet; nothing from the household network can start a connection into the lab, because the ER605's NAT drops it.
-3. **Nothing comes in:** confirm there are **no port forwards** (virtual servers), turn **UPnP off** (so no device in the lab can open its own port forward), and make sure **remote management from the WAN side is off**. The Cloudflare Tunnel is outbound-only, so nothing needs to come in.
+    Then **OK**. The lab can still reach the internet; nothing from the household network can start a connection into the lab, because the ER605's NAT drops it.
+3. **Nothing comes in:**
+    - **Transmission → NAT → Virtual Servers** lists **no** entries (no port forwards); check **One-to-One NAT** and **NAT-DMZ** under **Transmission → NAT** too.
+    - **Service → UPnP**: **Enable UPnP** cleared, and **Save**, so no device in the lab can open its own port forward.
+    - **System Tools → Admin Setup → Remote Management** lists **no** entries, so the web interface cannot be reached from the WAN side.
+    - **System Tools → Controller Settings**: **Cloud-Based Controller Management** off.
+    - **System Tools → Diagnostics → Remote Assistance**: the box cleared, so TP-Link's technicians cannot reach the router by SSH.
+
+    The Cloudflare Tunnel is outbound-only, so nothing needs to come in.
+4. **HTTPS for the web interface:** **System Tools → Admin Setup → System Settings**: **HTTPS Server Status** and **Redirect HTTP to HTTPS** checked, and **Save**. The router's certificate is self-signed, so the browser warns on the first visit; from then on, the admin password is not sent in the clear.
 
 ## Part 4: WireGuard for the workstation
 
-The workstation's private key is generated on the workstation and never leaves it; the router only learns its public key.
+The workstation's private key is generated on the workstation and never leaves it; the router only learns its public key. The steps follow TP-Link's WireGuard article for the ER605 v2 in standalone mode ([References](#references)).
 
 1. **The workstation's keys:**
 
@@ -71,8 +85,8 @@ The workstation's private key is generated on the workstation and never leaves i
     cat ~/.config/wireguard/rl-lab.pub      # the public key, for the router
     ```
 
-2. **The WireGuard server on the ER605:** in the VPN settings, create a **WireGuard** interface with listen port **`51820`** and local address **`10.10.99.1/24`**. Copy the **public key** the router generates for it.
-3. **The workstation as a peer:** add a peer named after the workstation, with the workstation's **public key** from step 1, allowed address **`10.10.99.2/32`**, and a keepalive of **25 seconds**.
+2. **The WireGuard server on the ER605:** **VPN → WireGuard → WireGuard**, then **Add**: **Name** `rl-lab`, **MTU** `1420` (the default), **Listen Port** **`51820`** (the default), **Local IP Address** **`10.10.99.1`**; the router generates its own key pair. Save the interface, then use its **Export** to get the router's **public key**.
+3. **The workstation as a peer:** **VPN → WireGuard → Peers**, then **Add**: **Interface** `rl-lab`, **Public Key** the workstation's public key from step 1, **Endpoint** and **Endpoint Port** left empty (the router is the server), **Allowed Address** **`10.10.99.2/32`**, and, if the page offers it, a persistent keepalive of **25 seconds**; then save.
 4. **The client profile:** on the workstation, write `~/.config/wireguard/rl-lab.conf` (mode `600`). It is a **split tunnel**: only the lab's traffic goes through it, so there is no `DNS` line and `AllowedIPs` lists only the lab subnet.
 
     ```ini
@@ -103,12 +117,24 @@ The workstation's private key is generated on the workstation and never leaves i
     sudo wg-quick down ~/.config/wireguard/rl-lab.conf
     ```
 
-6. **Keep a copy in the break-glass kit:** store the profile in the password manager ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)). With the NetworkManager import, then delete the files in `~/.config/wireguard/` (NetworkManager keeps its own copy, readable only by root); with `wg-quick`, keep `rl-lab.conf` (mode `600`) and delete only `rl-lab.key` and `rl-lab.pub`, since the profile holds the private key.
+6. **Keep a copy in the break-glass kit:** store the profile in Bitwarden ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)), then refresh the kit ([break-glass kit setup guide](break-glass-kit.md#keeping-the-kit-current)). With the NetworkManager import, then delete the files in `~/.config/wireguard/` (NetworkManager keeps its own copy, readable only by root); with `wg-quick`, keep `rl-lab.conf` (mode `600`) and delete only `rl-lab.key` and `rl-lab.pub`, since the profile holds the private key.
 
 ## Part 5: Backups and BIOS passwords
 
-1. **Back up the ER605's configuration** from the backup page under the system tools, and store the file in the password manager with the admin login. Repeat after every change.
-2. **BIOS passwords** on all three nodes: enter each machine's setup (**F1** on the Lenovo ThinkCentre, **F2** on the Dell OptiPlex machines) and set the **administrator (supervisor) password**, from the password manager. The other BIOS settings (Secure Boot, the TPM, power-on after a power cut) are part of step 2.2.
+1. **Back up the ER605's configuration:** **System Tools → Management → Backup & Restore**, and, in the **Backup** section, **Backup**; the browser saves the file. The break-glass kit reads only text in a vault item, not attachments ([break-glass kit setup guide](break-glass-kit.md#before-starting)), so the file goes into the notes of the router's Bitwarden item as base64 text, which `base64 -d` turns back into the file for a restore. With the CLI unlocked in the project's data folder (`export BW_SESSION="$(bw unlock --raw)"`, run on its own), move the file into memory and add it to the item:
+
+    ```bash
+    mv ~/Downloads/<the backup file> /dev/shm/rl-home-rt01.cfg
+    item_id="$(bw get item '<the router item>' | jq -r .id)"
+    bw get item "${item_id}" \
+      | jq --arg cfg "$(base64 -w 76 /dev/shm/rl-home-rt01.cfg)" --arg date "$(date +%F)" \
+        '.notes = ((.notes // "") + "\n\nConfiguration backup " + $date + " (base64):\n" + $cfg)' \
+      | bw encode | bw edit item "${item_id}" >/dev/null && echo "Backup added to the item"
+    rm /dev/shm/rl-home-rt01.cfg
+    ```
+
+    Bitwarden refuses a note whose encrypted form is longer than 10,000 characters (about 7,000 characters of text), and `bw edit` then reports the error. In that case, encrypt the file with the kit passphrase instead, as the kit's vault exports are ([break-glass kit setup guide](break-glass-kit.md#part-4-the-encrypted-export-of-the-bitwarden-vault), Part 4, step 3), and store it with them. Repeat after every change, replacing the older backup in the notes, then refresh the kit.
+2. **BIOS passwords** on all three nodes: enter each machine's setup (**F1** on the Lenovo ThinkCentre, **F2** on the Dell OptiPlex machines) and set the **administrator (supervisor) password**, from Bitwarden. The other BIOS settings (Secure Boot, the TPM, power-on after a power cut) are part of step 2.2.
 
 ## Checks
 
@@ -127,7 +153,10 @@ Step 2.2 repeats the isolation checks from a pod inside the cluster.
 
 The official pages these steps follow, each checked on the date shown. When a page has moved or changed, find the current one, update the step if needed, and change the date.
 
-- TP-Link (Omada): ["ER605 support page (firmware, release notes, datasheet)"](https://support.omadanetworks.com/us/product/er605/), checked 2026-11-12
+- TP-Link (Omada): ["ER605 support page (firmware, release notes, datasheet)"](https://support.omadanetworks.com/us/product/er605/), checked 2026-11-19
+- TP-Link: ["ER605 V2 User Guide (REV1.1.0)"](https://static.tp-link.com/upload/manual/2022/202208/20220830/1910013241_ER605(UN)2.0_UG.pdf) (standalone mode: login, status, WAN, LAN, DHCP, address reservation, IP groups, access control, NAT, UPnP, admin setup, controller settings, management, remote assistance), checked 2026-11-19
+- TP-Link: ["ER605(UN) V2 2.4.10 release note"](https://support.omadanetworks.com/us/document/136658/) (the minimum version for the update), checked 2026-11-19
+- TP-Link (Omada): ["How to Configure WireGuard VPN on Omada Router in Standalone Mode"](https://support.omadanetworks.com/us/document/13120/) (the ER605 v2), checked 2026-11-19
 - WireGuard: ["Quick Start"](https://www.wireguard.com/quickstart/), checked 2026-11-12
 - NetworkManager: ["nmcli reference manual"](https://networkmanager.dev/docs/api/latest/nmcli.html), checked 2026-11-12
 - Ubuntu: ["nmcli - command-line tool for controlling NetworkManager"](https://manpages.ubuntu.com/manpages/noble/man1/nmcli.1.html) (Ubuntu 24.04, NetworkManager 1.46: `connection import` supports only VPN configurations), checked 2026-11-13
