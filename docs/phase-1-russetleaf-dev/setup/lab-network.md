@@ -16,7 +16,7 @@ Spectrum router ── RE315 extender ── ER605 WAN (192.168.1.y) │ ER605 L
 - The **ER605 (v2)**, the **TL-SG105** switch (`rl-home-sw01`), and network cables. WireGuard needs hardware version **V2**: the label underneath gives the model with its region code (for example `ER605(UN)`) and a version number, where **2.x** means V2, and Part 1 confirms it on the router's **System Status** page.
 - The **latest V2 firmware** from the ER605's download page ([References](#references)), with its release note, downloaded **on the second computer** (below): the firmware is uploaded from that computer's browser, because the workstation reaches the router only over WireGuard, which Part 4 sets up. The release note gives a **minimum version for the update**: a router on an older version installs that version first. For 2.4.10 (September 2026) the minimum is 2.3.2.
 - The **workstation**, with `wireguard-tools` installed (the [workstation setup script](../plan.md#1-run-the-setup-script) installs it), and **Bitwarden** (the project's password manager) open.
-- A **second computer with an Ethernet port** (a laptop, or a desktop such as a Windows PC), for the first login (Part 1) and the checks at the end. The workstation stays on the household Wi-Fi throughout.
+- A **second computer with an Ethernet port** and a web browser, on any operating system (Linux, macOS or Windows), for the first login and firmware update (Part 1) and the checks at the end. It needs none of the project's credentials or keys. The workstation stays on the household Wi-Fi throughout.
 - The **MAC addresses** of the three nodes' network ports, for the address reservations. They need not be known in advance: once the nodes are on the switch, the ER605 lists each one that asks it for an address (Part 2, step 5). A node with no operating system asks only while it tries to start from the network; otherwise its BIOS setup shows the MAC address.
 - The **Spectrum router** (a SAX1V1K) and the **My Spectrum** app signed in to the account, to reserve the ER605's WAN address.
 
@@ -141,14 +141,26 @@ The workstation's private key is generated on the workstation and never leaves i
 
 The test for step 0.3:
 
-- [ ] From the **second computer plugged into the lab switch**: it gets a `10.10.0.1xx` address with DNS servers `1.1.1.1` and `9.9.9.9`, the internet works, and the Spectrum router at `192.168.1.1` (or any household device) is **unreachable**. On Windows, in PowerShell:
+- [ ] From the **second computer plugged into the lab switch**: it gets a `10.10.0.1xx` address with DNS servers `1.1.1.1` and `9.9.9.9`, the internet works, and the Spectrum router at `192.168.1.1` (or any household device) is **unreachable**. The commands for each operating system:
+    - **Linux** (systemd-resolved, as on Ubuntu), in a terminal:
 
-    ```powershell
-    ipconfig /all                    # the Ethernet adapter: IPv4 Address 10.10.0.1xx, DNS Servers 1.1.1.1 and 9.9.9.9
-    ping 1.1.1.1                     # replies
-    Resolve-DnsName docs.russetleaf.dev
-    ping 192.168.1.1                 # Request timed out
-    ```
+        ```bash
+        ip -4 address show            # the Ethernet interface: inet 10.10.0.1xx/24
+        resolvectl dns                # the Ethernet interface: 1.1.1.1 9.9.9.9
+        ping -c 3 1.1.1.1             # replies
+        resolvectl query docs.russetleaf.dev
+        ping -c 3 192.168.1.1         # 100% packet loss
+        ```
+
+    - **macOS:** **Apple menu → System Settings → Network**, the Ethernet connection, then **Details**: **TCP/IP** shows the IP address and **DNS** the DNS servers. Then, in Terminal, `ping -c 3 1.1.1.1` replies, `ping -c 3 192.168.1.1` gets no reply, and `docs.russetleaf.dev` opens in the browser.
+    - **Windows,** in PowerShell:
+
+        ```powershell
+        ipconfig /all                 # the Ethernet adapter: IPv4 Address 10.10.0.1xx, DNS Servers 1.1.1.1 and 9.9.9.9
+        ping 1.1.1.1                  # replies
+        Resolve-DnsName docs.russetleaf.dev
+        ping 192.168.1.1              # Request timed out
+        ```
 
 - [ ] From the **workstation with WireGuard up**: `ping 10.10.0.1` answers, and ordinary internet traffic does not go through the tunnel (`ip route get 1.1.1.1` shows the Wi-Fi interface, not `rl-lab`).
 - [ ] With **WireGuard down**: `10.10.0.1` is **not** reachable.
@@ -166,7 +178,9 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - TP-Link: ["ER605 V2 User Guide (REV1.1.0)"](https://static.tp-link.com/upload/manual/2022/202208/20220830/1910013241_ER605(UN)2.0_UG.pdf) (standalone mode: login, status, WAN, LAN, DHCP, address reservation, IP groups, access control, NAT, UPnP, admin setup, controller settings, management, remote assistance), checked 2026-11-19
 - TP-Link: ["ER605(UN) V2 2.4.10 release note"](https://support.omadanetworks.com/us/document/136658/) (the minimum version for the update), checked 2026-11-19
 - TP-Link: ["RE315 AC1200 Mesh Wi-Fi Range Extender"](https://www.tp-link.com/us/home-networking/range-extender/re315/) (one 10/100 Mbps Ethernet port) and ["RE315/RE215 User Guide (REV1.1.0)"](https://static.tp-link.com/upload/manual/2024/202408/20240820/1910013762_RE315_UG_REV1.1.0.pdf) (the Ethernet port in Range Extender mode), checked 2026-11-19
-- Microsoft: ["ipconfig"](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/ipconfig), ["ping"](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/ping) and ["Resolve-DnsName"](https://learn.microsoft.com/en-us/powershell/module/dnsclient/resolve-dnsname) (the checks from a Windows PC), checked 2026-11-19
+- Microsoft: ["ipconfig"](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/ipconfig), ["ping"](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/ping) and ["Resolve-DnsName"](https://learn.microsoft.com/en-us/powershell/module/dnsclient/resolve-dnsname) (the checks from Windows), checked 2026-11-19
+- Apple: ["Use DHCP or a manual IP address on Mac"](https://support.apple.com/guide/mac-help/use-dhcp-or-a-manual-ip-address-on-mac-mchlp2718/mac) and ["Change DNS settings on Mac"](https://support.apple.com/guide/mac-help/change-dns-settings-on-mac-mh14127/mac) (the checks from macOS), checked 2026-11-19
+- Ubuntu: ["ip-address"](https://manpages.ubuntu.com/manpages/noble/man8/ip-address.8.html), ["resolvectl"](https://manpages.ubuntu.com/manpages/noble/man1/resolvectl.1.html) and ["ping"](https://manpages.ubuntu.com/manpages/noble/man8/ping.8.html) (the checks from Linux), checked 2026-11-19
 - TP-Link (Omada): ["How to Find the Hardware Version on Your TP-Link Device"](https://support.omadanetworks.com/us/document/14139/), checked 2026-11-19
 - TP-Link (Omada): ["How to Configure WireGuard VPN on Omada Router in Standalone Mode"](https://support.omadanetworks.com/us/document/13120/) (the ER605 v2), checked 2026-11-19
 - WireGuard: ["Quick Start"](https://www.wireguard.com/quickstart/), checked 2026-11-12
