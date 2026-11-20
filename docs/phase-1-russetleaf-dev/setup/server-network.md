@@ -74,11 +74,12 @@ The ER605's web interface is used in **standalone mode** throughout: no Omada co
     | Name | `servers_to_main_deny` |
     | **Policy** | **BLOCK** |
     | **IP Type** | IPv4 |
+    | **Protocols** | **ALL** (the default) |
     | **Direction** | **LAN->WAN** (the main network is on the ER605's WAN side) |
     | Source **Type** | **IP Group**: `servers` |
     | Destination **Type** | **IP Group**: `main` |
     | **Effective Time** | Any |
-    | **States** | The default |
+    | **States** | **New**, **Established**, **Related** and **Invalid**, all selected (the default) |
 
     Then **OK**. The router allows whatever no rule blocks, so this one rule is enough: the server network can still reach the internet, and nothing from the main network can start a connection into it, because the ER605's NAT drops it.
 3. **Nothing comes in:**
