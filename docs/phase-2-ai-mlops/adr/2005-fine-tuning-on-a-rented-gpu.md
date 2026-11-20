@@ -7,7 +7,7 @@
 
 ## Context
 
-[ADR 2001](2001-mlops-lifecycle.md) defines the MLOps lifecycle; [ADR 3002](../../phase-3-aws-russetleaf-dev/adr/3002-fine-tuning-on-eks-gpu.md) put fine-tuning on the EKS GPU node pool, because the on-premises lab has no GPU. That left Phase 2, if built without Phase 3, with no model training at all: evaluation, registry, serving and monitoring, but no training step and no retraining loop. Training and drift-triggered retraining are central to MLOps, and a review against a common MLOps curriculum (KodeKloud's 100 Days of MLOps: data versioning, experiment tracking, training, GPU training, registry, serving, canary deploys, drift-triggered retraining, GitOps) found this the one significant gap.
+[ADR 2001](2001-mlops-lifecycle.md) defines the MLOps lifecycle; [ADR 3002](../../phase-3-aws-russetleaf-dev/adr/3002-fine-tuning-on-eks-gpu.md) put fine-tuning on the EKS GPU node pool, because the on-premises environment has no GPU. That left Phase 2, if built without Phase 3, with no model training at all: evaluation, registry, serving and monitoring, but no training step and no retraining loop. Training and drift-triggered retraining are central to MLOps, and a review against a common MLOps curriculum (KodeKloud's 100 Days of MLOps: data versioning, experiment tracking, training, GPU training, registry, serving, canary deploys, drift-triggered retraining, GitOps) found this the one significant gap.
 
 ## Decision
 

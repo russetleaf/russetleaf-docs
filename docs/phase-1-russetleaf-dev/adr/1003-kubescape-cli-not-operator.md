@@ -21,7 +21,7 @@ Most of this is already covered by tools in the design:
 | Network policy suggestions | Hand-written CiliumNetworkPolicies, debugged with Hubble |
 | **Framework scores (NSA-CISA, MITRE ATT&CK) and RBAC risk analysis** | **Nothing (the gap)** |
 
-`rl-onprem-cp01` of the on-premises lab has 8 GB of RAM and already uses about 6–7 GB.
+`rl-onprem-cp01` of the on-premises environment has 8 GB of RAM and already uses about 6–7 GB.
 
 ## Decision
 

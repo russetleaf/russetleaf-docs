@@ -11,7 +11,7 @@ The project plans runbooks for **changes and losses**: one per alert, a rollback
 
 - **No incident process:** no severity levels, no rule for when an incident is declared, no timeline, and nothing that coordinates the hand-offs to the breach runbook, forensics and postmortems ([ADR 1023](1023-reliability-practice.md)).
 - **Credential leaks:** the repos are public, and the on-premises cluster holds scoped long-lived AWS keys until Phase 1 step 9.1. The disaster recovery plan covers a whole account being compromised, not one credential leaking.
-- **Control-plane recovery:** etcd quorum loss and node replacement are one sentence in the disaster recovery plan, although they are the riskiest recoveries on the on-premises lab.
+- **Control-plane recovery:** etcd quorum loss and node replacement are one sentence in the disaster recovery plan, although they are the riskiest recoveries on the on-premises environment.
 - **WordPress:** the 48-hour target for security fixes ([ADR 1011](1011-update-strategy.md)) does not say what to do when a vulnerability is exploited and **no fix exists yet**, and a compromise that lives in the **database** (a rogue admin, injected content) is not a container problem.
 - **Power:** there is no UPS ([ADR 1014](1014-availability-levels.md)), and the node-failure drills only ever take one node down. A power cut takes all three down at once, including both MariaDB members.
 - **GitOps down:** the only rollback mechanism is a Git revert. With GitHub down or Argo CD broken, there is no sanctioned way to change the cluster, and self-heal would revert a manual change anyway.

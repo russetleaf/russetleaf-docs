@@ -88,7 +88,7 @@ nav:
           - YubiKeys on the workstation (SSH and sudo): phase-1-russetleaf-dev/setup/workstation-yubikey.md
           - Break-glass kit and GPG key: phase-1-russetleaf-dev/setup/break-glass-kit.md
           - Slack and outside monitoring: phase-1-russetleaf-dev/setup/slack-and-monitoring.md
-          - Lab network and WireGuard: phase-1-russetleaf-dev/setup/lab-network.md
+          - Server network and WireGuard: phase-1-russetleaf-dev/setup/server-network.md
       - Decisions:
           - "1001 No service mesh (Istio not used)": phase-1-russetleaf-dev/adr/1001-no-service-mesh.md
           - "1002 Media on S3, code in the image (not EFS)": phase-1-russetleaf-dev/adr/1002-s3-media-not-efs.md
@@ -103,7 +103,7 @@ nav:
           - "1011 Update strategy: Git-driven, risk-tiered updates with Renovate": phase-1-russetleaf-dev/adr/1011-update-strategy.md
           - "1012 OpenCost for in-cluster allocation, AWS billing for actual costs, and how cost alerts flow": phase-1-russetleaf-dev/adr/1012-opencost-and-aws-billing.md
           - "1013 Image supply chain: SLSA provenance, Opengrep for SAST, and the build pipeline's tools": phase-1-russetleaf-dev/adr/1013-image-supply-chain.md
-          - "1014 Availability levels: on-premises lab without HA; AWS designed for HA but run as a demo": phase-1-russetleaf-dev/adr/1014-availability-levels.md
+          - "1014 Availability levels: on-premises environment without HA; AWS designed for HA but run as a demo": phase-1-russetleaf-dev/adr/1014-availability-levels.md
           - "1015 Process allow-listing with Falco; AppArmor and SELinux not used; Tetragon and custom seccomp as optional extras": phase-1-russetleaf-dev/adr/1015-process-allow-listing.md
           - "1016 Rollback strategy: Git revert by default, automatic canary rollback, back up before schema changes": phase-1-russetleaf-dev/adr/1016-rollback-strategy.md
           - "1017 Intrusion detection and prevention in layers": phase-1-russetleaf-dev/adr/1017-intrusion-detection-and-prevention.md
@@ -129,7 +129,7 @@ nav:
           - "1037 Build the project in three phases": phase-1-russetleaf-dev/adr/1037-project-phases.md
           - "1038 Separate documentation repo, published as a docs site": phase-1-russetleaf-dev/adr/1038-documentation-repo-and-site.md
           - "1039 Bootstrap Cilium and Argo CD through Talos inline manifests, then hand off to Argo CD": phase-1-russetleaf-dev/adr/1039-bootstrap-through-talos-inline-manifests.md
-          - "1040 Lab network behind its own router, reached over WireGuard": phase-1-russetleaf-dev/adr/1040-lab-network-and-wireguard.md
+          - "1040 Server network behind its own router, reached over WireGuard": phase-1-russetleaf-dev/adr/1040-server-network-and-wireguard.md
           - "1041 Naming convention for hosts, nodes and clusters": phase-1-russetleaf-dev/adr/1041-naming-convention.md
           - "1042 S3 versioning, lifecycle rules and storage classes": phase-1-russetleaf-dev/adr/1042-s3-versioning-lifecycle-and-storage-classes.md
           - "1043 Database encryption at rest and TLS on every connection": phase-1-russetleaf-dev/adr/1043-database-encryption.md

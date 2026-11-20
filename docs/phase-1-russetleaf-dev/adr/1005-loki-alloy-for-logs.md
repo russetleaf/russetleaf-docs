@@ -11,7 +11,7 @@
 
 The design covered metrics (Prometheus), alerts (Alertmanager to Slack), network flows (Hubble), security events (Falco) and optional traces (Tempo), but had **no central log storage**. Logs could only be read live with `kubectl logs` or `stern`; once a pod restarted, was evicted, or a staging run was deleted, its logs were lost. That makes debugging and incident review much harder.
 
-Constraints: `rl-onprem-cp01` of the on-premises lab has 8 GB of RAM and already uses about 6–7 GB; both sites should work the same way; the on-premises site runs outside AWS; cost must stay near zero.
+Constraints: `rl-onprem-cp01` of the on-premises environment has 8 GB of RAM and already uses about 6–7 GB; both sites should work the same way; the on-premises site runs outside AWS; cost must stay near zero.
 
 ## Decision
 

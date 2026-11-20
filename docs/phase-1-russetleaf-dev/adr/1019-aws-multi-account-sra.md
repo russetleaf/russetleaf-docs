@@ -8,7 +8,7 @@
 
 ## Context
 
-The design used **one AWS account** for everything (the on-premises lab's AWS resources, aws.russetleaf.dev, OpenTofu state, CloudTrail, GuardDuty), plus a backup account under an Organization whose **management account was the workload account**. The **AWS Security Reference Architecture (SRA)** recommends instead: a management account that runs nothing; a Security OU with a **Security Tooling** account (delegated administrator for security services) and a **Log Archive** account; separate accounts per workload; organization-wide guardrails (SCPs); and centralized security services (Security Hub, GuardDuty, Config, Access Analyzer, an organization CloudTrail trail).
+The design used **one AWS account** for everything (the on-premises environment's AWS resources, aws.russetleaf.dev, OpenTofu state, CloudTrail, GuardDuty), plus a backup account under an Organization whose **management account was the workload account**. The **AWS Security Reference Architecture (SRA)** recommends instead: a management account that runs nothing; a Security OU with a **Security Tooling** account (delegated administrator for security services) and a **Log Archive** account; separate accounts per workload; organization-wide guardrails (SCPs); and centralized security services (Security Hub, GuardDuty, Config, Access Analyzer, an organization CloudTrail trail).
 
 ## Decision
 
@@ -54,7 +54,7 @@ The design used **one AWS account** for everything (the on-premises lab's AWS re
 
 - Each site, the logs, the backups and the security tools are isolated; a compromised workload account cannot delete logs or backups, and cannot turn off security services (SCPs).
 - A **data perimeter**: SCPs limit what the Organization's identities can do, and RCPs limit who can reach its resources, so a mistaken bucket or key policy cannot expose data outside the Organization.
-- About **$5–15/month** more (Security Hub, Config, KMS), included in the on-premises lab's always-on total of about **$14–33/month** (with `rl-onprem-cp03`'s electricity from [ADR 1020](1020-three-node-ha-onprem-cluster.md); see the Phase 1 design's cost table).
+- About **$5–15/month** more (Security Hub, Config, KMS), included in the on-premises environment's always-on total of about **$14–33/month** (with `rl-onprem-cp03`'s electricity from [ADR 1020](1020-three-node-ha-onprem-cluster.md); see the Phase 1 design's cost table).
 - More moving parts: cross-account access for state, replication and the seed Job; per-account CI roles; per-account quotas; SES access per account (and Bedrock model access in russetleaf-onprem, Phase 2).
 - Nothing is migrated: every account starts empty inside the Organization, under its guardrails from the first day.
 - An AWS foundation that follows the Security Reference Architecture, so it can be checked against AWS's own guidance.

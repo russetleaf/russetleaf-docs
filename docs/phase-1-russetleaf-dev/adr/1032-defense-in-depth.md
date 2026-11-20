@@ -9,7 +9,7 @@
 
 > **Update ([ADR 1061](1061-credential-rotation.md), 2026-11-17):** passwords are changed on events, not on a schedule, and machine credentials are rotated on a schedule, each with its interval in the credential inventory.
 
-> **Update ([ADR 1040](1040-lab-network-and-wireguard.md)):** the lab network is a separate subnet behind a TP-Link ER605 router (the ISP router cannot do VLANs), and the workstation reaches the cluster over WireGuard.
+> **Update ([ADR 1040](1040-server-network-and-wireguard.md)):** the server network is a separate subnet behind a TP-Link ER605 router (the ISP router cannot do VLANs), and the workstation reaches the cluster over WireGuard.
 
 ## Context
 
@@ -28,7 +28,7 @@ Defense in depth means layering controls so a failure at one layer is caught at 
 
 - **Summarize the controls by layer** in the overview's "Defense in depth" section (what each layer protects against, its main controls, and where the details are), and organize the threat model and control matrix (Phase 1 step 8.5) by the same layers, with an **OWASP ASVS** mapping for the application.
 - **SaaS account hardening:** passkeys or hardware security keys for GitHub, Cloudflare, Google, AWS (Identity Center), Slack and the registrar; **registrar lock** on the domain; GitHub organization settings (default workflow token **read-only**, only verified or allow-listed Actions, required reviews, environment protections), managed with OpenTofu's **GitHub provider** where possible; Cloudflare **least-privilege API tokens** and audit-log review; a minimal Google Cloud project; a **quarterly access review** of all of them.
-- **Lab network and boot:** a **lab VLAN** (or separate router subnet) with rules allowing the cluster out to the internet and in from the workstation only, and blocking it from devices on the main network; **Talos Secure Boot images** with the TPM-sealed disk encryption ([ADR 1031](1031-kubernetes-component-hardening.md)); **BIOS passwords**.
+- **Server network and boot:** a **server VLAN** (or separate router subnet) with rules allowing the cluster out to the internet and in from the workstation only, and blocking it from devices on the main network; **Talos Secure Boot images** with the TPM-sealed disk encryption ([ADR 1031](1031-kubernetes-component-hardening.md)); **BIOS passwords**.
 - **User namespaces** (`hostUsers: false`) for application pods where the Kubernetes and Talos versions support them (root in a container then maps to an unprivileged user on the node).
 - **Artifact integrity:** sign **Helm charts** with cosign (verified in CI before the version-bump pull request) and **pin charts by digest** in `russetleaf-gitops`; grant `packages: write` only to release jobs; **mirror critical third-party images** into GHCR (copied by digest after verifying upstream signatures, then re-signed) for availability and rate limits; **hash-pinned dependencies** (uv's lock file with hashes; `composer.lock`).
 - **Image:** a **distroless or slim multi-stage** base for the summarizer.
@@ -56,7 +56,7 @@ Defense in depth means layering controls so a failure at one layer is caught at 
 ## When to revisit
 
 - User namespaces are not supported yet: re-check after Talos and Kubernetes upgrades.
-- ~~The router cannot do VLANs: use a separate router or firewall for the lab.~~ Done: [ADR 1040](1040-lab-network-and-wireguard.md).
+- ~~The router cannot do VLANs: use a separate router or firewall for the server network.~~ Done: [ADR 1040](1040-server-network-and-wireguard.md).
 
 ## Open items
 

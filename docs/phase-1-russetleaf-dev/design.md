@@ -43,7 +43,7 @@ flowchart TB
     dns["DNS, CDN, WAF, TLS"] --> access["Access (admin paths, tools)"]
     tunnel["Tunnel (outbound-only from the on-premises cluster)"]
   end
-  subgraph lab["Lab network 10.10.0.0/24 behind the ER605 router: Talos cluster, three control-plane nodes"]
+  subgraph servers["Server network 10.10.0.0/24 behind the ER605 router: Talos cluster, three control-plane nodes"]
     cfd["cloudflared"] --> ingress["Cilium Gateway<br/>(Gateway API)"]
     ingress --> wp["WordPress pods<br/>(rl-onprem-cp03 and rl-onprem-cp01, Argo Rollouts canaries)"]
     wp --> db[("MariaDB<br/>primary rl-onprem-cp03, replica rl-onprem-cp01")]
@@ -151,9 +151,9 @@ The project depends on more than AWS: **GitHub** (code, CI, packages, attestatio
 - **Registrar lock** and 2FA on the domain's registrar account (alongside DNSSEC).
 - **Audit logs** reviewed (GitHub, Cloudflare), and a **quarterly access review** across all providers.
 
-### Lab network and boot
+### Server network and boot
 
-- **A separate lab network** behind its own router (a TP-Link ER605) on `10.10.0.0/24`: the cluster can reach the internet (for Cloudflare, AWS, GitHub) but **cannot reach devices on the main network**, devices on the main network cannot reach the cluster, and nothing comes in from outside (the Cloudflare Tunnel is outbound-only). The workstation stays on the main network's Wi-Fi and reaches the cluster's APIs over a **WireGuard** tunnel to the router ([ADR 1040](adr/1040-lab-network-and-wireguard.md)).
+- **A separate server network** behind its own router (a TP-Link ER605) on `10.10.0.0/24`: the cluster can reach the internet (for Cloudflare, AWS, GitHub) but **cannot reach devices on the main network**, devices on the main network cannot reach the cluster, and nothing comes in from outside (the Cloudflare Tunnel is outbound-only). The workstation stays on the main network's Wi-Fi and reaches the cluster's APIs over a **WireGuard** tunnel to the router ([ADR 1040](adr/1040-server-network-and-wireguard.md)).
 - **Secure Boot** with Talos's Secure Boot images, so only signed Talos boot components run; combined with the **TPM-sealed disk encryption** ([ADR 1031](adr/1031-kubernetes-component-hardening.md)), disks only unlock on the expected, untampered system.
 - **BIOS passwords** on all three nodes.
 
@@ -257,7 +257,7 @@ Each Kubernetes component has explicit controls and a repeatable check, recorded
 - **Encryption at rest:** Secrets in etcd (Talos's built-in encryption on premises; **EKS envelope encryption with a customer-managed KMS key**); **Talos disk encryption** of the system-state and data partitions on every on-premises node, **sealed to the TPM**; etcd snapshots stored only in the KMS-encrypted backup bucket, readable only by the backup role.
 - **kubelet:** `seccompDefault: true` (RuntimeDefault even for pods that do not ask), the read-only port off, certificate rotation, **serving certificates signed by the cluster CA** (so metrics-server and Prometheus verify TLS; [ADR 1035](adr/1035-platform-security.md)), a **per-pod PID limit** (`podPidsLimit`, so a fork bomb cannot exhaust a node) and **hard eviction thresholds** for memory, disk and inodes, alongside `systemReserved` and `kubeReserved` ([ADR 1034](adr/1034-kubernetes-threat-model-coverage.md)).
 - **Control-plane settings verified on premises** (profiling off, local-only binding, NodeRestriction, per-controller service-account credentials) with `talosctl`, in `docs/talos-hardening.md`.
-- **Talos host firewall:** the Kubernetes API (6443) and Talos API (50000) reachable only from the lab subnet and WireGuard clients.
+- **Talos host firewall:** the Kubernetes API (6443) and Talos API (50000) reachable only from the server subnet and WireGuard clients.
 
 ### Identity and access to the clusters
 
@@ -480,7 +480,7 @@ Many WordPress-on-AWS guides, including AWS's own reference architecture, put `w
 | Security | A writable code directory is where attackers hide web shells, and they persist across restarts | Read-only root filesystem (Kyverno), Falco alerts on writes to `/var/www/html`; a compromised pod is replaced clean |
 | Performance | PHP reads many small files per request, each over the network (needs careful OPcache tuning) | Code is on local disk in the image; media is served by the CDN straight from S3 |
 | Cost | ~$0.30/GB-month, plus throughput charges at scale | ~$0.023/GB-month; the CDN serves media without touching the pods |
-| On-premises lab | No EFS on premises; would need an NFS server (more load on 8 GB) | The same S3 approach works identically on premises |
+| On-premises environment | No EFS on premises; would need an NFS server (more load on 8 GB) | The same S3 approach works identically on premises |
 | Staging, ci, promotion | A shared filesystem per environment, kept in sync somehow | Each environment points at its own bucket |
 
 **What it costs:** no plugin installs from the admin screen (every plugin change is a new image through CI and staging, which is the point here); plugins that write files (some caching, form and backup plugins) need checking or a writable scratch volume; the media offload plugin becomes a key dependency.
@@ -596,7 +596,7 @@ encryption:
   nodeEncryption: false        # pod traffic only; node-to-node host traffic is left as is
 ```
 
-- **On-premises:** the Talos kernel includes WireGuard, so this is a Cilium setting only. WireGuard encrypts traffic **between** nodes; on the on-premises lab, that is traffic between all three nodes (for example, WordPress ↔ the MariaDB primary, MariaDB replication, ARC runners ↔ the gateway). Traffic between pods on the same node never leaves the machine.
+- **On-premises:** the Talos kernel includes WireGuard, so this is a Cilium setting only. WireGuard encrypts traffic **between** nodes; on the on-premises environment, that is traffic between all three nodes (for example, WordPress ↔ the MariaDB primary, MariaDB replication, ARC runners ↔ the gateway). Traffic between pods on the same node never leaves the machine.
 - **Cost:** a small amount of CPU for encryption, almost no memory.
 - **Check:** `cilium encrypt status` (or `cilium status`) shows WireGuard enabled with a peer for each other node.
 
@@ -688,7 +688,7 @@ The goal is that **no application holds a long-lived database password** where i
 
 ### russetleaf.dev: operator-generated passwords
 
-IAM authentication does not exist for a self-hosted MariaDB, so the on-premises lab removes the *human* from the password instead:
+IAM authentication does not exist for a self-hosted MariaDB, so the on-premises environment removes the *human* from the password instead:
 
 - **MariaDB Operator generates the passwords** (for the `wordpress` user, the backup user and the root user) into **Kubernetes Secrets**, using its `User` and `Grant` resources. They are random, never typed, never in Git and never in Secrets Manager. (Check the operator version supports generating the Secret; otherwise a small Job creates a random Secret before the `User` is applied.)
 - **WordPress reads the generated Secret directly** (same namespace), so there is no External Secrets step for the database.
@@ -972,7 +972,7 @@ Alerts start the response; the incident process and runbooks carry it through. T
 
 Changes never go straight to a live site. Every change to the WordPress image or the shared manifests (and, from Phase 2, the summarizer) moves through **local → ci → staging → prod**. In Phase 3, versions reach aws.russetleaf.dev only after they have run on russetleaf.dev.
 
-**Naming:** "dev" in russetleaf.dev is part of the domain name, not an environment. russetleaf.dev is the on-premises lab's **production** site. Environments are labeled explicitly everywhere (Kubernetes labels, Prometheus external labels, AWS tags) with `env=local|ci|staging|prod`, alongside `site=dev|aws`.
+**Naming:** "dev" in russetleaf.dev is part of the domain name, not an environment. russetleaf.dev is the on-premises environment's **production** site. Environments are labeled explicitly everywhere (Kubernetes labels, Prometheus external labels, AWS tags) with `env=local|ci|staging|prod`, alongside `site=dev|aws`.
 
 ### The environments
 
@@ -981,7 +981,7 @@ Changes never go straight to a live site. Every change to the WordPress image or
 | **local** | The operator's Ubuntu workstation: Docker Compose, plus a local Kubernetes cluster (kind, or Talos in Docker with `talosctl cluster create`) | Fast build-and-try loop for the image, charts and summarizer; rehearse Talos upgrades and manifest changes | On demand | $0 |
 | **ci** | A temporary **kind** cluster inside GitHub Actions, created for each pull request | Install the changed charts and run integration tests against **Moto** in server mode (one open-source container standing in for S3, SQS and Secrets Manager) and a **mock LLM** (LiteLLM's mock responses), so no AWS account or model is needed | Minutes per pull request | $0 (GitHub-hosted runners are free for public repos) |
 | **staging** | The on-premises cluster, in its own namespaces, at `staging.russetleaf.dev` behind Cloudflare Access | Run each new version against **real** AWS services and real models, with real (scrubbed) content, before production | **On demand only (scale-to-zero):** created for each promotion, deleted when tests finish | ~$0–1/month; ~0.7–1 GB of memory (on `rl-onprem-cp01`), only while running |
-| **prod (on-premises)** | russetleaf.dev | The live site | 24/7 | see the on-premises lab costs |
+| **prod (on-premises)** | russetleaf.dev | The live site | 24/7 | see the on-premises environment costs |
 
 ### ci: test clusters in GitHub Actions
 
@@ -1132,12 +1132,12 @@ A **monthly scheduled workflow** in `russetleaf-gitops` checks running versions 
 
 ## Disaster recovery
 
-Recovering from losses bigger than a bad change (a destroyed on-premises lab, a compromised or lost AWS account, a regional outage, a lost GitHub or Cloudflare account) is covered by **the [disaster recovery plan](disaster-recovery.md)**: an inventory of every asset and where its copy is, scenarios with data-loss and recovery-time targets and procedures, the bootstrap order from zero, and drills. The decisions are recorded in [ADR 1018](adr/1018-disaster-recovery.md). In short:
+Recovering from losses bigger than a bad change (a destroyed on-premises environment, a compromised or lost AWS account, a regional outage, a lost GitHub or Cloudflare account) is covered by **the [disaster recovery plan](disaster-recovery.md)**: an inventory of every asset and where its copy is, scenarios with data-loss and recovery-time targets and procedures, the bootstrap order from zero, and drills. The decisions are recorded in [ADR 1018](adr/1018-disaster-recovery.md). In short:
 
 - **Rebuild from code** wherever possible (OpenTofu, GitOps, image builds).
 - **Copy what cannot be rebuilt outside the workload accounts and region:** the **Backup** account (Security OU) holds **S3 Object Lock** buckets in **`us-west-2`** (30-day retention) receiving **replicated** copies of the database backups, OpenTofu state and media (CloudTrail logs already live in the **Log Archive** account's locked buckets); aws.russetleaf.dev's database is dumped at every `demo-down` and replicated the same way; a **GPG-encrypted copy** of the russetleaf.dev database dumps and etcd snapshots also goes daily to **Cloudflare R2** with a bucket lock, outside AWS entirely; all five repos (including `russetleaf-docs`) are **mirrored daily** as `git bundle`s.
 - **Regenerate secrets** rather than copy them, except account access and the Talos secrets bundle, which live in a **break-glass kit** (password manager, a printed copy of the essentials in a safe, and a GPG-encrypted copy in two cloud drives).
-- **Drills:** monthly restores, quarterly restores from the backup account, and a **yearly full "on-premises lab destroyed" rebuild** using only the break-glass kit and the backups.
+- **Drills:** monthly restores, quarterly restores from the backup account, and a **yearly full "on-premises environment destroyed" rebuild** using only the break-glass kit and the backups.
 - **Cost:** a few cents a month.
 
 ## Rollback strategy
@@ -1193,7 +1193,7 @@ Reverting OpenTofu code does not always undo infrastructure cleanly. Stateful re
 - **Once per quarter on premises:** rehearse a Talos rollback on a local Talos-in-Docker cluster, and the Cilium and Kyverno recovery paths in a kind cluster.
 - Times are recorded in the decision log and compared with the expected times above.
 
-## On-premises lab: hardware, backups and costs
+## On-premises environment: hardware, backups and costs
 
 The full AWS stack costs too much to run 24/7 for this site's traffic and budget. Instead:
 
@@ -1204,7 +1204,7 @@ The full AWS stack costs too much to run 24/7 for this site's traffic and budget
 
 ### On-premises hardware
 
-The three nodes are small-form-factor business PCs with 35 W Intel "T" processors. Hostnames follow the project's [naming convention](adr/1041-naming-convention.md); addresses are on the lab network ([ADR 1040](adr/1040-lab-network-and-wireguard.md)).
+The three nodes are small-form-factor business PCs with 35 W Intel "T" processors. Hostnames follow the project's [naming convention](adr/1041-naming-convention.md); addresses are on the server network ([ADR 1040](adr/1040-server-network-and-wireguard.md)).
 
 | Hostname | Model | CPU | RAM (max) | Disk | Network | Address | Role |
 |---|---|---|---|---|---|---|---|
@@ -1212,11 +1212,11 @@ The three nodes are small-form-factor business PCs with 35 W Intel "T" processor
 | `rl-onprem-cp02` | Dell OptiPlex 3040 Micro | Intel Core i5-6500T, 4 cores, 2.5 GHz | 8 GB DDR4 (16 GB) | 256 GB SSD | 1 GbE, Intel | `10.10.0.12` | Control plane + general workloads: the CI runners and staging runs. In Phase 2 it becomes the **dedicated LLM node** (it has the faster of the two 4-core CPUs) |
 | `rl-onprem-cp03` | Dell OptiPlex 3060 Micro | Intel Core i5-8500T, 6 cores, 2.1 GHz | 16 GB DDR4 (32 GB) | 256 GB NVMe SSD | 1 GbE, Intel | `10.10.0.13` | Control plane + **main workloads**: Argo CD, monitoring, Loki, Tempo, platform services, a WordPress replica, the **MariaDB primary** |
 | (virtual IP) | — | — | — | — | — | `10.10.0.10` | The Kubernetes API, held by one healthy node at a time |
-| `rl-onprem-rt01` | TP-Link ER605 (v2) | — | — | — | 1 GbE, 5 ports | `10.10.0.1` (LAN) | Lab router, firewall and WireGuard server |
+| `rl-onprem-rt01` | TP-Link ER605 (v2) | — | — | — | 1 GbE, 5 ports | `10.10.0.1` (LAN) | Server network router, firewall and WireGuard server |
 | `rl-onprem-sw01` | TP-Link TL-SG105 (unmanaged) | — | — | — | 1 GbE, 5 ports | — | Connects the router and the three nodes (one port spare) |
-| (main network) | TP-Link RE315 (range extender) | — | — | — | Wi-Fi to the ISP router; 1 × 10/100 Mbps Ethernet | — | Carries the lab's internet traffic to the ISP router (SAX1V1K); limits it to 100 Mbps |
+| (main network) | TP-Link RE315 (range extender) | — | — | — | Wi-Fi to the ISP router; 1 × 10/100 Mbps Ethernet | — | Carries the server network's internet traffic to the ISP router (SAX1V1K); limits it to 100 Mbps |
 
-The numbers follow the order the machines joined the lab; `rl-onprem-cp03` was bought for the three-node cluster ([ADR 1020](adr/1020-three-node-ha-onprem-cluster.md)). The maximum memory figures are the manufacturers' published limits as recalled at the time of writing; check them before buying memory.
+The numbers follow the order the machines joined the on-premises environment; `rl-onprem-cp03` was bought for the three-node cluster ([ADR 1020](adr/1020-three-node-ha-onprem-cluster.md)). The maximum memory figures are the manufacturers' published limits as recalled at the time of writing; check them before buying memory.
 
 **Network cards:** all three are Intel (I219-series on these models), so the Talos image needs no extra network firmware.
 
@@ -1249,11 +1249,11 @@ All three nodes are **control-plane nodes** that also run workloads, so etcd kee
 Two parts of the AWS design deliberately do not run on premises:
 
 - **Karpenter** needs a cloud provider to create nodes; the on-premises nodes are fixed hardware.
-- **kube-bench** looks for config files and processes where most Linux distributions keep them, and Talos does not, so many checks fail or come back "not applicable". Talos is hardened by default (no shell or SSH, read-only system, API-only management, only Node and RBAC authorization on the API server, no anonymous kubelet access), so the on-premises lab documents how Talos meets the CIS benchmark instead, and relies on Trivy Operator's compliance reports and metrics for continuous checks (see [ADR 3001](../phase-3-aws-russetleaf-dev/adr/3001-kube-bench-eks-only.md)).
+- **kube-bench** looks for config files and processes where most Linux distributions keep them, and Talos does not, so many checks fail or come back "not applicable". Talos is hardened by default (no shell or SSH, read-only system, API-only management, only Node and RBAC authorization on the API server, no anonymous kubelet access), so the on-premises environment documents how Talos meets the CIS benchmark instead, and relies on Trivy Operator's compliance reports and metrics for continuous checks (see [ADR 3001](../phase-3-aws-russetleaf-dev/adr/3001-kube-bench-eks-only.md)).
 
 ### russetleaf.dev database backups
 
-The database is protected in two ways. Against a **node failure**, MariaDB Operator runs **primary–replica replication** (primary on `rl-onprem-cp03`, replica on `rl-onprem-cp01`) with **automatic failover**, so at most a few seconds of changes are lost. Against **disasters** (data deleted or corrupted, or the whole on-premises lab lost), these **backups** run **every 6 hours**, so at most 6 hours of posts and settings can be lost. Volumes are on local disks with no replicated storage (no Ceph or Longhorn; see [ADR 1010](adr/1010-local-storage-no-ceph.md)).
+The database is protected in two ways. Against a **node failure**, MariaDB Operator runs **primary–replica replication** (primary on `rl-onprem-cp03`, replica on `rl-onprem-cp01`) with **automatic failover**, so at most a few seconds of changes are lost. Against **disasters** (data deleted or corrupted, or the whole on-premises environment lost), these **backups** run **every 6 hours**, so at most 6 hours of posts and settings can be lost. Volumes are on local disks with no replicated storage (no Ceph or Longhorn; see [ADR 1010](adr/1010-local-storage-no-ceph.md)).
 
 **MariaDB Operator** (not Talos) backs up the russetleaf.dev database. Talos has its own snapshot feature, but it only covers the cluster's internal state (etcd), not application data. The operator's `Backup` resource, deployed by Argo CD from `russetleaf-gitops/platform/mariadb/`, runs a scheduled dump and uploads it to S3.
 

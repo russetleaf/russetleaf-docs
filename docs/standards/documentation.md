@@ -30,7 +30,7 @@ The project follows the [Google developer documentation style guide](https://dev
 - **One H1 per page:** the page title, on the first line. The file name is the title in lowercase with hyphens (`break-glass-kit.md`).
 - **An opening paragraph** under the title says what the page is and when to use it.
 - **Heading levels:** H2 for sections, H3 for subsections, H4 only when unavoidable. Never skip a level.
-- **Sentence case:** capitalize the first word and names only (`Alerting and notifications`, not `Alerting And Notifications`). A numbered label is followed by a capital (`Part 2: Create the GPG key`); any other colon is followed by lowercase (`Availability levels: on-premises lab without HA`).
+- **Sentence case:** capitalize the first word and names only (`Alerting and notifications`, not `Alerting And Notifications`). A numbered label is followed by a capital (`Part 2: Create the GPG key`); any other colon is followed by lowercase (`Availability levels: on-premises environment without HA`).
 - **No punctuation at the end of a heading,** and no links in headings.
 - **Fixed heading formats** that tools read stay exactly as they are: plan steps as `### Step <n>: <title>`, with **Do:** and **Test:** paragraphs ([plan format](#document-types)), and ADR titles as `# ADR <number>: <title>`.
 - **Changing a heading changes its anchor.** Search the repo for links to the old anchor and update them in the same change.
@@ -66,7 +66,7 @@ The project follows the [Google developer documentation style guide](https://dev
 
 - **References are links.** Every mention of an ADR or an existing document is a Markdown link, such as [ADR 1032](../phase-1-russetleaf-dev/adr/1032-defense-in-depth.md); a file that does not exist yet (a planned runbook, a file in another repo) appears as a plain path in code. `tools/check_doc_links.py` enforces this.
 - **Relative links** between pages under `docs/`. Files outside `docs/` (scripts, `AGENTS.md`) are not on the site, so link to them with their full GitHub URL.
-- **Link text names the target** ("the [lab network setup guide](../phase-1-russetleaf-dev/setup/lab-network.md)"), never "here" or "this link".
+- **Link text names the target** ("the [server network setup guide](../phase-1-russetleaf-dev/setup/server-network.md)"), never "here" or "this link".
 - **External links** use `https://` and point to the page that holds the fact, not a home page.
 - **References:** every setup guide ends with a `## References` section listing the official pages its steps follow, and from step 9.2 every ADR lists the pages a decision rests on (prices, plan limits, terms, features). Each item names the publisher, quotes the page title as the link text and gives the date the page was last read: `- Cloudflare: ["Enable DNSSEC"](https://developers.cloudflare.com/registrar/get-started/enable-dnssec/), checked 2026-11-12`. Read a page before citing it, never cite from memory, and change the date whenever the page is read again. `tools/check_doc_style.py` fails a setup guide without the section or with an undated item. Inline links stay where one step depends on one page.
 

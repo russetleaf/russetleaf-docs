@@ -7,7 +7,7 @@
 
 ## Context
 
-The project had grown to two sites and one design document: russetleaf.dev on premises and aws.russetleaf.dev on EKS, with AI post summaries and an MLOps lifecycle running through both. Effort was estimated at roughly 525–875 focused hours. Built in one go, that is a year or more of evenings with nothing finished in between, and much of it (the EKS demo stack, GPU fine-tuning) adds less to the core platform than the time it takes. The on-premises lab alone already shows most of the platform work: infrastructure as code, GitOps, security, observability, delivery and operations.
+The project had grown to two sites and one design document: russetleaf.dev on premises and aws.russetleaf.dev on EKS, with AI post summaries and an MLOps lifecycle running through both. Effort was estimated at roughly 525–875 focused hours. Built in one go, that is a year or more of evenings with nothing finished in between, and much of it (the EKS demo stack, GPU fine-tuning) adds less to the core platform than the time it takes. The on-premises environment alone already shows most of the platform work: infrastructure as code, GitOps, security, observability, delivery and operations.
 
 ## Decision
 

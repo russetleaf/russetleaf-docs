@@ -1,6 +1,6 @@
-# Setup guide: the lab network and WireGuard
+# Setup guide: the server network and WireGuard
 
-The step-by-step procedure for the lab network: the **TP-Link ER605 (v2)** router (`rl-onprem-rt01`) that separates the cluster from the main network, and the **WireGuard** tunnel the workstation uses to reach it (Phase 1 [step 0.3](../plan.md#step-03-lab-network-segmentation)). The reasoning is in [ADR 1040](../adr/1040-lab-network-and-wireguard.md), and the addresses and hardware in the Phase 1 design's [On-premises hardware](../design.md#on-premises-hardware).
+The step-by-step procedure for the server network: the **TP-Link ER605 (v2)** router (`rl-onprem-rt01`) that separates the cluster from the main network, and the **WireGuard** tunnel the workstation uses to reach it (Phase 1 [step 0.3](../plan.md#step-03-network-segmentation)). The reasoning is in [ADR 1040](../adr/1040-server-network-and-wireguard.md), and the addresses and hardware in the Phase 1 design's [On-premises hardware](../design.md#on-premises-hardware).
 
 ```text
 Workstation (Wi-Fi, 192.168.1.x) ──WireGuard──┐
@@ -64,23 +64,24 @@ The ER605's web interface is used in **standalone mode** throughout: no Omada co
 
 ## Part 3: The firewall and remote access
 
-1. **The two networks as IP groups:** **Preferences → IP Group → IP Address**, then **Add**, twice: **Name** `main_net`, **IP Address Type** **IP Address/Mask**, `192.168.1.0` / `255.255.255.0`; and **Name** `lab_net`, `10.10.0.0` / `255.255.255.0`; each with **OK**. Then **Preferences → IP Group → IP Group**, **Add**, twice: **Group Name** `main` with **Address Name** `main_net`, and **Group Name** `lab` with `lab_net`; each with **OK**. (Names take only letters, digits and underscores.)
-2. **Block the lab from the main network:** **Firewall → Access Control → Access Control**, then **Add**:
+1. **The main network as an IP group:** an access-control rule names its destination by an IP group, not by an address. **Preferences → IP Group → IP Address**, then **Add**: name `main_net`, the network `192.168.1.0` with mask `255.255.255.0`, and **OK**. Then, on the **IP Group** tab of the same page, **Add**: name `main`, with the address `main_net`, and **OK**. (Names take only letters, digits and underscores.)
+2. **Block the server network from the main network:** **Firewall → Access Control**, then **Add**:
 
-    | Setting | Value |
+    | Field | Value |
     |---|---|
-    | Name | `lab-to-main-deny` |
-    | Policy | Block |
-    | Service Type | ALL |
-    | Direction | LAN -> WAN |
-    | Source | `lab` |
-    | Destination | `main` |
-    | Effective Time | Any |
+    | Name | `servers-to-main-deny` |
+    | **Policy** | Block |
+    | **IP Type** | IPv4 |
+    | **Direction** | **LAN->WAN** (the main network is on the ER605's WAN side) |
+    | Source **Type** | **Network**: the LAN network edited in Part 2 |
+    | Destination **Type** | **IP Group**: `main` |
+    | **Effective Time** | Any |
+    | **States** | The default |
 
-    Then **OK**. The lab can still reach the internet; nothing from the main network can start a connection into the lab, because the ER605's NAT drops it.
+    Then **OK**. The router allows whatever no rule blocks, so this one rule is enough: the server network can still reach the internet, and nothing from the main network can start a connection into it, because the ER605's NAT drops it.
 3. **Nothing comes in:**
     - **Transmission → NAT → Virtual Servers** lists **no** entries (no port forwards); check **One-to-One NAT** and **NAT-DMZ** under **Transmission → NAT** too.
-    - **Service → UPnP**: **Enable UPnP** cleared, and **Save**, so no device in the lab can open its own port forward.
+    - **Service → UPnP**: **Enable UPnP** cleared, and **Save**, so no device on the server network can open its own port forward.
     - **System Tools → Admin Setup → Remote Management** lists **no** entries, so the web interface cannot be reached from the WAN side.
     - **System Tools → Controller Settings**: **Cloud-Based Controller Management** off.
     - **System Tools → Diagnostics → Remote Assistance**: the box cleared, so TP-Link's technicians cannot reach the router by SSH.
@@ -96,18 +97,18 @@ The workstation's private key is generated on the workstation and never leaves i
 
     ```bash
     mkdir -p ~/.config/wireguard && chmod 700 ~/.config/wireguard
-    wg genkey | tee ~/.config/wireguard/rl-lab.key | wg pubkey > ~/.config/wireguard/rl-lab.pub
-    chmod 600 ~/.config/wireguard/rl-lab.key
-    cat ~/.config/wireguard/rl-lab.pub      # the public key, for the router
+    wg genkey | tee ~/.config/wireguard/rl-mgmt.key | wg pubkey > ~/.config/wireguard/rl-mgmt.pub
+    chmod 600 ~/.config/wireguard/rl-mgmt.key
+    cat ~/.config/wireguard/rl-mgmt.pub      # the public key, for the router
     ```
 
-2. **The WireGuard server on the ER605:** **VPN → WireGuard → WireGuard**, then **Add**: **Name** `rl-lab`, **MTU** `1420` (the default), **Listen Port** **`51820`** (the default), **Local IP Address** **`10.10.99.1`**; the router generates its own key pair. Save the interface, then use its **Export** to get the router's **public key**.
-3. **The workstation as a peer:** **VPN → WireGuard → Peers**, then **Add**: **Interface** `rl-lab`, **Public Key** the workstation's public key from step 1, **Endpoint** and **Endpoint Port** left empty (the router is the server), **Allowed Address** **`10.10.99.2/32`**, and, if the page offers it, a persistent keepalive of **25 seconds**; then save.
-4. **The client profile:** on the workstation, write `~/.config/wireguard/rl-lab.conf` (mode `600`). It is a **split tunnel**: only the lab's traffic goes through it, so there is no `DNS` line and `AllowedIPs` lists only the lab subnet.
+2. **The WireGuard server on the ER605:** **VPN → WireGuard → WireGuard**, then **Add**: **Name** `rl-mgmt`, **MTU** `1420` (the default), **Listen Port** **`51820`** (the default), **Local IP Address** **`10.10.99.1`**; the router generates its own key pair. Save the interface, then use its **Export** to get the router's **public key**.
+3. **The workstation as a peer:** **VPN → WireGuard → Peers**, then **Add**: **Interface** `rl-mgmt`, **Public Key** the workstation's public key from step 1, **Endpoint** and **Endpoint Port** left empty (the router is the server), **Allowed Address** **`10.10.99.2/32`**, and, if the page offers it, a persistent keepalive of **25 seconds**; then save.
+4. **The client profile:** on the workstation, write `~/.config/wireguard/rl-mgmt.conf` (mode `600`). It is a **split tunnel**: only the server network's traffic goes through it, so there is no `DNS` line and `AllowedIPs` lists only the server subnet.
 
     ```ini
     [Interface]
-    PrivateKey = <the contents of ~/.config/wireguard/rl-lab.key>
+    PrivateKey = <the contents of ~/.config/wireguard/rl-mgmt.key>
     Address = 10.10.99.2/24
 
     [Peer]
@@ -120,20 +121,20 @@ The workstation's private key is generated on the workstation and never leaves i
 5. **Import it into NetworkManager,** and keep it off until needed:
 
     ```bash
-    nmcli connection import type wireguard file ~/.config/wireguard/rl-lab.conf
-    nmcli connection modify rl-lab connection.autoconnect no
-    nmcli connection up rl-lab        # when working on the cluster
-    nmcli connection down rl-lab
+    nmcli connection import type wireguard file ~/.config/wireguard/rl-mgmt.conf
+    nmcli connection modify rl-mgmt connection.autoconnect no
+    nmcli connection up rl-mgmt        # when working on the cluster
+    nmcli connection down rl-mgmt
     ```
 
-    **Note:** the `nmcli` manual for NetworkManager 1.46 (Ubuntu 24.04) says `connection import` supports "only VPN configurations", imported by VPN plugins, and its WireGuard settings include no way to add a peer. Whether the import above works is confirmed when this step is first carried out, and this guide is updated with the result. If `nmcli` refuses it, use `wg-quick`, from the `wireguard-tools` package the setup script installs, which reads the same file and names the interface after it (`rl-lab`); it needs the file to stay in place, readable only by the operator:
+    **Note:** the `nmcli` manual for NetworkManager 1.46 (Ubuntu 24.04) says `connection import` supports "only VPN configurations", imported by VPN plugins, and its WireGuard settings include no way to add a peer. Whether the import above works is confirmed when this step is first carried out, and this guide is updated with the result. If `nmcli` refuses it, use `wg-quick`, from the `wireguard-tools` package the setup script installs, which reads the same file and names the interface after it (`rl-mgmt`); it needs the file to stay in place, readable only by the operator:
 
     ```bash
-    sudo wg-quick up ~/.config/wireguard/rl-lab.conf      # when working on the cluster
-    sudo wg-quick down ~/.config/wireguard/rl-lab.conf
+    sudo wg-quick up ~/.config/wireguard/rl-mgmt.conf      # when working on the cluster
+    sudo wg-quick down ~/.config/wireguard/rl-mgmt.conf
     ```
 
-6. **Keep a copy in the break-glass kit:** store the profile in Bitwarden ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)), then refresh the kit ([break-glass kit setup guide](break-glass-kit.md#keeping-the-kit-current)). With the NetworkManager import, then delete the files in `~/.config/wireguard/` (NetworkManager keeps its own copy, readable only by root); with `wg-quick`, keep `rl-lab.conf` (mode `600`) and delete only `rl-lab.key` and `rl-lab.pub`, since the profile holds the private key.
+6. **Keep a copy in the break-glass kit:** store the profile in Bitwarden ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)), then refresh the kit ([break-glass kit setup guide](break-glass-kit.md#keeping-the-kit-current)). With the NetworkManager import, then delete the files in `~/.config/wireguard/` (NetworkManager keeps its own copy, readable only by root); with `wg-quick`, keep `rl-mgmt.conf` (mode `600`) and delete only `rl-mgmt.key` and `rl-mgmt.pub`, since the profile holds the private key.
 
 ## Part 5: Backups and BIOS passwords
 
@@ -156,7 +157,7 @@ The workstation's private key is generated on the workstation and never leaves i
 
 The test for step 0.3:
 
-- [ ] From the **second computer plugged into the lab switch**: it gets a `10.10.0.1xx` address with DNS servers `1.1.1.1` and `9.9.9.9`, the internet works, and the ISP router at `192.168.1.1` (or any device on the main network) is **unreachable**. The commands for each operating system:
+- [ ] From the **second computer plugged into the switch**: it gets a `10.10.0.1xx` address with DNS servers `1.1.1.1` and `9.9.9.9`, the internet works, and the ISP router at `192.168.1.1` (or any device on the main network) is **unreachable**. The commands for each operating system:
     - **Linux** (systemd-resolved, as on Ubuntu), in a terminal:
 
         ```bash
@@ -177,9 +178,9 @@ The test for step 0.3:
         ping 192.168.1.1              # Request timed out
         ```
 
-- [ ] From the **workstation with WireGuard up**: `ping 10.10.0.1` answers, and ordinary internet traffic does not go through the tunnel (`ip route get 1.1.1.1` shows the Wi-Fi interface, not `rl-lab`).
+- [ ] From the **workstation with WireGuard up**: `ping 10.10.0.1` answers, and ordinary internet traffic does not go through the tunnel (`ip route get 1.1.1.1` shows the Wi-Fi interface, not `rl-mgmt`).
 - [ ] With **WireGuard down**: `10.10.0.1` is **not** reachable.
-- [ ] From **another device on the main network**: the lab is not reachable.
+- [ ] From **another device on the main network**: the server network is not reachable.
 - [ ] The router has **no port forwards**, **UPnP is off** and **remote management is off**.
 - [ ] The break-glass kit has the ER605's admin login, its configuration backup, the WireGuard profile and the three BIOS passwords.
 
@@ -198,6 +199,7 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - Apple: ["Use DHCP or a manual IP address on Mac"](https://support.apple.com/guide/mac-help/use-dhcp-or-a-manual-ip-address-on-mac-mchlp2718/mac) and ["Change DNS settings on Mac"](https://support.apple.com/guide/mac-help/change-dns-settings-on-mac-mh14127/mac) (the checks from macOS), checked 2026-11-19
 - Ubuntu: ["ip-address"](https://manpages.ubuntu.com/manpages/noble/man8/ip-address.8.html), ["resolvectl"](https://manpages.ubuntu.com/manpages/noble/man1/resolvectl.1.html) and ["ping"](https://manpages.ubuntu.com/manpages/noble/man8/ping.8.html) (the checks from Linux), checked 2026-11-19
 - TP-Link (Omada): ["How to Find the Hardware Version on Your TP-Link Device"](https://support.omadanetworks.com/us/document/14139/), checked 2026-11-19
+- TP-Link (Omada): ["Omada Gateway Access Control Configuration Examples"](https://support.omadanetworks.com/en/document/13189/) (standalone mode: IP groups, access-control rules, the rule's source as a LAN network), checked 2026-11-20
 - TP-Link (Omada): ["How to Configure DHCP Server on Omada Gateway"](https://support.omadanetworks.com/us/document/13196/) (standalone mode: the LAN network's fields) and ["How to Configure DHCP Address Reservation on Omada Gateway in Standalone Mode"](https://support.omadanetworks.com/us/document/13294/) (address reservations, the DHCP client list), checked 2026-11-20
 - TP-Link (Omada): ["How to Configure WireGuard VPN on Omada Router in Standalone Mode"](https://support.omadanetworks.com/us/document/13120/) (the ER605 v2), checked 2026-11-19
 - WireGuard: ["Quick Start"](https://www.wireguard.com/quickstart/), checked 2026-11-12

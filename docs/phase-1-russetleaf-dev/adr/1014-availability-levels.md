@@ -1,17 +1,17 @@
-# ADR 1014: Availability levels: on-premises lab without HA; AWS designed for HA but run as a demo
+# ADR 1014: Availability levels: on-premises environment without HA; AWS designed for HA but run as a demo
 
 - **Status:** Accepted; updated by [ADR 1020](1020-three-node-ha-onprem-cluster.md)
 - **Date:** 2026-11-01
 - **Applies to:** both sites
 - **Phase:** 1 (the on-premises cluster). Later: Phase 3 adds aws.russetleaf.dev's availability while running.
 
-> **Update ([ADR 1020](1020-three-node-ha-onprem-cluster.md)):** The on-premises lab now has **three control-plane nodes** with a virtual IP, replicated MariaDB with automatic failover, and spread workloads, so it **survives any single node failure** (recovery point: seconds; recovery time: about a minute). Power and internet remain single points of failure; a UPS is recommended. The "Future changes" items 1, 3 and 4 for the on-premises lab are now done; the table below describes the original two-node state.
+> **Update ([ADR 1020](1020-three-node-ha-onprem-cluster.md)):** The on-premises environment now has **three control-plane nodes** with a virtual IP, replicated MariaDB with automatic failover, and spread workloads, so it **survives any single node failure** (recovery point: seconds; recovery time: about a minute). Power and internet remain single points of failure; a UPS is recommended. The "Future changes" items 1, 3 and 4 for the on-premises environment are now done; the table below describes the original two-node state.
 
 ## Context
 
 High availability (HA) means a site keeps working when a single component (a node, a disk, a zone, a database instance) fails. It usually means running more than one of everything, which costs money and hardware. The two sites differ:
 
-*[The table below describes the **original two-node** on-premises lab. Current state ([ADR 1020](1020-three-node-ha-onprem-cluster.md)): three control-plane nodes with a virtual IP, MariaDB primary–replica replication with automatic failover, and WordPress, the ingress and cloudflared spread across nodes; the on-premises lab now survives any single node failure, with power and internet still single points of failure.]*
+*[The table below describes the **original two-node** on-premises environment. Current state ([ADR 1020](1020-three-node-ha-onprem-cluster.md)): three control-plane nodes with a virtual IP, MariaDB primary–replica replication with automatic failover, and WordPress, the ingress and cloudflared spread across nodes; the on-premises environment now survives any single node failure, with power and internet still single points of failure.]*
 
 | | russetleaf.dev (Talos, on-premises) | aws.russetleaf.dev (EKS, AWS) |
 |---|---|---|
@@ -27,15 +27,15 @@ High availability (HA) means a site keeps working when a single component (a nod
 
 ## Decision
 
-- ~~**russetleaf.dev: no high availability.**~~ **Superseded by [ADR 1020](1020-three-node-ha-onprem-cluster.md)** (highly available for a single node failure; the rest of this bullet describes the original lab). Single points of failure were accepted because the hardware (two 8 GB nodes) and the budget do not allow redundancy. Protection comes from **recovery**, not redundancy: everything is rebuilt from Git (OpenTofu, Argo CD), and the database is restored from S3 backups.
+- ~~**russetleaf.dev: no high availability.**~~ **Superseded by [ADR 1020](1020-three-node-ha-onprem-cluster.md)** (highly available for a single node failure; the rest of this bullet describes the original on-premises environment). Single points of failure were accepted because the hardware (two 8 GB nodes) and the budget do not allow redundancy. Protection comes from **recovery**, not redundancy: everything is rebuilt from Git (OpenTofu, Argo CD), and the database is restored from S3 backups.
 - **aws.russetleaf.dev: a highly available design, run in demo mode.** It is HA *within one region while running* (EKS control plane, nodes across zones, RDS Multi-AZ, ElastiCache replica, multi-zone ALB, CloudFront), with one deliberate demo cut (one NAT Gateway), and it is not always running.
 - **Recovery targets** (recovery point = how much data can be lost; recovery time = how long until the site is back):
 
 | | Recovery point | Recovery time |
 |---|---|---|
 | russetleaf.dev, single node or disk loss (**current**, three nodes; [ADR 1020](1020-three-node-ha-onprem-cluster.md)) | Seconds (MariaDB replication lag) | About a minute (database failover; other workloads already on other nodes) |
-| ~~russetleaf.dev, node or disk loss (original two-node lab)~~ | ~~≤ 6 hours (MariaDB backup interval); media, logs and traces are in S3~~ | ~~A few hours: rebuild the node or cluster from Git, restore the latest backup~~ |
-| russetleaf.dev, disaster (data corrupted or on-premises lab lost) | ≤ 6 hours (MariaDB backup interval) | 1–2 days with new hardware (see the [disaster recovery plan](../disaster-recovery.md)) |
+| ~~russetleaf.dev, node or disk loss (original two-node on-premises environment)~~ | ~~≤ 6 hours (MariaDB backup interval); media, logs and traces are in S3~~ | ~~A few hours: rebuild the node or cluster from Git, restore the latest backup~~ |
+| russetleaf.dev, disaster (data corrupted or on-premises environment lost) | ≤ 6 hours (MariaDB backup interval) | 1–2 days with new hardware (see the [disaster recovery plan](../disaster-recovery.md)) |
 | russetleaf.dev, site outage (power, internet) | None (data is intact) | Until power or internet returns; the external uptime check alerts |
 | aws.russetleaf.dev, node, zone or database failure (while running) | Seconds (RDS Multi-AZ, synchronous replication) | Seconds to minutes (Kubernetes rescheduling, RDS failover, Karpenter replacing nodes) |
 | aws.russetleaf.dev, between demos | Content kept in the final RDS snapshot and the media bucket | The next `demo-up` (about 20–30 minutes) |

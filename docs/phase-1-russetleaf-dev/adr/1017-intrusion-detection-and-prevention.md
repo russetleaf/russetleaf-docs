@@ -51,7 +51,7 @@ Falco provides runtime detection inside containers, but on its own it is not an 
 
 - aws.russetleaf.dev becomes always-on or holds personal data: consider GuardDuty Runtime Monitoring, Shield Advanced (if outages carry real cost) and Cloudflare Pro or AWS WAF Bot Control.
 - More memory on premises: Falco's audit plugin (CrowdSec and Tetragon are already realistic since [ADR 1020](1020-three-node-ha-onprem-cluster.md)).
-- A main-network IDS (router-level) becomes part of the lab.
+- A main-network IDS (router-level) becomes part of the on-premises environment.
 
 ## Open items
 

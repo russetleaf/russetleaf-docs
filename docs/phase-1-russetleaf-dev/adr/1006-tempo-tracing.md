@@ -11,7 +11,7 @@
 
 The design already has metrics (Prometheus), logs (Loki + Alloy), network flows (Hubble) and security events (Falco). Tracing was listed only as an optional WordPress-only extra, and the AWS plan had no step for it. The AI summary pipeline (WordPress → SQS → summarizer → LiteLLM gateway → Bedrock or llama.cpp) is asynchronous and crosses several services: when a summary is slow or fails, metrics and logs show *that* something went wrong, but not easily *where*.
 
-Constraints: `rl-onprem-cp01` of the on-premises lab has 8 GB of RAM and is close to its limit; EKS (demos only) has memory to spare; cost must stay near zero.
+Constraints: `rl-onprem-cp01` of the on-premises environment has 8 GB of RAM and is close to its limit; EKS (demos only) has memory to spare; cost must stay near zero.
 
 ## Decision
 

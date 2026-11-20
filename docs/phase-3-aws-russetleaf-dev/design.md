@@ -56,7 +56,7 @@ flowchart TB
 - **RDS for MariaDB** with **Multi-AZ** turned on. (Aurora does not offer MariaDB; if the site outgrew RDS, Aurora MySQL would be the next step, at the cost of switching engines.) **RDS Proxy** in front of it keeps failovers to seconds.
 - At least **2–3 WordPress replicas** spread across availability zones, plus a **HorizontalPodAutoscaler** and **PodDisruptionBudgets**.
 - EKS worker nodes in **multiple AZs**, provisioned by **Karpenter** (see Delivery and operations).
-- **What this project actually runs:** this design is highly available within one region **while the demo runs**, with one deliberate demo cut (one NAT Gateway instead of three). The on-premises lab, with three control-plane nodes, replicated MariaDB and spread workloads, **survives any single node failure**, but its site power supply and internet connection remain single points of failure ([ADR 1020](../phase-1-russetleaf-dev/adr/1020-three-node-ha-onprem-cluster.md)). Both are explained, with recovery targets and the changes (and costs) that would add HA, in [ADR 1014](../phase-1-russetleaf-dev/adr/1014-availability-levels.md).
+- **What this project actually runs:** this design is highly available within one region **while the demo runs**, with one deliberate demo cut (one NAT Gateway instead of three). The on-premises environment, with three control-plane nodes, replicated MariaDB and spread workloads, **survives any single node failure**, but its site power supply and internet connection remain single points of failure ([ADR 1020](../phase-1-russetleaf-dev/adr/1020-three-node-ha-onprem-cluster.md)). Both are explained, with recovery targets and the changes (and costs) that would add HA, in [ADR 1014](../phase-1-russetleaf-dev/adr/1014-availability-levels.md).
 
 ### Traffic and edge
 
@@ -85,7 +85,7 @@ flowchart LR
 
 ### Risk: confirm IAM tokens work from PHP first (with a fallback)
 
-The one uncertain part of this design is whether **PHP's MariaDB client (mysqlnd)** can send an IAM auth token to RDS Proxy. The token is sent as a clear-text password over TLS, which some clients only allow with extra settings. This is checked by a **short, early test** (Phase 3 step 1.6) before any IAM-specific code is relied on: a small test pod with the WordPress image logs in to the proxy with a token. Until that test passes, the on-premises lab builds only the `password` mode of the `db.php` drop-in.
+The one uncertain part of this design is whether **PHP's MariaDB client (mysqlnd)** can send an IAM auth token to RDS Proxy. The token is sent as a clear-text password over TLS, which some clients only allow with extra settings. This is checked by a **short, early test** (Phase 3 step 1.6) before any IAM-specific code is relied on: a small test pod with the WordPress image logs in to the proxy with a token. Until that test passes, the on-premises environment builds only the `password` mode of the `db.php` drop-in.
 
 **If the test fails, the fallback is password login to RDS Proxy with an automatically rotated secret.** It keeps almost every benefit:
 
@@ -97,7 +97,7 @@ The one uncertain part of this design is whether **PHP's MariaDB client (mysqlnd
 | Rotation | Not needed (tokens expire) | **Secrets Manager automatic rotation** (for example, every 30 days), using the **alternating-users** strategy: two database users (`wordpress_a`, `wordpress_b`), so the previous credentials keep working until the next rotation and nothing breaks mid-rotation |
 | Picking up a new password | n/a | External Secrets refreshes the Secret; **Reloader** (or an Argo Rollouts restart) restarts WordPress so new pods use it |
 | Connection pooling, fast failover, TLS | Yes | Yes (still through RDS Proxy) |
-| Chart setting | `database.auth: iam` | `database.auth: password` (the same mode the on-premises lab uses) |
+| Chart setting | `database.auth: iam` | `database.auth: password` (the same mode the on-premises environment uses) |
 
 Switching between the two is an **overlay change** in `russetleaf-gitops` (`database.auth` and the credential source) plus the proxy's auth setting in `russetleaf-infra`; the WordPress image supports both.
 
@@ -236,7 +236,7 @@ These are approximate prices for **`us-east-1`**, on demand unless noted, for a 
 | Alerting (SNS, Amazon Q Developer in chat applications, Slack free plan) | CloudWatch alarms and budget alerts to Slack | $0 |
 | **Total** | | **~$515–$575 / month** |
 
-The last two rows (CloudTrail and GuardDuty; Security Hub, Config and KMS) are organization-wide services, already counted in the on-premises lab's always-on cost; without them, the demo stack alone is about **$510–$555 / month** if left running.
+The last two rows (CloudTrail and GuardDuty; Security Hub, Config and KMS) are organization-wide services, already counted in the on-premises environment's always-on cost; without them, the demo stack alone is about **$510–$555 / month** if left running.
 
 GuardDuty EKS Runtime Monitoring, if used instead of Falco, is billed per vCPU monitored and would add roughly $10–$20/month at this size.
 
@@ -313,7 +313,7 @@ The full AWS design costs roughly **$0.70 an hour** while running. Run `tofu app
 | 10 hours | ~$7 |
 | 20 hours | ~$14 |
 
-Together with the on-premises lab (about $14–33 a month always on), the total is about **$30–50 a month** at 20 demo hours. If the AWS accounts are new, their free-tier credits can cover some of this.
+Together with the on-premises environment (about $14–33 a month always on), the total is about **$30–50 a month** at 20 demo hours. If the AWS accounts are new, their free-tier credits can cover some of this.
 
 **Tip:** set an AWS Budget with an email alert (for example, at $25) so a forgotten `tofu destroy` does not run up a bill. NAT Gateways and RDS are the most expensive items to leave running.
 

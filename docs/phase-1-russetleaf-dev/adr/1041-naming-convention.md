@@ -3,13 +3,13 @@
 - **Status:** Accepted
 - **Date:** 2026-11-02
 - **Applies to:** physical machines, network devices, Kubernetes nodes and clusters, on premises and in AWS
-- **Phase:** 1 (the on-premises lab). Phase 3 applies it to the EKS cluster, its node groups and EC2 instances.
+- **Phase:** 1 (the on-premises environment). Phase 3 applies it to the EKS cluster, its node groups and EC2 instances.
 
 > **Update ([decision log](../plan.md#decision-log), 2026-11-19):** the self-hosted site's code is **`onprem`** (on-premises), replacing `home`, so names say nothing about where the hardware is housed: `rl-onprem-cp01` and the cluster `rl-onprem`. Local names use `.internal` instead of `home.arpa`. No name had yet been applied to a device or account.
 
 ## Context
 
-The design referred to the on-premises servers as "box 1", "box 2" and "box 3", which is not how they appear anywhere real: in Talos, Kubernetes, DHCP, monitoring labels or the physical machines. The lab is about to be built (Phase 1 step 2.2), and names become hard to change once they are in certificates, node objects, dashboards and runbooks. The convention also has to work for future machines and for cloud nodes, whose names AWS assigns.
+The design referred to the on-premises servers as "box 1", "box 2" and "box 3", which is not how they appear anywhere real: in Talos, Kubernetes, DHCP, monitoring labels or the physical machines. The on-premises environment is about to be built (Phase 1 step 2.2), and names become hard to change once they are in certificates, node objects, dashboards and runbooks. The convention also has to work for future machines and for cloud nodes, whose names AWS assigns.
 
 ## Decision
 
@@ -18,7 +18,7 @@ The design referred to the on-premises servers as "box 1", "box 2" and "box 3", 
 | Part | Meaning | Values |
 |---|---|---|
 | `project` | The project | `rl` (RussetLeaf) |
-| `site` | Where the machine runs: a physical location, or a cloud region | `onprem` (the on-premises lab: hardware the project runs itself, wherever it is housed); `use1` (AWS `us-east-1`), `usw2` (`us-west-2`) |
+| `site` | Where the machine runs: a physical location, or a cloud region | `onprem` (the on-premises environment: hardware the project runs itself, wherever it is housed); `use1` (AWS `us-east-1`), `usw2` (`us-west-2`) |
 | `role` | What kind of machine it is, not what it runs | `cp` (Kubernetes node running the control plane; on premises it also runs workloads), `wk` (worker-only node), `gpu` (GPU worker), `rt` (router or firewall), `sw` (switch), `nas` (storage), `ws` (workstation) |
 | `nn` | Two-digit sequence per site and role | `01`, `02` and so on, in the order machines join; **never reused** |
 
@@ -33,7 +33,7 @@ The design referred to the on-premises servers as "box 1", "box 2" and "box 3", 
 
 **Clusters** follow the same idea, without the role and number: **`rl-onprem`** (the Talos cluster) and **`rl-use1`** (the EKS cluster). The cluster name is also the kubeconfig context and the `cluster` label on metrics and logs. Local test clusters are `kind-ci` (kind adds the `kind-` prefix) and `rl-local` (Talos in Docker).
 
-**The on-premises lab today:**
+**The on-premises environment today:**
 
 | Hostname | Machine | Address |
 |---|---|---|
@@ -70,7 +70,7 @@ The numbers follow the order the machines joined. Of the two 8 GB machines, the 
 ## When to revisit
 
 - A second on-premises site, or more clusters per site: add a cluster identifier to the format (for example, `rl-onprem-k2-cp01`).
-- More device types join the lab: extend the role list here before naming them.
+- More device types join the on-premises environment: extend the role list here before naming them.
 
 ## Open items
 

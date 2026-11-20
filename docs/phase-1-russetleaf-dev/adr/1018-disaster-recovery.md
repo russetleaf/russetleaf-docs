@@ -32,7 +32,7 @@ The design could already rebuild most things from code (OpenTofu, GitOps, image 
 - **No cluster-level backup tool:** Kubernetes objects are restored by **Argo CD from Git**, and data from **its own application-consistent backups** (MariaDB logical dumps, S3 versions and replicas). The weekly **etcd snapshots** are only for losing the control plane: restoring one rewinds the whole cluster, so they are never used to recover a single namespace or resource. Every stateful component is listed in the [disaster recovery plan](../disaster-recovery.md) as either backed up or rebuildable, and recovering deleted resources has its own runbook (`restore-deleted-resources.md`).
 - **Regenerate secrets rather than copy them**, except those that cannot be regenerated (account access, the Talos secrets bundle), which go in the **break-glass kit**: the password manager, a printed copy of the essentials in a safe, and a GPG-encrypted copy in Google Drive and OneDrive.
 - **A written plan** (the [disaster recovery plan](../disaster-recovery.md)): an asset inventory, scenarios with data-loss and recovery-time targets and procedures, and the bootstrap order from zero.
-- **Drills:** monthly restore; quarterly restore from the backup account; a yearly full "on-premises lab destroyed" rebuild using only the kit and backups; a once-then-yearly aws.russetleaf.dev restore; a 6-monthly break-glass kit check.
+- **Drills:** monthly restore; quarterly restore from the backup account; a yearly full "on-premises environment destroyed" rebuild using only the kit and backups; a once-then-yearly aws.russetleaf.dev restore; a 6-monthly break-glass kit check.
 
 ## Alternatives considered
 

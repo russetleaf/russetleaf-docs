@@ -7,7 +7,7 @@
 
 ## Context
 
-The gateway ([ADR 2002](2002-summary-pipeline-architecture.md)) needs a fallback that does not depend on Bedrock, and the project should show model serving on Kubernetes, not only API calls. The on-premises lab has no GPU. `rl-onprem-cp02` (a Dell OptiPlex 3040 with a 4-core i5-6500T and 8 GB) is an etcd member and control-plane node, so anything heavy on it risks the cluster's stability.
+The gateway ([ADR 2002](2002-summary-pipeline-architecture.md)) needs a fallback that does not depend on Bedrock, and the project should show model serving on Kubernetes, not only API calls. The on-premises environment has no GPU. `rl-onprem-cp02` (a Dell OptiPlex 3040 with a 4-core i5-6500T and 8 GB) is an etcd member and control-plane node, so anything heavy on it risks the cluster's stability.
 
 ## Decision
 

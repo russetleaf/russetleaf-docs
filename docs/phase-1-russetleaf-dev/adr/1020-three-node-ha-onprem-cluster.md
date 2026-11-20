@@ -2,7 +2,7 @@
 
 - **Status:** Accepted; updated by [ADR 1026](1026-cpu-limits.md)
 - **Date:** 2026-11-01
-- **Applies to:** russetleaf.dev (on-premises lab)
+- **Applies to:** russetleaf.dev (on-premises environment)
 - **Phase:** 1. Later: `rl-onprem-cp02` becomes the dedicated LLM node in Phase 2 ([ADR 2003](../../phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md)).
 - **Updates:** [ADR 1006](1006-tempo-tracing.md) (Tempo always on in the on-premises cluster), [ADR 1010](1010-local-storage-no-ceph.md) (database HA from replication), [ADR 1014](1014-availability-levels.md) (on-premises availability), [ADR 1015](1015-process-allow-listing.md) (Tetragon feasible on premises), [ADR 1017](1017-intrusion-detection-and-prevention.md) (CrowdSec feasible on premises)
 
@@ -10,7 +10,7 @@
 
 ## Context
 
-The on-premises lab had two nodes with 8 GB of RAM each: `rl-onprem-cp01` (single control plane, all workloads, about 6–7 GB in use) and `rl-onprem-cp02` (worker dedicated to the LLM). Memory ruled out several useful tools (always-on tracing, Tetragon, CrowdSec), and the cluster had single points of failure everywhere ([ADR 1014](1014-availability-levels.md)). A third machine was bought: an **Intel i5-8500T (6 cores, 35 W) with 16 GB of RAM and an NVMe SSD**.
+The on-premises environment had two nodes with 8 GB of RAM each: `rl-onprem-cp01` (single control plane, all workloads, about 6–7 GB in use) and `rl-onprem-cp02` (worker dedicated to the LLM). Memory ruled out several useful tools (always-on tracing, Tetragon, CrowdSec), and the cluster had single points of failure everywhere ([ADR 1014](1014-availability-levels.md)). A third machine was bought: an **Intel i5-8500T (6 cores, 35 W) with 16 GB of RAM and an NVMe SSD**.
 
 ## Decision
 

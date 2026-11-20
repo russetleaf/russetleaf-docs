@@ -9,7 +9,7 @@
 
 The design was checked against the common Kubernetes threat model, which groups threats into eight areas: trust boundaries and data flow, persistence, denial of service, malicious code execution, compromised applications in containers, attacker on the network, access to sensitive data, and privilege escalation.
 
-Four areas were well covered: malicious code execution (signed images, Falco, gVisor, seccomp), compromised applications (non-root, read-only, no service-account token, Pod Security `restricted`, default-deny networking), attacker on the network (Cilium policies, WireGuard, internal TLS, lab VLAN) and access to sensitive data (encryption at rest, Secret access limited and alerted).
+Four areas were well covered: malicious code execution (signed images, Falco, gVisor, seccomp), compromised applications (non-root, read-only, no service-account token, Pod Security `restricted`, default-deny networking), attacker on the network (Cilium policies, WireGuard, internal TLS, server VLAN) and access to sensitive data (encryption at rest, Secret access limited and alerted).
 
 Four had gaps:
 

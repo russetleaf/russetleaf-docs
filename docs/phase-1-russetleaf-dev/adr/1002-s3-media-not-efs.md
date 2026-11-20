@@ -9,7 +9,7 @@
 
 WordPress needs somewhere to keep `wp-content`: uploaded media, plus (traditionally) plugins and themes. When WordPress runs on several servers or pods, they must all see the same files. Many WordPress-on-AWS guides, including AWS's own reference architecture for WordPress on EC2 Auto Scaling groups, put `wp-content` on **Amazon EFS**, a shared network filesystem.
 
-This project is containerized and GitOps-managed. Images are signed and pinned by digest, Kyverno requires a read-only root filesystem, Falco alerts on writes to `/var/www/html`, and every change is promoted through ci and staging. The on-premises lab has no EFS, and `rl-onprem-cp01` has little spare memory.
+This project is containerized and GitOps-managed. Images are signed and pinned by digest, Kyverno requires a read-only root filesystem, Falco alerts on writes to `/var/www/html`, and every change is promoted through ci and staging. The on-premises environment has no EFS, and `rl-onprem-cp01` has little spare memory.
 
 ## Decision
 
@@ -28,7 +28,7 @@ This is the pattern used by large containerized WordPress platforms such as Word
 | Security | A writable code directory is where attackers hide web shells, which persist across restarts | Read-only root filesystem; a compromised pod is replaced clean |
 | Performance | PHP reads many small files per request over the network; needs careful OPcache tuning | Code on local disk; media served by the CDN from S3 |
 | Cost | ~$0.30/GB-month, plus throughput charges at scale | ~$0.023/GB-month |
-| On-premises lab | Needs an NFS server, adding load on 8 GB nodes | Same S3 approach on premises |
+| On-premises environment | Needs an NFS server, adding load on 8 GB nodes | Same S3 approach on premises |
 | Environments | A shared filesystem per environment, kept in sync | Each environment points at its own bucket |
 
 Also considered:

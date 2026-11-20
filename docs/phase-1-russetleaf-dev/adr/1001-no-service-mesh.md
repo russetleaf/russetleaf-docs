@@ -9,7 +9,7 @@
 
 Service meshes such as Istio are common in larger production Kubernetes environments. They add mutual TLS (mTLS) between services, layer-7 authorization, traffic shifting, retries and timeouts, and per-service request metrics.
 
-This project has about four services that talk to each other: WordPress, the post-summarizer, the LiteLLM gateway and the llama.cpp model server. *[Original two-node state; see [ADR 1020](1020-three-node-ha-onprem-cluster.md).]* The on-premises lab runs on two nodes with 8 GB of RAM each, and `rl-onprem-cp01` already uses about 6–7 GB. (With [ADR 1020](1020-three-node-ha-onprem-cluster.md)'s third node, memory is less tight, but a mesh's benefits are still small for about four services, so the decision stands.) Both clusters run Cilium, which provides network policies, Hubble flow visibility and optional transparent encryption.
+This project has about four services that talk to each other: WordPress, the post-summarizer, the LiteLLM gateway and the llama.cpp model server. *[Original two-node state; see [ADR 1020](1020-three-node-ha-onprem-cluster.md).]* The on-premises environment runs on two nodes with 8 GB of RAM each, and `rl-onprem-cp01` already uses about 6–7 GB. (With [ADR 1020](1020-three-node-ha-onprem-cluster.md)'s third node, memory is less tight, but a mesh's benefits are still small for about four services, so the decision stands.) Both clusters run Cilium, which provides network policies, Hubble flow visibility and optional transparent encryption.
 
 ## Decision
 

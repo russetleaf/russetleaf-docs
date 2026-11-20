@@ -10,7 +10,7 @@
 Everything outside the Kubernetes manifests is built as code in one repo, `russetleaf-infra`: the AWS Organization and its accounts, guardrails and security services ([ADR 1019](1019-aws-multi-account-sra.md)); the AWS resources each site uses; Cloudflare's DNS, tunnel, WAF rules and R2 bucket; the GitHub repo settings and branch protection (`envs/github`); and the **Talos cluster itself**, whose machine configurations are rendered and applied through Terraform's Talos provider ([ADR 1039](1039-bootstrap-through-talos-inline-manifests.md)). The choice of tool was stated in the overview and the plan, but no ADR recorded it or the alternatives. **CloudFormation** is AWS's own tool, so the question of why it is not used deserves a written answer. The constraints:
 
 - **Several providers, not only AWS:** AWS, Cloudflare, GitHub and Talos, with one workflow and one review process for all of them.
-- **Both sites** share modules: the on-premises lab's AWS pieces and aws.russetleaf.dev's stacks use the same ones.
+- **Both sites** share modules: the on-premises environment's AWS pieces and aws.russetleaf.dev's stacks use the same ones.
 - **A gated pipeline:** formatting, linting, policy checks, cost diffs, and applies of the exact reviewed plan through a GitHub Environment ([ADR 1030](1030-github-actions-ci.md)).
 - **One operator:** the tool must be widely used and documented, with a large set of maintained providers and modules.
 
