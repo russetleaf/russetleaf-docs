@@ -50,7 +50,7 @@ The ER605's web interface is used in **standalone mode** throughout: no Omada co
     | **Advanced Settings** | Unchanged |
 
     The router moves to the new address, so the browser loses the page: unplug the second computer's cable from the ER605 and plug it back in, so it gets an address in the new range, then log in at `http://10.10.0.1`. The DNS servers are public ones, not the ISP router: the firewall rule in Part 3 blocks the main network, which would break DNS for anything using `192.168.1.1`.
-4. **Address reservations:** once the nodes are on the switch and have asked for an address, the router's **DHCP Client List** shows each one with its MAC address; select **Reserve** on a node's entry to reserve the address it has, or go to **Network → LAN → Address Reservation**, select **Add**, and enter the node's MAC address, the IP address below and the hostname as its description ([ADR 1041](../adr/1041-naming-convention.md)), then **OK**. Edit an entry reserved from the client list to give it the address below.
+4. **Address reservations:** once the nodes are on the switch and have asked for an address (a node with no operating system asks only when it starts something from the network or from a USB stick; at the latest, when it first starts the Talos installer in step 2.2), the router's **DHCP Client List** shows each one with its MAC address; select **Reserve** on a node's entry to reserve the address it has, or go to **Network → LAN → Address Reservation**, select **Add**, and enter the node's MAC address, the IP address below and the hostname as its description ([ADR 1041](../adr/1041-naming-convention.md)), then **OK**. Edit an entry reserved from the client list to give it the address below.
 
     | Description | IP Address |
     |---|---|
@@ -154,7 +154,15 @@ The workstation's private key is generated on the workstation and never leaves i
     ```
 
     Bitwarden refuses a note whose encrypted form is longer than 10,000 characters (about 7,000 characters of text), and `bw edit` then reports the error. In that case, encrypt the file with the kit passphrase instead, as the kit's vault exports are ([break-glass kit setup guide](break-glass-kit.md#part-4-the-encrypted-export-of-the-bitwarden-vault), Part 4, step 3), and store it with them. Repeat after every change, replacing the older backup in the notes, then refresh the kit.
-2. **BIOS passwords** on all three nodes: enter each machine's setup (**F1** on the Lenovo ThinkCentre, **F2** on the Dell OptiPlex machines) and set the **administrator (supervisor) password**, from Bitwarden. The other BIOS settings (Secure Boot, the TPM, power-on after a power cut) are part of step 2.2.
+2. **BIOS administrator passwords** on all three nodes, so the firmware settings cannot be changed without one. Generate each in Bitwarden as **20 lowercase letters and digits**, the one format all three accept (the OptiPlex 3040's BIOS takes only lowercase letters, digits and a few symbols, up to 32 characters; the OptiPlex 3060's takes 4 to 32; the ThinkCentre's is not case sensitive), and save it in an item per node (`BIOS rl-onprem-cp01` and so on) before entering it. The other BIOS settings (Secure Boot, the TPM, power-on after a power cut) are part of step 2.2.
+
+    | Node | Open setup | Set the password | Save and exit |
+    |---|---|---|---|
+    | `rl-onprem-cp01` (ThinkCentre M710q) | Repeatedly press **F1** while it starts | **Security** → **Set Administrator Password**, then follow the instructions on the right of the screen | **F10**, then **Yes** |
+    | `rl-onprem-cp02` (OptiPlex 3040 Micro) | Press **F2** as soon as the Dell logo appears | **System Security** (or **Security**): check that **Password Status** is **Unlocked**, then **Setup Password** (or **Admin Password**), entered twice | `Esc`, then **Y** to save |
+    | `rl-onprem-cp03` (OptiPlex 3060 Micro) | Press **F2** as soon as the Dell logo appears | **Security** → **Admin Password**, entered twice | Save when leaving setup, as the screen prompts (the manual does not give the keys) |
+
+    Open setup again on each node afterwards: it now asks for the password. Lenovo's procedure comes from the guide for the same generation of Tiny models (the M700 and M900), since the M710q's own guides have no setup chapter; Dell's from each model's manual. The 3060's manual does not name the key that opens setup; **F2** is Dell's key on the 3040, and the screen confirms it. Leave **Admin Setup Lockout** (Dell) off: with it on, setup cannot be opened at all while the password is set.
 
 ## Checks
 
@@ -203,6 +211,8 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - Ubuntu: ["ip-address"](https://manpages.ubuntu.com/manpages/noble/man8/ip-address.8.html), ["resolvectl"](https://manpages.ubuntu.com/manpages/noble/man1/resolvectl.1.html) and ["ping"](https://manpages.ubuntu.com/manpages/noble/man8/ping.8.html) (the checks from Linux), checked 2026-11-19
 - TP-Link (Omada): ["How to Find the Hardware Version on Your TP-Link Device"](https://support.omadanetworks.com/us/document/14139/), checked 2026-11-19
 - TP-Link Community: ["ER605/How to block a device from internet access?"](https://community.tp-link.com/en/business/forum/topic/586812) (a **LAN->WAN** rule with IP groups as source and destination; TP-Link's article does not say which source types each direction offers, and the router offers **Network** only for **LAN->LAN**), checked 2026-11-20
+- Dell: ["OptiPlex 3040M Owner's Manual"](https://downloads.dell.com/topicspdf/optiplex-3040m-desktop_owners-manual2_en-us.pdf) (System Setup, the system and setup passwords and their allowed characters) and ["OptiPlex 3060 Micro Setup and specifications guide"](https://downloads.dell.com/topicspdf/optiplex-3060-desktop_Specifications3_en-us.pdf) (System setup: Security, **Admin Password**, password length), checked 2026-11-20
+- Lenovo: ["ThinkCentre M700 and M900 User Guide"](https://download.lenovo.com/pccbbs/thinkcentre_pdf/m700_m900_tiny_ug_en.pdf) (the Setup Utility: starting it, BIOS passwords, exiting), checked 2026-11-20
 - TP-Link (Omada): ["Omada Gateway Access Control Configuration Examples"](https://support.omadanetworks.com/en/document/13189/) (standalone mode: IP groups and access-control rules), checked 2026-11-20
 - TP-Link (Omada): ["How to Configure DHCP Server on Omada Gateway"](https://support.omadanetworks.com/us/document/13196/) (standalone mode: the LAN network's fields) and ["How to Configure DHCP Address Reservation on Omada Gateway in Standalone Mode"](https://support.omadanetworks.com/us/document/13294/) (address reservations, the DHCP client list), checked 2026-11-20
 - TP-Link (Omada): ["How to Configure WireGuard VPN on Omada Router in Standalone Mode"](https://support.omadanetworks.com/us/document/13120/) (the ER605 v2), checked 2026-11-19
