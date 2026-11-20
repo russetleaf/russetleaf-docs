@@ -8,7 +8,7 @@ Workstation (Wi-Fi, 192.168.1.x) ──WireGuard──┐
 ISP router ── RE315 extender ── ER605 WAN (192.168.1.y) │ ER605 LAN (10.10.0.1) ── switch ── the three nodes
 ```
 
-**Note:** the click paths in this guide are those the router's web interface showed when the procedure was last carried out. Firmware updates change the interface without notice, and TP-Link's documentation can lag behind the interface. Before following a path, check TP-Link's current documentation for the ER605 (v2); where the screen still differs, follow what it shows and fix this guide to match.
+**Note:** the click paths in this guide are those the router's web interface showed when the procedure was last carried out. Firmware updates change the interface without notice, and TP-Link's documentation can lag behind the interface. Before following a path, check TP-Link's current documentation for the ER605 (v2); where the screen still differs, follow what it shows and fix this guide to match. TP-Link's ER605 V2 user guide dates from 2022 and does not match firmware 2.4.x: where TP-Link's newer articles cover a page, the steps follow them, and the rest are confirmed against the screen when first carried out.
 
 ## Before starting
 
@@ -17,7 +17,7 @@ ISP router ── RE315 extender ── ER605 WAN (192.168.1.y) │ ER605 LAN (1
 - The **latest V2 firmware** from the ER605's download page ([References](#references)), with its release note, downloaded **on the second computer** (below): the firmware is uploaded from that computer's browser, because the workstation reaches the router only over WireGuard, which Part 4 sets up. One V2 firmware serves every 2.x hardware version: check that the release note's **Applied Model** list includes the one on the label. The release note also gives a **minimum version for the update** (**Minimum FW Version for Update**): a router on an older version installs that version first. For 2.4.10 Build 20260916 the minimum is 2.3.2 Build 20251029. The download is a `.zip` archive; Part 1 extracts the firmware file from it.
 - The **workstation**, with `wireguard-tools` installed (the [workstation setup script](../plan.md#1-run-the-setup-script) installs it), and **Bitwarden** (the project's password manager) open.
 - A **second computer with an Ethernet port** and a web browser, on any operating system (Linux, macOS or Windows), for the first login and firmware update (Part 1) and the checks at the end. It needs none of the project's credentials or keys. The workstation stays on the main network's Wi-Fi throughout.
-- The **MAC addresses** of the three nodes' network ports, for the address reservations. They need not be known in advance: once the nodes are on the switch, the ER605 lists each one that asks it for an address (Part 2, step 5). A node with no operating system asks only while it tries to start from the network; otherwise its BIOS setup shows the MAC address.
+- The **MAC addresses** of the three nodes' network ports, for the address reservations. They need not be known in advance: once the nodes are on the switch, the ER605 lists each one that asks it for an address (Part 2, step 4). A node with no operating system asks only while it tries to start from the network; otherwise its BIOS setup shows the MAC address.
 - Access to the **ISP router's** settings, to reserve the ER605's WAN address: its web page or its provider's app (for the Spectrum SAX1V1K used here, the **My Spectrum** app).
 
 ## Part 1: Wiring, first login and firmware
@@ -36,9 +36,21 @@ The ER605's web interface is used in **standalone mode** throughout: no Omada co
 2. **Keep that address fixed:** in the ISP router's settings, reserve the address the ISP router gave the ER605 (it appears under its host name, `rl-onprem-rt01`). Restart the ER605 afterwards (unplug it for ten seconds) and check on the **System Status** page that its WAN address has not changed. If the ISP router cannot reserve addresses, give the ER605 a **static WAN address** instead (**Connection Type** **Static IP**), outside the ISP router's DHCP range, with the ISP router, `192.168.1.1`, as gateway.
 
     **The link to the ISP router must carry the ER605's own MAC address:** an Ethernet cable, or a bridge that acts like one (a pair of powerline or MoCA adapters). A **Wi-Fi range extender** between them does not: TP-Link's range extenders, for example, replace the MAC address of each wired device behind them with a virtual one, or with the extender's own ([References](#references)), so the ISP router cannot tell the ER605 apart and neither a reservation nor a safely chosen static address is possible. With an ISP router managed only through an app, whose DHCP range is not shown, a reservation is the only safe choice.
-3. **LAN:** **Network → LAN → LAN**. Set **IP Address** to **`10.10.0.1`** and **Subnet Mask** to `255.255.255.0`, and **Save**. The browser moves to `http://10.10.0.1`; if it does not, unplug and reconnect the cable, so the workstation gets a new address, and log in there.
-4. **DHCP on the LAN:** on the same page, in the DHCP server settings: **Starting/Ending IP Address** **`10.10.0.100`** to **`10.10.0.199`**, **Default Gateway** `10.10.0.1`, **Primary/Secondary DNS** **`1.1.1.1`** and **`9.9.9.9`**, and **Status** checked; then **Save**. The DNS servers are public ones, not the ISP router: the firewall rule in Part 3 blocks the main network, which would break DNS for anything using `192.168.1.1`.
-5. **Address reservations:** first find each node's MAC address: **Network → LAN → DHCP Client List** shows every device that has an address from the ER605, with its **Client Name**, **MAC Address**, **Assigned IP Address** and **Lease Time**. Then **Network → LAN → Address Reservation**, then **Add** for each node: its **MAC Address**, the **IP Address** below, the hostname as **Description** ([ADR 1041](../adr/1041-naming-convention.md)), **Status** checked, and **OK**.
+3. **The LAN and its DHCP server:** **Network → LAN → LAN** lists the LAN networks; the router starts with one, at `192.168.0.1`. Edit that entry with the pencil icon in its **Operation** column (do not **Add** a second network), set the fields below, and **Save**:
+
+    | Field | Value |
+    |---|---|
+    | **IP Address** | **`10.10.0.1`**, subnet mask `255.255.255.0` |
+    | **"Vlan"** (as the page spells it) | Unchanged |
+    | DHCP | **DHCP** (selected by default: the router is the network's DHCP server) |
+    | **IP Address Range** | **`10.10.0.100`** to **`10.10.0.199`** |
+    | **Lease Time** | Unchanged |
+    | **Default Gateway** | `10.10.0.1` |
+    | **Primary DNS** / **Secondary DNS** | **`1.1.1.1`** / **`9.9.9.9`** |
+    | **Advanced Settings** | Unchanged |
+
+    The router moves to the new address, so the browser loses the page: unplug the second computer's cable from the ER605 and plug it back in, so it gets an address in the new range, then log in at `http://10.10.0.1`. The DNS servers are public ones, not the ISP router: the firewall rule in Part 3 blocks the main network, which would break DNS for anything using `192.168.1.1`.
+4. **Address reservations:** once the nodes are on the switch and have asked for an address, the router's **DHCP Client List** shows each one with its MAC address; select **Reserve** on a node's entry to reserve the address it has, or go to **Network → LAN → Address Reservation**, select **Add**, and enter the node's MAC address, the IP address below and the hostname as its description ([ADR 1041](../adr/1041-naming-convention.md)), then **OK**. Edit an entry reserved from the client list to give it the address below.
 
     | Description | IP Address |
     |---|---|
@@ -46,9 +58,9 @@ The ER605's web interface is used in **standalone mode** throughout: no Omada co
     | `rl-onprem-cp02` | `10.10.0.12` |
     | `rl-onprem-cp03` | `10.10.0.13` |
 
-    Leave **`10.10.0.10` unused**: it is the cluster's virtual IP. Talos also sets these addresses statically in step 2.2. If the router accepts reservations only inside the pool, widen the pool to `10.10.0.11`–`10.10.0.199`; `.10` stays outside it either way.
+    Leave **`10.10.0.10` unused**: it is the cluster's virtual IP. The reserved addresses are outside the DHCP range, which TP-Link allows as long as they are in the network's subnet. A node picks up its reserved address when it next renews its lease: unplug and reconnect its cable. Talos also sets these addresses statically in step 2.2.
 
-6. **Label the case** with the router's name, `rl-onprem-rt01`.
+5. **Label the case** with the router's name, `rl-onprem-rt01`.
 
 ## Part 3: The firewall and remote access
 
@@ -186,6 +198,7 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - Apple: ["Use DHCP or a manual IP address on Mac"](https://support.apple.com/guide/mac-help/use-dhcp-or-a-manual-ip-address-on-mac-mchlp2718/mac) and ["Change DNS settings on Mac"](https://support.apple.com/guide/mac-help/change-dns-settings-on-mac-mh14127/mac) (the checks from macOS), checked 2026-11-19
 - Ubuntu: ["ip-address"](https://manpages.ubuntu.com/manpages/noble/man8/ip-address.8.html), ["resolvectl"](https://manpages.ubuntu.com/manpages/noble/man1/resolvectl.1.html) and ["ping"](https://manpages.ubuntu.com/manpages/noble/man8/ping.8.html) (the checks from Linux), checked 2026-11-19
 - TP-Link (Omada): ["How to Find the Hardware Version on Your TP-Link Device"](https://support.omadanetworks.com/us/document/14139/), checked 2026-11-19
+- TP-Link (Omada): ["How to Configure DHCP Server on Omada Gateway"](https://support.omadanetworks.com/us/document/13196/) (standalone mode: the LAN network's fields) and ["How to Configure DHCP Address Reservation on Omada Gateway in Standalone Mode"](https://support.omadanetworks.com/us/document/13294/) (address reservations, the DHCP client list), checked 2026-11-20
 - TP-Link (Omada): ["How to Configure WireGuard VPN on Omada Router in Standalone Mode"](https://support.omadanetworks.com/us/document/13120/) (the ER605 v2), checked 2026-11-19
 - WireGuard: ["Quick Start"](https://www.wireguard.com/quickstart/), checked 2026-11-12
 - NetworkManager: ["nmcli reference manual"](https://networkmanager.dev/docs/api/latest/nmcli.html), checked 2026-11-12
