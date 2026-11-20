@@ -5,7 +5,7 @@
 - **Applies to:** russetleaf.dev (and aws.russetleaf.dev during demos)
 - **Phase:** 1 (site and API SLOs). Later: Phase 2 adds summary freshness and quality.
 
-> **Update (design review):** Availability and latency SLIs are measured at the **ingress inside the cluster**, so home internet outages do not burn the error budget (the external uptime check still alerts on them). The error-budget policy has an **exclusion process** for documented external incidents (for example, ISP or Bedrock outages): an annotation linking the incident record removes that window from the budget calculation.
+> **Update (design review):** Availability and latency SLIs are measured at the **ingress inside the cluster**, so site internet connection outages do not burn the error budget (the external uptime check still alerts on them). The error-budget policy has an **exclusion process** for documented external incidents (for example, ISP or Bedrock outages): an annotation linking the incident record removes that window from the budget calculation.
 
 ## Context
 
@@ -13,7 +13,7 @@ Alerting was threshold-based (error spikes, latency, freshness of backups), and 
 
 ## Decision
 
-- Define **SLOs** with SLIs for the site (availability 99.5%, latency 95% under 1 s), the AI summaries (freshness 99% within 15 minutes, quality 95% online-evaluation pass rate) and the home Kubernetes API (99.9%), over 28-day windows.
+- Define **SLOs** with SLIs for the site (availability 99.5%, latency 95% under 1 s), the AI summaries (freshness 99% within 15 minutes, quality 95% online-evaluation pass rate) and the on-premises Kubernetes API (99.9%), over 28-day windows.
 - Generate recording rules and **multi-window, multi-burn-rate alerts** with **Sloth** from SLO definitions in Git; fast burn pages `#rl-critical`, slow burn tickets the site channel; retire threshold alerts the SLOs replace.
 - **Error-budget policy enforced in automation:** when a budget is exhausted, `promote-to-prod` blocks promotions except `fix` or `reliability` changes until it recovers.
 - Compute the **DORA metrics** (deployment frequency, lead time, change failure rate, time to restore) from GitHub, Argo CD and incident records, published to Prometheus and Grafana.
@@ -34,7 +34,7 @@ Alerting was threshold-based (error spikes, latency, freshness of backups), and 
 
 ## When to revisit
 
-- The targets prove unrealistic for home hardware (power and internet outages count against availability).
+- The targets prove unrealistic for on-premises hardware (power and internet outages count against availability).
 - More services join the platform: SLOs become part of the golden-path template.
 
 ## Open items

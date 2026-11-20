@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-01
 - **Applies to:** both sites
-- **Phase:** 3. In Phase 1, the home cluster relies on Trivy Operator, Kubescape and the Talos hardening checks ([ADR 1031](../../phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md)).
+- **Phase:** 3. In Phase 1, the on-premises cluster relies on Trivy Operator, Kubescape and the Talos hardening checks ([ADR 1031](../../phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md)).
 
 ## Context
 
@@ -37,7 +37,7 @@ Both sites run **Trivy Operator**, which produces **CIS compliance reports** con
 ## Consequences
 
 - The two sites are checked by different tools; the reason is now documented rather than looking like an oversight.
-- Node-level evidence at home is the `talosctl` checks plus Trivy Operator, partly manual.
+- Node-level evidence on premises is the `talosctl` checks plus Trivy Operator, partly manual.
 - Every demo produces a kube-bench report per node pool automatically, with new failures highlighted.
 - One Grafana dashboard shows continuous CIS compliance trends for both clusters.
 

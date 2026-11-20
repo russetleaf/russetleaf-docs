@@ -18,7 +18,7 @@
 
 ## Alternatives considered
 
-- **VPC CNI alone** (with its network policy support): AWS-native and simplest, but standard NetworkPolicies only (no DNS-name or layer-7 rules), no Hubble, and a different model from the home cluster.
+- **VPC CNI alone** (with its network policy support): AWS-native and simplest, but standard NetworkPolicies only (no DNS-name or layer-7 rules), no Hubble, and a different model from the on-premises cluster.
 - **Cilium replacing the VPC CNI entirely (ENI mode):** possible, but further from what AWS supports out of the box; chaining keeps EKS close to its defaults.
 
 ## Consequences

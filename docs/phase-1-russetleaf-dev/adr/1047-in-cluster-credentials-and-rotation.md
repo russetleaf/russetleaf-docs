@@ -1,4 +1,4 @@
-# ADR 1047: The home cluster's own passwords are generated in the cluster and rotated automatically
+# ADR 1047: The on-premises cluster's own passwords are generated in the cluster and rotated automatically
 
 - **Status:** Accepted
 - **Date:** 2026-11-03
@@ -7,7 +7,7 @@
 
 ## Context
 
-The home cluster has passwords that are created and used only inside it: the MariaDB users (WordPress, backup, root) and, newly, Valkey's. Three problems were found:
+The on-premises cluster has passwords that are created and used only inside it: the MariaDB users (WordPress, backup, root) and, newly, Valkey's. Three problems were found:
 
 - **Valkey had no authentication.** Only a CiliumNetworkPolicy kept other pods away from it. A policy mistake, or anything that got past it, would allow reading and rewriting cached posts and options, which WordPress would then serve.
 - **MariaDB rotation was described two ways.** The design said the passwords were rotated by "a scheduled, tested procedure, not by hand"; the ongoing-operations table listed a quarterly manual task.
@@ -62,7 +62,7 @@ Supporting settings: the job's ServiceAccount may only read and update the named
 
 ## When to revisit
 
-- More applications use the home database: consider Vault or OpenBao dynamic credentials.
+- More applications use the on-premises database: consider Vault or OpenBao dynamic credentials.
 - MariaDB Operator gains native rotation (with overlap), or certificate-based users: simplify the job, or drop passwords for the database.
 - The cache starts holding sensitive data: add TLS to Valkey.
 

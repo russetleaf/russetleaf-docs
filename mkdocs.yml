@@ -103,13 +103,13 @@ nav:
           - "1011 Update strategy: Git-driven, risk-tiered updates with Renovate": phase-1-russetleaf-dev/adr/1011-update-strategy.md
           - "1012 OpenCost for in-cluster allocation, AWS billing for actual costs, and how cost alerts flow": phase-1-russetleaf-dev/adr/1012-opencost-and-aws-billing.md
           - "1013 Image supply chain: SLSA provenance, Opengrep for SAST, and the build pipeline's tools": phase-1-russetleaf-dev/adr/1013-image-supply-chain.md
-          - "1014 Availability levels: home lab without HA; AWS designed for HA but run as a demo": phase-1-russetleaf-dev/adr/1014-availability-levels.md
+          - "1014 Availability levels: on-premises lab without HA; AWS designed for HA but run as a demo": phase-1-russetleaf-dev/adr/1014-availability-levels.md
           - "1015 Process allow-listing with Falco; AppArmor and SELinux not used; Tetragon and custom seccomp as optional extras": phase-1-russetleaf-dev/adr/1015-process-allow-listing.md
           - "1016 Rollback strategy: Git revert by default, automatic canary rollback, back up before schema changes": phase-1-russetleaf-dev/adr/1016-rollback-strategy.md
           - "1017 Intrusion detection and prevention in layers": phase-1-russetleaf-dev/adr/1017-intrusion-detection-and-prevention.md
           - "1018 Disaster recovery with off-account immutable copies and a break-glass kit": phase-1-russetleaf-dev/adr/1018-disaster-recovery.md
           - "1019 Multi-account AWS structure aligned with the AWS Security Reference Architecture": phase-1-russetleaf-dev/adr/1019-aws-multi-account-sra.md
-          - "1020 Three-node home cluster with a highly available control plane": phase-1-russetleaf-dev/adr/1020-three-node-ha-home-cluster.md
+          - "1020 Three-node on-premises cluster with a highly available control plane": phase-1-russetleaf-dev/adr/1020-three-node-ha-onprem-cluster.md
           - "1021 SLOs with error budgets that gate promotions; DORA metrics": phase-1-russetleaf-dev/adr/1021-slos-and-error-budgets.md
           - "1022 Internal developer platform (Backstage, golden paths, multi-tenancy) and hub-and-spoke Argo CD": phase-1-russetleaf-dev/adr/1022-internal-developer-platform.md
           - "1023 Reliability practice: scheduled chaos experiments and blameless postmortems": phase-1-russetleaf-dev/adr/1023-reliability-practice.md
@@ -118,7 +118,7 @@ nav:
           - "1026 No CPU limits by default; CPU limits only to protect a specific neighbor": phase-1-russetleaf-dev/adr/1026-cpu-limits.md
           - "1027 Cilium as the network plugin on both clusters": phase-1-russetleaf-dev/adr/1027-cilium-cni.md
           - "1028 Internal certificates with cert-manager and an internal CA": phase-1-russetleaf-dev/adr/1028-internal-pki.md
-          - "1029 On-demand, scale-to-zero staging on the home cluster": phase-1-russetleaf-dev/adr/1029-on-demand-staging.md
+          - "1029 On-demand, scale-to-zero staging on the on-premises cluster": phase-1-russetleaf-dev/adr/1029-on-demand-staging.md
           - "1030 GitHub Actions for CI/CD, public repositories early, and the runner strategy": phase-1-russetleaf-dev/adr/1030-github-actions-ci.md
           - "1031 Kubernetes component hardening": phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md
           - "1032 Defense in depth: controls by layer, and the gaps closed": phase-1-russetleaf-dev/adr/1032-defense-in-depth.md
@@ -133,10 +133,10 @@ nav:
           - "1041 Naming convention for hosts, nodes and clusters": phase-1-russetleaf-dev/adr/1041-naming-convention.md
           - "1042 S3 versioning, lifecycle rules and storage classes": phase-1-russetleaf-dev/adr/1042-s3-versioning-lifecycle-and-storage-classes.md
           - "1043 Database encryption at rest and TLS on every connection": phase-1-russetleaf-dev/adr/1043-database-encryption.md
-          - "1044 Cilium's Gateway API for traffic into the home cluster (ingress-nginx is retired)": phase-1-russetleaf-dev/adr/1044-cilium-gateway-api.md
+          - "1044 Cilium's Gateway API for traffic into the on-premises cluster (ingress-nginx is retired)": phase-1-russetleaf-dev/adr/1044-cilium-gateway-api.md
           - "1045 Preserve evidence from a compromised container before containing and rebuilding it": phase-1-russetleaf-dev/adr/1045-container-forensics.md
           - "1046 Incident response, incident runbooks and one runbook index": phase-1-russetleaf-dev/adr/1046-incident-response-and-runbook-index.md
-          - "1047 The home cluster's own passwords are generated in the cluster and rotated automatically": phase-1-russetleaf-dev/adr/1047-in-cluster-credentials-and-rotation.md
+          - "1047 The on-premises cluster's own passwords are generated in the cluster and rotated automatically": phase-1-russetleaf-dev/adr/1047-in-cluster-credentials-and-rotation.md
           - "1048 One bash script standard for every repo, enforced by checks and agent instructions": phase-1-russetleaf-dev/adr/1048-bash-script-standard.md
           - "1049 GPL v3.0 for code and documentation; the RussetLeaf name and logo reserved": phase-1-russetleaf-dev/adr/1049-licensing.md
           - "1050 AWS Secrets Manager with External Secrets, not HashiCorp Vault": phase-1-russetleaf-dev/adr/1050-secrets-manager-and-external-secrets.md
@@ -157,7 +157,7 @@ nav:
       - Decisions:
           - "2001 Full MLOps lifecycle: tracking and registry, guardrails, online evaluation, data versioning and feedback": phase-2-ai-mlops/adr/2001-mlops-lifecycle.md
           - "2002 Summary pipeline: event-driven summarizer behind an LLM gateway": phase-2-ai-mlops/adr/2002-summary-pipeline-architecture.md
-          - "2003 Self-hosted model on rl-home-cp02 (CPU llama.cpp), dedicated by taint": phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md
+          - "2003 Self-hosted model on rl-onprem-cp02 (CPU llama.cpp), dedicated by taint": phase-2-ai-mlops/adr/2003-self-hosted-model-on-cp02.md
           - "2004 Agentic AI delivery, with least-privilege access and measured results": phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md
           - "2005 Fine-tuning on a rented spot GPU, with drift-triggered retraining": phase-2-ai-mlops/adr/2005-fine-tuning-on-a-rented-gpu.md
           - "2006 A read-only AI operations assistant with kagent": phase-2-ai-mlops/adr/2006-ai-operations-assistant.md
@@ -167,7 +167,7 @@ nav:
       - Plan: phase-3-aws-russetleaf-dev/plan.md
       - Decisions:
           - "3001 kube-bench on EKS only; Talos checked with its own hardening checks and Trivy Operator": phase-3-aws-russetleaf-dev/adr/3001-kube-bench-eks-only.md
-          - "3002 Fine-tuning on the EKS GPU node pool, with the challenger served at home": phase-3-aws-russetleaf-dev/adr/3002-fine-tuning-on-eks-gpu.md
+          - "3002 Fine-tuning on the EKS GPU node pool, with the challenger served on premises": phase-3-aws-russetleaf-dev/adr/3002-fine-tuning-on-eks-gpu.md
           - "3003 Cilium on EKS in chaining mode with the VPC CNI": phase-3-aws-russetleaf-dev/adr/3003-cilium-chaining-on-eks.md
           - "3004 EKS component hardening": phase-3-aws-russetleaf-dev/adr/3004-eks-component-hardening.md
           - "3005 EKS access through Identity Center, and the EKS audit-log archive": phase-3-aws-russetleaf-dev/adr/3005-eks-access-and-audit-logs.md

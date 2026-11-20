@@ -9,12 +9,12 @@
 
 WordPress needs somewhere to keep `wp-content`: uploaded media, plus (traditionally) plugins and themes. When WordPress runs on several servers or pods, they must all see the same files. Many WordPress-on-AWS guides, including AWS's own reference architecture for WordPress on EC2 Auto Scaling groups, put `wp-content` on **Amazon EFS**, a shared network filesystem.
 
-This project is containerized and GitOps-managed. Images are signed and pinned by digest, Kyverno requires a read-only root filesystem, Falco alerts on writes to `/var/www/html`, and every change is promoted through ci and staging. The home lab has no EFS, and `rl-home-cp01` has little spare memory.
+This project is containerized and GitOps-managed. Images are signed and pinned by digest, Kyverno requires a read-only root filesystem, Falco alerts on writes to `/var/www/html`, and every change is promoted through ci and staging. The on-premises lab has no EFS, and `rl-onprem-cp01` has little spare memory.
 
 ## Decision
 
 - **WordPress code** (core, plugins, themes) is **built into the container image** in the `russetleaf-wordpress` repo. Plugin installs and updates from the admin screen are disabled (`DISALLOW_FILE_MODS`).
-- **Media uploads go to S3** through an offload plugin, served through CloudFront on aws.russetleaf.dev and from S3 at home.
+- **Media uploads go to S3** through an offload plugin, served through CloudFront on aws.russetleaf.dev and from S3 on premises.
 - **No shared filesystem** is used on either site.
 
 This is the pattern used by large containerized WordPress platforms such as WordPress VIP and Human Made's Altis.
@@ -28,12 +28,12 @@ This is the pattern used by large containerized WordPress platforms such as Word
 | Security | A writable code directory is where attackers hide web shells, which persist across restarts | Read-only root filesystem; a compromised pod is replaced clean |
 | Performance | PHP reads many small files per request over the network; needs careful OPcache tuning | Code on local disk; media served by the CDN from S3 |
 | Cost | ~$0.30/GB-month, plus throughput charges at scale | ~$0.023/GB-month |
-| Home lab | Needs an NFS server, adding load on 8 GB nodes | Same S3 approach at home |
+| On-premises lab | Needs an NFS server, adding load on 8 GB nodes | Same S3 approach on premises |
 | Environments | A shared filesystem per environment, kept in sync | Each environment points at its own bucket |
 
 Also considered:
 
-- **EFS for uploads only** (code in the image, media on EFS): avoids an offload plugin, but keeps EFS's cost, needs NFS at home, and loses CDN-native media delivery.
+- **EFS for uploads only** (code in the image, media on EFS): avoids an offload plugin, but keeps EFS's cost, needs NFS on premises, and loses CDN-native media delivery.
 - **A persistent volume per pod:** does not work with several replicas, since each pod would see different files.
 
 ## Consequences
@@ -51,4 +51,4 @@ Also considered:
 
 ## Open items
 
-- **Offload plugin choice** (Phase 1 step 5.1): compare **S3-Uploads** (Human Made; writes directly to S3, so no writable uploads folder) and **WP Offload Media Lite** (writes locally first, then copies to S3). Check uploads, thumbnails, deletion, the media URL (S3 at home, CloudFront on AWS) and custom S3 endpoint support. Record the choice and reasons here, and whether the uploads `emptyDir` is needed.
+- **Offload plugin choice** (Phase 1 step 5.1): compare **S3-Uploads** (Human Made; writes directly to S3, so no writable uploads folder) and **WP Offload Media Lite** (writes locally first, then copies to S3). Check uploads, thumbnails, deletion, the media URL (S3 on premises, CloudFront on AWS) and custom S3 endpoint support. Record the choice and reasons here, and whether the uploads `emptyDir` is needed.

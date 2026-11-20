@@ -37,7 +37,7 @@ Rollback mechanisms existed in pieces (Argo Rollouts canaries, Git reverts, `tal
 
 - **`argocd app rollback` as the default:** quick, but conflicts with auto-sync and leaves Git out of step with the cluster.
 - **Always fixing forward:** avoids schema-rollback problems, but keeps users on a broken site while the fix is written and tested.
-- **Blue/green deployments for every release:** cleaner cut-overs, but doubles the running workload; `rl-home-cp01` cannot afford it, and canaries achieve most of the benefit.
+- **Blue/green deployments for every release:** cleaner cut-overs, but doubles the running workload; `rl-onprem-cp01` cannot afford it, and canaries achieve most of the benefit.
 - **Database migration tooling with down-migrations:** WordPress core does not provide reversible migrations, so backups are the practical safety net.
 
 ## Consequences

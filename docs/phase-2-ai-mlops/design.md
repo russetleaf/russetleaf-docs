@@ -9,10 +9,10 @@
 ## What Phase 2 adds to Phase 1
 
 - A fourth repo, **`russetleaf-llm-summarizer`** (prompts, evaluation set, the summarizer service and its chart).
-- **`rl-home-cp02` becomes the dedicated LLM node** (label `workload=llm`, taint `dedicated=llm:NoSchedule`) running llama.cpp, with the CI runners next to it.
-- AWS resources in russetleaf-home: the **SQS** summary queue and dead-letter queue, **Bedrock** access with a budget, the **model mirror bucket**, and staging equivalents.
+- **`rl-onprem-cp02` becomes the dedicated LLM node** (label `workload=llm`, taint `dedicated=llm:NoSchedule`) running llama.cpp, with the CI runners next to it.
+- AWS resources in russetleaf-onprem: the **SQS** summary queue and dead-letter queue, **Bedrock** access with a budget, the **model mirror bucket**, and staging equivalents.
 - WordPress changes in `russetleaf-wordpress`: the **summary-queue must-use plugin**, the `wordpress_posts_without_summary` metric and its alert, the **AI summary box** in the theme, and the summarizer's application password.
-- **Model training:** fine-tuning on a rented spot GPU in AWS, a fine-tuned challenger served at home, and retraining proposed when drift or quality alerts persist ([ADR 2005](adr/2005-fine-tuning-on-a-rented-gpu.md)).
+- **Model training:** fine-tuning on a rented spot GPU in AWS, a fine-tuned challenger served on premises, and retraining proposed when drift or quality alerts persist ([ADR 2005](adr/2005-fine-tuning-on-a-rented-gpu.md)).
 - Platform additions: KEDA, LiteLLM, MLflow, Argo Workflows and kagent (an AI operations assistant), plus the AI rows in Phase 1's shared sections (policies, network rules, Falco rules, tracing, alerts, SLOs, costs); see [AI components in the shared platform](#ai-components-in-the-shared-platform).
 
 ## Architecture
@@ -27,7 +27,7 @@ flowchart LR
   sum -->|"read post, save summary<br/>(REST API)"| wp
   sum --> gw["LiteLLM gateway<br/>routing, fallback, canaries, budgets"]
   gw --> bedrock["Amazon Bedrock<br/>Claude Haiku, Nova Lite"]
-  gw --> llama["llama.cpp (CPU)<br/>on rl-home-cp02, the LLM node"]
+  gw --> llama["llama.cpp (CPU)<br/>on rl-onprem-cp02, the LLM node"]
   mirror[("Model mirror bucket")] -->|"model file"| llama
   mlflow["MLflow<br/>tracking and registry"] -->|"feeds"| mirror
   wf["Argo Workflows<br/>online evaluation, data export"] --> mlflow
@@ -58,7 +58,7 @@ The summarizer authenticates to WordPress with an **application password** store
     - **routing and fallback** (for example, Bedrock first, the self-hosted model if Bedrock fails or is throttled)
     - **canary splits** for model changes (for example, send 10% of requests to a new model, then compare quality scores and cost before switching)
     - **rate limits and spending budgets** per app
-- The self-hosted model runs on a **dedicated LLM node**, `rl-home-cp02`:
+- The self-hosted model runs on a **dedicated LLM node**, `rl-onprem-cp02`:
     - The node carries the label `workload=llm` and the taint `dedicated=llm:NoSchedule`, so only the model server (plus cluster-wide agents such as node-exporter) runs there.
     - The model server Deployment has a matching **toleration** and **node selector**.
     - Model files are downloaded once by an init container from the **model mirror bucket** in S3 (so rebuilds do not depend on Hugging Face) into a volume on the node.
@@ -109,7 +109,7 @@ flowchart LR
 
 ### Experiment tracking and model registry (MLflow)
 
-- **MLflow** runs on the home cluster (on `rl-home-cp03`), with its metadata in MariaDB and its artifacts in an S3 bucket.
+- **MLflow** runs on the on-premises cluster (on `rl-onprem-cp03`), with its metadata in MariaDB and its artifacts in an S3 bucket.
 - **Every evaluation run is an MLflow run:** the CI evaluation gate, the online evaluation and every fine-tuning run log their **parameters** (Git commit, prompt version, model and its registry version, dataset version), **metrics** (rule-check pass rate, judge scores, latency, cost per summary) and **artifacts** (reports, sample outputs).
 - **Registered models**, with lineage back to the runs that produced them:
     - `summarizer-config`: the prompt, model choice and generation settings as one versioned unit
@@ -129,7 +129,7 @@ Post content is untrusted input, so the summarizer treats it as data:
 
 ### Online evaluation and drift monitoring
 
-- A **daily job** (Argo Workflows at home) samples a few percent of the day's new summaries, scores them with the same rule checks and judge as the CI gate, and logs the results to **MLflow** and to **Prometheus**.
+- A **daily job** (Argo Workflows on premises) samples a few percent of the day's new summaries, scores them with the same rule checks and judge as the CI gate, and logs the results to **MLflow** and to **Prometheus**.
 - It also tracks **input drift**: post length, language and topic distribution compared with the evaluation set.
 - **Grafana** shows quality and drift trends per model and prompt version; **Alertmanager** sends `SummaryQualityDegraded` and `InputDriftDetected` to `#rl-mlops`.
 - A sustained drop starts the response: compare the champion and challenger in the evaluation set, roll back routing ([ADR 1016](../phase-1-russetleaf-dev/adr/1016-rollback-strategy.md)), or trigger retraining.
@@ -137,10 +137,10 @@ Post content is untrusted input, so the summarizer treats it as data:
 ### Fine-tuning pipeline (distillation)
 
 - **Goal:** improve the small self-hosted model by **fine-tuning** it (LoRA) on high-quality example summaries, then compare it with the base model ([ADR 2005](adr/2005-fine-tuning-on-a-rented-gpu.md)).
-- **Where it runs:** the home lab has no GPU, so each run uses **one rented spot GPU instance** in the russetleaf-home account, started from a OpenTofu-managed launch template by the `train` workflow and terminated when the run ends (a few dollars per run). Its instance profile can only read the training data and write to the MLflow artifact bucket.
+- **Where it runs:** the on-premises lab has no GPU, so each run uses **one rented spot GPU instance** in the russetleaf-onprem account, started from a OpenTofu-managed launch template by the `train` workflow and terminated when the run ends (a few dollars per run). Its instance profile can only read the training data and write to the MLflow artifact bucket.
 - **Training data:** curated summaries from the feedback loop and the evaluation set, plus summaries from a stronger **teacher** model. **Check the teacher's terms first:** some model providers' terms restrict using their outputs to train other models. An **open-weights teacher** avoids the question.
 - **The pipeline** (`russetleaf-llm-summarizer/training/`, one container): fetch the versioned dataset (DVC) → fine-tune (LoRA) → **evaluate against the base model** on the evaluation set (including the adversarial cases) → convert to GGUF → **register** in MLflow as a `local-summarizer` version with its scores → if it beats the champion, propose it as the **challenger**.
-- **Deployment:** the challenger enters the gateway **canary** at home; online evaluation compares it with the champion; promotion to champion is a reviewed pull request.
+- **Deployment:** the challenger enters the gateway **canary** on premises; online evaluation compares it with the champion; promotion to champion is a reviewed pull request.
 - **Drift-triggered retraining:** sustained drift or quality alerts (drift reports from **Evidently**), or enough new feedback, open a **retraining pull request** with the report and the proposed dataset version; merging it starts a training run. A person always decides.
 
 ### Data versioning and feedback
@@ -150,7 +150,7 @@ Post content is untrusted input, so the summarizer treats it as data:
 
 ### Cost
 
-MLflow, Argo Workflows and the online-evaluation job run on the home cluster (`rl-home-cp03` has the memory); the extra Bedrock calls for daily judging cost cents a month; each fine-tuning run costs **a few dollars** of time on a rented spot GPU instance.
+MLflow, Argo Workflows and the online-evaluation job run on the on-premises cluster (`rl-onprem-cp03` has the memory); the extra Bedrock calls for daily judging cost cents a month; each fine-tuning run costs **a few dollars** of time on a rented spot GPU instance.
 
 ### Rolling back bad AI summaries
 
@@ -198,7 +198,7 @@ Design choices that make it stand on its own:
 - **Releases gated on quality:** a release tag runs the evaluation gate first; only a passing release is published, with its evaluation report attached to the GitHub release.
 - **Model card:** a record of which models were compared (Claude Haiku, Nova Lite and the self-hosted model), the scores, the cost per summary and known limitations, without running anything.
 - **Local demo:** `docker compose up` runs it against sample posts, so anyone can try it in minutes.
-- **Self-hosted runners:** the evaluation gate runs on ARC runners in the home cluster, registered to this repo, because it needs to reach the gateway and the self-hosted model. Runners are ephemeral, and jobs from fork pull requests need manual approval.
+- **Self-hosted runners:** the evaluation gate runs on ARC runners in the on-premises cluster, registered to this repo, because it needs to reach the gateway and the self-hosted model. Runners are ephemeral, and jobs from fork pull requests need manual approval.
 
 ### Where each AI component lives
 
@@ -209,8 +209,8 @@ Design choices that make it stand on its own:
 | Summary feedback plugin | `russetleaf-wordpress` |
 | Summarizer deployment settings per environment (queue URL, gateway URL, scaling, chart version) | `russetleaf-gitops` |
 | LiteLLM gateway and its routing config (models, fallbacks, canary weights, budgets) | `russetleaf-gitops` |
-| Self-hosted model server (llama.cpp Deployment, tolerations, home overlay) | `russetleaf-gitops` |
-| `rl-home-cp02`'s Talos label and taint | `russetleaf-infra` |
+| Self-hosted model server (llama.cpp Deployment, tolerations, on-premises overlay) | `russetleaf-gitops` |
+| `rl-onprem-cp02`'s Talos label and taint | `russetleaf-infra` |
 | Bedrock model access, gateway IAM role, SQS queues, Bedrock budget alert | `russetleaf-infra` |
 | SQS must-use plugin that queues posts | `russetleaf-wordpress` |
 
@@ -220,7 +220,7 @@ The self-hosted model is not a special case: its deployment is ordinary platform
 
 Alongside the agents that help build the project ([ADR 2004](adr/2004-agentic-ai-delivery.md)), Phase 2 runs one agent that helps **operate** it ([ADR 2006](adr/2006-ai-operations-assistant.md)):
 
-- **kagent** in the home cluster, with read-only tools for Kubernetes, Prometheus, Loki, Argo CD and Cilium.
+- **kagent** in the on-premises cluster, with read-only tools for Kubernetes, Prometheus, Loki, Argo CD and Cilium.
 - Its model calls go through the **LiteLLM gateway**, with its own key, budget and rate limits, so its cost appears on the LLM dashboards.
 - When an important alert fires, it investigates and posts a **triage note** in the alert's Slack thread: likely cause, evidence and suggested next steps from the runbook. It never changes anything; the operator decides.
 - Its diagnoses are checked against a small set of **incident scenarios** in staging, like the summarizer's evaluation gate.
@@ -235,7 +235,7 @@ These parts of Phase 1's shared platform sections exist only once the AI pipelin
 
 | Workload | gVisor? | Why |
 |---|---|---|
-| llama.cpp | Optional | Parses downloaded model files; CPU-only at home (gVisor's GPU support is limited) |
+| llama.cpp | Optional | Parses downloaded model files; CPU-only on premises (gVisor's GPU support is limited) |
 
 ### Process allow-listing
 
@@ -253,7 +253,7 @@ These parts of Phase 1's shared platform sections exist only once the AI pipelin
 
 ### Runtime security and compliance scanning
 
-- **Falco:** a rule for **unexpected outbound connections** from the LLM node (`rl-home-cp02`), which should only download model files (the CiliumNetworkPolicies also block these; Falco detects any attempt)
+- **Falco:** a rule for **unexpected outbound connections** from the LLM node (`rl-onprem-cp02`), which should only download model files (the CiliumNetworkPolicies also block these; Falco detects any attempt)
 
 ### Network policies
 
@@ -305,7 +305,7 @@ One trace then shows: a post is published → queued → picked up by the summar
 
 | Test | Load profile | Where | What it shows |
 |---|---|---|---|
-| **AI pipeline burst** | 200–500 posts queued at once | Home staging | KEDA scale-out limits, Bedrock throttling and gateway fallback to llama.cpp, dead-letter-queue behavior, time to drain the queue, cost per burst |
+| **AI pipeline burst** | 200–500 posts queued at once | On-premises staging | KEDA scale-out limits, Bedrock throttling and gateway fallback to llama.cpp, dead-letter-queue behavior, time to drain the queue, cost per burst |
 
 ### Cost alerts
 
@@ -326,11 +326,11 @@ One trace then shows: a post is published → queued → picked up by the summar
 |---|---|---|---|---|
 | **Models** (gateway routing) | Quality or cost problems in the canary or after a switch | **Git revert** of the routing weights in `platform/llm-gateway/`; then **re-summarize** affected posts (below) | Operator | Minutes, plus re-summarizing |
 
-### Model placement on `rl-home-cp02`
+### Model placement on `rl-onprem-cp02`
 
-**Protecting etcd:** etcd is sensitive to CPU starvation and disk latency. llama.cpp on `rl-home-cp02` gets a **CPU limit that leaves about one core free**, every node sets Talos's **system and kubelet reservations**, and every node uses an NVMe or SSD disk.
+**Protecting etcd:** etcd is sensitive to CPU starvation and disk latency. llama.cpp on `rl-onprem-cp02` gets a **CPU limit that leaves about one core free**, every node sets Talos's **system and kubelet reservations**, and every node uses an NVMe or SSD disk.
 
-**The model:** `rl-home-cp02` has about **5–5.5 GB** free for the model once its control-plane components are running. A **3B model** (4-bit) is the best fit: about 2.5–3.5 GB of RAM, and roughly a minute per summary on its 4-core i5-6500T (measured in step 3.1). That is fine for a queue handling 10–20 posts a month. A 7–8B model would be tight on `rl-home-cp02`; moving the model to `rl-home-cp03` (6 cores, more memory) is a possible later experiment.
+**The model:** `rl-onprem-cp02` has about **5–5.5 GB** free for the model once its control-plane components are running. A **3B model** (4-bit) is the best fit: about 2.5–3.5 GB of RAM, and roughly a minute per summary on its 4-core i5-6500T (measured in step 3.1). That is fine for a queue handling 10–20 posts a month. A 7–8B model would be tight on `rl-onprem-cp02`; moving the model to `rl-onprem-cp03` (6 cores, more memory) is a possible later experiment.
 
 ### SLOs
 
@@ -341,10 +341,10 @@ One trace then shows: a post is published → queued → picked up by the summar
 
 ### Running costs
 
-| Component | russetleaf.dev (home, 24/7) | aws.russetleaf.dev (AWS, OpenTofu in GitHub) | Est. monthly cost (USD) |
+| Component | russetleaf.dev (on-premises, 24/7) | aws.russetleaf.dev (AWS, OpenTofu in GitHub) | Est. monthly cost (USD) |
 |---|---|---|---|
 | AI post summaries | **Real SQS** + KEDA-scaled summarizer | — (not on aws.russetleaf.dev) | <$1 |
 | LLM gateway | LiteLLM in-cluster, routing to **real Amazon Bedrock** and the self-hosted model | — (not on aws.russetleaf.dev) | ~$1–$2 (Bedrock tokens) |
-| Self-hosted model | llama.cpp (CPU build) on `rl-home-cp02`, CPU-limited to protect etcd | — (not on aws.russetleaf.dev) | ~$2–$4 (electricity for `rl-home-cp02`) |
+| Self-hosted model | llama.cpp (CPU build) on `rl-onprem-cp02`, CPU-limited to protect etcd | — (not on aws.russetleaf.dev) | ~$2–$4 (electricity for `rl-onprem-cp02`) |
 | Prompt evaluation | GitHub Actions on ARC runners in the cluster | — (not on aws.russetleaf.dev) | (included above) |
-| MLOps lifecycle | MLflow, Argo Workflows, online evaluation with Evidently, feedback, DVC (home cluster); fine-tuning on a rented spot GPU | — (not on aws.russetleaf.dev) | ~$0 always on; a few $ per fine-tuning run |
+| MLOps lifecycle | MLflow, Argo Workflows, online evaluation with Evidently, feedback, DVC (on-premises cluster); fine-tuning on a rented spot GPU | — (not on aws.russetleaf.dev) | ~$0 always on; a few $ per fine-tuning run |

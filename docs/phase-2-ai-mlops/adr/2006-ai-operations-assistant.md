@@ -2,7 +2,7 @@
 
 - **Status:** Accepted; extended by [ADR 2007](2007-ai-diagnosis-and-remediation-proposals.md)
 - **Date:** 2026-11-02
-- **Applies to:** the home cluster's operations: alert triage and troubleshooting
+- **Applies to:** the on-premises cluster's operations: alert triage and troubleshooting
 - **Phase:** 2
 
 > **Update ([ADR 2007](2007-ai-diagnosis-and-remediation-proposals.md)):** the assistant gains a knowledge base of the project's documentation and can propose fixes as pull requests for the operator to review; it still makes no direct changes.
@@ -13,7 +13,7 @@
 
 ## Decision
 
-- **kagent** (a CNCF sandbox project) runs in the home cluster as an **AI operations assistant**: agents defined as Kubernetes resources, using tools for Kubernetes, Prometheus, Loki, Argo CD and Cilium (through MCP tool servers).
+- **kagent** (a CNCF sandbox project) runs in the on-premises cluster as an **AI operations assistant**: agents defined as Kubernetes resources, using tools for Kubernetes, Prometheus, Loki, Argo CD and Cilium (through MCP tool servers).
 - **Models through the gateway:** kagent's model configuration points at the **LiteLLM gateway**, with its own key, a small daily budget and rate limits, so its cost and usage appear on the existing LLM dashboards.
 - **Read-only by design:** its service accounts are bound to the **read-only** role ([ADR 1033](../../phase-1-russetleaf-dev/adr/1033-identity-and-access.md)), with no access to Secrets; tools that change anything (apply, delete, scale, exec) are not installed; its API requests appear in the audit log under its own identity. It **suggests**; the operator decides and acts.
 - **Alert triage:** critical and selected warning alerts are also sent from Alertmanager to the assistant, which investigates (events, logs, metrics, recent Argo CD syncs and network drops) and posts a **triage note** in the alert's Slack thread: likely cause, evidence, and suggested next steps from the runbook.
@@ -30,7 +30,7 @@
 ## Consequences
 
 - Faster first look at incidents, with evidence gathered in one place.
-- A few more components (the controller, UI and tool servers, roughly 0.3–0.6 GB; check current figures when installing), placed on `rl-home-cp01`, which has the headroom.
+- A few more components (the controller, UI and tool servers, roughly 0.3–0.6 GB; check current figures when installing), placed on `rl-onprem-cp01`, which has the headroom.
 - A small, bounded LLM cost through the gateway's budget.
 - kagent is young; resource names and tools may change between versions, so pin the version and check its documentation when building.
 

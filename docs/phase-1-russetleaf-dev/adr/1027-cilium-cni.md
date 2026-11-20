@@ -7,7 +7,7 @@
 
 > **Update ([ADR 3003](../../phase-3-aws-russetleaf-dev/adr/3003-cilium-chaining-on-eks.md)):** the project is now built in three phases ([ADR 1037](1037-project-phases.md)). This ADR covers the decision to use Cilium and its use on Talos (Phase 1). **Cilium on EKS, in chaining mode with the VPC CNI,** is recorded in [ADR 3003](../../phase-3-aws-russetleaf-dev/adr/3003-cilium-chaining-on-eks.md) (Phase 3).
 
-> **Update ([ADR 1039](1039-bootstrap-through-talos-inline-manifests.md)):** at home, Cilium is installed at bootstrap through Talos's inline manifests, then adopted by Argo CD.
+> **Update ([ADR 1039](1039-bootstrap-through-talos-inline-manifests.md)):** on premises, Cilium is installed at bootstrap through Talos's inline manifests, then adopted by Argo CD.
 
 ## Context
 

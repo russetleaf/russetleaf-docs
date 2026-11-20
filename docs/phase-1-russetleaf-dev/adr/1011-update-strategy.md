@@ -7,7 +7,7 @@
 
 ## Context
 
-The project has many layers that need regular updates: WordPress core, plugins and themes; base images; the summarizer's Python dependencies; platform components (Cilium, Argo CD, Kyverno, Falco, Loki and others); Talos and Kubernetes at home; EKS, AMIs, RDS and ElastiCache on AWS; OpenTofu providers; CLI tools and GitHub Actions; and the models. The design already pins versions (images by digest, charts, OpenTofu), disables WordPress's in-place updates (`DISALLOW_FILE_MODS`), and has ci kind tests, on-demand staging, promotion pull requests and Argo Rollouts canaries. What was missing was one consistent strategy, plus coverage of WordPress plugin vulnerabilities (which Trivy does not detect) and of end-of-life versions.
+The project has many layers that need regular updates: WordPress core, plugins and themes; base images; the summarizer's Python dependencies; platform components (Cilium, Argo CD, Kyverno, Falco, Loki and others); Talos and Kubernetes on premises; EKS, AMIs, RDS and ElastiCache on AWS; OpenTofu providers; CLI tools and GitHub Actions; and the models. The design already pins versions (images by digest, charts, OpenTofu), disables WordPress's in-place updates (`DISALLOW_FILE_MODS`), and has ci kind tests, on-demand staging, promotion pull requests and Argo Rollouts canaries. What was missing was one consistent strategy, plus coverage of WordPress plugin vulnerabilities (which Trivy does not detect) and of end-of-life versions.
 
 ## Decision
 
@@ -16,8 +16,8 @@ The project has many layers that need regular updates: WordPress core, plugins a
     - **Patch** updates to platform charts, CLI tools and GitHub Actions **auto-merge** once CI passes.
     - **Minor and major** platform updates are reviewed by hand and rehearsed on a **local Talos-in-Docker cluster** first.
     - **Application** updates (WordPress image, summarizer) go through **ci → staging → promotion → canary**.
-    - **Talos and Kubernetes** upgrades follow a fixed procedure (backups, local rehearsal, one node at a time: `rl-home-cp02`, `rl-home-cp01`, then `rl-home-cp03`; rollback with `talosctl rollback`).
-    - **EKS** versions are bumped before demos, since the stack is rebuilt each time; RDS's MariaDB version stays matched to the home MariaDB.
+    - **Talos and Kubernetes** upgrades follow a fixed procedure (backups, local rehearsal, one node at a time: `rl-onprem-cp02`, `rl-onprem-cp01`, then `rl-onprem-cp03`; rollback with `talosctl rollback`).
+    - **EKS** versions are bumped before demos, since the stack is rebuilt each time; RDS's MariaDB version stays matched to the on-premises MariaDB.
     - **Models** change only after the evaluation gate and a gateway canary.
 - **Security updates** skip the weekly schedule and are released within **48 hours**, triggered by **WPScan** (WordPress plugins and themes, weekly and in CI), Trivy Operator (running images) and Renovate's security alerts.
 - A **monthly version-age report** flags anything within 90 days of end of support.
@@ -29,7 +29,7 @@ The project has many layers that need regular updates: WordPress core, plugins a
 - **Auto-merging everything that passes CI:** less review work, but minor and major platform changes (for example, Cilium, Kyverno) can break the cluster in ways CI on kind does not catch.
 - **Manual updates only:** easy to fall behind, with no reminders; Renovate's Dependency Dashboard and the version-age report prevent that.
 - **Dependabot instead of Renovate:** works for common ecosystems, but Renovate handles more (Helm charts in Argo CD manifests, `.mise.toml`, Composer via WPackagist, custom version rules) and has better grouping and auto-merge controls.
-- **A full staging cluster for platform updates:** would catch more, but `rl-home-cp01` has no memory for a second cluster; local Talos-in-Docker rehearsal is the lightweight substitute.
+- **A full staging cluster for platform updates:** would catch more, but `rl-onprem-cp01` has no memory for a second cluster; local Talos-in-Docker rehearsal is the lightweight substitute.
 
 ## Consequences
 

@@ -25,7 +25,7 @@ flowchart LR
   visitor -->|HTTPS| site
   admin -->|"ALB OIDC + Google"| site
   op -->|"demo-up / demo-down"| gh
-  gh -->|"workflows on home runners"| aws
+  gh -->|"workflows on on-premises runners"| aws
   dev -->|"Argo CD (hub), seed data"| site
   site --> aws
   site -->|alerts| slack
@@ -56,7 +56,7 @@ flowchart TB
 - **RDS for MariaDB** with **Multi-AZ** turned on. (Aurora does not offer MariaDB; if the site outgrew RDS, Aurora MySQL would be the next step, at the cost of switching engines.) **RDS Proxy** in front of it keeps failovers to seconds.
 - At least **2–3 WordPress replicas** spread across availability zones, plus a **HorizontalPodAutoscaler** and **PodDisruptionBudgets**.
 - EKS worker nodes in **multiple AZs**, provisioned by **Karpenter** (see Delivery and operations).
-- **What this project actually runs:** this design is highly available within one region **while the demo runs**, with one deliberate demo cut (one NAT Gateway instead of three). The home lab, with three control-plane nodes, replicated MariaDB and spread workloads, **survives any single node failure**, but its home power supply and internet connection remain single points of failure ([ADR 1020](../phase-1-russetleaf-dev/adr/1020-three-node-ha-home-cluster.md)). Both are explained, with recovery targets and the changes (and costs) that would add HA, in [ADR 1014](../phase-1-russetleaf-dev/adr/1014-availability-levels.md).
+- **What this project actually runs:** this design is highly available within one region **while the demo runs**, with one deliberate demo cut (one NAT Gateway instead of three). The on-premises lab, with three control-plane nodes, replicated MariaDB and spread workloads, **survives any single node failure**, but its site power supply and internet connection remain single points of failure ([ADR 1020](../phase-1-russetleaf-dev/adr/1020-three-node-ha-onprem-cluster.md)). Both are explained, with recovery targets and the changes (and costs) that would add HA, in [ADR 1014](../phase-1-russetleaf-dev/adr/1014-availability-levels.md).
 
 ### Traffic and edge
 
@@ -85,7 +85,7 @@ flowchart LR
 
 ### Risk: confirm IAM tokens work from PHP first (with a fallback)
 
-The one uncertain part of this design is whether **PHP's MariaDB client (mysqlnd)** can send an IAM auth token to RDS Proxy. The token is sent as a clear-text password over TLS, which some clients only allow with extra settings. This is checked by a **short, early test** (Phase 3 step 1.6) before any IAM-specific code is relied on: a small test pod with the WordPress image logs in to the proxy with a token. Until that test passes, the home lab builds only the `password` mode of the `db.php` drop-in.
+The one uncertain part of this design is whether **PHP's MariaDB client (mysqlnd)** can send an IAM auth token to RDS Proxy. The token is sent as a clear-text password over TLS, which some clients only allow with extra settings. This is checked by a **short, early test** (Phase 3 step 1.6) before any IAM-specific code is relied on: a small test pod with the WordPress image logs in to the proxy with a token. Until that test passes, the on-premises lab builds only the `password` mode of the `db.php` drop-in.
 
 **If the test fails, the fallback is password login to RDS Proxy with an automatically rotated secret.** It keeps almost every benefit:
 
@@ -97,7 +97,7 @@ The one uncertain part of this design is whether **PHP's MariaDB client (mysqlnd
 | Rotation | Not needed (tokens expire) | **Secrets Manager automatic rotation** (for example, every 30 days), using the **alternating-users** strategy: two database users (`wordpress_a`, `wordpress_b`), so the previous credentials keep working until the next rotation and nothing breaks mid-rotation |
 | Picking up a new password | n/a | External Secrets refreshes the Secret; **Reloader** (or an Argo Rollouts restart) restarts WordPress so new pods use it |
 | Connection pooling, fast failover, TLS | Yes | Yes (still through RDS Proxy) |
-| Chart setting | `database.auth: iam` | `database.auth: password` (the same mode the home lab uses) |
+| Chart setting | `database.auth: iam` | `database.auth: password` (the same mode the on-premises lab uses) |
 
 Switching between the two is an **overlay change** in `russetleaf-gitops` (`database.auth` and the credential source) plus the proxy's auth setting in `russetleaf-infra`; the WordPress image supports both.
 
@@ -110,7 +110,7 @@ Switching between the two is an **overlay change** in `russetleaf-gitops` (`data
 | `russetleaf-wordpress` | The `db.php` drop-in (IAM token mode) and a chart setting **`database.auth`**, `password` (the default) or `iam`, plus the RDS CA certificate bundle for TLS |
 | `russetleaf-infra` | aws.russetleaf.dev: RDS Proxy (IAM required, TLS required), the `wordpress` secret and the proxy's role to read it, `manage_master_user_password`, `rds-db:connect` on the WordPress and seed-Job roles |
 | `russetleaf-gitops` `overlays/aws` | `database.auth: iam`, the proxy endpoint, the `db-setup` PreSync Job, CiliumNetworkPolicy allowing WordPress → the proxy endpoint (by DNS name) |
-| `russetleaf-gitops` `overlays/home`, `overlays/home-staging` | `database.auth: password`, pointing at the MariaDB Operator-generated Secret |
+| `russetleaf-gitops` `overlays/onprem`, `overlays/onprem-staging` | `database.auth: password`, pointing at the MariaDB Operator-generated Secret |
 | `russetleaf-gitops` `base/` | Unchanged, except that **no database credential source lives in the base**: each overlay supplies its own |
 
 The WordPress Rollout, Service, HPA and the rest of the base are the same for both sites; only where the credential comes from differs, which is exactly what overlays are for. A `russetleaf-wordpress` release adding the drop-in goes through ci → staging → prod like any other.
@@ -146,7 +146,7 @@ podDisruptionBudget:
 topologySpread: zone               # spread pods across availability zones
 
 database:
-  auth: iam                        # home overlays: password (Secret generated by MariaDB Operator)
+  auth: iam                        # on-premises overlays: password (Secret generated by MariaDB Operator)
   host: <proxy-name>.proxy-<id>.us-east-1.rds.amazonaws.com   # RDS Proxy endpoint
   port: 3306
   name: wordpress
@@ -193,7 +193,7 @@ ingress:
 
 rollout:
   canarySteps: [20, 50, 100]
-  analysisTemplate: cloudwatch-alb # home overlay: prometheus-cilium-gateway
+  analysisTemplate: cloudwatch-alb # on-premises overlay: prometheus-cilium-gateway
 
 extraConfig: |
   define('DISALLOW_FILE_MODS', true);
@@ -236,7 +236,7 @@ These are approximate prices for **`us-east-1`**, on demand unless noted, for a 
 | Alerting (SNS, Amazon Q Developer in chat applications, Slack free plan) | CloudWatch alarms and budget alerts to Slack | $0 |
 | **Total** | | **~$515–$575 / month** |
 
-The last two rows (CloudTrail and GuardDuty; Security Hub, Config and KMS) are organization-wide services, already counted in the home lab's always-on cost; without them, the demo stack alone is about **$510–$555 / month** if left running.
+The last two rows (CloudTrail and GuardDuty; Security Hub, Config and KMS) are organization-wide services, already counted in the on-premises lab's always-on cost; without them, the demo stack alone is about **$510–$555 / month** if left running.
 
 GuardDuty EKS Runtime Monitoring, if used instead of Falco, is billed per vCPU monitored and would add roughly $10–$20/month at this size.
 
@@ -313,7 +313,7 @@ The full AWS design costs roughly **$0.70 an hour** while running. Run `tofu app
 | 10 hours | ~$7 |
 | 20 hours | ~$14 |
 
-Together with the home lab (about $14–33 a month always on), the total is about **$30–50 a month** at 20 demo hours. If the AWS accounts are new, their free-tier credits can cover some of this.
+Together with the on-premises lab (about $14–33 a month always on), the total is about **$30–50 a month** at 20 demo hours. If the AWS accounts are new, their free-tier credits can cover some of this.
 
 **Tip:** set an AWS Budget with an email alert (for example, at $25) so a forgotten `tofu destroy` does not run up a bill. NAT Gateways and RDS are the most expensive items to leave running.
 
@@ -323,13 +323,13 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 
 ### Sandboxed runtimes (gVisor)
 
-**aws.russetleaf.dev (EKS):** gVisor is not used. AWS does not offer it as a managed option, and installing it through a custom AMI or node user data is not worth it for a demo cluster (the CI runners only run at home anyway). seccomp `RuntimeDefault` still applies.
+**aws.russetleaf.dev (EKS):** gVisor is not used. AWS does not offer it as a managed option, and installing it through a custom AMI or node user data is not worth it for a demo cluster (the CI runners only run on premises anyway). seccomp `RuntimeDefault` still applies.
 
 ### Workload permissions and database security
 
 - S3 and SES access through **EKS Pod Identity** (IRSA only for any component that does not support Pod Identity), not stored AWS access keys. Each role gets only what it needs:
     - WordPress may write to its S3 bucket and `rds-db:connect` as the `wordpress` user through RDS Proxy.
-- **No application database password on aws.russetleaf.dev:** WordPress logs in to RDS Proxy with IAM auth tokens; the master password is generated and rotated by RDS. At home, MariaDB Operator generates and rotates the passwords. See [Database access and credentials](../phase-1-russetleaf-dev/design.md#database-access-and-credentials).
+- **No application database password on aws.russetleaf.dev:** WordPress logs in to RDS Proxy with IAM auth tokens; the master password is generated and rotated by RDS. On premises, MariaDB Operator generates and rotates the passwords. See [Database access and credentials](../phase-1-russetleaf-dev/design.md#database-access-and-credentials).
 - RDS in **private subnets**, with **TLS required by the server** (`require_secure_transport = ON`) on every connection, including RDS Proxy's and the `db-setup` Job's, and **encrypted with a customer-managed KMS key** ([ADR 1043](../phase-1-russetleaf-dev/adr/1043-database-encryption.md)).
 
 ### Intrusion detection and prevention
@@ -341,7 +341,7 @@ These parts of Phase 1's shared platform sections apply only to the EKS site.
 The shared runbook ([ADR 1045](../phase-1-russetleaf-dev/adr/1045-container-forensics.md); the Phase 1 design's [Compromised containers](../phase-1-russetleaf-dev/design.md#compromised-containers)) gains an EKS section:
 
 - **Hold the stack:** annotate the node `karpenter.sh/do-not-disrupt: "true"` so consolidation leaves it alone, and set the **forensic hold** (a `ForensicHold=true` tag set by the `forensic-hold` workflow). While it is set, `demo-down` refuses to run and the safety net alerts without tearing down. A held stack still costs about $0.70 an hour, so the hold is released as soon as capture is done.
-- **More can be captured than at home:** whole-node memory with **AVML** through **SSM Session Manager** (its policy attached to the node role only during an incident), uploaded straight to the evidence bucket, and an **EBS snapshot** of the node's volume, tagged `ForensicHold=true`.
+- **More can be captured than on premises:** whole-node memory with **AVML** through **SSM Session Manager** (its policy attached to the node role only during an incident), uploaded straight to the evidence bucket, and an **EBS snapshot** of the node's volume, tagged `ForensicHold=true`.
 - **Isolate the node:** swap its security groups for an **isolation security group** with no rules, and turn on termination protection.
 - **Spot nodes** can be reclaimed with two minutes' warning, so memory is captured first.
 - **Logs already kept:** VPC flow logs and Resolver query logs in Log Archive, and EKS audit logs (1 year); the runbook records the time ranges.
@@ -398,7 +398,7 @@ Built and rehearsed in Phase 3 step 5.1c.
 |---|---|---|---|---|
 | **prod (AWS demo)** | aws.russetleaf.dev | The full production design, for demos | On demand | see the AWS costs |
 
-AWS has no separate staging: aws.russetleaf.dev is already temporary, its OpenTofu is checked with `plan`, `tofu test` and Checkov before each demo, and its application versions have already passed home staging and production.
+AWS has no separate staging: aws.russetleaf.dev is already temporary, its OpenTofu is checked with `plan`, `tofu test` and Checkov before each demo, and its application versions have already passed on-premises staging and production.
 
 ### Cost alerts
 
@@ -416,7 +416,7 @@ AWS has no separate staging: aws.russetleaf.dev is already temporary, its OpenTo
 
 | Layer | How updates arrive | How they are tested and rolled out | Cadence |
 |---|---|---|---|
-| **EKS** | Versions bumped in `russetleaf-infra/envs/aws`: cluster version, **pinned EKS add-on versions** (VPC CNI, CoreDNS, kube-proxy, EBS CSI, Pod Identity agent; Renovate cannot track these, so the monthly version-age workflow checks `aws eks describe-addon-versions` for the cluster version and opens a pull request when newer compatible versions exist), **pinned AMI version** in Karpenter's node class (Renovate-tracked), RDS and ElastiCache engine versions | The stack is rebuilt every demo, so there are no in-place upgrades; `demo-up` uses the new versions. RDS's MariaDB version is kept **matched to the home MariaDB**, so backups restore cleanly | Before each demo; always in EKS **standard support** |
+| **EKS** | Versions bumped in `russetleaf-infra/envs/aws`: cluster version, **pinned EKS add-on versions** (VPC CNI, CoreDNS, kube-proxy, EBS CSI, Pod Identity agent; Renovate cannot track these, so the monthly version-age workflow checks `aws eks describe-addon-versions` for the cluster version and opens a pull request when newer compatible versions exist), **pinned AMI version** in Karpenter's node class (Renovate-tracked), RDS and ElastiCache engine versions | The stack is rebuilt every demo, so there are no in-place upgrades; `demo-up` uses the new versions. RDS's MariaDB version is kept **matched to the on-premises MariaDB**, so backups restore cleanly | Before each demo; always in EKS **standard support** |
 
 ### Rollback
 
@@ -431,10 +431,10 @@ AWS has no separate staging: aws.russetleaf.dev is already temporary, its OpenTo
 
 ### Database content
 
-**Same engine on both sites:** aws.russetleaf.dev uses **RDS for MariaDB**, so russetleaf.dev's backups restore into it directly, with no collation rewrites or MySQL compatibility fixes. Pin the home MariaDB to the **same major version** RDS offers (for example, 11.4 LTS), so a dump from one always loads into the other.
+**Same engine on both sites:** aws.russetleaf.dev uses **RDS for MariaDB**, so russetleaf.dev's backups restore into it directly, with no collation rewrites or MySQL compatibility fixes. Pin the on-premises MariaDB to the **same major version** RDS offers (for example, 11.4 LTS), so a dump from one always loads into the other.
 
 ### Running costs
 
-| Component | russetleaf.dev (home, 24/7) | aws.russetleaf.dev (AWS, OpenTofu in GitHub) | Est. monthly cost (USD) |
+| Component | russetleaf.dev (on-premises, 24/7) | aws.russetleaf.dev (AWS, OpenTofu in GitHub) | Est. monthly cost (USD) |
 |---|---|---|---|
 | aws.russetleaf.dev always-on edge | n/a | Route 53 zone, CloudFront, offline page, media bucket, RDS snapshot (`envs/aws-edge`) | ~$1 |

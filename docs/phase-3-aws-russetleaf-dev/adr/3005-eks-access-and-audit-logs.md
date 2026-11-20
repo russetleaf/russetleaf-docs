@@ -7,7 +7,7 @@
 
 ## Context
 
-[ADR 1033](../../phase-1-russetleaf-dev/adr/1033-identity-and-access.md) gives people short-lived, personal, revocable access to the home cluster (Dex OIDC, group-based roles, an alerted break-glass path) and keeps a year of audit logs in the Log Archive account. EKS authenticates people through IAM, and its audit logs go to CloudWatch, so the same goals need AWS-specific mechanisms.
+[ADR 1033](../../phase-1-russetleaf-dev/adr/1033-identity-and-access.md) gives people short-lived, personal, revocable access to the on-premises cluster (Dex OIDC, group-based roles, an alerted break-glass path) and keeps a year of audit logs in the Log Archive account. EKS authenticates people through IAM, and its audit logs go to CloudWatch, so the same goals need AWS-specific mechanisms.
 
 ## Decision
 
@@ -25,7 +25,7 @@
 ## Consequences
 
 - People never hold long-lived EKS credentials; cluster-admin needs a separate, auditable sign-in.
-- EKS and home audit logs end up in the same tamper-evident archive.
+- EKS and on-premises audit logs end up in the same tamper-evident archive.
 
 ## When to revisit
 

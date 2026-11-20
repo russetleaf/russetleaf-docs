@@ -2,7 +2,7 @@
 
 - **Status:** Accepted; updated by [ADR 1048](../../phase-1-russetleaf-dev/adr/1048-bash-script-standard.md)
 - **Date:** 2026-11-02
-- **Applies to:** how Phases 2 and 3 are built: the repos, the home cluster, the AWS accounts and the GitHub organization
+- **Applies to:** how Phases 2 and 3 are built: the repos, the on-premises cluster, the AWS accounts and the GitHub organization
 - **Phase:** 2 (first used here). Phase 3 applies it to AWS infrastructure.
 
 > **Update ([ADR 1048](../../phase-1-russetleaf-dev/adr/1048-bash-script-standard.md)):** the `AGENTS.md` and `CLAUDE.md` files start in **Phase 1** (in `russetleaf-docs` now, and in each code repo from step 1.1), carrying the bash script standard, so every Claude Code session already starts with the project's rules.
@@ -21,7 +21,7 @@ Agents speed up work that has fast, objective checks (code, OpenTofu, manifests,
 - **Sandbox first:** agents iterate against local environments (kind or Talos in Docker, Moto, the mock LLM, the Docker Compose demo), never against production.
 - **Least-privilege identities for agents:**
     - **GitHub:** commits on branches and pull requests only; branch protection requires the operator's review; no admin or settings access.
-    - **Kubernetes (home):** the **read-only** role ([ADR 1033](../../phase-1-russetleaf-dev/adr/1033-identity-and-access.md)), with no access to Secrets, through its own short-lived kubeconfig.
+    - **Kubernetes (on-premises):** the **read-only** role ([ADR 1033](../../phase-1-russetleaf-dev/adr/1033-identity-and-access.md)), with no access to Secrets, through its own short-lived kubeconfig.
     - **AWS (Phase 3):** a **plan-only** role (read access plus the OpenTofu state lock), so an agent can run `tofu plan` but never `apply`; applies go through the human-approved `apply` environment.
     - **No secrets in the agent's context:** `.env` files, kubeconfigs with write access, talosconfigs and credentials are excluded through the agent's permission settings.
 - **Agent instructions in every repo:** an **`AGENTS.md`** (the conventions, how to run the checks, what the agent must not do), with a `CLAUDE.md` that imports it, so instructions are versioned and reviewed like code.

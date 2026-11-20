@@ -1,4 +1,4 @@
-# ADR 1029: On-demand, scale-to-zero staging on the home cluster
+# ADR 1029: On-demand, scale-to-zero staging on the on-premises cluster
 
 - **Status:** Accepted
 - **Date:** 2026-11-01
@@ -7,13 +7,13 @@
 
 ## Context
 
-Every release needs testing against real AWS services, real models and realistic data before production. Options range from no staging, to an always-on copy, to a separate cluster. The home cluster's memory was tight when staging was designed (two 8 GB nodes); with [ADR 1020](1020-three-node-ha-home-cluster.md)'s third node it could now afford an always-on copy.
+Every release needs testing against real AWS services, real models and realistic data before production. Options range from no staging, to an always-on copy, to a separate cluster. The on-premises cluster's memory was tight when staging was designed (two 8 GB nodes); with [ADR 1020](1020-three-node-ha-onprem-cluster.md)'s third node it could now afford an always-on copy.
 
 ## Decision
 
 - **Staging exists only while it is being tested:** Argo CD Applications for staging (WordPress, a small MariaDB, the summarizer) are in Git with **auto-sync off**; the `staging-test` workflow syncs them, loads **scrubbed** production data, runs smoke tests, the performance regression gate and a short soak, records the results, then **deletes** them (volumes included).
 - Staging has its own namespaces, database, bucket, queue, secrets and Bedrock budget; it shares the gateway and the self-hosted model.
-- AWS has no separate staging: aws.russetleaf.dev's versions are tested at home first.
+- AWS has no separate staging: aws.russetleaf.dev's versions are tested on premises first.
 
 ## Alternatives considered
 

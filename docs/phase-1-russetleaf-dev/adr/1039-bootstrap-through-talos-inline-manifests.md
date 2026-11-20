@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-02
-- **Applies to:** the home Talos cluster's bootstrap (`russetleaf-infra/envs/home`, `russetleaf-gitops/platform/`)
+- **Applies to:** the on-premises Talos cluster's bootstrap (`russetleaf-infra/envs/onprem`, `russetleaf-gitops/platform/`)
 - **Phase:** 1. Phase 3 bootstraps EKS differently ([ADR 3003](../../phase-3-aws-russetleaf-dev/adr/3003-cilium-chaining-on-eks.md)).
 
 ## Context
@@ -13,10 +13,10 @@ Talos images cannot contain Kubernetes applications: Image Factory only adds sys
 
 ## Decision
 
-- **OpenTofu renders** the Cilium chart, the Argo CD chart, a root **Application** pointing at `russetleaf-gitops/bootstrap/home`, and the kubelet serving-certificate approver ([ADR 1035](1035-platform-security.md)) into the machine config's **`cluster.inlineManifests`**, with pinned chart versions and the values Talos documents for Cilium.
+- **OpenTofu renders** the Cilium chart, the Argo CD chart, a root **Application** pointing at `russetleaf-gitops/bootstrap/onprem`, and the kubelet serving-certificate approver ([ADR 1035](1035-platform-security.md)) into the machine config's **`cluster.inlineManifests`**, with pinned chart versions and the values Talos documents for Cilium.
 - **Talos applies them during bootstrap**, so the cluster comes up with networking, GitOps and its root Application already running.
 - **Hand-off:** Phase 1 step 3.1 adds `platform/cilium/` and `platform/argocd/` with the same versions and values, so Argo CD adopts both without changing them; then the Cilium and Argo CD inline manifests are **removed** from the machine config, so later `talosctl upgrade-k8s` runs never roll back versions Argo CD has upgraded. (Before relying on it, confirm in a local Talos-in-Docker cluster that removing an inline manifest leaves its resources in place.)
-- **Fresh bootstraps after the hand-off:** a OpenTofu variable in `envs/home` (`bootstrap_inline_manifests`, default `false` once the hand-off is done) puts the inline manifests back for any new cluster: a rebuild, the yearly disaster drill or a local rehearsal. Without it, a rebuilt cluster would come up with no network plugin. After Argo CD has adopted Cilium and itself again, the variable is set back to `false`. (Joining a replacement node to the existing cluster does not need it.)
+- **Fresh bootstraps after the hand-off:** a OpenTofu variable in `envs/onprem` (`bootstrap_inline_manifests`, default `false` once the hand-off is done) puts the inline manifests back for any new cluster: a rebuild, the yearly disaster drill or a local rehearsal. Without it, a rebuilt cluster would come up with no network plugin. After Argo CD has adopted Cilium and itself again, the variable is set back to `false`. (Joining a replacement node to the existing cluster does not need it.)
 - The Cilium Application stays on **manual sync**, with the `helm rollback` recovery runbook ([ADR 1016](1016-rollback-strategy.md)).
 
 ## Alternatives considered

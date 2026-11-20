@@ -14,10 +14,10 @@ The design has no SIEM (security information and event management system). Its f
 That covers detection and alerting, but leaves three gaps that a SIEM normally fills:
 
 - **No single place to investigate.** Following an incident means searching Loki, CloudTrail (through Athena), GuardDuty and Cloudflare separately, with no shared timeline.
-- **Short retention.** The home cluster's logs are kept for 7 days. Only the API audit log is archived (1 year, [ADR 1033](1033-identity-and-access.md)), and the archive is not searchable from Grafana. An intrusion found after a week has lost its Falco events and sign-in logs.
+- **Short retention.** The on-premises cluster's logs are kept for 7 days. Only the API audit log is archived (1 year, [ADR 1033](1033-identity-and-access.md)), and the archive is not searchable from Grafana. An intrusion found after a week has lost its Falco events and sign-in logs.
 - **Detection rules without a standard form or tests.** The Loki alert rules are written by hand in LogQL, nothing checks that they still fire after a change in log format, and the planned MITRE ATT&CK detection map (step 7.1, [ADR 1036](1036-compliance-frameworks-and-privacy.md)) would be kept by hand.
 
-Constraints: about 32 GB of memory across three nodes, mostly allocated ([ADR 1020](1020-three-node-ha-home-cluster.md)); cost near zero; one operator; Talos nodes, which run no host agents; open-source tools by default ([ADR 1053](1053-open-source-tools-by-default.md)).
+Constraints: about 32 GB of memory across three nodes, mostly allocated ([ADR 1020](1020-three-node-ha-onprem-cluster.md)); cost near zero; one operator; Talos nodes, which run no host agents; open-source tools by default ([ADR 1053](1053-open-source-tools-by-default.md)).
 
 ## Decision
 
@@ -36,7 +36,7 @@ A full SIEM is recorded in the [improvements list](../improvements.md) (I1-4), w
 
 - **Wazuh** (open source, GPL): host intrusion detection, file integrity monitoring and a SIEM with its own dashboard. Its agent needs a host operating system to run on, which Talos does not provide, so it would see only what the cluster already sends; its indexer (an OpenSearch fork) needs about 4–8 GB of memory; and its detections overlap with Falco and GuardDuty.
 - **Security Onion:** a complete security monitoring distribution, but it needs a dedicated machine with 16 GB of memory or more, and it is built around network sensors (Suricata, Zeek), which [ADR 1017](1017-intrusion-detection-and-prevention.md) chose not to use.
-- **OpenSearch Security Analytics,** at home or as Amazon OpenSearch Service, optionally fed by **Security Lake:** runs Sigma rules natively and correlates findings. At home, it has the memory cost [ADR 1005](1005-loki-alloy-for-logs.md) rejected; on AWS, about $25 a month or more for the smallest instance, plus Security Lake's per-GB ingestion and a second copy of every log.
+- **OpenSearch Security Analytics,** on premises or as Amazon OpenSearch Service, optionally fed by **Security Lake:** runs Sigma rules natively and correlates findings. On premises, it has the memory cost [ADR 1005](1005-loki-alloy-for-logs.md) rejected; on AWS, about $25 a month or more for the smallest instance, plus Security Lake's per-GB ingestion and a second copy of every log.
 - **Elastic Security:** the same memory and operating costs as OpenSearch, with more features under Elastic's licenses.
 - **Splunk, Microsoft Sentinel or Datadog Cloud SIEM:** proprietary ([ADR 1053](1053-open-source-tools-by-default.md)), and paid beyond small free tiers that do not hold this project's volume for 90 days.
 - **Loki rules written by hand, as now:** no standard format, no tests, and a hand-kept ATT&CK map.

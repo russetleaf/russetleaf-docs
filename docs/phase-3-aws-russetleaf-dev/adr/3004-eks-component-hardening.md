@@ -7,27 +7,27 @@
 
 ## Context
 
-[ADR 1031](../../phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md) sets explicit controls and checks for every Kubernetes component on the home Talos cluster, and the controls shared by both clusters (Pod Security Admission labels, Kyverno's `restricted` set, service-account tokens off by default, network policies). On EKS, AWS manages the control plane under the shared-responsibility model; the project controls encryption settings, endpoint access, the nodes, add-ons and workloads. EKS does not enforce Pod Security by default.
+[ADR 1031](../../phase-1-russetleaf-dev/adr/1031-kubernetes-component-hardening.md) sets explicit controls and checks for every Kubernetes component on the on-premises Talos cluster, and the controls shared by both clusters (Pod Security Admission labels, Kyverno's `restricted` set, service-account tokens off by default, network policies). On EKS, AWS manages the control plane under the shared-responsibility model; the project controls encryption settings, endpoint access, the nodes, add-ons and workloads. EKS does not enforce Pod Security by default.
 
 ## Decision
 
 - **Secrets envelope encryption** with a **customer-managed KMS key** (not the AWS-owned default).
-- **API endpoint:** public but **restricted to the home network's address**, with private access on for the nodes; the demo workflows run on the home ARC runners so they come from that address.
+- **API endpoint:** public but **restricted to the main network's address**, with private access on for the nodes; the demo workflows run on the on-premises ARC runners so they come from that address.
 - **Nodes:** AL2023 with a pinned AMI version; **IMDSv2 required with a hop limit of 1**; kubelet `seccompDefault`, system and kubelet reservations, hard eviction thresholds and a per-pod PID limit ([ADR 1034](../../phase-1-russetleaf-dev/adr/1034-kubernetes-threat-model-coverage.md)) through the managed node group's launch template and Karpenter's node configuration; encrypted gp3 root volumes.
-- **Pod Security Admission labels** on every namespace, as at home, with the version pinned.
+- **Pod Security Admission labels** on every namespace, as on premises, with the version pinned.
 - **Add-on versions pinned** in OpenTofu, checked monthly by the version-age workflow.
 - **Checks:** kube-bench with the EKS profile on every demo ([ADR 3001](3001-kube-bench-eks-only.md)), `aws eks describe-cluster` for encryption and endpoint access, and the EKS items of the security review (Phase 3 step 4.1); the review states that the control plane is AWS's responsibility.
 
 ## Alternatives considered
 
 - **AWS-owned keys for envelope encryption:** the default and free, but the SRA prefers customer-managed keys for control and audit.
-- **A private-only API endpoint:** stronger, but needs a VPN or bastion for the workstation and the home runners; the home-address restriction is enough for a demo cluster.
+- **A private-only API endpoint:** stronger, but needs a VPN or bastion for the workstation and the on-premises runners; the site's public address restriction is enough for a demo cluster.
 - **Bottlerocket nodes:** a hardened, minimal OS like Talos; a good option, but AL2023 is simpler to configure with Karpenter and the managed node group.
 
 ## Consequences
 
 - A KMS key (about $1/month while the account has it).
-- The EKS hardening evidence matches the home cluster's: each control has a check and a recorded result per demo.
+- The EKS hardening evidence matches the on-premises cluster's: each control has a check and a recorded result per demo.
 
 ## When to revisit
 

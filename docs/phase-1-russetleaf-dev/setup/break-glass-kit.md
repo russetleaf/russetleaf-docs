@@ -7,8 +7,8 @@ The kit lives in three places, so that losing any two still leaves a way back in
 | Copy | Where | Opened with | Covers |
 |---|---|---|---|
 | Working copy | Bitwarden | The master password and Bitwarden's two-step login | Day-to-day use |
-| Printed copy | The safe at home, with `yubikey-backup` and a USB stick holding the GPG key | Physical access to the safe | Losing Bitwarden access |
-| Encrypted copy | Google Drive and OneDrive | A **passphrase the operator memorizes**, kept out of Bitwarden and the cloud | Losing the home (and the safe) and Bitwarden access together |
+| Printed copy | The safe, with `yubikey-backup` and a USB stick holding the GPG key | Physical access to the safe | Losing Bitwarden access |
+| Encrypted copy | Google Drive and OneDrive | A **passphrase the operator memorizes**, kept out of Bitwarden and the cloud | Losing the safe and Bitwarden access together |
 
 ## The GPG key
 
@@ -39,7 +39,7 @@ Have these ready:
     6. Check that the details name the USB stick, `RL-KIT` and exFAT, and select **Format**.
     7. **Mount it:** Disks leaves the new file system unmounted. With the partition still selected, select the mount button (the triangle) in the toolbar under the **Volumes** map, or select `RL-KIT` in the Files sidebar.
     8. Check the result: `lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINT` shows the partition with `exfat` and `RL-KIT`, mounted at `/media/<user>/RL-KIT`.
-- **A printer** connected by USB or on the home network, not a cloud print service, so the printed pages are not stored by a third party. The setup script sets CUPS, the workstation's print service, to keep no copy of a document once it has printed (`PreserveJobFiles No`; by default CUPS keeps each one on disk for a day), so the kit file never stays on the disk.
+- **A printer** connected by USB or on the main network, not a cloud print service, so the printed pages are not stored by a third party. The setup script sets CUPS, the workstation's print service, to keep no copy of a document once it has printed (`PreserveJobFiles No`; by default CUPS keeps each one on disk for a day), so the kit file never stays on the disk.
     1. **Add the printer:** a USB printer is usually added on its own when it is connected and turned on. Otherwise, or for a network printer, open the **Activities** overview, start typing `Printers`, and select **Printers**; select **Unlock** in the top right corner if it is shown, then **Add Printer…**, select the printer and select **Add**. A network printer that is not listed can be added by entering its address in the text field at the bottom of the dialog, then **Add**.
     2. **Check the print service setting:** `grep -x 'PreserveJobFiles No' /etc/cups/cupsd.conf` prints the line. If it prints nothing, run the setup script again.
     3. **Print a test page from the terminal,** the way the kit is printed: `lpstat -p` lists the printer's name, then `printf 'RussetLeaf printer test\n' | lp -d <printer>` prints one page with that line on it (`lp` reports `0 file(s)` when it reads from a pipe, which is expected). Once the page is out, `sudo find /var/spool/cups -maxdepth 1 -name 'd*'` prints nothing: CUPS keeps a document's data in a `d` file there while it prints and, with this setting, deletes it afterwards (the `c` files that remain hold only the job's name and history).
@@ -161,7 +161,7 @@ The kit file is generated from Bitwarden rather than typed, so every password an
 
         If it does not print the confirmation, the line in the file is wrong: correct it and run the block again.
 
-3. **Print** the kit file, the `paperkey` file and the public key, on a printer connected by USB or on the home network, straight from memory: `lpstat -p` lists the printers, then
+3. **Print** the kit file, the `paperkey` file and the public key, on a printer connected by USB or on the main network, straight from memory: `lpstat -p` lists the printers, then
 
     ```bash
     lp -d <printer> "${RL_KIT}/kit.txt" "${RL_KIT}/gpg-paperkey.txt" "${RL_KIT}/gpg-public-key.asc"
@@ -186,7 +186,7 @@ The kit file is generated from Bitwarden rather than typed, so every password an
     ```
 
     Each file is reported as copied, and `udisksctl` reports the stick unmounted. If it reports `target is busy`, a program still has the stick open, most often **Files**, which keeps running in the background after its windows close: `fuser -vm "${kit_usb}"` names the program. For Files, select the eject button next to **RL-KIT** in the Files sidebar, which unmounts the stick, or quit Files with `nautilus -q` and run the `udisksctl` line again.
-6. **Put in the safe:** the printed pages and `yubikey-backup`; the USB stick follows at the end of Part 4, which adds the vault exports to it. The safe then holds the AWS root password and an MFA device together, which is accepted for a home safe (decision log, 2026-11-05).
+6. **Put in the safe:** the printed pages and `yubikey-backup`; the USB stick follows at the end of Part 4, which adds the vault exports to it. The safe then holds the AWS root password and an MFA device together, which is accepted for a safe (decision log, 2026-11-05).
 
 ## Part 3: The encrypted copy in Google Drive and OneDrive
 

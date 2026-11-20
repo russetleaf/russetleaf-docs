@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-03
-- **Applies to:** every S3 bucket in `russetleaf-infra` (the shared `s3-*` modules, `envs/security`, `envs/dr`, `envs/home`, `envs/aws-edge`)
+- **Applies to:** every S3 bucket in `russetleaf-infra` (the shared `s3-*` modules, `envs/security`, `envs/dr`, `envs/onprem`, `envs/aws-edge`)
 - **Phase:** 1. Phase 2 applies it to the MLflow and DVC buckets; Phase 3 applies it to aws.russetleaf.dev's buckets.
 
 ## Context

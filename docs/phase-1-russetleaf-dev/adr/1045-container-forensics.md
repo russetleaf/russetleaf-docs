@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-03
 - **Applies to:** both sites (one shared runbook, with a section for each)
-- **Phase:** 1 (the runbook, toolkit, quarantine policy and evidence bucket; a drill at home). Later: Phase 3 adds the EKS node steps, a forensic hold in the demo workflows, and a drill on EKS.
+- **Phase:** 1 (the runbook, toolkit, quarantine policy and evidence bucket; a drill on premises). Later: Phase 3 adds the EKS node steps, a forensic hold in the demo workflows, and a drill on EKS.
 
 ## Context
 
@@ -15,7 +15,7 @@ Without that step, both the operator's first instinct and the platform's own aut
 - **Argo CD self-heal** reverts any manual change to the workload, such as a quarantine label or a changed selector.
 - **Karpenter consolidation** can remove an EKS node on its own, and a **spot interruption** removes it with two minutes' warning.
 - **`demo-down`** and the **demo safety net** destroy the whole EKS stack; rebuilding it is the documented rollback path.
-- **Log retention** is short: Loki keeps 7 days at home and 14 on EKS, and the Hubble DNS records keep 7.
+- **Log retention** is short: Loki keeps 7 days on premises and 14 on EKS, and the Hubble DNS records keep 7.
 
 Each platform also limits what can be collected:
 
@@ -35,7 +35,7 @@ Each platform also limits what can be collected:
     - Cordon the node. Do not drain it.
 3. **Capture, most volatile first,** with a privileged **forensics toolkit pod** on the same node:
     - process memory (`gcore` on every process in the container's cgroup)
-    - network state (sockets and connections from the container's network namespace; a short packet capture with `talosctl pcap` at home or `tcpdump` on EKS)
+    - network state (sockets and connections from the container's network namespace; a short packet capture with `talosctl pcap` on premises or `tcpdump` on EKS)
     - the process list with command lines, environment variables and open files
     - the container's writable layer (the overlay `upperdir`) and its `emptyDir` volumes, compared with the image
     - the pod's YAML, events and image digest, and the node's `dmesg`
@@ -53,19 +53,19 @@ Each platform also limits what can be collected:
 
 **Site-specific steps:**
 
-| | Home (Talos) | EKS (aws.russetleaf.dev demo) |
+| | On-premises (Talos) | EKS (aws.russetleaf.dev demo) |
 |---|---|---|
 | Node access | `talosctl` (`containers -k`, `logs`, `dmesg`, `processes`, `netstat`, `pcap`, `read`, `support`) plus the toolkit pod. No shell on the node | The toolkit pod, plus **SSM Session Manager** on the node. The SSM permission is attached to the node role only during an incident |
 | Whole-node memory | **Not captured.** Signed modules rule out LiME. Container process memory is the scope | **AVML** through SSM, uploaded straight to the evidence bucket with a presigned URL |
 | Disk | **Not imaged** (TPM-sealed). The writable layer and volumes are copied from the running node | **EBS snapshot** of the node's volume, tagged `ForensicHold=true`, kept in the russetleaf-aws account |
-| Node isolation | If the node itself is suspected (a container escape): capture first, then disconnect its network cable. etcd keeps quorum with the other two nodes ([ADR 1020](1020-three-node-ha-home-cluster.md)) | Swap the instance's security groups for an **isolation security group** with no rules, and turn on **termination protection** |
-| gVisor pods | Memory and process state through gVisor's own tools (`runsc debug`, `runsc checkpoint`), from the toolkit pod with access to the runtime's state directory | Not applicable (gVisor is home only) |
+| Node isolation | If the node itself is suspected (a container escape): capture first, then disconnect its network cable. etcd keeps quorum with the other two nodes ([ADR 1020](1020-three-node-ha-onprem-cluster.md)) | Swap the instance's security groups for an **isolation security group** with no rules, and turn on **termination protection** |
+| gVisor pods | Memory and process state through gVisor's own tools (`runsc debug`, `runsc checkpoint`), from the toolkit pod with access to the runtime's state directory | Not applicable (gVisor is on-premises only) |
 | Automation to hold | Argo CD | Argo CD, Karpenter, and the **forensic hold**: `demo-down` and the safety net refuse to destroy the stack while any resource in it is tagged `ForensicHold=true`; the safety net still alerts |
 
 ## Alternatives considered
 
 - **No runbook; rebuild from Git and rely on the central logs:** the logs (audit, CloudTrail, Falco, Hubble DNS) show what happened around the container, but not what ran inside it: the attacker's payload, any credentials in memory, or files written to temporary volumes. Recovery would be just as fast without the evidence, but nothing would be learned for the postmortem or the threat model.
-- **Kubernetes container checkpointing** (the kubelet's checkpoint API, with CRIU): captures memory and filesystem together in one call, and the result can be restored in a sandbox. Talos does not ship CRIU, so it cannot be relied on at home. Worth checking for EKS, and at home if a Talos extension appears.
+- **Kubernetes container checkpointing** (the kubelet's checkpoint API, with CRIU): captures memory and filesystem together in one call, and the result can be restored in a sandbox. Talos does not ship CRIU, so the on-premises cluster cannot rely on it. Worth checking for EKS, and on premises if a Talos extension appears.
 - **Ephemeral debug containers** (`kubectl debug --target`): convenient, but they change the compromised pod's own spec, share its namespaces (a compromised process could interfere with them), and need Kyverno exceptions for every application namespace instead of one `forensics` namespace.
 - **A dedicated Forensics account** (the SRA pattern, for analyzing evidence in isolation): cleaner separation, but another account to run for one operator. A locked bucket in Log Archive gives the same tamper resistance. Revisit if analysis ever needs its own compute.
 - **GuardDuty Runtime Monitoring or a commercial tool** with built-in evidence collection: EKS only, extra cost per node, and duplicates Falco ([ADR 1017](1017-intrusion-detection-and-prevention.md)).
@@ -83,14 +83,14 @@ Each platform also limits what can be collected:
 
 ## When to revisit
 
-- Talos ships CRIU (or an extension for it), or the kubelet checkpoint API works on the home cluster: consider checkpointing as the main capture method.
+- Talos ships CRIU (or an extension for it), or the kubelet checkpoint API works on the on-premises cluster: consider checkpointing as the main capture method.
 - Evidence analysis needs its own compute, or aws.russetleaf.dev becomes always-on or holds user data: consider a dedicated Forensics account.
 - Tetragon enforcement is adopted ([ADR 1015](1015-process-allow-listing.md)): an unlisted process would be killed before it could be captured, so decide whether Tetragon should alert only for some workloads.
 - A real incident shows a gap in the runbook.
 
 ## Open items
 
-- Phase 1 step 7.13: the toolkit image, `forensics` namespace and `PolicyException`, the quarantine policy, the evidence bucket and permission sets, the runbook, and the first drill at home (including a gVisor pod). Decide which repo builds the toolkit image.
+- Phase 1 step 7.13: the toolkit image, `forensics` namespace and `PolicyException`, the quarantine policy, the evidence bucket and permission sets, the runbook, and the first drill on premises (including a gVisor pod). Decide which repo builds the toolkit image.
 - Phase 1 step 7.13: confirm that `gcore` works on a WordPress process from the toolkit pod under Talos, and whether `runsc checkpoint` can be run from a pod.
 - Phase 1 step 7.13: add the evidence bucket to the record of processing and the retention schedule ([ADR 1036](1036-compliance-frameworks-and-privacy.md)).
 - Phase 3 step 5.1c: SSM and AVML on the EKS nodes, the isolation security group, the forensic hold in `demo-down` and the safety net, and a drill on EKS. Check whether the kubelet checkpoint API works there.

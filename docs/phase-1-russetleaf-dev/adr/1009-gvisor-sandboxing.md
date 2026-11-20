@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-01
-- **Applies to:** seccomp on both sites; gVisor on the home cluster only
+- **Applies to:** seccomp on both sites; gVisor on the on-premises cluster only
 - **Phase:** 1. Later: Phase 2 runs the evaluation jobs on the sandboxed runners; Phase 3 does not use gVisor on EKS.
 
 ## Context
@@ -14,16 +14,16 @@ Two workloads run code that is not fully trusted:
 - the **ARC self-hosted CI runners**, which run code from pull requests
 - **WordPress**, internet-facing PHP whose plugins are its most common attack route
 
-Constraints: home nodes have 8 GB of RAM; Talos offers official system extensions for **gVisor** and **Kata Containers**; EKS offers neither as a managed option.
+Constraints: on-premises nodes have 8 GB of RAM; Talos offers official system extensions for **gVisor** and **Kata Containers**; EKS offers neither as a managed option.
 
 ## Decision
 
 - **Require seccomp `RuntimeDefault`** for every workload on both sites (Kyverno), with narrow exceptions only for third-party components that need a different profile.
-- **gVisor on the home cluster:** add Talos's gVisor system extension to all nodes (three since [ADR 1020](1020-three-node-ha-home-cluster.md)) and a `gvisor` RuntimeClass.
+- **gVisor on the on-premises cluster:** add Talos's gVisor system extension to all nodes (three since [ADR 1020](1020-three-node-ha-onprem-cluster.md)) and a `gvisor` RuntimeClass.
     - **ARC runners:** run under gVisor, **enforced** by a Kyverno rule in their namespace.
     - **WordPress:** **trial** under gVisor with a before-and-after load test; keep it only if response times stay acceptable (record the numbers here).
     - Falco's **gVisor event source** turned on, so detection still covers sandboxed pods.
-- **EKS:** no gVisor (custom AMIs are not worth it for a demo cluster, and the runners only run at home); seccomp `RuntimeDefault` still applies.
+- **EKS:** no gVisor (custom AMIs are not worth it for a demo cluster, and the runners only run on premises); seccomp `RuntimeDefault` still applies.
 - **Kata Containers:** not used.
 
 ## Alternatives considered
@@ -36,15 +36,15 @@ Constraints: home nodes have 8 GB of RAM; Talos offers official system extension
 ## Consequences
 
 - Every container runs with the default seccomp filter at no cost.
-- Code from pull requests runs in a user-space kernel sandbox, separated from `rl-home-cp02`'s host kernel.
+- Code from pull requests runs in a user-space kernel sandbox, separated from `rl-onprem-cp02`'s host kernel.
 - gVisor adds some CPU overhead and a little memory per sandboxed pod, and some programs that rely on unusual system calls may not work under it (test before enforcing).
 - Falco needs its gVisor event source configured to keep visibility inside sandboxed pods.
-- The two sites differ: gVisor is home-only, documented here.
+- The two sites differ: gVisor is on-premises only, documented here.
 
 ## When to revisit
 
 - WordPress under gVisor proves too slow: run it with seccomp only, and record the load-test results.
-- More memory on the home nodes, or a need for VM-level isolation: reconsider Kata.
+- More memory on the on-premises nodes, or a need for VM-level isolation: reconsider Kata.
 - AWS offering a managed sandboxed runtime for EKS, or running untrusted code on EKS: reconsider gVisor there.
 
 ## Open items

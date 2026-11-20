@@ -9,14 +9,14 @@
 
 > **Update ([ADR 1061](1061-credential-rotation.md), 2026-11-17):** passwords are changed on events, not on a schedule, and machine credentials are rotated on a schedule, each with its interval in the credential inventory.
 
-> **Update ([ADR 1040](1040-lab-network-and-wireguard.md)):** the lab network is a separate subnet behind a TP-Link ER605 router (the household router cannot do VLANs), and the workstation reaches the cluster over WireGuard.
+> **Update ([ADR 1040](1040-lab-network-and-wireguard.md)):** the lab network is a separate subnet behind a TP-Link ER605 router (the ISP router cannot do VLANs), and the workstation reaches the cluster over WireGuard.
 
 ## Context
 
 Defense in depth means layering controls so a failure at one layer is caught at another. For a Kubernetes platform, the layers are commonly named after Kubernetes' security documentation (the "4 C's"): **Cloud** (the provider and infrastructure), **Cluster** (Kubernetes), **Container** (images and runtime) and **Code** (the application and its dependencies); each depends on the one outside it. A review against those layers, and against cloud provider, infrastructure, isolation, artifact, image, workload and application-code security, found the design strong in depth but with gaps:
 
 - the project's **other providers** (GitHub, Cloudflare, Google Cloud, Slack, the domain registrar) were not hardened like AWS
-- the **home network** put the nodes on the same LAN as household devices; **Secure Boot** and **BIOS passwords** were not decided
+- the **network** put the nodes on the same LAN as the devices on the main network; **Secure Boot** and **BIOS passwords** were not decided
 - **user namespaces** were not used
 - **Helm charts** were not signed or pinned by digest; critical **third-party images** were not mirrored; `packages: write` was not limited to release jobs; Python and PHP dependencies were not **hash-pinned**
 - the summarizer's **base image** was not specified
@@ -28,7 +28,7 @@ Defense in depth means layering controls so a failure at one layer is caught at 
 
 - **Summarize the controls by layer** in the overview's "Defense in depth" section (what each layer protects against, its main controls, and where the details are), and organize the threat model and control matrix (Phase 1 step 8.5) by the same layers, with an **OWASP ASVS** mapping for the application.
 - **SaaS account hardening:** passkeys or hardware security keys for GitHub, Cloudflare, Google, AWS (Identity Center), Slack and the registrar; **registrar lock** on the domain; GitHub organization settings (default workflow token **read-only**, only verified or allow-listed Actions, required reviews, environment protections), managed with OpenTofu's **GitHub provider** where possible; Cloudflare **least-privilege API tokens** and audit-log review; a minimal Google Cloud project; a **quarterly access review** of all of them.
-- **Home network and boot:** a **lab VLAN** (or separate router subnet) with rules allowing the cluster out to the internet and in from the workstation only, and blocking it from household devices; **Talos Secure Boot images** with the TPM-sealed disk encryption ([ADR 1031](1031-kubernetes-component-hardening.md)); **BIOS passwords**.
+- **Lab network and boot:** a **lab VLAN** (or separate router subnet) with rules allowing the cluster out to the internet and in from the workstation only, and blocking it from devices on the main network; **Talos Secure Boot images** with the TPM-sealed disk encryption ([ADR 1031](1031-kubernetes-component-hardening.md)); **BIOS passwords**.
 - **User namespaces** (`hostUsers: false`) for application pods where the Kubernetes and Talos versions support them (root in a container then maps to an unprivileged user on the node).
 - **Artifact integrity:** sign **Helm charts** with cosign (verified in CI before the version-bump pull request) and **pin charts by digest** in `russetleaf-gitops`; grant `packages: write` only to release jobs; **mirror critical third-party images** into GHCR (copied by digest after verifying upstream signatures, then re-signed) for availability and rate limits; **hash-pinned dependencies** (uv's lock file with hashes; `composer.lock`).
 - **Image:** a **distroless or slim multi-stage** base for the summarizer.
@@ -41,7 +41,7 @@ Defense in depth means layering controls so a failure at one layer is caught at 
 ## Alternatives considered
 
 - **Leaving non-AWS providers at defaults:** they hold the code, DNS, sign-in and alerts; a compromise there bypasses the AWS controls.
-- **Flat home network:** simpler, but a compromised node could reach household devices (and vice versa).
+- **Flat main network:** simpler, but a compromised node could reach devices on the main network (and vice versa).
 - **Signing images only:** leaves charts (which define what runs) unverified.
 - **A WAF-only approach to web security:** WAFs do not set browser security policies (CSP, HSTS) or find application flaws the way DAST does.
 - **A commercial DAST or ASVS tool:** ZAP's baseline scan is free and enough for this site.

@@ -16,24 +16,24 @@ Most of this is already covered by tools in the design:
 | Scanning manifests and Helm charts in CI | Checkov (rendered manifests, charts) and the Kyverno CLI |
 | Admission-time policy | Kyverno |
 | Vulnerability scanning of running images | Trivy Operator |
-| CIS benchmark, node and control-plane level | kube-bench (EKS); Talos hardening notes plus Trivy Operator (home) |
+| CIS benchmark, node and control-plane level | kube-bench (EKS); Talos hardening notes plus Trivy Operator (on-premises) |
 | Runtime threat detection | Falco |
 | Network policy suggestions | Hand-written CiliumNetworkPolicies, debugged with Hubble |
 | **Framework scores (NSA-CISA, MITRE ATT&CK) and RBAC risk analysis** | **Nothing (the gap)** |
 
-`rl-home-cp01` of the home lab has 8 GB of RAM and already uses about 6–7 GB.
+`rl-onprem-cp01` of the on-premises lab has 8 GB of RAM and already uses about 6–7 GB.
 
 ## Decision
 
 - **Do not install the Kubescape operator** in either cluster.
 - **Run the Kubescape CLI on demand** against each live cluster, from the workstation or the in-cluster CI runners, with nothing installed in the cluster:
     - frameworks: **NSA-CISA** and **MITRE ATT&CK**, plus the **RBAC** analysis
-    - **monthly** on the home cluster, and **once per AWS demo** on EKS
+    - **monthly** on the on-premises cluster, and **once per AWS demo** on EKS
     - reports saved in `russetleaf-gitops/docs/` (for example, `docs/security/kubescape-<site>-<date>.json` with a short Markdown summary), next to the kube-bench and Trivy reports; accepted findings explained in the summary
 
 ## Alternatives considered
 
-- **Kubescape operator in the cluster:** continuous scanning and in-cluster reports, but several components using roughly 0.5–1 GB of memory, most of it duplicating Trivy Operator and Falco. Does not fit `rl-home-cp01`.
+- **Kubescape operator in the cluster:** continuous scanning and in-cluster reports, but several components using roughly 0.5–1 GB of memory, most of it duplicating Trivy Operator and Falco. Does not fit `rl-onprem-cp01`.
 - **Kubescape manifest scanning in CI:** largely duplicates Checkov and the Kyverno CLI; adds framework labels but little new coverage.
 - **Not using Kubescape at all:** leaves no framework-based posture score or RBAC risk review.
 
@@ -45,11 +45,11 @@ Most of this is already covered by tools in the design:
 
 ## When to revisit
 
-- More memory on the home nodes, making the operator affordable for continuous posture monitoring.
+- More memory on the on-premises nodes, making the operator affordable for continuous posture monitoring.
 - A requirement for continuous compliance reporting (for example, an audit).
 - Trivy Operator or Falco being removed, leaving the operator's other features uncovered.
 
 ## Open items
 
-- First home-cluster scan (Phase 1 step 7.2): record the baseline scores and any accepted findings.
+- First on-premises cluster scan (Phase 1 step 7.2): record the baseline scores and any accepted findings.
 - First EKS scan (Phase 3 step 2.5).

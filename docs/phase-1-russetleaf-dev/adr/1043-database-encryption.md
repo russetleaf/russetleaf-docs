@@ -7,16 +7,16 @@
 
 ## Context
 
-The databases were encrypted at rest (Talos disk encryption at home; RDS encryption on AWS) and TLS was required for WordPress's own connections, but several gaps remained:
+The databases were encrypted at rest (Talos disk encryption on premises; RDS encryption on AWS) and TLS was required for WordPress's own connections, but several gaps remained:
 
-- TLS was required **per user** (the `wordpress` user at home), not by the server, so other connections were not covered:
+- TLS was required **per user** (the `wordpress` user on premises), not by the server, so other connections were not covered:
     - replication between the primary and the replica
     - the backup user
     - the `db-setup` Job's direct connection to RDS
     - MLflow's connection
 - RDS encryption was mentioned without a key, and the database backups used S3's default encryption, although the dumps hold commenters' email addresses and the users' password hashes.
 
-Cilium's WireGuard encryption already protects pod traffic between home nodes, but "always TLS" should be enforced by the database, not depend on each client's settings or on the network layer.
+Cilium's WireGuard encryption already protects pod traffic between on-premises nodes, but "always TLS" should be enforced by the database, not depend on each client's settings or on the network layer.
 
 ## Decision
 
@@ -24,7 +24,7 @@ Cilium's WireGuard encryption already protects pod traffic between home nodes, b
 
 - **`require_secure_transport = ON`** on every MariaDB server: russetleaf.dev production and staging (in the `MariaDB` resource's configuration), the MLflow database, and the RDS parameter group. A connection without TLS is refused, whatever user or client makes it.
 - **TLS 1.2 or later only** (`tls_version = TLSv1.2,TLSv1.3`).
-- **Home certificates** from the internal CA (cert-manager), renewed automatically; clients verify the server certificate against that CA.
+- **On-premises certificates** from the internal CA (cert-manager), renewed automatically; clients verify the server certificate against that CA.
 - **Replication over TLS:** MariaDB Operator's replication connections, and its own management connections, use TLS. Confirm that the installed operator version supports this for replication and backups; if a component cannot use TLS, record the exception here with its compensating control (Cilium WireGuard between nodes).
 - **Users also require TLS** (`REQUIRE SSL` on the `wordpress`, backup and MLflow users), as a second layer if the server setting is ever lost.
 - **AWS:**
@@ -34,7 +34,7 @@ Cilium's WireGuard encryption already protects pod traffic between home nodes, b
 
 **At rest: encrypted everywhere, with keys under the project's control where the data leaves the cluster.**
 
-- **Home:** the database volumes come from local-path-provisioner under `/var/local-path-provisioner`, which lies on Talos's **encrypted, TPM-sealed** partition ([ADR 1031](1031-kubernetes-component-hardening.md)). A test confirms this, so a volume cannot end up on an unencrypted disk.
+- **On-premises:** the database volumes come from local-path-provisioner under `/var/local-path-provisioner`, which lies on Talos's **encrypted, TPM-sealed** partition ([ADR 1031](1031-kubernetes-component-hardening.md)). A test confirms this, so a volume cannot end up on an unencrypted disk.
 - **RDS:** `storage_encrypted = true` with a **customer-managed KMS key** in russetleaf-aws. Automated backups, final snapshots and instances restored from them are encrypted with the same key.
 - **Database backups in S3:** **SSE-KMS with a customer-managed key** and an **S3 Bucket Key** (fewer KMS requests, lower cost). The key policy lets only the backup role (write), the restore and staging-data Jobs (read) and S3 replication use it. The Backup account's copies already use their own customer-managed key.
 
@@ -57,13 +57,13 @@ Cilium's WireGuard encryption already protects pod traffic between home nodes, b
 
 - Every database connection on both sites is encrypted, enforced by the server.
 - Backups and snapshots can only be read by roles the key policies name.
-- About $1 a month per customer-managed key (the backup key at home; the RDS key in russetleaf-aws, only while it exists).
+- About $1 a month per customer-managed key (the backup key on premises; the RDS key in russetleaf-aws, only while it exists).
 - A slight TLS handshake cost on new connections, negligible at this scale, and absorbed by RDS Proxy's pooling on AWS.
 - Certificate expiry becomes a failure mode; cert-manager renews the certificates, and its certificate-expiry alert covers them.
 
 ## When to revisit
 
-- MariaDB Operator gains certificate-based users: consider passwordless `REQUIRE X509` at home (see the Phase 1 design's [Database access and credentials](../design.md#database-access-and-credentials)).
+- MariaDB Operator gains certificate-based users: consider passwordless `REQUIRE X509` on premises (see the Phase 1 design's [Database access and credentials](../design.md#database-access-and-credentials)).
 - A component cannot use TLS: record the exception and its compensating control here.
 
 ## Open items

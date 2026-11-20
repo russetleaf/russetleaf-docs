@@ -30,7 +30,7 @@ The project follows the [Google developer documentation style guide](https://dev
 - **One H1 per page:** the page title, on the first line. The file name is the title in lowercase with hyphens (`break-glass-kit.md`).
 - **An opening paragraph** under the title says what the page is and when to use it.
 - **Heading levels:** H2 for sections, H3 for subsections, H4 only when unavoidable. Never skip a level.
-- **Sentence case:** capitalize the first word and names only (`Alerting and notifications`, not `Alerting And Notifications`). A numbered label is followed by a capital (`Part 2: Create the GPG key`); any other colon is followed by lowercase (`Availability levels: home lab without HA`).
+- **Sentence case:** capitalize the first word and names only (`Alerting and notifications`, not `Alerting And Notifications`). A numbered label is followed by a capital (`Part 2: Create the GPG key`); any other colon is followed by lowercase (`Availability levels: on-premises lab without HA`).
 - **No punctuation at the end of a heading,** and no links in headings.
 - **Fixed heading formats** that tools read stay exactly as they are: plan steps as `### Step <n>: <title>`, with **Do:** and **Test:** paragraphs ([plan format](#document-types)), and ADR titles as `# ADR <number>: <title>`.
 - **Changing a heading changes its anchor.** Search the repo for links to the old anchor and update them in the same change.

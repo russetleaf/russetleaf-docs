@@ -13,7 +13,7 @@
 
 The project builds two images, each with a Helm chart published as an OCI artifact: the WordPress image (`russetleaf-wordpress`) and the post-summarizer (`russetleaf-llm-summarizer`). Both sites must pull them:
 
-- **russetleaf.dev** runs 24/7 on a home Talos cluster, **outside AWS**.
+- **russetleaf.dev** runs 24/7 on an on-premises Talos cluster, **outside AWS**.
 - **aws.russetleaf.dev** runs on EKS only during demos.
 
 Images are built and signed (cosign keyless) in GitHub Actions, and Kyverno only admits images signed by those workflows and pulled from allowed registries. ~~The repos are private while being built and become public later (Phase 1 step 9.2).~~ **Superseded by [ADR 1030](1030-github-actions-ci.md):** the repos are made public early (step 1.1).
@@ -24,15 +24,15 @@ Use **GHCR** for all project images and charts: `ghcr.io/russetleaf/russetleaf-w
 
 Reasons, in order of importance:
 
-1. **The home cluster runs outside AWS.** Private ECR needs AWS credentials, and ECR login tokens **expire every 12 hours**, so the home cluster would need a job or credential helper refreshing its pull secret, which can quietly break pulls. Public GHCR packages need no credentials.
+1. **The on-premises cluster runs outside AWS.** Private ECR needs AWS credentials, and ECR login tokens **expire every 12 hours**, so the on-premises cluster would need a job or credential helper refreshing its pull secret, which can quietly break pulls. Public GHCR packages need no credentials.
 2. **Simpler CI and signing.** GitHub Actions pushes to GHCR with its built-in token, and cosign keyless signing uses GitHub's identity directly. ECR would need an AWS role per repo for pushing.
 3. **One registry for both sites:** identical image references everywhere and a single Kyverno registry rule.
 4. **Traceable:** packages appear on each repo's GitHub page, linked to the code and workflow that built them.
-5. **Cost (minor):** public GHCR packages are free; ECR would cost about $0.10/GB-month of storage plus data-transfer charges for pulls from home: a few dollars a month at most.
+5. **Cost (minor):** public GHCR packages are free; ECR would cost about $0.10/GB-month of storage plus data-transfer charges for pulls from the on-premises cluster: a few dollars a month at most.
 
 ## Alternatives considered
 
-- **Amazon ECR only:** the usual choice for production workloads on AWS, with IAM-controlled access, Amazon Inspector scanning, VPC endpoints (EKS pulls never leave AWS) and lifecycle policies. Rejected here mainly because of the 12-hour token refresh for the home cluster.
+- **Amazon ECR only:** the usual choice for production workloads on AWS, with IAM-controlled access, Amazon Inspector scanning, VPC endpoints (EKS pulls never leave AWS) and lifecycle policies. Rejected here mainly because of the 12-hour token refresh for the on-premises cluster.
 - **Both registries (build once, push to both):** keeps each site on its "native" registry, but doubles the image references, signing identities and Kyverno rules to maintain.
 - **Docker Hub:** pull rate limits for anonymous and free accounts, and no advantage over GHCR for this project.
 
@@ -48,7 +48,7 @@ Reasons, in order of importance:
 ## When to revisit
 
 - A requirement that images stay **private inside AWS** (for example, a compliance rule), or that EKS pulls never leave the VPC.
-- The home cluster moving into AWS (removing the token-refresh problem).
+- The on-premises cluster moving into AWS (removing the token-refresh problem).
 - GitHub pull limits, outages or pricing changes affecting deployments.
 
 ## Open items

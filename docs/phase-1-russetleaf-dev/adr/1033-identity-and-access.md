@@ -11,19 +11,19 @@
 
 ## Context
 
-Workload identity was well covered (projected service-account tokens off by default, Pod Identity on EKS, scoped keys at home), and the admin UIs sat behind Cloudflare Access with Google. But for **people**:
+Workload identity was well covered (projected service-account tokens off by default, Pod Identity on EKS, scoped keys on premises), and the admin UIs sat behind Cloudflare Access with Google. But for **people**:
 
-- the home cluster was used through Talos's generated **admin kubeconfig**: a long-lived **cluster-admin client certificate** that **cannot be revoked**
+- the on-premises cluster was used through Talos's generated **admin kubeconfig**: a long-lived **cluster-admin client certificate** that **cannot be revoked**
 - day-to-day Talos API access used the full admin role
 - there were no defined **human roles**; cluster-admin was the default
 - Argo CD, Grafana and Backstage relied on the edge login, without their own SSO and roles
-- **audit logs** were kept only 7 days (Loki at home) or briefly (CloudWatch on EKS), and Argo CD's audit trail was not collected
+- **audit logs** were kept only 7 days (Loki on premises) or briefly (CloudWatch on EKS), and Argo CD's audit trail was not collected
 - **platform namespaces** had no default-deny network policies
-- the home External Secrets bootstrap key remained a static key until an optional later step
+- the on-premises External Secrets bootstrap key remained a static key until an optional later step
 
 ## Decision
 
-- **OIDC sign-in for people on the home cluster:** **Dex** (in `russetleaf-gitops/platform/dex/`) as the OIDC provider, with a **Google** connector; the API server trusts Dex through Kubernetes' **structured authentication configuration** (issuer, audience, claim mappings and the internal CA from [ADR 1028](1028-internal-pki.md)); people use **kubelogin** to get short-lived tokens. Check the Talos version's support for structured authentication configuration (or use the older `--oidc-*` API server flags).
+- **OIDC sign-in for people on the on-premises cluster:** **Dex** (in `russetleaf-gitops/platform/dex/`) as the OIDC provider, with a **Google** connector; the API server trusts Dex through Kubernetes' **structured authentication configuration** (issuer, audience, claim mappings and the internal CA from [ADR 1028](1028-internal-pki.md)); people use **kubelogin** to get short-lived tokens. Check the Talos version's support for structured authentication configuration (or use the older `--oidc-*` API server flags).
 - **Break-glass:** the Talos-generated admin kubeconfig is kept **only in the break-glass kit**, never used day to day, and an **audit alert** (`KubeBreakGlassAdminUsed`) fires whenever its identity makes a request. If Dex is down, the break-glass kubeconfig is the documented way in.
 - **Talos API roles:** day-to-day talosconfig uses the **`os:reader`** role; `os:admin` is break-glass and change-time only.
 - **Human RBAC roles** (`russetleaf-gitops/platform/rbac/`): **`platform-admin`**, **`operator`** (deploy, restart, view logs; no RBAC or Secret changes) and **`read-only`** ClusterRoles, bound to Dex groups (or, for a single person, specific users); **no day-to-day cluster-admin**. Argo CD's service account remains the identity that changes production.
@@ -32,7 +32,7 @@ Workload identity was well covered (projected service-account tokens off by defa
 - **Audit-log retention:** Kubernetes audit logs are also shipped to an **S3 bucket with Object Lock in the Log Archive account**, kept **1 year** (Alloy writes a copy; EKS: [ADR 3005](../../phase-3-aws-russetleaf-dev/adr/3005-eks-access-and-audit-logs.md)); Argo CD's audit events (who synced or changed what) are collected into Loki and the same archive.
 - **Default-deny network policies for platform namespaces** too (Argo CD, monitoring, logging, External Secrets, Kyverno, cert-manager, Dex, KEDA, Argo Rollouts and others), with least-privilege egress per component (for example, Argo CD → GitHub and GHCR and the API server; External Secrets → Secrets Manager; cert-manager → the API server), tested in CI.
 - **Pod Security Admission version pinned** on every namespace (`enforce-version`), so Kubernetes upgrades do not silently change enforcement.
-- **Keyless AWS access for the home cluster** (Phase 1 step 9.1) moves into the **Extended** tier (it was optional), removing the last static AWS keys.
+- **Keyless AWS access for the on-premises cluster** (Phase 1 step 9.1) moves into the **Extended** tier (it was optional), removing the last static AWS keys.
 
 ## Alternatives considered
 

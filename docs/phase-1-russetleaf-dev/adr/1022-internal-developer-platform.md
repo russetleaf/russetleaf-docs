@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-01
-- **Applies to:** the home cluster as the platform; aws.russetleaf.dev as a managed spoke
+- **Applies to:** the on-premises cluster as the platform; aws.russetleaf.dev as a managed spoke
 - **Phase:** 1 (Backstage, the golden path, multi-tenancy, the Argo CD hub with a local spoke cluster). Later: Phase 3 adds EKS as a second spoke.
 
 ## Context
@@ -15,7 +15,7 @@ The project had become a capable platform (GitOps, signed supply chain, policies
 - **A golden-path software template** that creates a complete new service (repo, CI with the full supply-chain pipeline, a Kyverno-compliant chart, CiliumNetworkPolicies, SLOs, dashboard, alerts, runbook stub, ApplicationSet registration).
 - **Proof:** create a **second, different service** from the template and measure time to first production deploy.
 - **Multi-tenancy:** per-tenant namespaces, Argo CD projects, quotas and limit ranges, RBAC, Kyverno policies and OpenCost showback.
-- **Hub-and-spoke Argo CD:** the home Argo CD manages EKS during demos (registered by `demo-up` with IAM authentication, EKS API endpoint restricted to the home network), using ApplicationSets with cluster generators; the per-cluster Argo CD remains the fallback.
+- **Hub-and-spoke Argo CD:** the on-premises Argo CD manages EKS during demos (registered by `demo-up` with IAM authentication, EKS API endpoint restricted to the main network), using ApplicationSets with cluster generators; the per-cluster Argo CD remains the fallback.
 
 ## Alternatives considered
 
@@ -28,8 +28,8 @@ The project had become a capable platform (GitOps, signed supply chain, policies
 ## Consequences
 
 - The platform's value is demonstrated by a second service built on it, with a measured onboarding time.
-- Backstage is a sizeable application to run and upgrade (Node.js plugins, PostgreSQL); about 1–1.5 GB of memory on `rl-home-cp03`.
-- The EKS API endpoint is reachable from the home network during demos (restricted by address and IAM).
+- Backstage is a sizeable application to run and upgrade (Node.js plugins, PostgreSQL); about 1–1.5 GB of memory on `rl-onprem-cp03`.
+- The EKS API endpoint is reachable from the main network during demos (restricted by address and IAM).
 - One Argo CD view for both clusters.
 
 ## When to revisit

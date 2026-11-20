@@ -15,7 +15,7 @@ The full AWS design (EKS, RDS Multi-AZ with RDS Proxy, ElastiCache, NAT Gateways
 
 - **Two OpenTofu root modules:** `envs/aws-edge` (**always on**, about $1/month: the Route 53 zone, ACM certificates, the CloudFront distribution, the offline-page bucket, the media bucket, the log and trace buckets, the RDS final snapshot) and `envs/aws` (the **demo stack**: VPC, EKS, Karpenter, RDS, ElastiCache, WAF, queues).
 - **CloudFront's error fallback** serves the **offline page** (status 503, pointing to russetleaf.dev) whenever the origin is unreachable, with short error caching and a 2-second origin timeout, so the switch between live and offline needs no DNS changes.
-- **`demo-up` and `demo-down` workflows** (GitHub Actions on the home ARC runners): apply, wait for Argo CD and the site, run kube-bench, register with the Argo CD hub; and the reverse, with a final RDS snapshot and an Alertmanager silence. A **safety-net workflow** alerts when the stack has been up longer than its limit.
+- **`demo-up` and `demo-down` workflows** (GitHub Actions on the on-premises ARC runners): apply, wait for Argo CD and the site, run kube-bench, register with the Argo CD hub; and the reverse, with a final RDS snapshot and an Alertmanager silence. A **safety-net workflow** alerts when the stack has been up longer than its limit.
 - **Content between demos:** a final snapshot on destroy restored on the next `demo-up`; media lives in the always-on edge; an optional seed from russetleaf.dev's backups.
 - **Cost guardrails:** the russetleaf-aws account's budgets and anomaly detection, a per-demo cost report, and about $0.70 per demo hour.
 

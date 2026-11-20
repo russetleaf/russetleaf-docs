@@ -35,7 +35,7 @@ The whole of Phase 1 is ~389–650 hours, step 0.2's 1–2 included ([plan](plan
 | Day | Work |
 |---|---|
 | **Sun, Nov 15** | Step 0.1: the YubiKeys on the workstation ([setup guide](setup/workstation-yubikey.md)), the Slack channels, bot and monitoring accounts ([setup guide](setup/slack-and-monitoring.md)), the break-glass kit ([setup guide](setup/break-glass-kit.md)), and `yubikey-backup` into the safe |
-| **Mon, Nov 16** | Step 0.3: the ER605 as `rl-home-rt01` ([lab network setup guide](setup/lab-network.md)); step 1.1 begins: the code repos in the organization, with their mirrors |
+| **Mon, Nov 16** | Step 0.3: the ER605 as `rl-onprem-rt01` ([lab network setup guide](setup/lab-network.md)); step 1.1 begins: the code repos in the organization, with their mirrors |
 | **Tue, Nov 17** | Step 1.1 continued: the guardrails (secret scanning, Checkov, Renovate, the bash and documentation checks), the issues and project board |
 | **Wed, Nov 18** | Steps 2.0 and 2.1: the AWS Organization, its accounts and IAM Identity Center ([setup guide](setup/aws-management-account.md)), then the OpenTofu state bucket and CI roles |
 | **Thu, Nov 19** | Step 2.2 begins: Talos on all three nodes, etcd, the virtual IP, Cilium and Argo CD |
@@ -44,7 +44,7 @@ What each milestone shows when it is done:
 
 - **M1:** accounts, tools, budget alert, the lab network with WireGuard access, decisions recorded, the repos, the AWS Organization and accounts, and the OpenTofu state bucket.
 - **M2:** the three-node, highly available Talos cluster with Cilium and Argo CD, hardened and tested.
-- **M3:** the organization's security services, the home AWS and Cloudflare resources, the OpenTofu pipeline, the repos' CI guardrails, Argo CD managing everything; storage, secrets and certificates, ingress through the tunnel, monitoring and alerting, MariaDB and Valkey, logging, and OIDC sign-in.
+- **M3:** the organization's security services, the on-premises AWS and Cloudflare resources, the OpenTofu pipeline, the repos' CI guardrails, Argo CD managing everything; storage, secrets and certificates, ingress through the tunnel, monitoring and alerting, MariaDB and Valkey, logging, and OIDC sign-in.
 - **M4:** russetleaf.dev live on the custom image and theme, with ci tests, on-demand staging, promotion and the privacy basics.
 - **M5:** Kyverno and network policies enforced, the docs polished, and the project published as a finished Core tier. **First complete release.**
 - **M6:** the post go-live review of the improvements list, progressive delivery, sandboxing, runtime security, security detections as code, mail and identity monitoring, cost and tracing, keyless AWS access, and the rollback, node-failure and disaster drills.

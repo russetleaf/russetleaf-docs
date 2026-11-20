@@ -1,6 +1,6 @@
 # Phase 2 build plan: AI post summaries and MLOps
 
-This is the step-by-step plan for **Phase 2**, described in the [Phase 2 design](design.md): AI-generated post summaries on russetleaf.dev, with an LLM gateway, a self-hosted model on `rl-home-cp02`, and an MLOps lifecycle. It needs **Phase 1's Core tier** finished (the cluster, GitOps, platform services, WordPress, ci, staging and promotion, Kyverno and network policies). Fine-tuning runs on a rented spot GPU in AWS, since the home lab has none ([ADR 2005](adr/2005-fine-tuning-on-a-rented-gpu.md)).
+This is the step-by-step plan for **Phase 2**, described in the [Phase 2 design](design.md): AI-generated post summaries on russetleaf.dev, with an LLM gateway, a self-hosted model on `rl-onprem-cp02`, and an MLOps lifecycle. It needs **Phase 1's Core tier** finished (the cluster, GitOps, platform services, WordPress, ci, staging and promotion, Kyverno and network policies). Fine-tuning runs on a rented spot GPU in AWS, since the on-premises lab has none ([ADR 2005](adr/2005-fine-tuning-on-a-rented-gpu.md)).
 
 Each step is sized for one or a few Claude sessions and ends with a **test** that must pass before moving on. Work the same way as in Phase 1 (see its [How to use this plan with Claude](../phase-1-russetleaf-dev/plan.md#how-to-use-this-plan-with-claude)): start each session by pointing Claude at this plan, the Phase 2 design and the overview; one step at a time; record actual hours; keep the plan and decision log current. Before starting, write this phase's `roadmap.md` (milestones and dates, in the format of Phase 1's [roadmap](../phase-1-russetleaf-dev/roadmap.md)), create its issues with `tools/plan_to_issues.py`, and write a spec per step from [`docs/specs/TEMPLATE.md`](../specs/TEMPLATE.md).
 
@@ -20,7 +20,7 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 
 | Tier | What it means | Steps | Est. hours |
 |---|---|---|---|
-| **Core** | A working, evaluated and secured summary pipeline: the repo, the agents' workspace and guardrails, AWS resources, `rl-home-cp02` as the LLM node, the WordPress side, KEDA, the gateway, the summarizer, its release and monitoring, the evaluation set, runners and gate, security for the new components, and the docs. | 1.1–1.4, 2.1–2.5, 4.1–4.3, 5.1, 5.3 | **~50–86** |
+| **Core** | A working, evaluated and secured summary pipeline: the repo, the agents' workspace and guardrails, AWS resources, `rl-onprem-cp02` as the LLM node, the WordPress side, KEDA, the gateway, the summarizer, its release and monitoring, the evaluation set, runners and gate, security for the new components, and the docs. | 1.1–1.4, 2.1–2.5, 4.1–4.3, 5.1, 5.3 | **~50–86** |
 | **Extended** | The full MLOps lifecycle: the AI burst test, the self-hosted model and gateway routing, MLflow tracking and registry, guardrails, online evaluation and drift, and observability and operations for the AI components. | 2.6, 3.1, 3.2, 4.4–4.6, 5.2 | **~33–54** |
 | **Advanced** | The feedback loop and data versioning (DVC); fine-tuning on a rented GPU, the fine-tuned challenger, and drift-triggered retraining; the AI operations assistant (kagent), and AI diagnosis with remediation proposed as pull requests. | 4.7–4.10, 5.2b, 5.2c | **~64–104** |
 | **Total** | | | **~147–244** |
@@ -34,10 +34,10 @@ Every step in the [progress checklist](#progress-checklist) has a **tier** and a
 | Decision | Recommendation | Why it matters |
 |---|---|---|
 | **Summarizer language** | **Python** (boto3 for SQS, the `openai` client for the gateway, OpenTelemetry SDK). | Fastest path; the most common language for MLOps work. |
-| **Models** | **Claude Haiku** (default) and **Amazon Nova Lite** on Bedrock, plus a 4-bit **3B model** (for example, Qwen2.5-3B or Llama 3.2 3B) on `rl-home-cp02` with llama.cpp. | Sets the budgets, the evaluation set and `rl-home-cp02`'s memory use. |
+| **Models** | **Claude Haiku** (default) and **Amazon Nova Lite** on Bedrock, plus a 4-bit **3B model** (for example, Qwen2.5-3B or Llama 3.2 3B) on `rl-onprem-cp02` with llama.cpp. | Sets the budgets, the evaluation set and `rl-onprem-cp02`'s memory use. |
 | **AWS access for the AI components** | Pod roles through the cluster's OIDC provider if Phase 1 step 9.1 (keyless AWS access) is done; otherwise scoped IAM keys, like the rest of Phase 1. | Avoids adding new static keys if they can be avoided. |
 
-ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture), 2003 (self-hosted model on `rl-home-cp02`), 2004 (agentic AI delivery), 2005 (fine-tuning on a rented GPU), 2006 (AI operations assistant) and 2007 (AI diagnosis and remediation proposals), in `adr/` (see the [overview's index](../overview.md#architecture-decision-records)).
+ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture), 2003 (self-hosted model on `rl-onprem-cp02`), 2004 (agentic AI delivery), 2005 (fine-tuning on a rented GPU), 2006 (AI operations assistant) and 2007 (AI diagnosis and remediation proposals), in `adr/` (see the [overview's index](../overview.md#architecture-decision-records)).
 
 ## Stage 1: Foundations
 
@@ -53,7 +53,7 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 - **Agent instructions:** an `AGENTS.md` in `russetleaf-llm-summarizer`, `russetleaf-gitops`, `russetleaf-wordpress` and `russetleaf-docs` (the project's conventions, how to run each repo's checks, and what an agent must not do), and a `CLAUDE.md` in each that imports it.
 - **Claude Code** is the coding agent ([ADR 2004](adr/2004-agentic-ai-delivery.md)): install it on the workstation with the permission settings below, and add the **Claude Code GitHub Action** to `russetleaf-llm-summarizer` and `russetleaf-gitops` for small tasks that come back as pull requests (read-only token defaults; it can never merge).
-- **Permission settings** for the agent tool: allow the repo's local tools and tests; deny reading `.env` files, kubeconfigs with write access, talosconfigs and credential files; deny `tofu apply`, `kubectl apply` against the home cluster, `git push` to `main`, and `gh pr merge`.
+- **Permission settings** for the agent tool: allow the repo's local tools and tests; deny reading `.env` files, kubeconfigs with write access, talosconfigs and credential files; deny `tofu apply`, `kubectl apply` against the on-premises cluster, `git push` to `main`, and `gh pr merge`.
 - **Identities:** a read-only kubeconfig for agents (the `read-only` role from Phase 1 step 4.7, short-lived), and no AWS credentials in agent sessions.
 - **Sandbox:** a documented local environment per repo (Docker Compose demo, kind with Moto and the mock LLM) that an agent can create and destroy on its own.
 - **Pull-request template** in each repo: a "Done by" field and a checklist for the reviewer (IAM, policies, network rules, secrets, new dependencies).
@@ -63,15 +63,15 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 
 ### Step 1.2: AWS resources for the AI pipeline
 
-**Do:** in `russetleaf-infra`, add the **`sqs-queue`** (with dead-letter queue) and **`bedrock-access`** modules, then in `envs/home`: the **summary queue** and dead-letter queue (production and staging), the **model mirror bucket** (with `prevent_destroy`), the **Bedrock budget alert**, and credentials for WordPress (send to the queue), the summarizer (read from the queue) and LiteLLM (`bedrock:InvokeModel` on the chosen models only), each in Secrets Manager (or pod roles, if Phase 1 step 9.1 is done). Confirm access to Claude Haiku and Amazon Nova Lite in the chosen region (Anthropic models may need a one-time use-case form in the console). Extend the ci stand-ins with SQS (LocalStack, or **ElasticMQ** if LocalStack's terms do not suit). Request a **GPU quota** for G-family spot instances in russetleaf-home now if the fine-tuning steps (4.8–4.10) are planned; approval can take days.
+**Do:** in `russetleaf-infra`, add the **`sqs-queue`** (with dead-letter queue) and **`bedrock-access`** modules, then in `envs/onprem`: the **summary queue** and dead-letter queue (production and staging), the **model mirror bucket** (with `prevent_destroy`), the **Bedrock budget alert**, and credentials for WordPress (send to the queue), the summarizer (read from the queue) and LiteLLM (`bedrock:InvokeModel` on the chosen models only), each in Secrets Manager (or pod roles, if Phase 1 step 9.1 is done). Confirm access to Claude Haiku and Amazon Nova Lite in the chosen region (Anthropic models may need a one-time use-case form in the console). Extend the ci stand-ins with SQS (LocalStack, or **ElasticMQ** if LocalStack's terms do not suit). Request a **GPU quota** for G-family spot instances in russetleaf-onprem now if the fine-tuning steps (4.8–4.10) are planned; approval can take days.
 
 **Test:** each credential's allowed action works and a disallowed one fails (for example, the summarizer cannot send to the queue); `aws bedrock-runtime converse` with the LiteLLM credential returns a response; the budget alert exists; deleting the model mirror bucket is refused by the plan.
 
-### Step 1.3: `rl-home-cp02` as the LLM node
+### Step 1.3: `rl-onprem-cp02` as the LLM node
 
-**Do:** in `russetleaf-infra/envs/home`, label `rl-home-cp02` `workload=llm` and taint it `dedicated=llm:NoSchedule`; give the ARC runners a matching toleration so they keep running there, next to the model; move anything else that ran on `rl-home-cp02` in Phase 1 (for example, Backstage overflow) back to `rl-home-cp01` and `rl-home-cp03`; recheck the kubelet PID limit against llama.cpp's process count. Update the memory budget in the Phase 2 design.
+**Do:** in `russetleaf-infra/envs/onprem`, label `rl-onprem-cp02` `workload=llm` and taint it `dedicated=llm:NoSchedule`; give the ARC runners a matching toleration so they keep running there, next to the model; move anything else that ran on `rl-onprem-cp02` in Phase 1 (for example, Backstage overflow) back to `rl-onprem-cp01` and `rl-onprem-cp03`; recheck the kubelet PID limit against llama.cpp's process count. Update the memory budget in the Phase 2 design.
 
-**Test:** `kubectl describe node rl-home-cp02` shows the label and taint; only the runners and node agents run on `rl-home-cp02`; every node stays under its memory budget.
+**Test:** `kubectl describe node rl-onprem-cp02` shows the label and taint; only the runners and node agents run on `rl-onprem-cp02`; every node stays under its memory budget.
 
 ### Step 1.4: WordPress side of the pipeline (`russetleaf-wordpress`)
 
@@ -121,8 +121,8 @@ ADRs for this phase: 2001 (MLOps lifecycle), 2002 (summary pipeline architecture
 - **Code and image checks** (as for `russetleaf-wordpress`, see Phase 1 step 5.1): **ruff**, **mypy**, **Opengrep**, **pip-audit**, dependency review, hadolint, Checkov, zizmor, `helm lint` / `ct lint`, container-structure-test, Trivy (vulnerability, secret and misconfiguration scanners).
 - `ci/`: kind end-to-end tests on GitHub-hosted runners, with the AWS stand-ins (SQS) and a **mock LLM** (LiteLLM with mock responses): a queued post gets a summary written back to a test WordPress; a failing message reaches the dead-letter queue.
 - **Checkov on the summarizer's Dockerfile and chart** in pull request CI.
-- Release workflow: build, SBOM, scan, push by digest, sign, attach the SBOM as a signed attestation, add **SLSA build provenance**, verify all three, write release notes with digests and Rekor links, push the image and the chart (OCI) to GHCR, open a chart-bump pull request on `russetleaf-gitops` for **`overlays/home-staging`** (promoted to prod by the Phase 1 step 5.7 pipeline).
-- `russetleaf-gitops/apps/post-summarizer/overlays/home` and `overlays/home-staging`: queue URL, gateway URL (staging uses its own LiteLLM key and budget), WordPress URL, credentials from External Secrets.
+- Release workflow: build, SBOM, scan, push by digest, sign, attach the SBOM as a signed attestation, add **SLSA build provenance**, verify all three, write release notes with digests and Rekor links, push the image and the chart (OCI) to GHCR, open a chart-bump pull request on `russetleaf-gitops` for **`overlays/onprem-staging`** (promoted to prod by the Phase 1 step 5.7 pipeline).
+- `russetleaf-gitops/apps/post-summarizer/overlays/onprem` and `overlays/onprem-staging`: queue URL, gateway URL (staging uses its own LiteLLM key and budget), WordPress URL, credentials from External Secrets.
 - Turn on the summarizer check in the staging smoke tests (added in step 1.4).
 - A **re-summarize job** (a CLI in `russetleaf-llm-summarizer`, run as a Kubernetes Job): find posts whose stored summary metadata matches a given prompt version or model, and re-queue them through SQS so they are summarized again with the current version. Document it in `docs/runbooks/rollback-models.md`.
 
@@ -142,13 +142,13 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 **Test:** the queue drains completely within the expected time, nothing is lost (failures end up in the dead-letter queue with alerts), the summarizer scales back to zero, and the burst's cost is recorded.
 
-## Stage 3: Self-hosted model (`rl-home-cp02`)
+## Stage 3: Self-hosted model (`rl-onprem-cp02`)
 
 ### Step 3.1: llama.cpp model server
 
-**Do:** `platform/llm-serving/`: llama.cpp server (CPU build) with a toleration and node selector for `rl-home-cp02`; an init container that downloads a 4-bit **3B model** (for example, Qwen2.5-3B or Llama 3.2 3B) into a local-path volume (mirror the file in S3 so rebuilds do not depend on Hugging Face); metrics enabled; memory limits leaving ~1 GB free on the node, and a **CPU limit leaving about one core free**, because `rl-home-cp02` is also an etcd member (watch etcd's latency metrics while summaries run).
+**Do:** `platform/llm-serving/`: llama.cpp server (CPU build) with a toleration and node selector for `rl-onprem-cp02`; an init container that downloads a 4-bit **3B model** (for example, Qwen2.5-3B or Llama 3.2 3B) into a local-path volume (mirror the file in S3 so rebuilds do not depend on Hugging Face); metrics enabled; memory limits leaving ~1 GB free on the node, and a **CPU limit leaving about one core free**, because `rl-onprem-cp02` is also an etcd member (watch etcd's latency metrics while summaries run).
 
-**Test:** the pod runs **only** on `rl-home-cp02`; an OpenAI-style request returns a summary; record the time per summary and memory use in the decision log.
+**Test:** the pod runs **only** on `rl-onprem-cp02`; an OpenAI-style request returns a summary; record the time per summary and memory use in the decision log.
 
 ### Step 3.2: Gateway routing to the local model
 
@@ -166,7 +166,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 4.2: Runners for `russetleaf-llm-summarizer`
 
-**Do:** add a second ARC runner scale set (Phase 1 step 5.5) registered to **`russetleaf-llm-summarizer`**, on `rl-home-cp02` next to the model, with the same protections (approval for fork pull requests, self-hosted label limited to the evaluation workflows).
+**Do:** add a second ARC runner scale set (Phase 1 step 5.5) registered to **`russetleaf-llm-summarizer`**, on `rl-onprem-cp02` next to the model, with the same protections (approval for fork pull requests, self-hosted label limited to the evaluation workflows).
 
 **Test:** a test workflow runs on a self-hosted runner pod, which is deleted afterwards; a fork pull request waits for approval.
 
@@ -183,9 +183,9 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 4.4: Experiment tracking and model registry (MLflow)
 
-**Do:** `platform/mlflow/` (placed on `rl-home-cp03`): the MLflow tracking server with MariaDB for metadata (TLS required by the server, per [ADR 1043](../phase-1-russetleaf-dev/adr/1043-database-encryption.md)) and an S3 artifact bucket (`s3-mlops` module in `russetleaf-infra`; versioned, old versions deleted after 30 days per [ADR 1042](../phase-1-russetleaf-dev/adr/1042-s3-versioning-lifecycle-and-storage-classes.md), scoped access through External Secrets), behind Cloudflare Access. Change the evaluation gate (step 4.3) to log every run to MLflow (Git commit, prompt version, model, dataset version, scores, latency, cost). Register `summarizer-config` and `local-summarizer` (the current 3B model file) with `champion` aliases, feed the model mirror bucket from the registry, and make routing changes in `russetleaf-gitops` reference registry versions. **Back up MLflow's database** like WordPress's: a MariaDB Operator `Backup` to the backup bucket every 6 hours (replicated to the Backup account), with the same backup-age alert, and add it to the [disaster recovery plan](../phase-1-russetleaf-dev/disaster-recovery.md) ([ADR 1018](../phase-1-russetleaf-dev/adr/1018-disaster-recovery.md)); the model registry records which versions were approved, and cannot be rebuilt. Also **replicate the artifact bucket** to the Backup account (Backup-account key, as in Phase 1 step 2.5) and add it to the monthly copies and the freshness check, since the registry is useless without the model files. **Check `rl-home-cp03`'s memory** afterwards against the budget in the Phase 2 design; if it passes about 85%, place MLflow on `rl-home-cp01`. See the Phase 2 design's [MLOps lifecycle](design.md#mlops-lifecycle).
+**Do:** `platform/mlflow/` (placed on `rl-onprem-cp03`): the MLflow tracking server with MariaDB for metadata (TLS required by the server, per [ADR 1043](../phase-1-russetleaf-dev/adr/1043-database-encryption.md)) and an S3 artifact bucket (`s3-mlops` module in `russetleaf-infra`; versioned, old versions deleted after 30 days per [ADR 1042](../phase-1-russetleaf-dev/adr/1042-s3-versioning-lifecycle-and-storage-classes.md), scoped access through External Secrets), behind Cloudflare Access. Change the evaluation gate (step 4.3) to log every run to MLflow (Git commit, prompt version, model, dataset version, scores, latency, cost). Register `summarizer-config` and `local-summarizer` (the current 3B model file) with `champion` aliases, feed the model mirror bucket from the registry, and make routing changes in `russetleaf-gitops` reference registry versions. **Back up MLflow's database** like WordPress's: a MariaDB Operator `Backup` to the backup bucket every 6 hours (replicated to the Backup account), with the same backup-age alert, and add it to the [disaster recovery plan](../phase-1-russetleaf-dev/disaster-recovery.md) ([ADR 1018](../phase-1-russetleaf-dev/adr/1018-disaster-recovery.md)); the model registry records which versions were approved, and cannot be rebuilt. Also **replicate the artifact bucket** to the Backup account (Backup-account key, as in Phase 1 step 2.5) and add it to the monthly copies and the freshness check, since the registry is useless without the model files. **Check `rl-onprem-cp03`'s memory** afterwards against the budget in the Phase 2 design; if it passes about 85%, place MLflow on `rl-onprem-cp01`. See the Phase 2 design's [MLOps lifecycle](design.md#mlops-lifecycle).
 
-**Test:** `rl-home-cp03`'s memory stays under about 85%; an evaluation run appears in MLflow with its parameters, metrics and report; the registry shows both models with lineage to their runs; the gateway's routing points at a registered version; a backup restored into a scratch MariaDB instance shows the same registered versions and aliases.
+**Test:** `rl-onprem-cp03`'s memory stays under about 85%; an evaluation run appears in MLflow with its parameters, metrics and report; the registry shows both models with lineage to their runs; the gateway's routing points at a registered version; a backup restored into a scratch MariaDB instance shows the same registered versions and aliases.
 
 ### Step 4.5: Guardrails
 
@@ -210,8 +210,8 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Do** ([ADR 2005](adr/2005-fine-tuning-on-a-rented-gpu.md)):
 
 - **Training container** in `russetleaf-llm-summarizer/training/`: fetch the DVC-versioned training set; **LoRA fine-tune** the 3B base model; **evaluate against the base** on the evaluation set (including the adversarial cases); convert to GGUF; **register** the result in MLflow as a `local-summarizer` version with its scores, dataset version and Git commit; propose it as **challenger** if it beats the base. Build, scan and sign it like the summarizer image.
-- **Infrastructure** in `russetleaf-infra/envs/home`: a **launch template** for one spot GPU instance (for example, g6.xlarge; a GPU-ready image; outbound-only security group; a **maximum run time** after which the instance shuts itself down), an **instance profile** that can only read the DVC training data and write to the MLflow artifact bucket, and a **training-launcher role** for the `train` workflow (GitHub OIDC; may start and stop instances from that template only). The instance reaches the home MLflow through Cloudflare Access with a service token kept in Secrets Manager.
-- **`train` workflow** (on the home runners, started by hand or by a merged retraining pull request): assume the launcher role, start the instance with the dataset version and base model as parameters, wait for the run to register its result, then confirm the instance has terminated.
+- **Infrastructure** in `russetleaf-infra/envs/onprem`: a **launch template** for one spot GPU instance (for example, g6.xlarge; a GPU-ready image; outbound-only security group; a **maximum run time** after which the instance shuts itself down), an **instance profile** that can only read the DVC training data and write to the MLflow artifact bucket, and a **training-launcher role** for the `train` workflow (GitHub OIDC; may start and stop instances from that template only). The instance reaches the on-premises MLflow through Cloudflare Access with a service token kept in Secrets Manager.
+- **`train` workflow** (on the on-premises runners, started by hand or by a merged retraining pull request): assume the launcher role, start the instance with the dataset version and base model as parameters, wait for the run to register its result, then confirm the instance has terminated.
 - **Cost alert:** `TrainingInstanceRunningLong` when a training instance has been running longer than expected, to `#rl-costs` and `#rl-mlops`.
 - Before generating training data with a teacher model, **check the provider's terms**; use an open-weights teacher if in doubt.
 
@@ -219,7 +219,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 ### Step 4.9: Deploy a fine-tuned challenger
 
-**Do:** once step 4.8 has registered a fine-tuned `local-summarizer` version that beats the base model, deploy it to `rl-home-cp02` as the **challenger**: llama.cpp loads it from the model mirror bucket (fed from the registry), the gateway sends it a canary share of summaries, and online evaluation compares it with the champion. Promote it (MLflow alias plus a `russetleaf-gitops` routing pull request) only if it holds up for a week; update `MODEL_CARD.md`.
+**Do:** once step 4.8 has registered a fine-tuned `local-summarizer` version that beats the base model, deploy it to `rl-onprem-cp02` as the **challenger**: llama.cpp loads it from the model mirror bucket (fed from the registry), the gateway sends it a canary share of summaries, and online evaluation compares it with the champion. Promote it (MLflow alias plus a `russetleaf-gitops` routing pull request) only if it holds up for a week; update `MODEL_CARD.md`.
 
 **Test:** the challenger serves its canary share; online evaluation shows champion-versus-challenger scores side by side; promotion or rejection is recorded in MLflow, the model card and the decision log.
 
@@ -237,7 +237,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 - **Kyverno:** add the `russetleaf-llm-summarizer` release workflow's signing identity to image verification (signature, SBOM and provenance); Pod Security Admission labels (`restricted`) and quotas on the summarizer, gateway and model namespaces; KEDA on the service-account token allow-list; a `PolicyException` for llama.cpp's image only if it genuinely cannot run read-only or as non-root.
 - **CiliumNetworkPolicies:** summarizer → SQS, the gateway and WordPress's REST API (a **layer-7** rule: `GET`/`POST` on `/wp-json/*` only); gateway → llama.cpp and `bedrock-runtime`; llama.cpp's init container → the model mirror bucket only.
-- **Falco:** process allow-lists for the summarizer and gateway (`python`) and llama.cpp (`llama-server`); a rule for unexpected outbound connections from `rl-home-cp02`.
+- **Falco:** process allow-lists for the summarizer and gateway (`python`) and llama.cpp (`llama-server`); a rule for unexpected outbound connections from `rl-onprem-cp02`.
 - Optional: a recorded **custom seccomp profile** for the summarizer (as in Phase 1 step 7.7).
 
 **Test:** an unsigned summarizer image is rejected; a non-REST-API request from the summarizer to WordPress is blocked at layer 7; `curl https://example.com` from the gateway is blocked while Bedrock calls work; starting an unlisted process in the summarizer raises a Falco alert; the summary pipeline still works end to end.
@@ -247,19 +247,19 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 **Do:**
 
 - **Tracing:** turn tracing on in the summarizer and gateway values, sampling 100% of summary jobs.
-- **Cost:** OpenCost with `rl-home-cp02` attributed to the LLM namespace and the Bedrock spend shown alongside; the Bedrock row in the monthly cost review.
+- **Cost:** OpenCost with `rl-onprem-cp02` attributed to the LLM namespace and the Bedrock spend shown alongside; the Bedrock row in the monthly cost review.
 - **SLOs:** summary **freshness** (99% within 15 minutes) and daily **quality** (95%) in Sloth, with the error-budget policy covering summarizer releases (if Phase 1 step 8.1 is done).
 - **Chaos:** latency injected into model calls with a **Toxiproxy** sidecar in front of the gateway's upstream calls (Chaos Mesh's network rules cannot reliably target AWS endpoints), if Phase 1 step 8.6 is done.
 - **Rollback:** `docs/runbooks/rollback-models.md` (routing revert, re-summarize job) and a drill: roll back a prompt version and re-summarize the affected posts.
-- **Drills:** include the summarizer in the node-failure drill (`rl-home-cp02` offline: the gateway falls back to Bedrock).
+- **Drills:** include the summarizer in the node-failure drill (`rl-onprem-cp02` offline: the gateway falls back to Bedrock).
 
-**Test:** publishing a post produces **one trace** covering WordPress → the queue message → the summarizer → the gateway → the model call → saving the summary, showing which model answered, with no post text, prompts or summaries in any span; OpenCost shows the LLM namespace's cost; the re-summarize drill restores the earlier summaries; with `rl-home-cp02` off, summaries still arrive through Bedrock.
+**Test:** publishing a post produces **one trace** covering WordPress → the queue message → the summarizer → the gateway → the model call → saving the summary, showing which model answered, with no post text, prompts or summaries in any span; OpenCost shows the LLM namespace's cost; the re-summarize drill restores the earlier summaries; with `rl-onprem-cp02` off, summaries still arrive through Bedrock.
 
 ### Step 5.2b: AI operations assistant (kagent)
 
 **Do** ([ADR 2006](adr/2006-ai-operations-assistant.md)):
 
-- `platform/kagent/`: kagent (version pinned) on `rl-home-cp01`, with its tool servers for Kubernetes, Prometheus, Loki, Argo CD and Cilium only; tools that change anything are not installed. Check the current resource names and tool list in kagent's documentation.
+- `platform/kagent/`: kagent (version pinned) on `rl-onprem-cp01`, with its tool servers for Kubernetes, Prometheus, Loki, Argo CD and Cilium only; tools that change anything are not installed. Check the current resource names and tool list in kagent's documentation.
 - **Model:** a model configuration pointing at the **LiteLLM gateway**, with its own key, a small daily budget and rate limits.
 - **Permissions:** service accounts bound to the **read-only** role, with no access to Secrets; Kyverno, Pod Security and a default-deny network policy like any platform namespace (egress only to the API server, Prometheus, Loki, Argo CD and the gateway).
 - **Alert triage:** an Alertmanager webhook receiver sends critical (and selected warning) alerts to an assistant agent, which posts a **triage note** (likely cause, evidence, suggested next steps from the runbook) in the alert's Slack thread, labeled as AI-generated.
@@ -271,7 +271,7 @@ Then turn on the **`WordPressPostsMissingSummaries`** alert (from the custom met
 
 **Do** ([ADR 2007](adr/2007-ai-diagnosis-and-remediation-proposals.md)):
 
-- **Knowledge base:** PostgreSQL with **pgvector** (CloudNativePG, on `rl-home-cp01`; reuse the operator from Phase 1 step 8.3 if it exists; **no backup**, since re-running the embedding job rebuilds it, as recorded in the [disaster recovery plan](../phase-1-russetleaf-dev/disaster-recovery.md)); an Argo Workflows job that chunks and embeds the `russetleaf-docs` repo, the runbooks, the postmortems and the repos' code and Helm values (embeddings through the gateway, with its own budget), nightly and after merges to `main`; a small MCP server for search that returns passages with source links.
+- **Knowledge base:** PostgreSQL with **pgvector** (CloudNativePG, on `rl-onprem-cp01`; reuse the operator from Phase 1 step 8.3 if it exists; **no backup**, since re-running the embedding job rebuilds it, as recorded in the [disaster recovery plan](../phase-1-russetleaf-dev/disaster-recovery.md)); an Argo Workflows job that chunks and embeds the `russetleaf-docs` repo, the runbooks, the postmortems and the repos' code and Helm values (embeddings through the gateway, with its own budget), nightly and after merges to `main`; a small MCP server for search that returns passages with source links.
 - **Agents** (kagent): a **diagnosis agent** (read-only tools plus knowledge-base search) that writes a diagnosis citing its sources; a **remediation agent** that, when the runbook's fix is a Git change, opens an `ai-proposed` pull request in `russetleaf-gitops` with the evidence, the cited runbook, the expected effect and how to undo it; a **verification agent** that comments on the pull request after merge with whether the alert cleared and the SLIs recovered.
 - **Limits:** a GitHub App for the agents limited to branches and pull requests in `russetleaf-gitops` (no merge, no settings); a CI check that **rejects `ai-proposed` pull requests touching protected paths** (RBAC, Kyverno and network policies, secrets, Argo CD and Cilium configuration); one open proposal per incident and a daily limit; a kill switch.
 - **Evaluation:** run the incident scenarios and selected chaos experiments in staging; score each run (correct diagnosis, correct runbook cited, a proposal the operator would merge, any harmful proposal) and log the results to MLflow.
@@ -302,7 +302,7 @@ Also write **an account of building Phase 2 with agents** (`docs/agentic-deliver
 | 1.1 `russetleaf-llm-summarizer` repo | Core | 2–3 | ☐ | | | | | | |
 | 1.1b Agent workspace and guardrails | Core | 3–5 | ☐ | | | | | | |
 | 1.2 AWS resources for the AI pipeline | Core | 3–5 | ☐ | | | | | | |
-| 1.3 `rl-home-cp02` as the LLM node | Core | 1–2 | ☐ | | | | | | |
+| 1.3 `rl-onprem-cp02` as the LLM node | Core | 1–2 | ☐ | | | | | | |
 | 1.4 WordPress side of the pipeline | Core | 4–7 | ☐ | | | | | | |
 | 2.1 KEDA | Core | 1–3 | ☐ | | | | | | |
 | 2.2 LiteLLM gateway | Core | 3–5 | ☐ | | | | | | |
@@ -310,7 +310,7 @@ Also write **an account of building Phase 2 with agents** (`docs/agentic-deliver
 | 2.4 Summarizer chart + deploy | Core | 6–10 | ☐ | | | | | | |
 | 2.5 LLM monitoring | Core | 3–6 | ☐ | | | | | | |
 | 2.6 AI pipeline burst test | Extended | 3–5 | ☐ | | | | | | |
-| 3.1 llama.cpp on `rl-home-cp02` | Extended | 4–6 | ☐ | | | | | | |
+| 3.1 llama.cpp on `rl-onprem-cp02` | Extended | 4–6 | ☐ | | | | | | |
 | 3.2 Gateway routing to local model | Extended | 2–4 | ☐ | | | | | | |
 | 4.1 Evaluation set | Core | 5–8 | ☐ | | | | | | |
 | 4.2 Runners for `russetleaf-llm-summarizer` | Core | 1–2 | ☐ | | | | | | |

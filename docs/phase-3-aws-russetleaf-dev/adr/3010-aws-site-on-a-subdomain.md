@@ -7,7 +7,7 @@
 
 ## Context
 
-Phase 3 built its site on a second domain, registered with Route 53 Domains in an AWS account outside the Organization. The design had to move that registration into the Organization, copy its hosted zone, and manage a second registrar, a second set of registrar locks and a second DNSSEC chain of trust. The site exists to show the full AWS production design (EKS, RDS, CloudFront) next to the home site, not to serve a separate audience under its own name.
+Phase 3 built its site on a second domain, registered with Route 53 Domains in an AWS account outside the Organization. The design had to move that registration into the Organization, copy its hosted zone, and manage a second registrar, a second set of registrar locks and a second DNSSEC chain of trust. The site exists to show the full AWS production design (EKS, RDS, CloudFront) next to the on-premises site, not to serve a separate audience under its own name.
 
 ## Decision
 

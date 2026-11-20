@@ -9,7 +9,7 @@
 
 Service meshes such as Istio are common in larger production Kubernetes environments. They add mutual TLS (mTLS) between services, layer-7 authorization, traffic shifting, retries and timeouts, and per-service request metrics.
 
-This project has about four services that talk to each other: WordPress, the post-summarizer, the LiteLLM gateway and the llama.cpp model server. *[Original two-node state; see [ADR 1020](1020-three-node-ha-home-cluster.md).]* The home lab runs on two nodes with 8 GB of RAM each, and `rl-home-cp01` already uses about 6–7 GB. (With [ADR 1020](1020-three-node-ha-home-cluster.md)'s third node, memory is less tight, but a mesh's benefits are still small for about four services, so the decision stands.) Both clusters run Cilium, which provides network policies, Hubble flow visibility and optional transparent encryption.
+This project has about four services that talk to each other: WordPress, the post-summarizer, the LiteLLM gateway and the llama.cpp model server. *[Original two-node state; see [ADR 1020](1020-three-node-ha-onprem-cluster.md).]* The on-premises lab runs on two nodes with 8 GB of RAM each, and `rl-onprem-cp01` already uses about 6–7 GB. (With [ADR 1020](1020-three-node-ha-onprem-cluster.md)'s third node, memory is less tight, but a mesh's benefits are still small for about four services, so the decision stands.) Both clusters run Cilium, which provides network policies, Hubble flow visibility and optional transparent encryption.
 
 ## Decision
 
@@ -25,16 +25,16 @@ Do not run a service mesh. Cover a mesh's benefits with tools already in the des
 
 ## Alternatives considered
 
-- **Istio, sidecar mode:** a proxy in every pod (roughly 50–100 MB each) plus `istiod` (~300–500 MB). Did not fit `rl-home-cp01`'s memory on the original two-node cluster; still a large share of the three-node cluster's memory ([ADR 1020](1020-three-node-ha-home-cluster.md)).
+- **Istio, sidecar mode:** a proxy in every pod (roughly 50–100 MB each) plus `istiod` (~300–500 MB). Did not fit `rl-onprem-cp01`'s memory on the original two-node cluster; still a large share of the three-node cluster's memory ([ADR 1020](1020-three-node-ha-onprem-cluster.md)).
 - **Istio, ambient mode:** no per-pod proxies; a small proxy per node plus optional layer-7 "waypoint" proxies. Much lighter, but still a few hundred MB, a second policy system overlapping Cilium's, specific settings to run alongside Cilium, and more to upgrade and debug.
-- **Amazon VPC Lattice:** service-to-service networking across VPCs and accounts, with discovery, authentication policies and routing, without sidecars; suited to many teams' services spread over accounts, while aws.russetleaf.dev is one cluster in one VPC, where Cilium already handles service traffic, policies and visibility, and it does not cover the home cluster.
+- **Amazon VPC Lattice:** service-to-service networking across VPCs and accounts, with discovery, authentication policies and routing, without sidecars; suited to many teams' services spread over accounts, while aws.russetleaf.dev is one cluster in one VPC, where Cilium already handles service traffic, policies and visibility, and it does not cover the on-premises cluster.
 - **Linkerd:** lighter than Istio, but the same overlap with Cilium and the same small benefit at this scale.
 - **Cilium's own mutual authentication:** not used, as it adds little over WireGuard plus layer-7 policies for four services.
 
 ## Consequences
 
 - Simpler operations: one networking and policy system (Cilium) on both clusters.
-- Memory stays available for the actual workloads on `rl-home-cp01`.
+- Memory stays available for the actual workloads on `rl-onprem-cp01`.
 - Not covered: **per-connection service identity checks** (every call proving which service it comes from). Network policies restrict *who can connect* by labels, and encryption protects traffic in transit, but neither proves service identity cryptographically on each request.
 
 ## When to revisit
@@ -42,7 +42,7 @@ Do not run a service mesh. Cover a mesh's benefits with tools already in the des
 - Many more services calling each other (roughly ten or more), where per-service retries, timeouts and metrics become hard to manage without a mesh.
 - A requirement (for example, compliance) to verify service identity on every connection.
 - Traffic between several clusters that needs consistent identity and encryption.
-- More memory on the home nodes (for example, 16 GB), making Istio ambient mode affordable.
+- More memory on the on-premises nodes (for example, 16 GB), making Istio ambient mode affordable.
 
 ## Open items
 

@@ -9,7 +9,7 @@
 
 ## Context
 
-Only admins and editors log in to WordPress; site visitors do not. By default WordPress uses its own username/password logins at `/wp-login.php`, which is a constant target for password-guessing and credential-stuffing attacks. The project already avoids human-handled passwords elsewhere (IAM auth for the database on AWS, generated passwords at home) and already uses Cloudflare Access for admin tools on the home site. Constraints: no cost, both sites working the same way, no plugin installs from the admin screen ([ADR 1002](1002-s3-media-not-efs.md)), and the post-summarizer must keep logging in to the REST API with an application password.
+Only admins and editors log in to WordPress; site visitors do not. By default WordPress uses its own username/password logins at `/wp-login.php`, which is a constant target for password-guessing and credential-stuffing attacks. The project already avoids human-handled passwords elsewhere (IAM auth for the database on AWS, generated passwords on premises) and already uses Cloudflare Access for admin tools on the on-premises site. Constraints: no cost, both sites working the same way, no plugin installs from the admin screen ([ADR 1002](1002-s3-media-not-efs.md)), and the post-summarizer must keep logging in to the REST API with an application password.
 
 ## Decision
 
@@ -26,7 +26,7 @@ Only admins and editors log in to WordPress; site visitors do not. By default Wo
 - **Keep WordPress passwords (with a 2FA plugin):** still exposes a password login page to the internet, and passwords must be managed.
 - **Edge layer only (Cloudflare Access / ALB OIDC) without WordPress OIDC:** strong protection, but WordPress would still need its own passwords behind it.
 - **WordPress OIDC only, no edge layer:** removes passwords, but the login page and admin area stay reachable by anyone.
-- **Amazon Cognito** (federated with Google): adds a user pool and configuration with no benefit for a handful of admins, and does not cover the home site.
+- **Amazon Cognito** (federated with Google): adds a user pool and configuration with no benefit for a handful of admins, and does not cover the on-premises site.
 - **Freemium "social login" plugins:** often lock features behind paid tiers and add more code than needed.
 
 ## Consequences

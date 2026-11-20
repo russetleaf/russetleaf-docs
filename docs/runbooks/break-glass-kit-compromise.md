@@ -12,7 +12,7 @@ The rule for when credentials change is [ADR 1061](../phase-1-russetleaf-dev/adr
 
 ## Symptoms
 
-- The safe is missing, opened or damaged, or the home was broken into.
+- The safe is missing, opened or damaged, or the place it is kept was broken into.
 - The printed kit, the USB stick or `yubikey-backup` is missing from the safe, or was seen, photographed or handled by someone else.
 - A decrypted copy of the kit file, or of a vault export, may have been left on a disk, in a download folder or on another computer, or the kit passphrase may have been seen or typed on an untrusted computer.
 - An account in the kit sends an unexpected alert: a new sign-in, a changed password, a removed or added security key, recovery codes viewed or regenerated, or Advanced Protection or two-step login changed.

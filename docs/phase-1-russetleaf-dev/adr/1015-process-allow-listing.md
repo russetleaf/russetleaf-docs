@@ -1,11 +1,11 @@
 # ADR 1015: Process allow-listing with Falco; AppArmor and SELinux not used; Tetragon and custom seccomp as optional extras
 
-- **Status:** Accepted; updated by [ADR 1020](1020-three-node-ha-home-cluster.md)
+- **Status:** Accepted; updated by [ADR 1020](1020-three-node-ha-onprem-cluster.md)
 - **Date:** 2026-11-01
 - **Applies to:** both sites
 - **Phase:** 1 (WordPress's allow-list). Later: Phase 2 adds the summarizer, gateway and llama.cpp lists; Phase 3 tries Tetragon enforcement on EKS.
 
-> **Update ([ADR 1020](1020-three-node-ha-home-cluster.md)):** With the three-node home cluster's extra memory, **Tetragon enforcement is realistic at home** after its EKS trial.
+> **Update ([ADR 1020](1020-three-node-ha-onprem-cluster.md)):** With the three-node on-premises cluster's extra memory, **Tetragon enforcement is realistic on premises** after its EKS trial.
 
 ## Context
 
@@ -25,7 +25,7 @@ Platform constraints:
 - **Keep the images lean:** no download tools or package managers in final images where practical (the official WordPress image's startup script still needs its shell), checked by container-structure-test.
 - **Do not use AppArmor or custom SELinux policies.**
 - **Optional extras:**
-    - **Tetragon** enforcement (kill unlisted processes), tried on EKS during a demo first, and at home only if memory allows.
+    - **Tetragon** enforcement (kill unlisted processes), tried on EKS during a demo first, and on premises only if memory allows.
     - **Custom seccomp profiles** recorded with the **Security Profiles Operator** for WordPress and the summarizer.
 
 ## Alternatives considered
@@ -33,7 +33,7 @@ Platform constraints:
 - **AppArmor profiles:** not available on Talos or the EKS nodes used here.
 - **Custom SELinux policies:** large effort, limited Talos support, and AL2023's default permissive mode; little gain over seccomp, Falco and the read-only, non-root containers.
 - **KubeArmor:** enforcement through AppArmor, SELinux or BPF-LSM; depends on kernel features not guaranteed on Talos, and duplicates Tetragon, which fits the existing Cilium stack.
-- **Tetragon enforcement everywhere now:** blocks rather than detects, but costs memory on `rl-home-cp01` and can break workloads if an allow-list is wrong; better proven on EKS first.
+- **Tetragon enforcement everywhere now:** blocks rather than detects, but costs memory on `rl-onprem-cp01` and can break workloads if an allow-list is wrong; better proven on EKS first.
 - **Detection only through the existing "shell in pod" rule:** catches shells but not other unexpected programs (for example, `curl`, a miner).
 
 ## Consequences
@@ -45,7 +45,7 @@ Platform constraints:
 
 ## When to revisit
 
-- Tetragon proves stable on EKS: consider enforcement for WordPress at home too.
+- Tetragon proves stable on EKS: consider enforcement for WordPress on premises too.
 - Talos adds AppArmor or full SELinux support, or the EKS nodes move to Bottlerocket (which enforces SELinux).
 - A compliance requirement mandates mandatory access control profiles.
 
