@@ -82,15 +82,15 @@ The ER605's web interface is used in **standalone mode** throughout: no Omada co
     | **States** | **New**, **Established**, **Related** and **Invalid**, all selected (the default) |
 
     Then **OK**. The router allows whatever no rule blocks, so this one rule is enough: the server network can still reach the internet, and nothing from the main network can start a connection into it, because the ER605's NAT drops it.
-3. **Nothing comes in:**
+3. **Nothing comes in:** check each of these; on firmware 2.4.10 all were already in this state, so nothing needed changing. Change only a setting that differs.
     - **Transmission → NAT → Virtual Servers** lists **no** entries (no port forwards); check **One-to-One NAT** and **NAT-DMZ** under **Transmission → NAT** too.
     - **Service → UPnP**: **Enable UPnP** cleared, and **Save**, so no device on the server network can open its own port forward.
     - **System Tools → Admin Setup → Remote Management** lists **no** entries, so the web interface cannot be reached from the WAN side.
     - **System Tools → Controller Settings**: **Cloud-Based Controller Management** off.
     - **System Tools → Diagnostics → Remote Assistance**: the box cleared, so TP-Link's technicians cannot reach the router by SSH.
 
-    The Cloudflare Tunnel is outbound-only, so nothing needs to come in.
-4. **HTTPS for the web interface:** **System Tools → Admin Setup → System Settings**: **HTTPS Server Status** and **Redirect HTTP to HTTPS** checked, and **Save**. The router's certificate is self-signed, so the browser warns on the first visit; from then on, the admin password is not sent in the clear.
+    The Cloudflare Tunnel is outbound-only, so nothing needs to come in. These paths, from the 2022 user guide, match firmware 2.4.10.
+4. **HTTPS for the web interface:** **System Tools → Admin Setup → System Settings**: **HTTPS Server Status** and **Redirect HTTP to HTTPS** checked (both already on with firmware 2.4.10; otherwise check them and **Save**). The router's certificate is self-signed, so the browser warns on the first visit; from then on, the admin password is not sent in the clear.
 
 ## Part 4: WireGuard for the workstation
 
