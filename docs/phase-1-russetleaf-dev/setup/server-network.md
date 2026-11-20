@@ -64,16 +64,18 @@ The ER605's web interface is used in **standalone mode** throughout: no Omada co
 
 ## Part 3: The firewall and remote access
 
-1. **The main network as an IP group:** an access-control rule names its destination by an IP group, not by an address. **Preferences → IP Group → IP Address**, then **Add**: name `main_net`, the network `192.168.1.0` with mask `255.255.255.0`, and **OK**. Then, on the **IP Group** tab of the same page, **Add**: name `main`, with the address `main_net`, and **OK**. (Names take only letters, digits and underscores.)
+1. **The two networks as IP groups:** a rule in the **LAN->WAN** direction names its source and destination by IP groups, not by LAN networks (the **Network** type is offered only for **LAN->LAN** rules). **Preferences → IP Group → IP Address**, then **Add**, twice, each with **OK**: `main_net`, the network `192.168.1.0` with mask `24` (the form takes the prefix length); and `server_net`, `10.10.0.0` with mask `24`. Then, on the **IP Group** tab of the same page, **Add**, twice, each with **OK**: `main`, with the address `main_net`; and `servers`, with `server_net`.
+
+    **Names on the router** take only letters, digits and underscores, for IP groups, access-control rules and the WireGuard interface alike: the router refuses hyphens.
 2. **Block the server network from the main network:** **Firewall → Access Control**, then **Add**:
 
     | Field | Value |
     |---|---|
-    | Name | `servers-to-main-deny` |
-    | **Policy** | Block |
+    | Name | `servers_to_main_deny` |
+    | **Policy** | **BLOCK** |
     | **IP Type** | IPv4 |
     | **Direction** | **LAN->WAN** (the main network is on the ER605's WAN side) |
-    | Source **Type** | **Network**: the LAN network edited in Part 2 |
+    | Source **Type** | **IP Group**: `servers` |
     | Destination **Type** | **IP Group**: `main` |
     | **Effective Time** | Any |
     | **States** | The default |
@@ -102,8 +104,8 @@ The workstation's private key is generated on the workstation and never leaves i
     cat ~/.config/wireguard/rl-mgmt.pub      # the public key, for the router
     ```
 
-2. **The WireGuard server on the ER605:** **VPN → WireGuard → WireGuard**, then **Add**: **Name** `rl-mgmt`, **MTU** `1420` (the default), **Listen Port** **`51820`** (the default), **Local IP Address** **`10.10.99.1`**; the router generates its own key pair. Save the interface, then use its **Export** to get the router's **public key**.
-3. **The workstation as a peer:** **VPN → WireGuard → Peers**, then **Add**: **Interface** `rl-mgmt`, **Public Key** the workstation's public key from step 1, **Endpoint** and **Endpoint Port** left empty (the router is the server), **Allowed Address** **`10.10.99.2/32`**, and, if the page offers it, a persistent keepalive of **25 seconds**; then save.
+2. **The WireGuard server on the ER605:** **VPN → WireGuard → WireGuard**, then **Add**: **Name** `rl_mgmt` (the router's name for the interface; the workstation's side is `rl-mgmt`), **MTU** `1420` (the default), **Listen Port** **`51820`** (the default), **Local IP Address** **`10.10.99.1`**; the router generates its own key pair. Save the interface, then use its **Export** to get the router's **public key**.
+3. **The workstation as a peer:** **VPN → WireGuard → Peers**, then **Add**: **Interface** `rl_mgmt`, **Public Key** the workstation's public key from step 1, **Endpoint** and **Endpoint Port** left empty (the router is the server), **Allowed Address** **`10.10.99.2/32`**, and, if the page offers it, a persistent keepalive of **25 seconds**; then save.
 4. **The client profile:** on the workstation, write `~/.config/wireguard/rl-mgmt.conf` (mode `600`). It is a **split tunnel**: only the server network's traffic goes through it, so there is no `DNS` line and `AllowedIPs` lists only the server subnet.
 
     ```ini
@@ -199,7 +201,8 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - Apple: ["Use DHCP or a manual IP address on Mac"](https://support.apple.com/guide/mac-help/use-dhcp-or-a-manual-ip-address-on-mac-mchlp2718/mac) and ["Change DNS settings on Mac"](https://support.apple.com/guide/mac-help/change-dns-settings-on-mac-mh14127/mac) (the checks from macOS), checked 2026-11-19
 - Ubuntu: ["ip-address"](https://manpages.ubuntu.com/manpages/noble/man8/ip-address.8.html), ["resolvectl"](https://manpages.ubuntu.com/manpages/noble/man1/resolvectl.1.html) and ["ping"](https://manpages.ubuntu.com/manpages/noble/man8/ping.8.html) (the checks from Linux), checked 2026-11-19
 - TP-Link (Omada): ["How to Find the Hardware Version on Your TP-Link Device"](https://support.omadanetworks.com/us/document/14139/), checked 2026-11-19
-- TP-Link (Omada): ["Omada Gateway Access Control Configuration Examples"](https://support.omadanetworks.com/en/document/13189/) (standalone mode: IP groups, access-control rules, the rule's source as a LAN network), checked 2026-11-20
+- TP-Link Community: ["ER605/How to block a device from internet access?"](https://community.tp-link.com/en/business/forum/topic/586812) (a **LAN->WAN** rule with IP groups as source and destination; TP-Link's article does not say which source types each direction offers, and the router offers **Network** only for **LAN->LAN**), checked 2026-11-20
+- TP-Link (Omada): ["Omada Gateway Access Control Configuration Examples"](https://support.omadanetworks.com/en/document/13189/) (standalone mode: IP groups and access-control rules), checked 2026-11-20
 - TP-Link (Omada): ["How to Configure DHCP Server on Omada Gateway"](https://support.omadanetworks.com/us/document/13196/) (standalone mode: the LAN network's fields) and ["How to Configure DHCP Address Reservation on Omada Gateway in Standalone Mode"](https://support.omadanetworks.com/us/document/13294/) (address reservations, the DHCP client list), checked 2026-11-20
 - TP-Link (Omada): ["How to Configure WireGuard VPN on Omada Router in Standalone Mode"](https://support.omadanetworks.com/us/document/13120/) (the ER605 v2), checked 2026-11-19
 - WireGuard: ["Quick Start"](https://www.wireguard.com/quickstart/), checked 2026-11-12
