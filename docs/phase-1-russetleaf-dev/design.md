@@ -1210,7 +1210,7 @@ The three nodes are small-form-factor business PCs with 35 W Intel "T" processor
 |---|---|---|---|---|---|---|---|
 | `rl-onprem-cp01` | Lenovo ThinkCentre M710q Tiny | Intel Core i5-6400T, 4 cores, 2.2 GHz | 8 GB DDR4 (32 GB) | 256 GB SSD | 1 GbE, Intel | `10.10.0.11` | Control plane + **secondary workloads**: a WordPress replica, the **MariaDB replica**, the second cloudflared replica |
 | `rl-onprem-cp02` | Dell OptiPlex 3040 Micro | Intel Core i5-6500T, 4 cores, 2.5 GHz | 8 GB DDR4 (16 GB) | 256 GB SSD | 1 GbE, Intel | `10.10.0.12` | Control plane + general workloads: the CI runners and staging runs. In Phase 2 it becomes the **dedicated LLM node** (it has the faster of the two 4-core CPUs) |
-| `rl-onprem-cp03` | Dell OptiPlex 3060 Micro | Intel Core i5-8500T, 6 cores, 2.1 GHz | 16 GB DDR4 (32 GB) | 256 GB NVMe SSD | 1 GbE, Intel | `10.10.0.13` | Control plane + **main workloads**: Argo CD, monitoring, Loki, Tempo, platform services, a WordPress replica, the **MariaDB primary** |
+| `rl-onprem-cp03` | Dell OptiPlex 5060 Micro | Intel Core i5-8500T, 6 cores, 2.1 GHz | 16 GB DDR4 (32 GB) | 256 GB NVMe SSD | 1 GbE, Intel | `10.10.0.13` | Control plane + **main workloads**: Argo CD, monitoring, Loki, Tempo, platform services, a WordPress replica, the **MariaDB primary** |
 | (virtual IP) | — | — | — | — | — | `10.10.0.10` | The Kubernetes API, held by one healthy node at a time |
 | `rl-onprem-rt01` | TP-Link ER605 (v2) | — | — | — | 1 GbE, 5 ports | `10.10.0.1` (LAN) | Server network router, firewall and WireGuard server |
 | `rl-onprem-sw01` | TP-Link TL-SG105 (unmanaged) | — | — | — | 1 GbE, 5 ports | — | Connects the router and the three nodes (one port spare) |

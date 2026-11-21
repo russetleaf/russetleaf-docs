@@ -18,7 +18,7 @@ The on-premises environment had two nodes with 8 GB of RAM each: `rl-onprem-cp01
 
 | Node | Hardware | Roles |
 |---|---|---|
-| **`rl-onprem-cp03`** (new) | Dell OptiPlex 3060, i5-8500T (6 cores), 16 GB, NVMe | Control plane + **main workloads**: Argo CD, monitoring, Loki, Tempo, platform services, a WordPress replica, the **MariaDB primary** |
+| **`rl-onprem-cp03`** (new) | Dell OptiPlex 5060 Micro, i5-8500T (6 cores), 16 GB, NVMe | Control plane + **main workloads**: Argo CD, monitoring, Loki, Tempo, platform services, a WordPress replica, the **MariaDB primary** |
 | **`rl-onprem-cp01`** | Lenovo M710q, i5-6400T (4 cores), 8 GB | Control plane + **secondary workloads**: a WordPress replica, the **MariaDB replica**, the second cloudflared replica, staging runs |
 | **`rl-onprem-cp02`** | Dell OptiPlex 3040, i5-6500T (4 cores), 8 GB | Control plane + **dedicated LLM** (label `workload=llm`, taint `dedicated=llm:NoSchedule`) and the CI runners |
 

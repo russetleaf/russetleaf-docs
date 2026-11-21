@@ -39,7 +39,7 @@ The design referred to the on-premises servers as "box 1", "box 2" and "box 3", 
 |---|---|---|
 | `rl-onprem-cp01` | Lenovo ThinkCentre M710q Tiny (i5-6400T, 8 GB) | `10.10.0.11` |
 | `rl-onprem-cp02` | Dell OptiPlex 3040 Micro (i5-6500T, 8 GB) | `10.10.0.12` |
-| `rl-onprem-cp03` | Dell OptiPlex 3060 Micro (i5-8500T, 16 GB) | `10.10.0.13` |
+| `rl-onprem-cp03` | Dell OptiPlex 5060 Micro (i5-8500T, 16 GB) | `10.10.0.13` |
 | `rl-onprem-rt01` | TP-Link ER605 v2 | `10.10.0.1` |
 | `rl-onprem-sw01` | TP-Link TL-SG105 (5-port gigabit, unmanaged) | — |
 
