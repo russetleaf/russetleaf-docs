@@ -159,10 +159,10 @@ The workstation's private key is generated on the workstation and never leaves i
     | Node | Open setup | Set the password | Save and exit |
     |---|---|---|---|
     | `rl-onprem-cp01` (ThinkCentre M710q) | Repeatedly press **F1** while it starts | **Security** → **Set Administrator Password**, then follow the instructions on the right of the screen | **F10**, then **Yes** |
-    | `rl-onprem-cp02` (OptiPlex 3040 Micro) | Press **F2** as soon as the Dell logo appears | **Security** → **Admin Password**: **Enter the new password**, then **Confirm new password** | `Esc`, then **Y** to save |
-    | `rl-onprem-cp03` (OptiPlex 3060 Micro) | Press **F2** as soon as the Dell logo appears | **Security** → **Admin Password**: **Enter the new password**, then **Confirm new password** | Save when leaving setup, as the screen prompts (the manual does not give the keys) |
+    | `rl-onprem-cp02` (OptiPlex 3040 Micro) | Press **F2** as soon as the Dell logo appears | **Security** → **Admin Password**: **Enter the new password**, then **Confirm new password** | **Exit** |
+    | `rl-onprem-cp03` (OptiPlex 3060 Micro) | Press **F2** as soon as the Dell logo appears | **Security** → **Admin Password**: **Enter the new password**, then **Confirm new password** | **Exit** |
 
-    Open setup again on each node afterwards: it now asks for the password. Lenovo's procedure comes from the guide for the same generation of Tiny models (the M700 and M900), since the M710q's own guides have no setup chapter; Dell's from each model's manual. The 3060's manual does not name the key that opens setup; **F2** is Dell's key on the 3040, and the screen confirms it. Leave **Admin Setup Lockout** (Dell) off: with it on, setup cannot be opened at all while the password is set.
+    Open setup again on each node afterwards: it now asks for the password. Lenovo's procedure comes from the guide for the same generation of Tiny models (the M700 and M900), since the M710q's own guides have no setup chapter; Dell's from each model's manual. Leave **Admin Setup Lockout** (Dell) off: with it on, setup cannot be opened at all while the password is set.
 
 ## Checks
 
