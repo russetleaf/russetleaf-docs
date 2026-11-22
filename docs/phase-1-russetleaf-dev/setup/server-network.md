@@ -171,19 +171,36 @@ The workstation's private key is generated on the workstation and never leaves i
 
 ## Part 5: Backups and BIOS passwords
 
-1. **Back up the ER605's configuration:** **System Tools → Management → Backup & Restore**, and, in the **Backup** section, **Backup**; the browser saves the file. The break-glass kit reads only text in a vault item, not attachments ([break-glass kit setup guide](break-glass-kit.md#before-starting)), so the file goes into the notes of the router's Bitwarden item as base64 text, which `base64 -d` turns back into the file for a restore. With the CLI unlocked in the project's data folder (`export BW_SESSION="$(bw unlock --raw)"`, run on its own), move the file into memory and add it to the item:
+1. **Back up the ER605's configuration:** with the tunnel up (Part 4), open `https://10.10.0.1` on the workstation, go to **System Tools → Management → Backup & Restore**, choose **Export unencrypted configuration file** in the **Backup** section, and download it. The router's own encryption is not used: it adds a password that would be stored beside the file anyway, and a backup that cannot be decrypted at restore time is worthless; the file is encrypted with the kit passphrase instead. The file (about 250 KB with firmware 2.4.10) is too large for a Bitwarden note, so it is kept **next to the vault exports**, in the same places and with the same encryption ([break-glass kit setup guide](break-glass-kit.md#part-4-the-encrypted-export-of-the-bitwarden-vault)):
+    1. **Encrypt it in memory** and prove the encrypted copy, removing the download from the disk:
 
-    ```bash
-    mv ~/Downloads/<the backup file> /dev/shm/rl-onprem-rt01.cfg
-    item_id="$(bw get item '<the router item>' | jq -r .id)"
-    bw get item "${item_id}" \
-      | jq --arg cfg "$(base64 -w 76 /dev/shm/rl-onprem-rt01.cfg)" --arg date "$(date +%F)" \
-        '.notes = ((.notes // "") + "\n\nConfiguration backup " + $date + " (base64):\n" + $cfg)' \
-      | bw encode | bw edit item "${item_id}" >/dev/null && echo "Backup added to the item"
-    rm /dev/shm/rl-onprem-rt01.cfg
-    ```
+        ```bash
+        rl_tmp="$(mktemp -d -p /dev/shm rl-router.XXXX)"
+        cfg="${rl_tmp}/rl-onprem-rt01-config-$(date +%F).bin"
+        cp ~/Downloads/'<the downloaded file>' "${cfg}"
+        shred -u ~/Downloads/'<the downloaded file>'
+        gpg --symmetric --cipher-algo AES256 --s2k-digest-algo SHA512 --s2k-count 65011712 \
+          --output "${cfg}.gpg" "${cfg}"
+        gpgconf --reload gpg-agent
+        gpg --decrypt "${cfg}.gpg" | cmp - "${cfg}" && echo "Encrypted copy verified"
+        rm "${cfg}"
+        ```
 
-    Bitwarden refuses a note whose encrypted form is longer than 10,000 characters (about 7,000 characters of text), and `bw edit` then reports the error. In that case, encrypt the file with the kit passphrase instead, as the kit's vault exports are ([break-glass kit setup guide](break-glass-kit.md#part-4-the-encrypted-export-of-the-bitwarden-vault), Part 4, step 3), and store it with them. Repeat after every change, replacing the older backup in the notes, then refresh the kit.
+        On an SSD, `shred` cannot guarantee that the old blocks are overwritten; full-disk encryption on the workstation covers what remains.
+    2. **Store it** like the exports: upload `rl-onprem-rt01-config-<date>.bin.gpg` from `${rl_tmp}` to the kit folders on Google Drive and OneDrive and check the uploaded copies ([break-glass kit setup guide](break-glass-kit.md#part-3-the-encrypted-copy-in-google-drive-and-onedrive), Part 3, step 4); then copy it to the USB stick, check the copy and unmount the stick (Part 4, step 5), and return it to the safe.
+    3. **Point to it from the router's Bitwarden item,** so the kit file says where the backup is: with the CLI unlocked in the project's data folder (`export BW_SESSION="$(bw unlock --raw)"`, run on its own),
+
+        ```bash
+        item_id="$(bw get item '<the router item>' | jq -r .id)"
+        bw get item "${item_id}" \
+          | jq --arg f "$(basename "${cfg}").gpg" \
+            '.notes = ((.notes // "") + "\n\nConfiguration backup: " + $f + " (encrypted with the kit passphrase), in the kit folders on Google Drive and OneDrive and on the RL-KIT USB stick.")' \
+          | bw encode | bw edit item "${item_id}" >/dev/null && echo "Note added"
+        bw lock && unset BW_SESSION
+        rm -rf "${rl_tmp}"
+        ```
+
+    Repeat after every configuration change, replacing the older backup in all three places and its note, then refresh the kit. To restore: decrypt the file with the kit passphrase (`gpg --output /dev/shm/rl-onprem-rt01.bin --decrypt <file>`), and import it on the same page of the ER605.
 2. **BIOS administrator passwords** on all three nodes, so the firmware settings cannot be changed without one. Generate each in Bitwarden as **20 lowercase letters and digits**, the one format all three accept (the OptiPlex 3040's BIOS takes only lowercase letters, digits and a few symbols, up to 32 characters; the OptiPlex 5060's takes 4 to 32; the ThinkCentre's is not case sensitive), and save it in an item per node (`BIOS rl-onprem-cp01` and so on) before entering it. The other BIOS settings (Secure Boot, the TPM, power-on after a power cut) are part of step 2.2.
 
     | Node | Open setup | Set the password | Save and exit |
@@ -223,7 +240,7 @@ The test for step 0.3:
 - [ ] With **WireGuard down**: `10.10.0.1` is **not** reachable.
 - [ ] From **another device on the main network**: the server network is not reachable.
 - [ ] The router has **no port forwards**, **UPnP is off** and **remote management is off**.
-- [ ] The break-glass kit has the ER605's admin login, its configuration backup and the three BIOS passwords; no copy of the workstation's WireGuard private key exists outside NetworkManager.
+- [ ] The break-glass kit has the ER605's admin login (with a note pointing to the configuration backup) and the three BIOS passwords, and the encrypted configuration backup is in the kit folders on Google Drive and OneDrive and on the USB stick; no copy of the workstation's WireGuard private key exists outside NetworkManager.
 
 Step 2.2 repeats the isolation checks from a pod inside the cluster.
 
