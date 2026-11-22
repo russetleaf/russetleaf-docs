@@ -231,3 +231,4 @@ Mbps
 uplink
 [Pp]owerline
 LEDs
+[Pp]reshared

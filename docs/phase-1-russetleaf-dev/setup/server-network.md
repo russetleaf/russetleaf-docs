@@ -97,7 +97,7 @@ The ER605's web interface is used in **standalone mode** throughout: no Omada co
 
 ## Part 4: WireGuard for the workstation
 
-The workstation's private key is generated on the workstation and never leaves it; the router only learns its public key. The steps follow TP-Link's WireGuard article for the ER605 v2 in standalone mode ([References](#references)).
+The workstation's private key is generated on the workstation and never leaves it; the router only learns its public key. TP-Link's WireGuard articles ([References](#references)) describe the older **VPN → WireGuard** menu and the newer **VPN → VPN Server**; the steps below use **VPN → Site-to-Site VPN**, as confirmed on firmware 2.4.10, because it is the form that takes the workstation's public key.
 
 1. **The workstation's keys:**
 
@@ -108,20 +108,52 @@ The workstation's private key is generated on the workstation and never leaves i
     cat ~/.config/wireguard/rl-mgmt.pub      # the public key, for the router
     ```
 
-2. **The WireGuard server on the ER605:** **VPN → WireGuard → WireGuard**, then **Add**: **Name** `rl_mgmt` (the router's name for the interface; the workstation's side is `rl-mgmt`), **MTU** `1420` (the default), **Listen Port** **`51820`** (the default), **Local IP Address** **`10.10.99.1`**; the router generates its own key pair. Save the interface, then use its **Export** to get the router's **public key**.
-3. **The workstation as a peer:** **VPN → WireGuard → Peers**, then **Add**: **Interface** `rl_mgmt`, **Public Key** the workstation's public key from step 1, **Endpoint** and **Endpoint Port** left empty (the router is the server), **Allowed Address** **`10.10.99.2/32`**, and, if the page offers it, a persistent keepalive of **25 seconds**; then save.
+2. **The tunnel on the ER605:** **VPN → Site-to-Site VPN**, then **Add**, with **WireGuard** as the type. Firmware 2.4.x has no separate WireGuard menu: its **VPN → VPN Server** also offers WireGuard, but generates each client's key pair on the router (the client's **Public Key** cannot be entered, in either **Authorization** mode), so the client's private key would be stored on the router and exported in a file. A site-to-site tunnel takes the other side's public key instead, and the workstation is that other side. The tunnel:
+
+    | Field | Value |
+    |---|---|
+    | **Name** | `rl_mgmt` (the router's name; the workstation's side is `rl-mgmt`) |
+    | **Status** | Enabled |
+    | **Interface** | **WAN1** |
+    | Port | `51820` (the default) |
+    | **Local IP Address** | `10.10.99.1` (the router's address in the tunnel) |
+    | **Private Key** / **Public Key** | Unchanged: the router generates its own pair; the **Public Key** goes into the workstation's profile (step 4) |
+
+3. **The workstation as the peer,** in the same form's peer section:
+
+    | Field | Value |
+    |---|---|
+    | **Name** | `workstation` |
+    | **Public Key** | The workstation's public key from step 1. It is not secret, so copy it to the second computer by any convenient means and paste it: typing 44 characters can outlast the router's **Web Idle Timeout** (on **System Tools → Admin Setup → System Settings**) |
+    | **Endpoint** / **Endpoint Port** | Empty: the workstation connects to the router, not the other way round |
+    | **Allowed Address** | `10.10.99.2/32` (the workstation's address in the tunnel, and nothing else) |
+    | **Preshared Key** | Empty: a preshared key would have to be typed into the router from the second computer, spreading a second secret |
+    | **Persistent Keepalive** | Empty: the workstation's profile keeps the tunnel alive |
+    | **Status** | Enabled |
+
+    Save the peer, then the tunnel.
 4. **The client profile:** on the workstation, write `~/.config/wireguard/rl-mgmt.conf` (mode `600`). It is a **split tunnel**: only the server network's traffic goes through it, so there is no `DNS` line and `AllowedIPs` lists only the server subnet.
 
-    ```ini
+    Write it with the private key read from its file, so the key is never shown or typed; the router's public key is copied from the tunnel's **Public Key** field on the ER605 (it is not secret):
+
+    ```bash
+    router_public_key='<the ER605 tunnel public key>'
+    wan_address='<the ER605 WAN address>'
+    (
+      umask 077
+      cat > ~/.config/wireguard/rl-mgmt.conf <<EOF
     [Interface]
-    PrivateKey = <the contents of ~/.config/wireguard/rl-mgmt.key>
+    PrivateKey = $(cat ~/.config/wireguard/rl-mgmt.key)
     Address = 10.10.99.2/24
 
     [Peer]
-    PublicKey = <the ER605's WireGuard public key>
-    Endpoint = <the ER605's WAN address>:51820
+    PublicKey = ${router_public_key}
+    Endpoint = ${wan_address}:51820
     AllowedIPs = 10.10.0.0/24
     PersistentKeepalive = 25
+    EOF
+    )
+    grep -v PrivateKey ~/.config/wireguard/rl-mgmt.conf   # check everything but the key
     ```
 
 5. **Import it into NetworkManager,** and keep it off until needed:
@@ -219,6 +251,7 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - Lenovo: ["ThinkCentre M700 and M900 User Guide"](https://download.lenovo.com/pccbbs/thinkcentre_pdf/m700_m900_tiny_ug_en.pdf) (the Setup Utility: starting it, BIOS passwords, exiting), checked 2026-11-20
 - TP-Link (Omada): ["Omada Gateway Access Control Configuration Examples"](https://support.omadanetworks.com/en/document/13189/) (standalone mode: IP groups and access-control rules), checked 2026-11-20
 - TP-Link (Omada): ["How to Configure DHCP Server on Omada Gateway"](https://support.omadanetworks.com/us/document/13196/) (standalone mode: the LAN network's fields) and ["How to Configure DHCP Address Reservation on Omada Gateway in Standalone Mode"](https://support.omadanetworks.com/us/document/13294/) (address reservations, the DHCP client list), checked 2026-11-20
+- TP-Link (Omada): ["How to Configure WireGuard VPN on Omada Gateway"](https://support.omadanetworks.com/us/document/13314/) (standalone mode: **VPN → VPN Server** for clients, with **Authorization** **Auto** or **Manual**, and **VPN → Site-to-Site VPN**, whose peer takes the other side's public key), checked 2026-11-22
 - TP-Link (Omada): ["How to Configure WireGuard VPN on Omada Router in Standalone Mode"](https://support.omadanetworks.com/us/document/13120/) (the ER605 v2), checked 2026-11-19
 - WireGuard: ["Quick Start"](https://www.wireguard.com/quickstart/), checked 2026-11-12
 - NetworkManager: ["nmcli reference manual"](https://networkmanager.dev/docs/api/latest/nmcli.html), checked 2026-11-12
