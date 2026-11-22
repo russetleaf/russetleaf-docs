@@ -1214,7 +1214,7 @@ The three nodes are small-form-factor business PCs with 35 W Intel "T" processor
 | (virtual IP) | — | — | — | — | — | `10.10.0.10` | The Kubernetes API, held by one healthy node at a time |
 | `rl-onprem-rt01` | TP-Link ER605 (v2) | — | — | — | 1 GbE, 5 ports | `10.10.0.1` (LAN) | Server network router, firewall and WireGuard server |
 | `rl-onprem-sw01` | TP-Link TL-SG105 (unmanaged) | — | — | — | 1 GbE, 5 ports | — | Connects the router and the three nodes (one port spare) |
-| (main network) | TP-Link RE315 (range extender) | — | — | — | Wi-Fi to the ISP router; 1 × 10/100 Mbps Ethernet | — | Carries the server network's internet traffic to the ISP router (SAX1V1K); limits it to 100 Mbps |
+| (main network) | TP-Link TL-PA4010 KIT (two AV600 powerline adapters, paired) | — | — | — | Over the electrical wiring; 1 × 10/100 Mbps Ethernet each | — | Carries the server network's internet traffic from the ER605 to the ISP router (SAX1V1K), passing the ER605's own MAC address; limits it to 100 Mbps |
 
 The numbers follow the order the machines joined the on-premises environment; `rl-onprem-cp03` was bought for the three-node cluster ([ADR 1020](adr/1020-three-node-ha-onprem-cluster.md)). The maximum memory figures are the manufacturers' published limits as recalled at the time of writing; check them before buying memory.
 

@@ -7,15 +7,17 @@
 
 > **Update ([decision log](../plan.md#decision-log), 2026-11-20):** the network behind the ER605 is called **the server network** (it was "the lab network"), and the workstation's WireGuard tunnel is **`rl-mgmt`**; the decision is unchanged.
 
+> **Update ([decision log](../plan.md#decision-log), 2026-11-22):** the ER605 reaches the ISP router through powerline adapters, not a Wi-Fi range extender: the extender replaced the ER605's MAC address with its own, so the ISP router could not reserve the ER605's WAN address.
+
 ## Context
 
-[ADR 1032](1032-defense-in-depth.md) requires the cluster to be separated from devices on the main network. The main network is the internet service provider's router (the **ISP router**; here a Spectrum SAX1V1K), a TP-Link RE315 (AC1200 Mesh Wi-Fi Range Extender) in the server room, and an unmanaged switch (a TP-Link TL-SG105) connecting the servers. None of these can create VLANs or isolate wired devices, and the ISP router does not allow custom routes. The workstation is on the main network's Wi-Fi and must stay there.
+[ADR 1032](1032-defense-in-depth.md) requires the cluster to be separated from devices on the main network. The main network is the internet service provider's router (the **ISP router**; here a Spectrum SAX1V1K), a pair of powerline adapters (TP-Link TL-PA4010, AV600) carrying a wired link from the ISP router to the server room over the electrical wiring, and an unmanaged switch (a TP-Link TL-SG105) connecting the servers. None of these can create VLANs or isolate wired devices, and the ISP router does not allow custom routes. The workstation is on the main network's Wi-Fi and must stay there.
 
 The decision is needed before Talos is installed: the nodes' addresses and the cluster's virtual IP are written into the Talos configuration and certificates, so moving the cluster to another subnet later means re-addressing or rebuilding it.
 
 ## Decision
 
-- **A TP-Link ER605 (v2) router in front of the servers:** WAN port to the RE315's Ethernet port, LAN port to the switch. The server network is its own subnet, **`10.10.0.0/24`**: gateway `10.10.0.1`, cluster virtual IP `10.10.0.10`, the three nodes at `10.10.0.11`–`.13`.
+- **A TP-Link ER605 (v2) router in front of the servers:** WAN port to the server-room powerline adapter (so the ISP router sees the ER605's own MAC address), LAN port to the switch. The server network is its own subnet, **`10.10.0.0/24`**: gateway `10.10.0.1`, cluster virtual IP `10.10.0.10`, the three nodes at `10.10.0.11`–`.13`.
 - **Isolation:** an access-control rule on the ER605 lets the server network reach the internet but **not `192.168.1.0/24`**; the ER605's NAT keeps devices on the main network out; no port forwards anywhere (the Cloudflare Tunnel is outbound-only).
 - **Workstation access over WireGuard:** the ER605's WireGuard server (clients `10.10.99.0/24`) listens on its WAN address on the main network, so the workstation connects from the main network's Wi-Fi with **no port forwarding on the ISP router**. The client profile is a **split tunnel** (only `10.10.0.0/24`). The Talos host firewall allows the Kubernetes and Talos APIs only from the server subnet and the WireGuard clients.
 - **The admin tools do not need the VPN:** Grafana, Argo CD and Hubble UI stay behind Cloudflare Access.
@@ -33,7 +35,7 @@ The decision is needed before Talos is installed: the nodes' addresses and the c
 - Devices on the main network and the cluster cannot reach each other; `kubectl` and `talosctl` work only over the tunnel.
 - The tunnel works only on site (it is not exposed to the internet), which is enough for this project.
 - One more device to keep updated and backed up; double NAT for the cluster's outbound traffic (no effect on the Cloudflare Tunnel).
-- The RE315 reaches the ISP router over Wi-Fi, and its Ethernet port is **10/100 Mbps**, so the cluster's internet connection is limited to 100 Mbps and to the quality of that Wi-Fi link; traffic between the nodes stays on the switch at 1 Gbps. A faster uplink is in the [improvements list](../improvements.md) (I1-10).
+- The powerline adapters' Ethernet ports are **10/100 Mbps**, so the cluster's internet connection is limited to 100 Mbps, less in practice, depending on the electrical wiring; traffic between the nodes stays on the switch at 1 Gbps. A faster uplink is in the [improvements list](../improvements.md) (I1-10).
 
 ## When to revisit
 

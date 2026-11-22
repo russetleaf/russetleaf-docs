@@ -229,4 +229,5 @@ Better Stack
 Gbps
 Mbps
 uplink
-powerline
+[Pp]owerline
+LEDs
