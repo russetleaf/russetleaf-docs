@@ -165,14 +165,9 @@ The workstation's private key is generated on the workstation and never leaves i
     nmcli connection down rl-mgmt
     ```
 
-    **Note:** the `nmcli` manual for NetworkManager 1.46 (Ubuntu 24.04) says `connection import` supports "only VPN configurations", imported by VPN plugins, and its WireGuard settings include no way to add a peer. Whether the import above works is confirmed when this step is first carried out, and this guide is updated with the result. If `nmcli` refuses it, use `wg-quick`, from the `wireguard-tools` package the setup script installs, which reads the same file and names the interface after it (`rl-mgmt`); it needs the file to stay in place, readable only by the operator:
+    Then test it: with the tunnel up, `ping -c 3 10.10.0.1` answers and `ip route get 1.1.1.1` shows the Wi-Fi interface, not `rl-mgmt` (a split tunnel); with it down, `ping -c 3 10.10.0.1` gets no reply. The import works on Ubuntu 24.04 (NetworkManager 1.46; confirmed 2026-11-22), although the `nmcli` manual describes `connection import` only for VPN plugins.
 
-    ```bash
-    sudo wg-quick up ~/.config/wireguard/rl-mgmt.conf      # when working on the cluster
-    sudo wg-quick down ~/.config/wireguard/rl-mgmt.conf
-    ```
-
-6. **Keep a copy in the break-glass kit:** store the profile in Bitwarden ([disaster recovery plan](../disaster-recovery.md#break-glass-kit)), then refresh the kit ([break-glass kit setup guide](break-glass-kit.md#keeping-the-kit-current)). With the NetworkManager import, then delete the files in `~/.config/wireguard/` (NetworkManager keeps its own copy, readable only by root); with `wg-quick`, keep `rl-mgmt.conf` (mode `600`) and delete only `rl-mgmt.key` and `rl-mgmt.pub`, since the profile holds the private key.
+6. **Delete the key files; keep no copy of the private key:** NetworkManager keeps its own copy of the profile, readable only by root, so delete the files in `~/.config/wireguard/` (`rm ~/.config/wireguard/rl-mgmt.*`). The private key is not stored in Bitwarden or the break-glass kit: after a lost or rebuilt workstation, a new key pair is generated (step 1) and the peer's **Public Key** on the ER605 is replaced (step 3), signing in to the ER605 from a computer on the server network with the admin login from the kit. Secrets that can be regenerated are regenerated rather than copied ([ADR 1018](../adr/1018-disaster-recovery.md)).
 
 ## Part 5: Backups and BIOS passwords
 
@@ -228,7 +223,7 @@ The test for step 0.3:
 - [ ] With **WireGuard down**: `10.10.0.1` is **not** reachable.
 - [ ] From **another device on the main network**: the server network is not reachable.
 - [ ] The router has **no port forwards**, **UPnP is off** and **remote management is off**.
-- [ ] The break-glass kit has the ER605's admin login, its configuration backup, the WireGuard profile and the three BIOS passwords.
+- [ ] The break-glass kit has the ER605's admin login, its configuration backup and the three BIOS passwords; no copy of the workstation's WireGuard private key exists outside NetworkManager.
 
 Step 2.2 repeats the isolation checks from a pod inside the cluster.
 
@@ -255,5 +250,4 @@ The official pages these steps follow, each checked on the date shown. When a pa
 - TP-Link (Omada): ["How to Configure WireGuard VPN on Omada Router in Standalone Mode"](https://support.omadanetworks.com/us/document/13120/) (the ER605 v2), checked 2026-11-19
 - WireGuard: ["Quick Start"](https://www.wireguard.com/quickstart/), checked 2026-11-12
 - NetworkManager: ["nmcli reference manual"](https://networkmanager.dev/docs/api/latest/nmcli.html), checked 2026-11-12
-- Ubuntu: ["nmcli - command-line tool for controlling NetworkManager"](https://manpages.ubuntu.com/manpages/noble/man1/nmcli.1.html) (Ubuntu 24.04, NetworkManager 1.46: `connection import` supports only VPN configurations), checked 2026-11-13
-- Ubuntu: ["wg-quick - set up a WireGuard interface simply"](https://manpages.ubuntu.com/manpages/noble/man8/wg-quick.8.html) (Ubuntu 24.04), checked 2026-11-13
+- Ubuntu: ["nmcli - command-line tool for controlling NetworkManager"](https://manpages.ubuntu.com/manpages/noble/man1/nmcli.1.html) (Ubuntu 24.04, NetworkManager 1.46: `connection import`), checked 2026-11-22
