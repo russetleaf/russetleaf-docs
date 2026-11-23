@@ -4,7 +4,7 @@
 
 ## Summary
 
-The **break-glass kit** holds the root credentials: Bitwarden's master password and two-step login recovery code, AWS root, the Google Accounts, Microsoft, the YubiKeys' PINs, and the GPG key that decrypts the backup copies in Cloudflare R2. With Bitwarden's credentials, whoever holds the kit can open the whole vault, so an exposed kit exposes every credential in it: the passwords, recovery codes and authenticator keys of every account, and the machine credentials ([disaster recovery plan](../phase-1-russetleaf-dev/disaster-recovery.md#break-glass-kit), [break-glass kit setup guide](../phase-1-russetleaf-dev/setup/break-glass-kit.md)). This runbook is for any exposure of the kit. Its worst case is the **theft of the safe**, which takes the printed kit, the USB stick with the GPG key, and `yubikey-backup` with its PIN (in the kit) together, so the thief holds a password and a second factor for almost every account.
+The **break-glass kit** holds the root credentials: Bitwarden's two-step login recovery code and API key, AWS root, the Google Accounts, Microsoft, the YubiKeys' PINs, and the GPG key that decrypts the backup copies in Cloudflare R2. Bitwarden's master password is not in it, so the kit alone does not open the vault; but the Google Accounts it exposes are the sign-in or email for other services (Cloudflare, Slack, the uptime checker), and the vault may have been opened if the master password was ever seen, so this runbook secures every account ([disaster recovery plan](../phase-1-russetleaf-dev/disaster-recovery.md#break-glass-kit), [break-glass kit setup guide](../phase-1-russetleaf-dev/setup/break-glass-kit.md)). This runbook is for any exposure of the kit. Its worst case is the **theft of the safe**, which takes the printed kit, the USB stick with the GPG key, and `yubikey-backup` with its PIN (in the kit) together, so the thief holds a password and a second factor for almost every account.
 
 The response follows the incident response life cycle of NIST SP 800-61 Rev. 3, which maps it onto the CSF 2.0 Functions: **Detect** (the exposure is found and its scope estimated), **Respond** (the incident is managed, analyzed, reported and mitigated: contained, then eradicated), **Recover** (restoration, verified, then the end of recovery declared), and **Improvement** (lessons learned). Containment comes first and in order of **blast radius**: the accounts that can reset others (Bitwarden, then the two Google Accounts, whose mailboxes receive every other account's resets) before the rest. NIST SP 800-63B-4, section 4.5, adds the rule for the stolen key: a compromised authenticator is invalidated promptly, since "the consequences of not invalidating a compromised authenticator are usually more significant than the denial-of-service potential of invalidating one in error."
 
@@ -21,7 +21,7 @@ The rule for when credentials change is [ADR 1061](../phase-1-russetleaf-dev/adr
 
 | Exposed | What it gives | Severity |
 |---|---|---|
-| The **safe** (printed kit, USB stick and `yubikey-backup`) | A password and a second factor (the key and its PIN) for every account that takes security keys; Bitwarden's master password and recovery code; recovery codes and authenticator keys for the rest; every machine credential in the vault; the GPG key and its passphrase | SEV1 |
+| The **safe** (printed kit, USB stick and `yubikey-backup`) | A password and a second factor (the key and its PIN) for every root account in the kit, and so the services that sign in through the Google Accounts or send links to them; Bitwarden's recovery code and API key (not its master password); the GPG key and its passphrase | SEV1 |
 | The **printed kit** only, or a decrypted kit file | The same, except the second factor: accounts with security keys still need a YubiKey, but each one's recovery codes bypass it | SEV1 |
 | The **kit passphrase** only, with the cloud copies intact | Nothing until a cloud copy is also obtained; then the same as the kit | SEV2 |
 | The **USB stick** only | The GPG key's secret part, still encrypted with its passphrase (in the kit), and the vault exports, still encrypted with the kit passphrase | SEV2 |
@@ -49,7 +49,7 @@ Work through the parts in order: each secures the account that the later ones de
 
 ### Part 1: Bitwarden
 
-Bitwarden holds the working copy of everything else, and the thief holds its master password, its recovery code and a registered key. Changing the master password locks the thief out of new sign-ins; the recovery code cannot be replaced directly, since Bitwarden generates a new one only when the old one is used, so it is used on purpose.
+Bitwarden holds the working copy of everything else. The thief holds its recovery code, its API key and a registered key, but not its master password, which is only memorized; changing the master password anyway rules out a password seen some other way, and locks out new sign-ins; the recovery code cannot be replaced directly, since Bitwarden generates a new one only when the old one is used, so it is used on purpose.
 
 1. **Sign in** to the web app (`https://vault.bitwarden.com`) with the master password and `yubikey-primary`.
 2. **Check the devices:** **Settings → Security → Devices** lists each device with **Recently active** and **First login**. Note any device that is not the operator's in the record: it means the vault was opened by someone else.
@@ -209,7 +209,7 @@ The thief holds the secret key (on the USB stick and the `paperkey` page) and it
 ### Part 15: A new kit
 
 1. **Choose a new kit passphrase** ([break-glass kit setup guide](../phase-1-russetleaf-dev/setup/break-glass-kit.md#before-starting)), since the old one may have been exposed with the kit, and memorize it.
-2. **Make the kit again** with the setup guide, Parts 2 to 4, with Bitwarden's new master password and recovery code, a new USB stick, and the new GPG key. Delete the old cloud copies of the kit and the vault exports from Google Drive and OneDrive.
+2. **Make the kit again** with the setup guide, Parts 2 to 4, with Bitwarden's new recovery code, a new USB stick, and the new GPG key. Delete the old cloud copies of the kit and the vault exports from Google Drive and OneDrive.
 3. **Keep the safe somewhere new,** or change its combination, and put in it the new printed kit, the new USB stick and the replacement `yubikey-backup`.
 
 ### Part 16: Close the incident

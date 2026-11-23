@@ -10,7 +10,7 @@ The kit lives in three places, so that losing any two still leaves a way back in
 | Printed copy | The safe, with `yubikey-backup` and a USB stick holding the GPG key | Physical access to the safe | Losing Bitwarden access |
 | Encrypted copy | Google Drive and OneDrive | A **passphrase the operator memorizes**, kept out of Bitwarden and the cloud | Losing the safe and Bitwarden access together |
 
-The printed and encrypted copies hold only the **root credentials**: those that recover everything else. They are seven items from Bitwarden (listed in [Before starting](#before-starting)), plus Bitwarden's own email, master password and recovery code, which are kept out of the vault. Every other credential is reached through Bitwarden once it is open again, and, if Bitwarden itself is lost, from the quarterly encrypted export of the whole vault ([Part 4](#part-4-the-encrypted-export-of-the-bitwarden-vault)). So the printed kit changes only when a root credential changes, and the rest of the vault is never printed. This is the usual practice for offline emergency credentials, such as AWS's for the root user's credentials.
+The printed and encrypted copies hold only the **root credentials**: those that recover everything else. They are seven items from Bitwarden (listed in [Before starting](#before-starting)), plus Bitwarden's account email and two-step login recovery code, which are kept out of the vault. Bitwarden's **master password** is not in the kit: like the kit passphrase, it is only memorized, so a stolen safe does not open the vault. Every other credential is reached through Bitwarden once it is open again, and, if Bitwarden itself is lost, from the quarterly encrypted export of the whole vault ([Part 4](#part-4-the-encrypted-export-of-the-bitwarden-vault)). So the printed kit changes only when a root credential changes, and the rest of the vault is never printed. This is the usual practice for offline emergency credentials, such as AWS's for the root user's credentials.
 
 ## The GPG key
 
@@ -160,25 +160,16 @@ The kit file is generated from Bitwarden rather than typed, so every password an
 
     Every field of a login, an SSH key, a card or an identity item is written out, with its custom fields and notes. The block prints `All kit items found`, then `7` twice (seven items, each in the file once; an `8` means two items share a name, and only one should keep it) and `0` (no item has attachments). A **Missing** line names an item that was renamed or deleted: correct its name in Bitwarden, or this list if the kit's contents changed on purpose, and generate the file again. An item with attachments is reported by name in the file: move what the attachment holds into the item's notes, and generate the file again.
 
-2. **Add Bitwarden's own recovery details,** which are kept out of the vault. All three are needed: the **recovery code** replaces only the second factor (the YubiKeys), while the **master password** cannot be recovered or reset by Bitwarden at all (its encryption is zero-knowledge), so the printed copy is its only written backup, for a forgotten password or someone acting for the operator. The kit passphrase, by contrast, is never printed, since it protects the cloud copies of this same file. The details are kept out of the vault: with them, the account signs in without a YubiKey, so they are not left where anyone reading the unlocked vault would find them ([account sign-in setup guide](account-sign-in.md#part-1-the-personal-google-account-microsoft-and-bitwarden)). Open the file with `vim -n -i NONE -c 'setlocal noundofile nobackup nowritebackup' "${RL_KIT}/kit.txt"` (the options keep every copy of the text in memory: `-n` turns off the swap file and `-i NONE` the `viminfo` file, which would save yanked text in the home folder, and the settings turn off undo and backup files, which a `vimrc` may send to a folder on disk), and add these three lines **below the title line**, after a blank line (`gg`, then `o` opens a new line under the title; press **Enter** once for the blank line), so the title stays the first line of the printed kit, each exactly in this form:
+2. **Add Bitwarden's own recovery details,** which are kept out of the vault: with the recovery code, the account signs in without a YubiKey, so it is not left where anyone reading the unlocked vault would find it ([account sign-in setup guide](account-sign-in.md#part-1-the-personal-google-account-microsoft-and-bitwarden)). Open the file with `vim -n -i NONE -c 'setlocal noundofile nobackup nowritebackup' "${RL_KIT}/kit.txt"` (the options keep every copy of the text in memory: `-n` turns off the swap file and `-i NONE` the `viminfo` file, which would save yanked text in the home folder, and the settings turn off undo and backup files, which a `vimrc` may send to a folder on disk), and add these two lines **below the title line**, after a blank line (`gg`, then `o` opens a new line under the title; press **Enter** once for the blank line), so the title stays the first line of the printed kit:
 
     ```text
     Bitwarden account email: <name>@russetleaf.dev
-    Bitwarden master password: <the master password>
     Bitwarden two-step login recovery code: <the recovery code>
     ```
 
-    - **The recovery code is pasted, not typed:** in the Bitwarden web app, **Settings → Security → Two-step login → View recovery code** (it asks for the master password) shows it; copy it and paste it into the file (**Ctrl+Shift+V** in the terminal, in vim's insert mode). Then copy any harmless text, so the code does not stay on the clipboard.
-    - **The master password is typed from memory, then checked:** this reads it back from the file and unlocks Bitwarden with it, without showing it. Unlocking also gives the CLI a new session, which the steps that follow use:
+    The **recovery code is pasted, not typed:** in the Bitwarden web app, **Settings → Security → Two-step login → View recovery code** (it asks for the master password) shows it; copy it and paste it into the file (**Ctrl+Shift+V** in the terminal, in vim's insert mode). Then copy any harmless text, so the code does not stay on the clipboard.
 
-        ```bash
-        BW_KIT_PASSWORD="$(sed -n 's/^Bitwarden master password: //p' "${RL_KIT}/kit.txt")"
-        export BW_KIT_PASSWORD
-        BW_SESSION="$(bw unlock --passwordenv BW_KIT_PASSWORD --raw)" && export BW_SESSION && echo "The master password in the kit is correct"
-        unset BW_KIT_PASSWORD
-        ```
-
-        If it does not print the confirmation, the line in the file is wrong: correct it and run the block again.
+    **The master password is not added.** The recovery code replaces only the second factor (the YubiKeys); the master password is needed with it, and Bitwarden cannot recover or reset it (its encryption is zero-knowledge). Keeping it only in memory, like the kit passphrase, means a stolen safe gives the thief the recovery code but not the vault. If it is forgotten, the vault is rebuilt in a new Bitwarden account from the latest encrypted vault export ([Part 4](#part-4-the-encrypted-export-of-the-bitwarden-vault)), opened with the kit passphrase, so the two memorized secrets are kept **different**, and only forgetting both loses the vault. The 6-monthly check below confirms both.
 
 3. **Print** the kit file, the `paperkey` file and the public key, on a printer connected by USB or on the main network, straight from memory: `lpstat -p` lists the printers, then
 
@@ -223,7 +214,7 @@ The kit file is generated from Bitwarden rather than typed, so every password an
     gpg --decrypt "${RL_KIT}/russetleaf-break-glass-kit.txt.gpg" | head -n 1
     ```
 
-    It prints the kit's title line, and only that line, since the next lines hold Bitwarden's master password and recovery code.
+    It prints the kit's title line, and only that line, since the next lines hold Bitwarden's recovery code.
 
 3. **Upload** `russetleaf-break-glass-kit.txt.gpg` to a folder in **Google Drive** and a folder in **OneDrive**, through their web pages. Neither needs sharing with anyone.
 4. **Check the uploaded copies:** download the file from Google Drive and from OneDrive (to `~/Downloads`, where the browser names the second one with a number), and compare each with the file decrypted in step 2. A copy with the same bytes decrypts the same way, so the kit's contents never need to be shown on screen:
@@ -303,7 +294,7 @@ This part adds a copy of the **whole vault** that can be read and imported **wit
 - [ ] The secret key export decrypted a test message in a scratch keyring (Part 1, step 3).
 - [ ] With `FPR` set to the key's fingerprint, `gpg --list-secret-keys "${FPR}"` in the workstation's own keyring finds **no** key.
 - [ ] The encrypted kit decrypts with the memorized passphrase after `gpgconf --reload gpg-agent` (Part 3, step 2), and the copies **downloaded from Google Drive** and **from OneDrive** are identical to it (Part 3, step 4).
-- [ ] The kit file holds the seven items and Bitwarden's three recovery lines, and nothing else from the vault (Part 2, step 1).
+- [ ] The kit file holds the seven items and Bitwarden's two recovery lines (no master password), and nothing else from the vault (Part 2, steps 1 and 2).
 - [ ] The safe holds the printed pages, the `paperkey` printout, the USB stick and `yubikey-backup`.
 - [ ] Bitwarden holds the GPG key's fingerprint, passphrase and public key.
 - [ ] Both exports (the vault and the `Shared accounts` collection) decrypt with the memorized passphrase after `gpgconf --reload gpg-agent`, and their item counts add up to the number `bw` lists (Part 4, step 4); the copies downloaded from Google Drive and OneDrive are identical to them, and copies are on the USB stick.
@@ -326,9 +317,9 @@ Put the USB stick back in the safe afterwards.
 
 ## Keeping the kit current
 
-- **When a kit item changes** (one of the seven items, or Bitwarden's master password or recovery code: for example a replaced YubiKey's PIN, a used or regenerated backup code, a rotated API key; [ADR 1061](../adr/1061-credential-rotation.md)): update Bitwarden, then repeat Part 2, steps 1 to 4, and Part 3 with the GPG exports from the USB stick, replace both cloud copies, and replace the printed kit pages (shredding the old ones). Make a new vault export at the same time (Part 4), replacing the old copies. A change to any other item needs no refresh: it is in Bitwarden at once, and in the next quarterly vault export.
+- **When a kit item changes** (one of the seven items, or Bitwarden's recovery code: for example a replaced YubiKey's PIN, a used or regenerated backup code, a rotated API key; [ADR 1061](../adr/1061-credential-rotation.md)): update Bitwarden, then repeat Part 2, steps 1 to 4, and Part 3 with the GPG exports from the USB stick, replace both cloud copies, and replace the printed kit pages (shredding the old ones). Make a new vault export at the same time (Part 4), replacing the old copies. A change to any other item needs no refresh: it is in Bitwarden at once, and in the next quarterly vault export.
 - **The vault export** is renewed **quarterly** (Part 4, steps 1 to 6), even when the kit has not changed, since the rest of the vault changes much more often than the kit.
-- **Every 6 months** (in May and November, by the [exercise program](../../exercises.md#calendar)'s calendar): download both cloud copies and decrypt them after `gpgconf --reload gpg-agent`, check the GPG key's expiry date (`gpg --show-keys gpg-public-key.asc`), and check the kit for **drift** from Bitwarden: generate a fresh kit file (Part 2, step 1, after the setup lines in [Before starting](#before-starting)), and compare its Bitwarden items with the cloud copy's, without printing either:
+- **Every 6 months** (in May and November, by the [exercise program](../../exercises.md#calendar)'s calendar): confirm both memorized secrets, signing in to the Bitwarden web app with the master password typed (not filled in) and decrypting the cloud copies with the kit passphrase; download both cloud copies and decrypt them after `gpgconf --reload gpg-agent`, check the GPG key's expiry date (`gpg --show-keys gpg-public-key.asc`), and check the kit for **drift** from Bitwarden: generate a fresh kit file (Part 2, step 1, after the setup lines in [Before starting](#before-starting)), and compare its Bitwarden items with the cloud copy's, without printing either:
 
     ```bash
     items='/^==== /,/^---- end of the Bitwarden items ----$/p'

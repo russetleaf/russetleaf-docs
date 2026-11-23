@@ -5,7 +5,7 @@
 - **Applies to:** both sites, the AWS accounts and the supporting SaaS accounts
 - **Phase:** 1 (step 0.1 for the accounts and the break-glass kit; step 4.2 for the credential inventory). Later phases add their credentials to the inventory under the same rule.
 
-> **Update ([decision log](../plan.md#decision-log), 2026-11-23):** the break-glass kit holds only the root credentials, so it is refreshed only when one of them changes (one of its seven items, or Bitwarden's master password or recovery code). Other changes are covered by Bitwarden and the quarterly encrypted vault export, with no reprint.
+> **Update ([decision log](../plan.md#decision-log), 2026-11-23):** the break-glass kit holds only the root credentials, so it is refreshed only when one of them changes (one of its seven items, or Bitwarden's recovery code). Other changes are covered by Bitwarden and the quarterly encrypted vault export, with no reprint.
 
 ## Context
 
