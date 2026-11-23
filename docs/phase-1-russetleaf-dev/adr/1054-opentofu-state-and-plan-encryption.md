@@ -5,6 +5,8 @@
 - **Applies to:** every OpenTofu root module in `russetleaf-infra` (both sites)
 - **Phase:** 1 (from the first apply in step 2.0; the pipeline in step 2.4). Phase 3's environments use the same setup.
 
+> **Update ([decision log](../plan.md#decision-log), 2026-11-23):** the state passphrase is kept in Bitwarden and in the encrypted vault exports kept with the break-glass kit, not in the kit's printed and encrypted copies, which hold only the root credentials; recovery reads it from Bitwarden, or from a vault export if Bitwarden is lost.
+
 ## Context
 
 OpenTofu state holds secret values in plain text: the **Talos machine secrets** (which can rebuild the cluster's certificate authorities), generated passwords where a resource returns them, and every attribute of every resource. Saved plan files, which the pipeline keeps as short-lived workflow artifacts so the reviewed plan is the one applied ([ADR 1030](1030-github-actions-ci.md)), hold the same values.

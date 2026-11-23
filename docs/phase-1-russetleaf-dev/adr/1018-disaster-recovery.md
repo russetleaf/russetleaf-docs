@@ -11,6 +11,8 @@
 
 > **Update ([ADR 1054](1054-opentofu-state-and-plan-encryption.md)):** OpenTofu encrypts its state before writing it, so the state copies in the Backup account are opened with the **state passphrase from the break-glass kit**, still without any access to the russetleaf-infra account or its keys.
 
+> **Update ([decision log](../plan.md#decision-log), 2026-11-23):** the printed and encrypted copies of the break-glass kit hold only the **root credentials** (AWS root, Bitwarden's recovery details and API key, the two Google Accounts, Microsoft, the GPG key and the YubiKey PINs). Every other secret that cannot be regenerated, the Talos secrets bundle and the state passphrase among them, is kept in Bitwarden, the kit's working copy, and in the encrypted vault exports kept with the kit ([break-glass kit setup guide](../setup/break-glass-kit.md)).
+
 ## Context
 
 The design could already rebuild most things from code (OpenTofu, GitOps, image builds), back up the databases (MariaDB to S3 every 6 hours; RDS snapshots), version media, and roll back changes ([ADR 1016](1016-rollback-strategy.md)). But:

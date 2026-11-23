@@ -5,6 +5,8 @@
 - **Applies to:** both sites, the AWS accounts and the supporting SaaS accounts
 - **Phase:** 1 (step 0.1 for the accounts and the break-glass kit; step 4.2 for the credential inventory). Later phases add their credentials to the inventory under the same rule.
 
+> **Update ([decision log](../plan.md#decision-log), 2026-11-23):** the break-glass kit holds only the root credentials, so it is refreshed only when one of them changes (one of its seven items, or Bitwarden's master password or recovery code). Other changes are covered by Bitwarden and the quarterly encrypted vault export, with no reprint.
+
 ## Context
 
 The project holds two kinds of credential. The first is the operator's **passwords** for the accounts it depends on (AWS root and Identity Center, the Google Accounts, Microsoft, Bitwarden, GitHub, GitLab, Cloudflare, Slack and the outside monitoring services). Each is long, random and unique, generated in Bitwarden, and every account also needs a second factor: one of the two YubiKeys wherever the service supports security keys, otherwise an authenticator code ([ADR 1056](1056-aws-root-mfa-two-security-keys.md), [account sign-in setup guide](../setup/account-sign-in.md)). The second is **machine credentials**: tokens, keys, client secrets and passphrases used by workflows and the clusters, which have no second factor and are copied into secret stores, workflow secrets and sometimes logs.
