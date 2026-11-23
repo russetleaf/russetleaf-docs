@@ -167,6 +167,7 @@ Better Stack signs in with a link emailed to the Workspace address, secured in P
     ```
 
     ```bash
+    bw sync      # without it, the CLI returns the old token from its last sync
     bw get password "<item name>" | gh secret set GITLAB_PAT --repo russetleaf/russetleaf-docs
     gh workflow run "Backup to GitLab" --repo russetleaf/russetleaf-docs
     ```
