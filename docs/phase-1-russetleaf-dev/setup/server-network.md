@@ -191,6 +191,7 @@ The workstation's private key is generated on the workstation and never leaves i
     3. **Point to it from the router's Bitwarden item,** so the kit file says where the backup is: with the CLI unlocked in the project's data folder (`export BW_SESSION="$(bw unlock --raw)"`, run on its own),
 
         ```bash
+        bw sync      # the CLI's copy of the vault does not include items added since its last sync
         item_id="$(bw get item '<the router item>' | jq -r .id)"
         bw get item "${item_id}" \
           | jq --arg f "$(basename "${cfg}").gpg" \
