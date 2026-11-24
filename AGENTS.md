@@ -13,6 +13,8 @@ This repo holds the RussetLeaf project's documentation (published at https://doc
 - **Keep private details out of the repo:** it is public, so no secrets, AWS account or Organization IDs, personal email addresses or phone numbers. Write placeholders such as `<name>+rl-management@<domain>`, and keep real values in Bitwarden, the project's password manager.
 - **Professional reasons only:** justify decisions on technical, operational, security, cost or compliance grounds, as industry documentation would. No personal or career reasons (job listings, certifications, what a tool shows on a résumé, "good for a portfolio").
 - **No judgments of skill levels** (such as "junior", "intermediate" or "advanced") about people or their work in any file.
+- **Written for a build from scratch:** every procedure (plan steps, setup guides, the disaster recovery plan, runbooks) describes building the project from nothing, for someone with their own accounts and hardware. Steps that only move an existing setup (transfers, changed email addresses, an "old" key, dated history of when something was first set up) are given in the working session, never in a procedure; ADRs and the decision log may record history.
+- **Ask when an instruction can be read two ways,** before acting on it, rather than choosing a reading.
 
 ## Bash scripts
 

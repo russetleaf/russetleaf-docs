@@ -23,6 +23,8 @@ The project follows the [Google developer documentation style guide](https://dev
 - **No contractions:** "cannot", "does not", "it is".
 - **Professional reasons only.** Justify decisions on technical, operational, security, cost or compliance grounds, never on personal or career ones.
 - **No judgments of skill levels** about people or their work ("junior", "advanced").
+- **Precise technical terms:** name a mechanism as an RFC, the vendor's documentation or industry documentation names it ("Google sign-in (OIDC)", "password sign-in"), never with an informal label ("Google route", "password path"). When a term is needed and not settled, look it up and add it to the [word list](#word-list).
+- **Written for a build from scratch:** procedures describe building the project from nothing; steps that only move an existing setup belong in the working session, and history belongs in ADRs and the decision log.
 - **Plain, exact words.** Leave out "simply", "just", "easy" and "obviously"; state the number, the setting or the command instead of "some", "a few" or "properly".
 
 ## Page structure
@@ -72,7 +74,7 @@ The project follows the [Google developer documentation style guide](https://dev
 
 ## Setup guides
 
-- **Full click paths:** each step gives the path from the service's home page or dashboard to the setting, with the labels the service shows (**Admin home → Security → Security settings → Sign-in settings**), and names the setting and the value to choose.
+- **Full click paths:** each step gives the path from the service's home page or dashboard to the setting, with the labels the service shows (**Admin home → Security → Security settings → Sign-in settings**), and names the setting and the value to choose. It states every selection the screen needs, including what must be selected inside a view before a menu or button applies to it, and explains anything on screen that could look like a mistake; vendor documentation often assumes a default selection. Where the labels are not documented, the step says so, and the labels seen on screen are recorded in the guide when the step is carried out.
 - **The click-path note,** after the opening paragraph of every guide that uses a web console:
 
     ```markdown
