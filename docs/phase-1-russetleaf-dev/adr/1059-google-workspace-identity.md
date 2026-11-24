@@ -9,7 +9,7 @@
 
 ## Context
 
-The project's accounts were registered to the operator's personal Google Account: the AWS root email addresses (as aliases of the personal mailbox), Slack, the Google sign-in for the WordPress admins and Dex, and the Google Cloud project that issues the OAuth clients. That ties the platform's identity to a personal mailbox, offers no groups for role-based access (Dex maps cluster roles from groups, [ADR 1033](1033-identity-and-access.md)), and gives no administrator control over how the identity signs in.
+The project needs an identity for its accounts and sign-ins: the AWS root email addresses, Slack, the Google sign-in for the WordPress admins and Dex, and the Google Cloud project that issues the OAuth clients. Registering them to the operator's personal Google Account would tie the platform's identity to a personal mailbox, offer no groups for role-based access (Dex maps cluster roles from groups, [ADR 1033](1033-identity-and-access.md)), and give no administrator control over how the identity signs in.
 
 ## Decision
 
@@ -45,7 +45,7 @@ The project's accounts were registered to the operator's personal Google Account
 
 ## Open items
 
-- Phase 1 step 0.1: the organization, the mail records and the groups; the existing accounts moved to the new addresses.
+- Phase 1 step 0.1: the organization, the mail records and the groups; the project's accounts registered to the Workspace addresses.
 - Phase 1 step 2.3: the domain's Google records imported into OpenTofu with the rest of russetleaf.dev's DNS.
 - Phase 1 step 4.7: Dex's Google connector reading Workspace groups (a service account with read access to the Directory API).
 - Phase 1 step 7.16: the DMARC reports and the account's sign-in and admin events in the `security` tenant, with detection rules.
