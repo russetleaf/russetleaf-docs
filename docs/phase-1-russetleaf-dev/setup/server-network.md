@@ -201,7 +201,7 @@ The workstation's private key is generated on the workstation and never leaves i
         rm -rf "${rl_tmp}"
         ```
 
-    Repeat after every configuration change, replacing the older backup in all three places and its note. To restore: decrypt the file with the kit passphrase (`gpg --output /dev/shm/rl-onprem-rt01.bin --decrypt <file>`), and import it on the same page of the ER605.
+    Repeat after every configuration change, replacing the older backup in all three places (deleting the old cloud copies from the trash too: [break-glass kit setup guide](break-glass-kit.md#keeping-the-kit-current), **Replacing a cloud copy**) and its note. To restore: decrypt the file with the kit passphrase (`gpg --output /dev/shm/rl-onprem-rt01.bin --decrypt <file>`), and import it on the same page of the ER605.
 2. **BIOS administrator passwords** on all three nodes, so the firmware settings cannot be changed without one. Generate each in Bitwarden as **20 lowercase letters and digits**, the one format all three accept (the OptiPlex 3040's BIOS takes only lowercase letters, digits and a few symbols, up to 32 characters; the OptiPlex 5060's takes 4 to 32; the ThinkCentre's is not case sensitive), and save it in an item per node (`BIOS rl-onprem-cp01` and so on) before entering it. The other BIOS settings (Secure Boot, the TPM, power-on after a power cut) are part of step 2.2.
 
     | Node | Open setup | Set the password | Save and exit |
