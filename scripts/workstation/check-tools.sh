@@ -180,6 +180,8 @@ function check_base_packages() {
   check_tool bats required bats --version
   check_tool direnv required direnv version
   check_tool wg required wg --version
+  check_tool vim required vim --version
+  check_tool claude required claude --version
 }
 
 ########################################

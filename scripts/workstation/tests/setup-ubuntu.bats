@@ -19,6 +19,7 @@ load helpers
   [[ "${output}" == *"--no-color"* ]]
   [[ "${output}" != *"localstack"* ]]
   [[ "${output}" == *"64   Invalid option"* ]]
+  [[ "${output}" == *"65   A repository key does not have its published fingerprint"* ]]
   [[ "${output}" == *"78   The Docker snap or a conflicting package is installed"* ]]
 }
 

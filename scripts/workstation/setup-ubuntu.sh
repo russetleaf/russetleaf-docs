@@ -6,9 +6,9 @@ set -Eeuo pipefail
 #
 # Sets up an Ubuntu 24.04 workstation for RussetLeaf: the base packages, Docker
 # Engine (from Docker's repository, not the snap), kind's file-watch limits, no
-# copies of printed documents kept by CUPS, mise
-# and direnv with their shell hooks, the Bitwarden CLI and Opengrep, and the Python
-# tools installed with uv. Safe to run again: each step checks or overwrites its own files instead of appending. A
+# copies of printed documents kept by CUPS, Claude Code (from Anthropic's
+# repository), mise and direnv with their shell hooks, the Bitwarden CLI and
+# Opengrep, and the Python tools installed with uv. Safe to run again: each step checks or overwrites its own files instead of appending. A
 # rerun also upgrades the packages it installs, if newer versions exist.
 #
 # The per-repo CLI tools (tofu, kubectl, talosctl, ...) are installed later by
@@ -31,7 +31,7 @@ function init_script() {
   readonly APT_PACKAGES=(
     git curl wget unzip jq ca-certificates gnupg scdaemon pcscd paperkey exfatprogs yubikey-manager
     libpam-u2f pamu2fcfg
-    python3 python3-venv shellcheck shfmt bats direnv wireguard-tools procps
+    python3 python3-venv shellcheck shfmt bats direnv wireguard-tools procps vim
   )
   readonly DOCKER_PACKAGES=(
     docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
@@ -48,6 +48,9 @@ function init_script() {
   # "latest" fails to install; pinned to the last 1.x release until the registry
   # catches up (improvement I1-9)
   readonly OPENGREP_VERSION="1.33.1"
+  # The fingerprint of the key that signs Anthropic's Claude Code repository, as
+  # published in its setup documentation (code.claude.com/docs/en/setup)
+  readonly CLAUDE_CODE_KEY_FPR="31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE"
   readonly KEYRING_DIR="/etc/apt/keyrings"
   readonly SOURCES_DIR="/etc/apt/sources.list.d"
   readonly BASHRC="${HOME}/.bashrc"
@@ -57,6 +60,7 @@ function init_script() {
 
   # Exit codes (any other non-zero code is that of a failed command)
   readonly ERR_USAGE=64       # Invalid option
+  readonly ERR_BAD_KEY=65     # A downloaded repository key has the wrong fingerprint
   readonly ERR_UNSUPPORTED=69 # Not Ubuntu 24.04
   readonly ERR_ROOT=77        # Run as root
   readonly ERR_CONFLICT=78    # Docker snap or conflicting packages installed
@@ -124,6 +128,7 @@ Available options:
 Exit codes:
   0    Success
   64   Invalid option
+  65   A repository key does not have its published fingerprint
   69   Not Ubuntu 24.04
   77   Run as root
   78   The Docker snap or a conflicting package is installed
@@ -300,6 +305,30 @@ function set_print_spool() {
 }
 
 ########################################
+# Install Claude Code from Anthropic's signed apt repository (the stable channel),
+# after checking that the downloaded key has the published fingerprint. Updates
+# arrive with the system's other package updates.
+# Globals:
+#   CLAUDE_CODE_KEY_FPR, ERR_BAD_KEY, KEYRING_DIR (read)
+# Arguments:
+#   None
+########################################
+function install_claude_code() {
+  local key_file="${KEYRING_DIR}/claude-code.asc" fingerprints
+
+  log_step "Claude Code (from Anthropic's signed apt repository)"
+  add_apt_repo claude-code https://downloads.claude.ai/keys/claude-code.asc "${key_file}" \
+    "deb [signed-by=${key_file}] https://downloads.claude.ai/claude-code/apt/stable stable main"
+  fingerprints="$(gpg --show-keys --with-colons "${key_file}" | awk -F: '$1 == "fpr" { print $10 }')"
+  if [[ "${fingerprints}" != "${CLAUDE_CODE_KEY_FPR}" ]]; then
+    sudo rm -f "${key_file}" "${SOURCES_DIR}/claude-code.list"
+    die "${ERR_BAD_KEY}" "Claude Code's repository key does not have the published fingerprint ${CLAUDE_CODE_KEY_FPR}; removed it"
+  fi
+  apt_get update
+  apt_get install -y claude-code
+}
+
+########################################
 # Install mise from its signed apt repository, and add the mise and direnv hooks,
 # and ~/.local/bin on the PATH, to ~/.bashrc
 # Globals:
@@ -436,6 +465,7 @@ function main() {
   install_docker
   set_kind_limits
   set_print_spool
+  install_claude_code
   install_mise
   install_bitwarden_cli
   install_opengrep

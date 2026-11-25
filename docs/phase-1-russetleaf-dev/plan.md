@@ -67,9 +67,10 @@ In order, it:
 3. Adds **Docker's** signed apt repository and installs Docker Engine with the Buildx and Compose plugins (not the snap), then adds the user to the `docker` group.
 4. Raises the **file-watch limits** kind needs on Ubuntu (otherwise pods fail with "too many open files").
 5. Sets **CUPS**, the print service, to keep no copy of a document once it has printed (`PreserveJobFiles No` in `/etc/cups/cupsd.conf`; by default it keeps each one on disk for a day), since the break-glass kit is printed from memory so that it never stays on the disk.
-6. Adds **mise's** signed apt repository and installs mise, so it is updated with the rest of the system, then adds the mise and direnv hooks to `~/.bashrc` (once, however often it runs).
-7. Installs the **Bitwarden CLI** (`bw`), **Opengrep** (pinned) and **Vale** (the version CI uses) globally with mise, which verifies each release's checksum. (The Bitwarden desktop app is installed by hand; see [Configuration](#4-configuration).)
-8. Installs **uv** globally with mise, and the **Python tools** with `uv tool install`.
+6. Adds **Anthropic's** signed apt repository for **Claude Code** (the stable channel), after checking that the downloaded key has the fingerprint Anthropic publishes (`31DD DE24 DDFA B679 F42D 7BD2 BAA9 29FF 1A7E CACE`), and installs Claude Code, so it is updated with the rest of the system; a key with another fingerprint is removed, and the script stops.
+7. Adds **mise's** signed apt repository and installs mise, so it is updated with the rest of the system, then adds the mise and direnv hooks to `~/.bashrc` (once, however often it runs).
+8. Installs the **Bitwarden CLI** (`bw`), **Opengrep** (pinned) and **Vale** (the version CI uses) globally with mise, which verifies each release's checksum. (The Bitwarden desktop app is installed by hand; see [Configuration](#4-configuration).)
+9. Installs **uv** globally with mise, and the **Python tools** with `uv tool install`.
 
 Both workstation scripts take `--help` (options and exit codes), `--verbose` (trace every command) and `--no-color`; colors are also off when `NO_COLOR` is set or the output is not a terminal. They follow the [bash script standard](../standards/bash.md), and share `scripts/lib/common.sh` for messages and for error and signal handling: a failed command is reported with its line number, and Ctrl+C or a `kill` stops the script instead of letting it carry on.
 
@@ -97,6 +98,8 @@ Afterwards, **log out and back in** (for the `docker` group), clone each repo, a
 | `bats` | Setup script (apt) | Running the shell scripts' tests (also in CI) |
 | `direnv` | Setup script (apt) | Loading each repo's environment (`.envrc`: profiles and tokens from the password manager or Secrets Manager) on entering its folder |
 | `wireguard-tools` | Setup script (apt) | The WireGuard tunnel to the server subnet (with NetworkManager; [Configuration](#4-configuration)) |
+| `vim` | Setup script (apt) | The editor the break-glass kit procedure uses to add Bitwarden's recovery lines in memory ([break-glass kit setup guide](setup/break-glass-kit.md#part-2-the-kit-file-and-the-printed-copy)); Ubuntu's desktop includes only a minimal `vi` |
+| `claude` (Claude Code) | Setup script (Anthropic's signed apt repository, stable channel; the key's fingerprint checked) | Claude's command-line tool, used to work with Claude on the repos (see **AI assistance, not agents** above; coding agents from Phase 2, [ADR 2004](../phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md)); proprietary, an accepted exception ([ADR 1053](adr/1053-open-source-tools-by-default.md)); updated through apt, not its own background updater |
 | Docker Engine (`docker-ce`, `containerd.io`) | Setup script (Docker's apt repository) | Runs the local kind and Talos-in-Docker clusters, the Moto AWS stand-in, the local WordPress environment and container-based linters (PHP_CodeSniffer, PHPStan) |
 | Docker Buildx plugin | Setup script (Docker's apt repository) | Building the WordPress image (and the summarizer's in Phase 2) locally |
 | Docker Compose plugin | Setup script (Docker's apt repository) | The local environment in `compose.yaml` (WordPress, MariaDB, Valkey, Moto) |

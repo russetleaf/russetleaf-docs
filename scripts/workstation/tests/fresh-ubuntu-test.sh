@@ -226,6 +226,24 @@ function check_print_spool() {
 }
 
 ########################################
+# Check that the Claude Code repository key is the one Anthropic publishes
+# Globals:
+#   ERR_TEST_FAILED (read)
+# Arguments:
+#   None
+########################################
+function check_claude_code_key() {
+  local expected="31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE" found
+
+  log_step "Claude Code repository key"
+  found="$(gpg --show-keys --with-colons /etc/apt/keyrings/claude-code.asc | awk -F: '$1 == "fpr" { print $10 }')"
+  if [[ "${found}" != "${expected}" ]]; then
+    die "${ERR_TEST_FAILED}" "expected the key ${expected}, found: ${found:-none}"
+  fi
+  log_ok "The key has Anthropic's published fingerprint."
+}
+
+########################################
 # Check that the second run changed nothing
 # Globals:
 #   ERR_TEST_FAILED, SNAPSHOT_DIR (read)
@@ -281,6 +299,7 @@ function main() {
   snapshot second
   check_bashrc
   check_print_spool
+  check_claude_code_key
   check_idempotent
   run_check_tools
   log_step "Result"
