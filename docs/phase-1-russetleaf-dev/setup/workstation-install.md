@@ -73,13 +73,22 @@ The installer's screens, in order:
 
 1. **Unlock the disk** with the passphrase at the prompt, then sign in.
 2. **Apply the updates** that **Software Updater** offers, and restart if it asks.
-3. **Continue with the [local workstation setup](../plan.md#local-workstation-setup-ubuntu-2404):** the setup script, then the [workstation YubiKey setup guide](workstation-yubikey.md) (on a replacement workstation, its section on a new machine), Bitwarden and the rest.
+3. **Lock the screen when the workstation is left:** the session blanks and locks the screen after 10 minutes without activity, as security baselines such as the CIS Benchmarks expect of an administrator's workstation (at most 15 minutes). Ubuntu can be set to never blank the screen, which also stops it locking, so set it explicitly:
+
+    ```bash
+    gsettings set org.gnome.desktop.session idle-delay 600
+    gsettings set org.gnome.desktop.screensaver lock-enabled true
+    gsettings set org.gnome.desktop.screensaver lock-delay 0
+    ```
+
+4. **Continue with the [local workstation setup](../plan.md#local-workstation-setup-ubuntu-2404):** the setup script, then the [workstation YubiKey setup guide](workstation-yubikey.md) (on a replacement workstation, its section on a new machine), Bitwarden and the rest.
 
 ## Checks
 
 - [ ] The image's checksum was `OK`, from a checksum file with a good signature from Ubuntu's key, fingerprint `8439 38DF 228D 22F7 B374  2BC0 D94A A3F0 EFE2 1092` (Part 1).
 - [ ] The computer asks for the disk passphrase at every start, before the login screen.
 - [ ] `lsblk -o NAME,TYPE,FSTYPE,SIZE,MOUNTPOINTS` shows the main partition as `crypto_LUKS`, with an unlocked `crypt` device holding the system (`/`).
+- [ ] `gsettings get org.gnome.desktop.session idle-delay` prints `uint32 600`, and `gsettings get org.gnome.desktop.screensaver lock-enabled` prints `true`.
 - [ ] Both new items are in Bitwarden, and the disk passphrase is memorized.
 
 ## References
