@@ -285,7 +285,7 @@ Each phase's plan tiers every step as **Core** (a complete, working, secure plat
 | Phases 1 and 2 | ~536–894 | 27–45 weeks (6–10 months) |
 | All three phases | ~640–1064 | 32–53 weeks (7–12 months; 15–24 months at 10 hours a week) |
 
-Phase 1 is built with AI assistance in conversation; Phases 2 and 3 are built with AI coding agents under [ADR 2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md), with Phase 1's actual hours as the baseline for measuring the difference. Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar. A finished Phase 1 is worth more than three unfinished phases.
+Phase 1 is built with supervised AI assistance (Claude edits the repos through Claude Code, and the operator reviews every change and does all work on hardware and accounts); Phases 2 and 3 are built with AI coding agents under [ADR 2004](phase-2-ai-mlops/adr/2004-agentic-ai-delivery.md), with Phase 1's actual hours as the baseline for measuring the difference. Claude speeds up writing code and documents; debugging, waiting (quotas, CI, DNS) and learning each tool dominate the calendar. A finished Phase 1 is worth more than three unfinished phases.
 
 ## Repository structure (four repos)
 

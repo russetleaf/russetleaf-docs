@@ -7,9 +7,11 @@
 
 > **Update ([ADR 1048](../../phase-1-russetleaf-dev/adr/1048-bash-script-standard.md)):** the `AGENTS.md` and `CLAUDE.md` files start in **Phase 1** (in `russetleaf-docs` now, and in each code repo from step 1.1), carrying the bash script standard, so every Claude Code session already starts with the project's rules.
 
+> **Update ([decision log](../../phase-1-russetleaf-dev/plan.md#decision-log), 2026-11-25):** Phase 1's way of working is described as it is practised: Claude edits the repos through Claude Code, runs the checks, and commits each change after the operator's review; the operator does all work on hardware and accounts. What this ADR adds in Phases 2 and 3 is unchanged: agents working through a step on their own, against its spec.
+
 ## Context
 
-Phase 1 is built with AI assistance in conversation (Claude answers, drafts and reviews; the operator runs every command and makes every change), not with autonomous agents. Phases 2 and 3 are built with **AI coding agents** (for example Claude Code): agents that read the repo, edit files, run tools and tests, and iterate on their own until a task's checks pass.
+Phase 1 is built with supervised AI assistance (Claude edits the repos through Claude Code, and the operator reviews every change and does all work on hardware and accounts), not with autonomous agents. Phases 2 and 3 are built with **AI coding agents** (for example Claude Code): agents that read the repo, edit files, run tools and tests, and iterate on their own until a task's checks pass.
 
 Agents speed up work that has fast, objective checks (code, OpenTofu, manifests, tests) and help less with hardware, waiting and debugging the live environment. They also bring risks a careful team manages: broad credentials, unreviewed changes, prompt injection through content the agent reads, and plausible-looking mistakes in security-sensitive configuration. Building Phases 2 and 3 this way, with Phase 1 as a baseline, shows how agents can be used safely on DevOps and MLOps work and what they change.
 
