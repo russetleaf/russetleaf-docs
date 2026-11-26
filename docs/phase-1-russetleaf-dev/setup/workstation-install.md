@@ -41,7 +41,7 @@ The step-by-step procedure for installing **Ubuntu 24.04 LTS** on the operator's
 
 On Ubuntu, with **Disks**:
 
-1. Plug in the USB stick, open the **Activities** overview, and start **Disks**.
+1. Plug in the USB stick, then open **Disks**: press the Super key (the Windows-logo key), type `Disks`, and press **Enter**.
 2. Select the **USB stick** in the list on the left. Check its size and model, so the right device is erased, not the disk the computer runs from.
 3. Close any window that shows the stick's files.
 4. In the window header, select **Drive Options** (⋮), then **Restore Disk Image…**.
