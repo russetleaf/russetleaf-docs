@@ -51,8 +51,8 @@ On Ubuntu, with **Disks**:
 ## Part 3: Start the installer
 
 1. **Back up:** everything on the workstation's disk is erased in Part 4.
-2. **Intel RST:** Ubuntu's installer does not support disks in Intel RST (RAID) mode. If the firmware setup shows the storage mode as RAID or RST, set it to **AHCI** ([References](#references)).
-3. **Start from the USB stick:** plug it in, turn the computer on, and press the boot-menu key while it starts (**F12** on most computers; `Esc`, **F2** or **F10** on some, shown briefly on the start screen), then choose the USB stick.
+2. **Intel RST:** Ubuntu's installer does not support disks in Intel RST (RAID) mode. Check before installing: `lspci | grep -i -E 'sata|raid'` shows `[RAID mode]` or `RAID bus controller` when it is on. If so, set the firmware's storage mode to **AHCI** (the disk is erased anyway). On a Dell OptiPlex, for example the 9020: press **F2** as the Dell logo appears, then **System Configuration → SATA Operation → AHCI**, apply, and exit ([References](#references)). Keep the firmware in UEFI mode with Secure Boot on.
+3. **Start from the USB stick:** plug it in, turn the computer on, and press the boot-menu key while it starts (**F12** on most computers, Dell's included; `Esc`, **F2** or **F10** on some, shown briefly on the start screen), then choose the USB stick under the **UEFI** boot options.
 4. Choose **Try or Install Ubuntu** in the boot menu if one appears.
 
 ## Part 4: Install with encryption
@@ -95,6 +95,7 @@ The installer's screens, in order:
 
 The official pages these steps follow, each checked on the date shown. When a page has moved or changed, find the current one, update the step if needed, and change the date.
 
+- Dell: ["OptiPlex 9020 Mini Tower Owner's Manual"](https://dl.dell.com/topicspdf/optiplex-9020-desktop_owners-manual2_en-us.pdf) (System Setup with F2, the one-time boot menu with F12, **SATA Operation**), checked 2026-11-27
 - Ubuntu: ["Ubuntu 24.04 releases"](https://releases.ubuntu.com/24.04/) (the images, `SHA256SUMS` and `SHA256SUMS.gpg`), checked 2026-11-24
 - Ubuntu: ["How to verify your Ubuntu download"](https://ubuntu.com/tutorials/how-to-verify-ubuntu) (the signature and checksum checks; its examples use an older release and key), checked 2026-11-24
 - Ubuntu: ["Create a bootable USB stick"](https://ubuntu.com/desktop/docs/en/latest/how-to/create-a-bootable-usb-stick/) (Disks, **Restore Disk Image…**; Rufus on Windows), checked 2026-11-24
