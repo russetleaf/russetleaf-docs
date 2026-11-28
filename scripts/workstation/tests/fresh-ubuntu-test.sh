@@ -161,7 +161,11 @@ function snapshot() {
   {
     echo "## files"
     sha256sum "${TEST_HOME}/.bashrc" "${TEST_HOME}/.profile" /etc/sysctl.d/99-kind.conf \
-      /etc/cups/cupsd.conf /etc/apt/sources.list.d/* /etc/apt/keyrings/* 2>&1 || true
+      /etc/cups/cupsd.conf /etc/apt/sources.list.d/* /etc/apt/keyrings/* \
+      /etc/dconf/profile/user /etc/dconf/db/local.d/00-russetleaf-screen-lock \
+      /etc/dconf/db/local.d/locks/00-russetleaf-screen-lock 2>&1 || true
+    echo "## firewall"
+    ufw status verbose 2>&1 || true
     echo "## groups"
     id -nG "${TEST_USER}"
     echo "## packages"
@@ -226,21 +230,70 @@ function check_print_spool() {
 }
 
 ########################################
-# Check that the Claude Code repository key is the one Anthropic publishes
+# Check that each repository key is the one its publisher publishes (or, for
+# Docker, the one pinned in setup-ubuntu.sh)
 # Globals:
 #   ERR_TEST_FAILED (read)
 # Arguments:
 #   None
 ########################################
-function check_claude_code_key() {
-  local expected="31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE" found
+function check_repo_keys() {
+  local entry key expected found
 
-  log_step "Claude Code repository key"
-  found="$(gpg --show-keys --with-colons /etc/apt/keyrings/claude-code.asc | awk -F: '$1 == "fpr" { print $10 }')"
-  if [[ "${found}" != "${expected}" ]]; then
-    die "${ERR_TEST_FAILED}" "expected the key ${expected}, found: ${found:-none}"
+  log_step "Repository keys"
+  for entry in claude-code.asc:31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE \
+    docker.asc:9DC858229FC7DD38854AE2D88D81803C0EBFCD88 \
+    mise-archive-keyring.gpg:24853EC9F655CE80B48E6C3A8B81C9D17413A06D; do
+    key="/etc/apt/keyrings/${entry%%:*}"
+    expected="${entry##*:}"
+    found="$(gpg --show-keys --with-colons "${key}" |
+      awk -F: '$1 == "pub" { want = 1; next } $1 == "fpr" && want { print $10; want = 0 }')"
+    if [[ "${found}" != "${expected}" ]]; then
+      die "${ERR_TEST_FAILED}" "expected ${key} to hold the key ${expected}, found: ${found:-none}"
+    fi
+  done
+  log_ok "Each repository key has its expected fingerprint."
+}
+
+########################################
+# Check that the firewall is on and blocks incoming connections
+# Globals:
+#   ERR_TEST_FAILED (read)
+# Arguments:
+#   None
+########################################
+function check_firewall() {
+  local status
+
+  log_step "Firewall"
+  status="$(ufw status verbose)"
+  if ! grep -qx 'Status: active' <<<"${status}" || ! grep -q '^Default: deny (incoming), allow (outgoing)' <<<"${status}"; then
+    die "${ERR_TEST_FAILED}" "expected ufw active, denying incoming and allowing outgoing; found: ${status}"
   fi
-  log_ok "The key has Anthropic's published fingerprint."
+  log_ok "ufw is active and blocks incoming connections."
+}
+
+########################################
+# Check that the screen-lock policy is in the system dconf database and locked
+# Globals:
+#   ERR_TEST_FAILED (read)
+# Arguments:
+#   None
+########################################
+function check_screen_lock() {
+  local key
+
+  log_step "Screen lock"
+  if ! grep -qx 'system-db:local' /etc/dconf/profile/user || [[ ! -f /etc/dconf/db/local ]]; then
+    die "${ERR_TEST_FAILED}" "expected the user profile to read the compiled system database /etc/dconf/db/local"
+  fi
+  for key in /org/gnome/desktop/session/idle-delay /org/gnome/desktop/screensaver/lock-enabled \
+    /org/gnome/desktop/screensaver/lock-delay; do
+    if ! grep -qxF "${key}" /etc/dconf/db/local.d/locks/00-russetleaf-screen-lock; then
+      die "${ERR_TEST_FAILED}" "expected ${key} to be locked"
+    fi
+  done
+  log_ok "The screen-lock settings are set for every user and locked."
 }
 
 ########################################
@@ -299,7 +352,9 @@ function main() {
   snapshot second
   check_bashrc
   check_print_spool
-  check_claude_code_key
+  check_repo_keys
+  check_firewall
+  check_screen_lock
   check_idempotent
   run_check_tools
   log_step "Result"

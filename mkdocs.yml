@@ -86,6 +86,7 @@ nav:
           - GitHub organization: phase-1-russetleaf-dev/setup/github-organization.md
           - GitLab group and repo mirrors: phase-1-russetleaf-dev/setup/gitlab-group.md
           - Workstation install with full-disk encryption: phase-1-russetleaf-dev/setup/workstation-install.md
+          - Bitwarden on the workstation (desktop app and CLI): phase-1-russetleaf-dev/setup/workstation-bitwarden.md
           - YubiKeys on the workstation (SSH and sudo): phase-1-russetleaf-dev/setup/workstation-yubikey.md
           - Break-glass kit and GPG key: phase-1-russetleaf-dev/setup/break-glass-kit.md
           - Slack and outside monitoring: phase-1-russetleaf-dev/setup/slack-and-monitoring.md

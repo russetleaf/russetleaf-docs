@@ -73,29 +73,42 @@ The installer's screens, in order:
 
 1. **Unlock the disk** with the passphrase at the prompt, then sign in.
 2. **Apply the updates** that **Software Updater** offers, and restart if it asks.
-3. **Lock the screen when the workstation is left:** the session blanks and locks the screen after 10 minutes without activity, as security baselines such as the CIS Benchmarks expect of an administrator's workstation (at most 15 minutes). Ubuntu can be set to never blank the screen, which also stops it locking, so set it explicitly:
+3. **Set the firmware password and check Secure Boot** ([Part 6](#part-6-firmware-password-and-secure-boot)), before anything else is set up.
+
+## Part 6: Firmware password and Secure Boot
+
+Without a firmware password, anyone at the keyboard can turn Secure Boot off or change the boot settings; with it, the firmware's settings can be viewed but not changed. Secure Boot means only signed boot loaders and kernels start, so a changed boot chain cannot capture the disk passphrase. Both are among the CIS Benchmarks' expectations for an administrator's workstation.
+
+1. **Generate the password** in Bitwarden, on the other device, in a new item named `Workstation - firmware administrator`: **20 lowercase letters and digits**, since firmware setup screens use a limited keyboard layout and reject or mistype some symbols.
+2. **Set it:** restart, press **F2** as the Dell logo appears, and in the menu on the left open **Security → Admin Password**. Leave **Enter the old password** empty, type the new password in **Enter the new password** and again in **Confirm new password**, then press **Enter** ([References](#references)). The firmware shows a password once it is set. On other computers, the setting is usually under **Security** or **Passwords**.
+3. **Check Secure Boot** in the same setup screens: **Secure Boot → Secure Boot Enable** shows **Enabled** (it needs UEFI boot mode, which Part 3 kept). If it shows **Disabled**, select **Enabled**.
+4. **Apply** and **Exit**; the computer restarts and asks for the disk passphrase as before.
+5. **Confirm from Ubuntu:**
 
     ```bash
-    gsettings set org.gnome.desktop.session idle-delay 600
-    gsettings set org.gnome.desktop.screensaver lock-enabled true
-    gsettings set org.gnome.desktop.screensaver lock-delay 0
+    mokutil --sb-state           # SecureBoot enabled
     ```
 
-4. **Continue with the [local workstation setup](../plan.md#local-workstation-setup-ubuntu-2404):** the setup script, then the [workstation YubiKey setup guide](workstation-yubikey.md) (on a replacement workstation, its section on a new machine), Bitwarden and the rest.
+6. **Continue with the [local workstation setup](../plan.md#local-workstation-setup-ubuntu-2404):** the setup script, which also turns on the firewall and sets the screen lock for every user, locked against change (after 10 minutes without activity, as the CIS Benchmarks expect of an administrator's workstation, at most 15); then the [workstation Bitwarden setup guide](workstation-bitwarden.md) and the [workstation YubiKey setup guide](workstation-yubikey.md) (on a replacement workstation, its section on a new machine), and the rest.
 
 ## Checks
 
 - [ ] The image's checksum was `OK`, from a checksum file with a good signature from Ubuntu's key, fingerprint `8439 38DF 228D 22F7 B374  2BC0 D94A A3F0 EFE2 1092` (Part 1).
 - [ ] The computer asks for the disk passphrase at every start, before the login screen.
 - [ ] `lsblk -o NAME,TYPE,FSTYPE,SIZE,MOUNTPOINTS` shows the main partition as `crypto_LUKS`, with an unlocked `crypt` device holding the system (`/`).
-- [ ] `gsettings get org.gnome.desktop.session idle-delay` prints `uint32 600`, and `gsettings get org.gnome.desktop.screensaver lock-enabled` prints `true`.
-- [ ] Both new items are in Bitwarden, and the disk passphrase is memorized.
+- [ ] Firmware setup (**F2**) asks for the administrator password before a setting can be changed, and the password is in Bitwarden.
+- [ ] `mokutil --sb-state` prints `SecureBoot enabled`.
+- [ ] After the setup script and a new login: `gsettings get org.gnome.desktop.session idle-delay` prints `uint32 600`, `gsettings get org.gnome.desktop.screensaver lock-enabled` prints `true`, and `gsettings writable org.gnome.desktop.session idle-delay` prints `false` (the setting is locked).
+- [ ] After the setup script: `sudo ufw status verbose` shows `Status: active` and `Default: deny (incoming), allow (outgoing)`.
+- [ ] The new items are in Bitwarden, and the disk passphrase is memorized.
 
 ## References
 
 The official pages these steps follow, each checked on the date shown. When a page has moved or changed, find the current one, update the step if needed, and change the date.
 
 - Dell: ["OptiPlex 9020 Mini Tower Owner's Manual"](https://dl.dell.com/topicspdf/optiplex-9020-desktop_owners-manual2_en-us.pdf) (System Setup with F2, the one-time boot menu with F12, **SATA Operation**), checked 2026-11-27
+- Dell: ["How to set an admin password in the BIOS"](https://www.dell.com/support/kbdoc/en-us/000219905/how-to-set-an-admin-password-in-the-bios) (what the administrator password protects; **Security** or **Passwords**, by model), checked 2026-11-27
+- Center for Internet Security: ["CIS Ubuntu Linux 24.04 LTS Benchmark"](https://www.cisecurity.org/benchmark/ubuntu_linux) (the screen-lock, firewall and boot recommendations), checked 2026-11-27
 - Ubuntu: ["Ubuntu 24.04 releases"](https://releases.ubuntu.com/24.04/) (the images, `SHA256SUMS` and `SHA256SUMS.gpg`), checked 2026-11-24
 - Ubuntu: ["How to verify your Ubuntu download"](https://ubuntu.com/tutorials/how-to-verify-ubuntu) (the signature and checksum checks; its examples use an older release and key), checked 2026-11-24
 - Ubuntu: ["Create a bootable USB stick"](https://ubuntu.com/desktop/docs/en/latest/how-to/create-a-bootable-usb-stick/) (Disks, **Restore Disk Image…**; Rufus on Windows), checked 2026-11-24

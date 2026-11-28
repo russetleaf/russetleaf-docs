@@ -19,7 +19,7 @@ Have these ready:
 
 - **Both YubiKeys**, each with a FIDO2 PIN (`ykman fido access change-pin`).
 - **The setup script run** ([`setup-ubuntu.sh`](https://github.com/russetleaf/russetleaf-docs/blob/main/scripts/workstation/setup-ubuntu.sh)), which installs `libpam-u2f` and `pamu2fcfg`; OpenSSH and `libfido2`, which security-key SSH keys need, come with Ubuntu.
-- **Bitwarden open**, for the signing key's passphrase.
+- **Bitwarden open**, for the signing key's passphrase ([workstation Bitwarden setup guide](workstation-bitwarden.md)).
 - For Part 2, **a second terminal with a root shell** (`sudo -i`), kept open until the checks pass, so a mistake in the PAM files can be undone.
 
 ## Part 1: SSH keys on the YubiKeys
@@ -89,7 +89,13 @@ Have these ready:
         ```
 
         The `allowed_signers` line lets `git log --show-signature` check the project's signatures on the workstation.
-    3. **Apply them only to RussetLeaf repos:** an `includeIf` in the global Git configuration loads the file in any repo with a remote in the `russetleaf` organization or group, over SSH or HTTPS ([`git-config` conditional includes](https://git-scm.com/docs/git-config#_conditional_includes), Git 2.36 or later). Run the whole block:
+    3. **Set the Git user name** globally, so every repo on the machine, RussetLeaf's and others, has one (Git refuses to commit without it, and a new Ubuntu install has no `~/.gitconfig`). The name appears in every commit, including in the public repos:
+
+        ```bash
+        git config --global user.name "<First name> <Last name>"
+        ```
+
+    4. **Apply them only to RussetLeaf repos:** an `includeIf` in the global Git configuration loads the file in any repo with a remote in the `russetleaf` organization or group, over SSH or HTTPS ([`git-config` conditional includes](https://git-scm.com/docs/git-config#_conditional_includes), Git 2.36 or later). Run the whole block:
 
         ```bash
         for url in git@github.com:russetleaf/** https://github.com/russetleaf/** git@gitlab.com:russetleaf/** https://gitlab.com/russetleaf/**; do
@@ -98,13 +104,13 @@ Have these ready:
         ```
 
         `git config --global` adds these lines at the end of the global file, so they override an earlier `user.email` or `user.signingkey`.
-    4. **Register the public key** (`cat ~/.ssh/id_ed25519_russetleaf_git_signing.pub`, the whole line) with the title `workstation russetleaf git signing`:
+    5. **Register the public key** (`cat ~/.ssh/id_ed25519_russetleaf_git_signing.pub`, the whole line) with the title `workstation russetleaf git signing`:
         - **GitHub:** as in step 2, with the key type for **signing**, so it appears under **Signing keys** only. GitHub shows a commit as **Verified** when its email is a verified address of the account, so the Workspace address must be one ([GitHub organization setup guide](github-organization.md)).
         - **GitLab:** as in step 2, with the **Usage type** **Signing** and the **Expiration date** cleared, so the key does not expire. GitLab shows commits signed with it as **Verified** when the Workspace address is a verified email of the account ([GitLab group setup guide](gitlab-group.md#part-2-notifications-to-the-workspace-address-once)), which matters if work moves to GitLab ([disaster recovery plan](../disaster-recovery.md)).
 
         The key is replaced only with the workstation, or at once if it may be compromised.
-    5. **Unlock it once per session** with `ssh-add ~/.ssh/id_ed25519_russetleaf_git_signing` (the passphrase from Bitwarden). Git signs through the SSH agent, so commits made without a terminal, such as a coding agent's, also work while the key is unlocked; `ssh-add -D` clears it, for example before leaving the workstation unlocked. This relies on **one agent for the whole desktop session**: Ubuntu's session starts one and points every terminal at it (`SSH_AUTH_SOCK`, shown by `systemctl --user show-environment`). A shell startup file such as `~/.bashrc` must not start its own (`eval "$(ssh-agent -s)"`): each terminal would then get a separate agent, a key unlocked in one would be missing in the others and for programs started from them, and the extra agents keep running after their terminals close.
-    6. **Test,** inside a RussetLeaf repo: `git config user.email` shows the Workspace address and `git config user.signingkey` the new key; after the next commit, `git log --show-signature -1` reports a good signature for the Workspace address, and the commit shows **Verified** on GitHub once pushed. Outside a RussetLeaf repo, `git config user.email` shows the global value.
+    6. **Unlock it once per session** with `ssh-add ~/.ssh/id_ed25519_russetleaf_git_signing` (the passphrase from Bitwarden). Git signs through the SSH agent, so commits made without a terminal, such as a coding agent's, also work while the key is unlocked; `ssh-add -D` clears it, for example before leaving the workstation unlocked. This relies on **one agent for the whole desktop session**: Ubuntu's session starts one and points every terminal at it (`SSH_AUTH_SOCK`, shown by `systemctl --user show-environment`). A shell startup file such as `~/.bashrc` must not start its own (`eval "$(ssh-agent -s)"`): each terminal would then get a separate agent, a key unlocked in one would be missing in the others and for programs started from them, and the extra agents keep running after their terminals close.
+    7. **Test,** inside a RussetLeaf repo: `git config user.email` shows the Workspace address and `git config user.signingkey` the new key; after the next commit, `git log --show-signature -1` reports a good signature for the Workspace address, and the commit shows **Verified** on GitHub once pushed. Outside a RussetLeaf repo, `git config user.email` shows the global value.
 6. **Put `yubikey-backup` back in the safe.**
 
 ## Part 2: `sudo` with a YubiKey and the password
@@ -194,12 +200,12 @@ Nothing in this guide is stored on the YubiKeys themselves: the SSH keys are not
 
 1. **Set up the new machine** with the setup script ([workstation configuration](../plan.md#4-configuration)), then follow Parts 1 and 2 on it, naming its keys after the machine, for example `-C "laptop yubikey-primary $(date +%Y)"` and `-f ~/.ssh/id_ed25519_sk_laptop_primary_"$(date +%Y)"`, and the same titles on GitHub and GitLab. Its keys are renewed every year in the same way.
 2. **Commit signing:** follow Part 1, step 5 on the new machine, naming its key after it (for example the comment and title `laptop russetleaf git signing`). A signing key is replaced, never copied, and commits signed by the old one stay verified after it is removed: GitHub stores a verification record with each commit when it is pushed and does not re-check it when a key is rotated, revoked or deleted, and GitLab keeps them verified when a key is deleted rather than revoked.
-3. **Retire the old machine:** on GitHub and GitLab, delete its SSH keys and its signing key (on GitLab with **Remove** and **Delete**, not **Revoke**); on the machine itself, delete `~/.ssh` and `/etc/u2f_mappings` before it is wiped or given away.
+3. **Retire the old machine:** on GitHub and GitLab, delete every key the old machine used, authentication and signing, whatever its title (on GitLab with **Remove** and **Delete**, not **Revoke**); on the machine itself, delete `~/.ssh` and `/etc/u2f_mappings` before it is wiped or given away. When the new workstation replaces one on the same hardware, delete the old keys before adding the new ones, since they share titles. Then check that each account lists only the keys of the machines in use: `gh ssh-key list` (the `read:public_key` and `read:ssh_signing_key` scopes, [workstation configuration](../plan.md#4-configuration)), and GitLab's **SSH keys** page. Any other key, for example a key file from another computer, can push to the project's repos without a YubiKey: delete it, or replace it with a YubiKey key made on that computer as in Part 1.
 
 ## Checks
 
 - [ ] `ssh -T git@github.com` and `ssh -T git@gitlab.com` work with each YubiKey and fail with none plugged in.
-- [ ] GitHub lists the current year's two `ed25519-sk` keys, and no older ones, under **Authentication keys** (a subheading of **SSH keys** on the **SSH and GPG keys** page) and `workstation russetleaf git signing` only under **Signing keys**; GitLab lists the two as **Authentication** and `workstation russetleaf git signing` as **Signing**, with no expiry date; a new commit shows **Verified** on GitHub.
+- [ ] `gh ssh-key list` shows only the current year's two `ed25519-sk` authentication keys and `workstation russetleaf git signing` (one set per workstation in use); GitHub lists the current year's two `ed25519-sk` keys, and no older ones, under **Authentication keys** (a subheading of **SSH keys** on the **SSH and GPG keys** page) and `workstation russetleaf git signing` only under **Signing keys**; GitLab lists the two as **Authentication** and `workstation russetleaf git signing` as **Signing**, with no expiry date; a new commit shows **Verified** on GitHub.
 - [ ] `ssh-keygen -y -P "" -f ~/.ssh/id_ed25519_russetleaf_git_signing` fails (the signing key has a passphrase), and the passphrase is in Bitwarden.
 - [ ] Inside a RussetLeaf repo, `git config user.email` shows the Workspace address, and `git log --show-signature -1` reports a good signature for it.
 - [ ] `sudo -l` lists no `NOPASSWD` entry for the operator.

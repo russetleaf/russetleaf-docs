@@ -13,12 +13,12 @@ load helpers
 
 SYSTEM_TOOLS=(
   git curl wget unzip jq gpg paperkey mkfs.exfat ykman pamu2fcfg python3 shellcheck shfmt bats direnv wg vim claude
-  mise bw opengrep vale uv pre-commit checkov ruff pip-audit prowler zizmor
+  mise bw gh opengrep vale uv pre-commit checkov ruff pip-audit prowler zizmor
 )
 REPO_TOOLS=(
   tofu tflint terraform-docs infracost talosctl kubectl helm kustomize kind argocd
   kubeconform ct k6 cilium hubble kyverno cosign syft trivy rekor-cli hadolint
-  container-structure-test kubescape gh aws promtool
+  container-structure-test kubescape aws promtool
 )
 
 ########################################

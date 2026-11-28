@@ -216,24 +216,25 @@ function check_docker() {
 }
 
 ########################################
-# Check mise, the Bitwarden CLI, Opengrep, Vale, uv and the Python tools
+# Check mise, the Bitwarden CLI, the GitHub CLI, Opengrep, Vale, uv and the Python tools
 # Arguments:
 #   None
 ########################################
 function check_python_tools() {
   local tool tool_path
 
-  # uv, bw, opengrep and vale are global mise tools, so they are on the PATH only in shells
+  # uv, bw, gh, opengrep and vale are global mise tools, so they are on the PATH only in shells
   # that run `mise activate`; ask mise where they are in other shells (scripts, CI)
-  for tool in uv bw opengrep vale; do
+  for tool in uv bw gh opengrep vale; do
     if ! command -v "${tool}" >/dev/null 2>&1 && tool_path="$(mise which "${tool}" 2>/dev/null)"; then
       PATH="${tool_path%/*}:${PATH}"
     fi
   done
 
-  section "mise, the Bitwarden CLI, Opengrep, Vale and the Python tools (uv)"
+  section "mise, the Bitwarden and GitHub CLIs, Opengrep, Vale and the Python tools (uv)"
   check_tool mise required mise --version
   check_tool bw required bw --version
+  check_tool gh required gh --version
   check_tool opengrep required opengrep --version
   check_tool vale required vale --version
   check_tool uv required uv --version
@@ -253,7 +254,7 @@ function check_python_tools() {
 function check_repo_tools() {
   section "Per-repo tools (from the current repo's .mise.toml)"
   if [[ ! -f .mise.toml && ! -f mise.toml ]]; then
-    log_warn "no .mise.toml here; run this inside a project repo, or use --system"
+    log_warn "no .mise.toml here, so these tools are not installed; run this inside a code repo after 'mise install', or use --system before the code repos exist"
   fi
   check_tool tofu required tofu version
   check_tool tflint required tflint --version
@@ -278,7 +279,6 @@ function check_repo_tools() {
   check_tool hadolint required hadolint --version
   check_tool container-structure-test required container-structure-test version
   check_tool kubescape required kubescape version
-  check_tool gh required gh --version
   check_tool aws required aws --version
   check_tool promtool required promtool --version
   check_tool k9s optional k9s version --short
