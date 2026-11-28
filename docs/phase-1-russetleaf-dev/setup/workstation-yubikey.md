@@ -48,6 +48,7 @@ Have these ready:
         IdentityFile ~/.ssh/id_ed25519_sk_primary_$(date +%Y)
         IdentityFile ~/.ssh/id_ed25519_sk_backup_$(date +%Y)
         IdentitiesOnly yes
+        IdentityAgent none
         ControlMaster auto
         ControlPath ~/.ssh/cm-%C
         ControlPersist 10m
@@ -55,7 +56,7 @@ Have these ready:
     chmod 600 ~/.ssh/config
     ```
 
-    `IdentitiesOnly yes` makes SSH offer only these two keys, never the signing key.
+    `IdentitiesOnly yes` makes SSH offer only these two keys, never the signing key. `IdentityAgent none` makes it use the key files directly, in the order listed, rather than through the desktop session's SSH agent: that agent loads every key in `~/.ssh` at login and offers them in its own order, so with `yubikey-backup` in the safe a connection would first fail with `signing failed for ED25519-SK ... agent refused operation` before trying `yubikey-primary`, and the touch prompt would come from the agent instead of the terminal. The YubiKey keys have no passphrase, so the agent adds nothing for them. Commit signing (step 5) still uses the agent, which Git reaches on its own.
 
     **Connection reuse:** the first push or pull opens an authenticated connection (one touch) and keeps it open; later pushes and pulls to the same host reuse it without a touch, until it has been idle for 10 minutes. The socket lives in `~/.ssh`, which only the operator can write to, as the `ssh_config` manual recommends. `ssh -O exit git@github.com` (or `git@gitlab.com`) closes it at once, for example before leaving the workstation unlocked. Anyone using the operator's logged-in session during that window can push without a touch, so the window stays short. A program that runs Git without a terminal, such as a coding agent, cannot show the touch prompt (`Confirm user presence`), so the YubiKey only blinks, and a request that is not touched in time fails with a misleading `incorrect passphrase` error. Before such a program pushes or pulls, the operator opens the connection from a terminal, with `ssh -T git@github.com` (or `git@gitlab.com`) and a touch; the program's Git commands then reuse it for the next 10 minutes.
 
@@ -130,7 +131,7 @@ The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in th
     3. Run `visudo -c`: every file reports `parsed OK`. Run the `grep` again: it prints nothing for the operator.
     4. In the other terminal, `sudo -k; sudo true` asks for the password.
 
-3. **Register both keys,** one command per key, each complete on its own line so that the YubiKey can be swapped between them. With only `yubikey-primary` plugged in, start the file with its registration (touch it when it blinks; `sudo` asks for the password):
+3. **Register both keys,** one command per key, each complete on its own line so that the YubiKey can be swapped between them. Run them in the **operator's own terminal, not the root shell**: there `${USER}` is `root`, so the keys would be registered for root, and once step 4 makes the key `required`, every `sudo` by the operator would be refused. With only `yubikey-primary` plugged in, start the file with its registration (touch it when it blinks; `sudo` asks for the password):
 
     ```bash
     pamu2fcfg -u "${USER}" -o pam://russetleaf-workstation -i pam://russetleaf-workstation | sudo tee /etc/u2f_mappings >/dev/null
@@ -148,7 +149,7 @@ The registered keys go in a **root-owned file** (`/etc/u2f_mappings`), not in th
     sudo chown root:root /etc/u2f_mappings && sudo chmod 644 /etc/u2f_mappings && ls -l /etc/u2f_mappings && sudo awk -F: '{print NR": user "$1", "NF-1" keys"}' /etc/u2f_mappings
     ```
 
-    It shows `-rw-r--r-- 1 root root` and a single line, `1: user <user>, 2 keys`. The file holds `<user>:<primary-key>:<backup-key>`, public data only.
+    It shows `-rw-r--r-- 1 root root` and a single line, `1: user <user>, 2 keys`, where `<user>` is the operator's own user name (`echo "${USER}"` in the operator's terminal), never `root`. If it shows `root`, correct the name before step 4: `sudo sed -i '1s/^root:/<user>:/' /etc/u2f_mappings`. The file holds `<user>:<primary-key>:<backup-key>`, public data only.
 4. **Require the key for `sudo` and `sudo -i`:** add the `pam_u2f` line directly **above** `@include common-auth` in **both** `/etc/pam.d/sudo` and `/etc/pam.d/sudo-i`, then show the result:
 
     ```bash
