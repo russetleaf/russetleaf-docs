@@ -536,10 +536,10 @@ function install_python_tools() {
 #   Writes the next steps to stdout
 ########################################
 function print_next_steps() {
-  local first_step="Log out and back in, so the screen-lock policy applies."
+  local first_step="Open a new terminal (or run: source ~/.bashrc)."
 
   if [[ "${needs_relogin}" == "true" ]]; then
-    first_step="Log out and back in, so the docker group and the screen-lock policy apply."
+    first_step="Log out and back in, so the docker group applies."
   fi
   log_step "Done"
   log_ok "The workstation is set up."

@@ -98,7 +98,7 @@ Without a firmware password, anyone at the keyboard can turn Secure Boot off or 
 - [ ] `lsblk -o NAME,TYPE,FSTYPE,SIZE,MOUNTPOINTS` shows the main partition as `crypto_LUKS`, with an unlocked `crypt` device holding the system (`/`).
 - [ ] Firmware setup (**F2**) asks for the administrator password before a setting can be changed, and the password is in Bitwarden.
 - [ ] `mokutil --sb-state` prints `SecureBoot enabled`.
-- [ ] After the setup script and a new login: `gsettings get org.gnome.desktop.session idle-delay` prints `uint32 600`, `gsettings get org.gnome.desktop.screensaver lock-enabled` prints `true`, and `gsettings writable org.gnome.desktop.session idle-delay` prints `false` (the setting is locked).
+- [ ] After the setup script: `gsettings get org.gnome.desktop.session idle-delay` prints `uint32 600`, `gsettings get org.gnome.desktop.screensaver lock-enabled` prints `true`, and `gsettings writable org.gnome.desktop.session idle-delay` prints `false` (the setting is locked).
 - [ ] After the setup script: `sudo ufw status verbose` shows `Status: active` and `Default: deny (incoming), allow (outgoing)`.
 - [ ] The new items are in Bitwarden, and the disk passphrase is memorized.
 
